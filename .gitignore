@@ -1,0 +1,106 @@
+HELP.md
+
+### Gradle ###
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS (Spring Tool Suite) ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Cursor IDE ###
+.cursor/
+.cursorignore
+.cursor-tuning/
+
+### Antigravity (Gemini CLI) ###
+.agent/
+.gemini/
+
+### OS Generated Files ###
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+### Java ###
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.nar
+*.rar
+*.zip
+*.tar.gz
+hs_err_pid*
+
+### Logs ###
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+*.env
+
+### Node.js (Frontend) ###
+node_modules/
+dist/
+.npm
+.yarn-integrity
+
+### Temporary Files ###
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
