@@ -14,6 +14,7 @@ import {
   Modal
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface RfqSelection {
   rfqNo: string;
@@ -116,9 +117,7 @@ export default function RfqSelectionPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const getStatusBadge = (status: RfqSelection['status']) => {
     const config = {

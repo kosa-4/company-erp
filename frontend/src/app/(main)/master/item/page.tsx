@@ -15,6 +15,7 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { Item, ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 // Mock 데이터
 const mockItems: Item[] = [
@@ -130,9 +131,7 @@ export default function ItemPage() {
     setIsDetailModalOpen(true);
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const columns: ColumnDef<Item>[] = [
     {

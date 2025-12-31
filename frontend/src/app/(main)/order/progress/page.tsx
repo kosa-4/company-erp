@@ -15,6 +15,7 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface OrderProgress {
   poNo: string;
@@ -154,9 +155,7 @@ export default function OrderProgressPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const getStatusBadge = (status: OrderProgress['progressStatus']) => {
     const config = {
