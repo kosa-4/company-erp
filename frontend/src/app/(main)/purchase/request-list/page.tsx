@@ -15,6 +15,7 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { ColumnDef, StatusType } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface PurchaseRequest {
   prNo: string;
@@ -139,9 +140,7 @@ export default function PurchaseRequestListPage() {
     setIsDetailModalOpen(true);
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const getStatusBadge = (status: StatusType) => {
     const config = {

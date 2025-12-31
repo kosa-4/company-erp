@@ -15,6 +15,7 @@ import {
   Textarea
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface PendingOrder {
   rfqNo: string;
@@ -91,9 +92,7 @@ export default function OrderPendingPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const columns: ColumnDef<PendingOrder>[] = [
     {
