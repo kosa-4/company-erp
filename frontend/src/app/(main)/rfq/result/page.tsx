@@ -12,6 +12,7 @@ import {
   SearchPanel
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface RfqResult {
   rfqNo: string;
@@ -107,9 +108,7 @@ export default function RfqResultPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const columns: ColumnDef<RfqResult>[] = [
     {

@@ -14,6 +14,7 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface PrItem {
   lineNo: number;
@@ -71,9 +72,7 @@ export default function PurchaseRequestPage() {
     remark: '',
   });
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const columns: ColumnDef<PrItem>[] = [
     { key: 'lineNo', header: 'No', width: 50, align: 'center' },

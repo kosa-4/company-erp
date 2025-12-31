@@ -15,6 +15,7 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface ReceivingRecord {
   grNo: string;
@@ -118,9 +119,7 @@ export default function ReceivingListPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const getStatusBadge = (status: ReceivingRecord['status']) => {
     const config = {

@@ -13,6 +13,7 @@ import {
   Textarea
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface ReceivingTarget {
   poNo: string;
@@ -99,9 +100,7 @@ export default function ReceivingTargetPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const columns: ColumnDef<ReceivingTarget>[] = [
     {
