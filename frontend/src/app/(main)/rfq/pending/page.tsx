@@ -16,6 +16,7 @@ import {
   Textarea
 } from '@/components/ui';
 import { ColumnDef, StatusType } from '@/types';
+import { formatNumber } from '@/lib/utils';
 
 interface PendingRfq {
   prNo: string;
@@ -100,9 +101,7 @@ export default function RfqPendingPage() {
     });
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('ko-KR').format(num);
-  };
+
 
   const getStatusBadge = (status: StatusType) => {
     return <Badge variant="green">승인</Badge>;
