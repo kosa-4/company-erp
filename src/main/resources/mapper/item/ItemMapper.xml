@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper>
+    <select id="selectItemList" resultType="com.company.erp.master.item.dto.ItemListDto">
+        SELECT
+            ITEM_CD,
+            ITEM_NM,
+            ITEM_SPEC,
+            MAKER_CD,
+            MAKER_NM,
+            UNIT_CD
+        FROM MTGL
+        WHERE DEL_FLAG = 'N'
+        ORDER BY ITEM_NM
+    </select>
+</mapper>
