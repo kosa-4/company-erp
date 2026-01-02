@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -95,7 +95,27 @@ const mockItems: Item[] = [
 ];
 
 export default function ItemPage() {
-  const [items] = useState<Item[]>(mockItems);
+  const [items, setItems] = useState<Item[]>([]);
+  const fetchItems = async () => {
+  try {
+      const response = await fetch("http://localhost:8080/master/item");
+
+      if (!response.ok) {
+        console.error("품목 조회 실패", response.statusText);
+        return;
+      }
+
+      const data: Item[] = await response.json();
+      setItems(data);
+
+    } catch (err) {
+      console.error("품목 조회 중 오류 발생", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+  }, []); 
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
     itemName: '',
@@ -130,6 +150,8 @@ export default function ItemPage() {
     setSelectedItem(item);
     setIsDetailModalOpen(true);
   };
+
+  
 
 
 
