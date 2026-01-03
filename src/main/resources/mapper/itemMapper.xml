@@ -2,16 +2,51 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.company.erp.master.item.mapper.ItemMapper">
-    <select id="selectItemList" resultType="com.company.erp.master.item.dto.ItemListDto">
+    <select id="selectItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="com.company.erp.master.item.dto.ItemListDto">
         SELECT
             ITEM_CD,
             ITEM_NM,
             ITEM_SPEC,
             MAKER_CD,
             MAKER_NM,
-            UNIT_CD
-        FROM MTGL
-        WHERE DEL_FLAG = 'N'
-        ORDER BY ITEM_NM
+            UNIT_CD,
+            REG_DATE
+        FROM
+            MTGL
+        <where>
+            <if test="ITEM_CD != null and ITEM_CD != ''">
+                AND ITEM_CD LIKE CONCAT('%', #{ITEM_CD}, '%')
+            </if>
+            <if test="ITEM_NM != null and ITEM_NM != ''">
+                AND ITEM_NM LIKE CONCAT('%', #{ITEM_NM}, '%')
+            </if>
+            <if test="USE_FLAG != null and USE_FLAG != ''">
+                AND USE_FLAG = #{USE_FLAG}
+            </if>
+            <if test="REG_DATE_FROM != null">
+                AND  REG_DATE <![CDATA[>=]]> #{REG_DATE_FROM}
+            </if>
+            <if test="REG_DATE_TO != null">
+                AND  REG_DATE <![CDATA[<=]]> #{REG_DATE_TO}
+            </if>
+            <if test="MAKER_NM != null and MAKER_NM != ''">
+                AND MAKER_NM LIKE CONCAT('%', #{MAKER_NM}, '%')
+            </if>
+            AND DEL_FLAG = 'N'
+        </where>
+        ORDER BY
+            ITEM_CD ASC
+        LIMIT #{pageSize}
+        OFFSET #{offset} <!--알아서 get으로 호출-->
+    </select>
+
+    <!--개수-->
+    <select id="countItemList" resultType="int">
+        SELECT
+            COUNT(*) AS item_count
+        FROM
+            MTGL
+        WHERE
+            DEL_FLAG = 'N'
     </select>
 </mapper>
