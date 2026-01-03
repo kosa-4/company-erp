@@ -16,83 +16,85 @@ import {
 } from '@/components/ui';
 import { Item, ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { data } from 'framer-motion/client';
+import { Console } from 'console';
 
 // Mock 데이터
-const mockItems: Item[] = [
-  {
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    itemNameEn: 'Laptop 15 inch',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '컴퓨터',
-    categoryS: '노트북',
-    spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-    unit: 'EA',
-    unitPrice: 1500000,
-    manufacturerCode: 'MFR001',
-    manufacturerName: '삼성전자',
-    modelNo: 'NT950XCR-A58A',
-    useYn: 'Y',
-    remark: '업무용 표준 사양',
-    createdAt: '2024-01-15',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    itemNameEn: '27 inch Monitor',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '모니터',
-    categoryS: 'LED 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    unitPrice: 350000,
-    manufacturerCode: 'MFR002',
-    manufacturerName: 'LG전자',
-    modelNo: '27QN880',
-    useYn: 'Y',
-    createdAt: '2024-01-20',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0003',
-    itemName: '무선 키보드 마우스 세트',
-    itemNameEn: 'Wireless Keyboard Mouse Set',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '주변기기',
-    categoryS: '입력장치',
-    spec: '무선 2.4GHz, USB 수신기',
-    unit: 'SET',
-    unitPrice: 45000,
-    manufacturerCode: 'MFR003',
-    manufacturerName: '로지텍',
-    modelNo: 'MK540',
-    useYn: 'Y',
-    createdAt: '2024-02-01',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    itemNameEn: 'A4 Copy Paper',
-    itemType: '사무용품',
-    categoryL: '사무용품',
-    categoryM: '용지',
-    categoryS: '복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    unitPrice: 25000,
-    manufacturerCode: 'MFR004',
-    manufacturerName: '한솔제지',
-    modelNo: 'COPY-A4-80',
-    useYn: 'Y',
-    createdAt: '2024-02-10',
-    createdBy: 'admin',
-  },
-];
+// const mockItems: Item[] = [
+//   {
+//     itemCode: 'ITM-2024-0001',
+//     itemName: '노트북 (15인치)',
+//     itemNameEn: 'Laptop 15 inch',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '컴퓨터',
+//     categoryS: '노트북',
+//     spec: '15.6" FHD, i7, 16GB, 512GB SSD',
+//     unit: 'EA',
+//     unitPrice: 1500000,
+//     manufacturerCode: 'MFR001',
+//     manufacturerName: '삼성전자',
+//     modelNo: 'NT950XCR-A58A',
+//     useYn: 'Y',
+//     remark: '업무용 표준 사양',
+//     createdAt: '2024-01-15',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0002',
+//     itemName: '27인치 모니터',
+//     itemNameEn: '27 inch Monitor',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '모니터',
+//     categoryS: 'LED 모니터',
+//     spec: '27" QHD, IPS, 75Hz',
+//     unit: 'EA',
+//     unitPrice: 350000,
+//     manufacturerCode: 'MFR002',
+//     manufacturerName: 'LG전자',
+//     modelNo: '27QN880',
+//     useYn: 'Y',
+//     createdAt: '2024-01-20',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0003',
+//     itemName: '무선 키보드 마우스 세트',
+//     itemNameEn: 'Wireless Keyboard Mouse Set',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '주변기기',
+//     categoryS: '입력장치',
+//     spec: '무선 2.4GHz, USB 수신기',
+//     unit: 'SET',
+//     unitPrice: 45000,
+//     manufacturerCode: 'MFR003',
+//     manufacturerName: '로지텍',
+//     modelNo: 'MK540',
+//     useYn: 'Y',
+//     createdAt: '2024-02-01',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0004',
+//     itemName: 'A4 복사용지',
+//     itemNameEn: 'A4 Copy Paper',
+//     itemType: '사무용품',
+//     categoryL: '사무용품',
+//     categoryM: '용지',
+//     categoryS: '복사용지',
+//     spec: 'A4, 80g, 500매/박스',
+//     unit: 'BOX',
+//     unitPrice: 25000,
+//     manufacturerCode: 'MFR004',
+//     manufacturerName: '한솔제지',
+//     modelNo: 'COPY-A4-80',
+//     useYn: 'Y',
+//     createdAt: '2024-02-10',
+//     createdBy: 'admin',
+//   },
+// ];
 
 export default function ItemPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -107,6 +109,7 @@ export default function ItemPage() {
 
       const data: Item[] = await response.json();
       setItems(data);
+      
 
     } catch (err) {
       console.error("품목 조회 중 오류 발생", err);
@@ -115,7 +118,9 @@ export default function ItemPage() {
 
   useEffect(() => {
     fetchItems();
+    
   }, []); 
+
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
     itemName: '',
@@ -151,13 +156,10 @@ export default function ItemPage() {
     setIsDetailModalOpen(true);
   };
 
-  
-
-
-
+  // db 컬럼과 key 일치 필요
   const columns: ColumnDef<Item>[] = [
     {
-      key: 'itemCode',
+      key: 'item_CD',
       header: '품목코드',
       width: 140,
       align: 'center',
@@ -168,7 +170,7 @@ export default function ItemPage() {
       ),
     },
     {
-      key: 'itemName',
+      key: 'item_NM',
       header: '품목명',
       align: 'left',
     },
@@ -179,32 +181,32 @@ export default function ItemPage() {
       align: 'center',
     },
     {
-      key: 'spec',
+      key: 'item_SPEC',
       header: '규격',
       width: 200,
       align: 'left',
     },
     {
-      key: 'unit',
+      key: 'unit_CD',
       header: '단위',
       width: 60,
       align: 'center',
     },
     {
-      key: 'unitPrice',
+      key: 'unit',
       header: '단가',
       width: 120,
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
     {
-      key: 'manufacturerCode',
+      key: 'maker_CD',
       header: '제조사코드',
       width: 100,
       align: 'center',
     },
     {
-      key: 'manufacturerName',
+      key: 'maker_NM',
       header: '제조사명',
       width: 120,
       align: 'left',
@@ -276,6 +278,10 @@ export default function ItemPage() {
           </Button>
         }
       >
+        {(() => {
+          console.log(items);
+          return null;
+        })()}
         <DataGrid
           columns={columns}
           data={items}
@@ -284,6 +290,7 @@ export default function ItemPage() {
           loading={loading}
           emptyMessage="등록된 품목이 없습니다."
         />
+        
       </Card>
 
       {/* 상세/수정 모달 */}
