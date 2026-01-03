@@ -1,6 +1,7 @@
 package com.company.erp.master.item.controller;
 
 import com.company.erp.master.item.dto.ItemListDto;
+import com.company.erp.master.item.dto.ItemSearchDto;
 import com.company.erp.master.item.service.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,10 +21,11 @@ public class ItemController {
     ItemService itemService;
 
     // 품목 현황 조회
-    @GetMapping
-    public ResponseEntity<List<ItemListDto>> getItemList(){
+    @GetMapping("")
+    // 쿼리 파라미터 자동으로 mapping
+    public ResponseEntity<List<ItemListDto>> getItemList(ItemSearchDto searchDto){
         try{
-            List<ItemListDto> items = itemService.getItemList();
+            List<ItemListDto> items = itemService.getItemList(searchDto);
             return ResponseEntity.ok(items);
         } catch (Exception e) {
             e.printStackTrace();
