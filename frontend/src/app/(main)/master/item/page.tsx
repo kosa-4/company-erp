@@ -278,10 +278,11 @@ export default function ItemPage() {
           </Button>
         }
       >
-        {(() => {
+        {/* items 요소 확인 */}
+        {/* {(() => {
           console.log(items);
           return null;
-        })()}
+        })()} */}
         <DataGrid
           columns={columns}
           data={items}
