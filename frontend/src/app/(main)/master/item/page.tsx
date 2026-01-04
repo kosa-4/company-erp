@@ -127,7 +127,7 @@ export default function ItemPage() {
     
   }, []); 
 
-  // ItemSearchDto와 변수명 매핑 아마도...?
+  // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
     ITEM_CD: '',
     ITEM_NM: '',
@@ -163,9 +163,9 @@ export default function ItemPage() {
     setSearchParams({
       ITEM_CD: '',
       ITEM_NM: '',
-      useYn: '',
-      startDate: '',
-      endDate: '',
+      USE_FLAG: '',
+      REG_DATE_FROM: '',
+      REG_DATE_TO: '',
       MAKER_NM: '',
     });
     // 리스트 초기화
@@ -261,8 +261,8 @@ export default function ItemPage() {
         />
         <Select
           label="사용여부"
-          value={searchParams.useYn}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, useYn: e.target.value }))}
+          value={searchParams.USE_FLAG}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, USE_FLAG: e.target.value }))}
           options={[
             { value: '', label: '전체' },
             { value: 'Y', label: '사용' },
@@ -271,13 +271,13 @@ export default function ItemPage() {
         />
         <DatePicker
           label="등록일자 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
+          value={searchParams.REG_DATE_FROM}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, REG_DATE_FROM: e.target.value }))}
         />
         <DatePicker
           label="등록일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+          value={searchParams.REG_DATE_TO}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, REG_DATE_TO: e.target.value }))}
         />
         <Input
           label="제조사"
