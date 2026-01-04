@@ -14,6 +14,7 @@
         FROM
             MTGL
         <where>
+            DEL_FLAG = 'N'
             <if test="ITEM_CD != null and ITEM_CD != ''">
                 AND ITEM_CD LIKE CONCAT('%', #{ITEM_CD}, '%')
             </if>
@@ -24,15 +25,14 @@
                 AND USE_FLAG = #{USE_FLAG}
             </if>
             <if test="REG_DATE_FROM != null">
-                AND  REG_DATE <![CDATA[>=]]> #{REG_DATE_FROM}
+                AND REG_DATE <![CDATA[>=]]> #{REG_DATE_FROM}
             </if>
             <if test="REG_DATE_TO != null">
-                AND  REG_DATE <![CDATA[<=]]> #{REG_DATE_TO}
+                AND REG_DATE <![CDATA[<=]]> #{REG_DATE_TO}
             </if>
             <if test="MAKER_NM != null and MAKER_NM != ''">
                 AND MAKER_NM LIKE CONCAT('%', #{MAKER_NM}, '%')
             </if>
-            AND DEL_FLAG = 'N'
         </where>
         ORDER BY
             ITEM_CD ASC
@@ -47,6 +47,7 @@
         FROM
             MTGL
         <where>
+            DEL_FLAG = 'N'
             <if test="ITEM_CD != null and ITEM_CD != ''">
                 AND ITEM_CD LIKE CONCAT('%', #{ITEM_CD}, '%')
             </if>
@@ -65,7 +66,7 @@
             <if test="MAKER_NM != null and MAKER_NM != ''">
                 AND MAKER_NM LIKE CONCAT('%', #{MAKER_NM}, '%')
             </if>
-            AND DEL_FLAG = 'N'
+
         </where>
     </select>
 </mapper>
