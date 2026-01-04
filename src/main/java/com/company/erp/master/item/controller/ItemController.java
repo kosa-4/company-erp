@@ -23,7 +23,7 @@ public class ItemController {
     // 쿼리 파라미터 자동으로 mapping
     public ResponseEntity<ItemResponseDto<ItemListDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
         try{
-            System.out.println(searchDto);
+//            System.out.println(searchDto);
             ItemResponseDto<ItemListDto> items = itemService.getItemPage(searchDto);
             // 검색 조건이 많을수록 dto가 유리
             return ResponseEntity.ok(items);
