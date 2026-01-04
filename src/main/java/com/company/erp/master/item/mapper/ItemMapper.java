@@ -9,5 +9,5 @@ import java.util.List;
 @Mapper
 public interface ItemMapper {
     List<ItemListDto> selectItemList(ItemSearchDto searchDto);
-    int countItemList();
+    int countItemList(ItemSearchDto searchDto);
 }

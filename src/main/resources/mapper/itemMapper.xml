@@ -41,12 +41,31 @@
     </select>
 
     <!--개수-->
-    <select id="countItemList" resultType="int">
+    <select id="countItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="int">
         SELECT
             COUNT(*) AS item_count
         FROM
             MTGL
-        WHERE
-            DEL_FLAG = 'N'
+        <where>
+            <if test="ITEM_CD != null and ITEM_CD != ''">
+                AND ITEM_CD LIKE CONCAT('%', #{ITEM_CD}, '%')
+            </if>
+            <if test="ITEM_NM != null and ITEM_NM != ''">
+                AND ITEM_NM LIKE CONCAT('%', #{ITEM_NM}, '%')
+            </if>
+            <if test="USE_FLAG != null and USE_FLAG != ''">
+                AND USE_FLAG = #{USE_FLAG}
+            </if>
+            <if test="REG_DATE_FROM != null">
+                AND  REG_DATE <![CDATA[>=]]> #{REG_DATE_FROM}
+            </if>
+            <if test="REG_DATE_TO != null">
+                AND  REG_DATE <![CDATA[<=]]> #{REG_DATE_TO}
+            </if>
+            <if test="MAKER_NM != null and MAKER_NM != ''">
+                AND MAKER_NM LIKE CONCAT('%', #{MAKER_NM}, '%')
+            </if>
+            AND DEL_FLAG = 'N'
+        </where>
     </select>
 </mapper>

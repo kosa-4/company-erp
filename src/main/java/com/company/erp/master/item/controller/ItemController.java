@@ -1,15 +1,13 @@
 package com.company.erp.master.item.controller;
 
 import com.company.erp.master.item.dto.ItemListDto;
+import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
 import com.company.erp.master.item.service.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,11 +19,12 @@ public class ItemController {
     ItemService itemService;
 
     // 품목 현황 조회
-    @GetMapping("")
+    @GetMapping
     // 쿼리 파라미터 자동으로 mapping
-    public ResponseEntity<List<ItemListDto>> getItemList(ItemSearchDto searchDto){
+    public ResponseEntity<ItemResponseDto<ItemListDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
         try{
-            List<ItemListDto> items = itemService.getItemList(searchDto);
+            ItemResponseDto<ItemListDto> items = itemService.getItemPage(searchDto);
+            // 검색 조건이 많을수록 dto가 유리
             return ResponseEntity.ok(items);
         } catch (Exception e) {
             e.printStackTrace();
