@@ -18,6 +18,7 @@ import { Item, ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
 import { Console } from 'console';
+import { useRouter } from 'next/navigation';
 
 // Mock 데이터
 // const mockItems: Item[] = [
@@ -107,9 +108,12 @@ export default function ItemPage() {
         return;
       }
 
-      const data: Item[] = await response.json();
-      setItems(data);
+      const data: {[k:string]: any} = await response.json();
+      if(data.items.length > 0){
+        setItems(data.items);
+      }
       
+      // console.log("data ", data.items);
 
     } catch (err) {
       console.error("품목 조회 중 오류 발생", err);
@@ -122,12 +126,12 @@ export default function ItemPage() {
   }, []); 
 
   const [searchParams, setSearchParams] = useState({
-    itemCode: '',
-    itemName: '',
+    ITEM_CD: '',
+    ITEM_NM: '',
     useYn: '',
     startDate: '',
     endDate: '',
-    manufacturer: '',
+    MAKER_NM: '',
   });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -136,19 +140,28 @@ export default function ItemPage() {
 
   const handleSearch = async () => {
     setLoading(true);
+    
+    const response = await fetch ("http://localhost:8080/master/item?" +
+      new URLSearchParams(searchParams)
+    );
+    const data: {[k:string]: any} = await response.json();
+    setItems(data.items);
+    console.log(data.items);
+
     await new Promise(resolve => setTimeout(resolve, 500));
     setLoading(false);
   };
 
   const handleReset = () => {
     setSearchParams({
-      itemCode: '',
-      itemName: '',
+      ITEM_CD: '',
+      ITEM_NM: '',
       useYn: '',
       startDate: '',
       endDate: '',
-      manufacturer: '',
+      MAKER_NM: '',
     });
+    fetchItems();
   };
 
   const handleRowClick = (item: Item) => {
@@ -229,14 +242,14 @@ export default function ItemPage() {
         <Input
           label="품목코드"
           placeholder="품목코드 입력"
-          value={searchParams.itemCode}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, itemCode: e.target.value }))}
+          value={searchParams.ITEM_CD}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, ITEM_CD: e.target.value }))}
         />
         <Input
           label="품목명"
           placeholder="품목명 입력"
-          value={searchParams.itemName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, itemName: e.target.value }))}
+          value={searchParams.ITEM_NM}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, ITEM_NM: e.target.value }))}
         />
         <Select
           label="사용여부"
@@ -261,8 +274,8 @@ export default function ItemPage() {
         <Input
           label="제조사"
           placeholder="제조사명 입력"
-          value={searchParams.manufacturer}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, manufacturer: e.target.value }))}
+          value={searchParams.MAKER_NM}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, MAKER_NM: e.target.value }))}
         />
       </SearchPanel>
 
@@ -293,6 +306,10 @@ export default function ItemPage() {
         />
         
       </Card>
+
+      <section>
+
+      </section>
 
       {/* 상세/수정 모달 */}
       <Modal
