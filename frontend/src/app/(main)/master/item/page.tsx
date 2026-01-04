@@ -109,6 +109,8 @@ export default function ItemPage() {
       }
 
       const data: {[k:string]: any} = await response.json();
+
+      // 검색 결과가 존재할 때만 리스트 출력
       if(data.items.length > 0){
         setItems(data.items);
       }
@@ -125,12 +127,13 @@ export default function ItemPage() {
     
   }, []); 
 
+  // ItemSearchDto와 변수명 매핑 아마도...?
   const [searchParams, setSearchParams] = useState({
     ITEM_CD: '',
     ITEM_NM: '',
-    useYn: '',
-    startDate: '',
-    endDate: '',
+    USE_FLAG: '',
+    REG_DATE_FROM: '',
+    REG_DATE_TO: '',
     MAKER_NM: '',
   });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -141,18 +144,22 @@ export default function ItemPage() {
   const handleSearch = async () => {
     setLoading(true);
     
+    // url로 파라미터 전달
     const response = await fetch ("http://localhost:8080/master/item?" +
       new URLSearchParams(searchParams)
     );
+
+    // item 리스트 입력
     const data: {[k:string]: any} = await response.json();
     setItems(data.items);
-    console.log(data.items);
+    // console.log(data.items);
 
     await new Promise(resolve => setTimeout(resolve, 500));
     setLoading(false);
   };
 
   const handleReset = () => {
+    // 검색창 초기화
     setSearchParams({
       ITEM_CD: '',
       ITEM_NM: '',
@@ -161,6 +168,7 @@ export default function ItemPage() {
       endDate: '',
       MAKER_NM: '',
     });
+    // 리스트 초기화
     fetchItems();
   };
 
