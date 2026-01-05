@@ -1,5 +1,6 @@
 package com.company.erp.master.item.mapper;
 
+import com.company.erp.master.item.dto.ItemDetailDto;
 import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemSearchDto;
@@ -16,7 +17,10 @@ public interface ItemMapper {
     int countItemList(ItemSearchDto searchDto);
     // 중복 item 체크
     int checkItemDuplicate(ItemDto itemDto);
+    // 상세 품목 조회
+    ItemDetailDto selectItemByCode(String code);
 
+    /* 등록 */
     // item 등록
     void insertItem(ItemDto itemDto);
 }

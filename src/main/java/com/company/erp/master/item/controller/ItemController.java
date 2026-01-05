@@ -26,9 +26,22 @@ public class ItemController {
         try{
 //            System.out.println(searchDto);
             // 검색 조건이 많을수록 dto가 유리
-            ItemResponseDto<ItemDto> items = itemService.getItemPage(searchDto);
+            ItemResponseDto<ItemDto> items = itemService.getItemList(searchDto);
 
-            return ResponseEntity.ok(items);
+            return ResponseEntity.ok().body(items);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // 상세 품목 조회
+    @GetMapping("/{code}")
+    public ResponseEntity<ItemDto> getItemDetail(@PathVariable String code){
+        try{
+            ItemDto item = itemService.getItemDetail(code);
+
+            return ResponseEntity.ok().body(item);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -40,7 +53,7 @@ public class ItemController {
     public ResponseEntity<String> registerItem(@RequestBody ItemDto itemDto){
         try{
             itemService.registerItem(itemDto);
-            return ResponseEntity.ok("상품 등록이 완료되었습니다.");
+            return ResponseEntity.ok().body("상품 등록이 완료되었습니다.");
         }
         catch (RuntimeException e){
             return ResponseEntity.badRequest().body(e.getMessage());
