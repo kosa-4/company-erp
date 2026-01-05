@@ -6,11 +6,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class ItemDetailDto extends ItemDto{
-    private String ITEM_CLS; // 품목 종류
-    private String ITEM_CLS1; // 대분류
-    private String ITEM_CLS2; // 중분류
-    private String ITEM_CLS3; // 소분류
-    private int UNIT_PRC;
+    private String itemType; // 품목 종류
+    private String categoryL; // 대분류
+    private String categoryM; // 중분류
+    private String categoryS; // 소분류
+    private int unitPrice;
 }
 /*
     ITEM_CD	품목번호	VARCHAR2(50)	PRIMARY KEY

@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true) // 부모와 자식 필드 구분
 @Data
 public class ItemSearchDto extends ItemDto {
-    private LocalDateTime REG_DATE_FROM;
-    private LocalDateTime REG_DATE_TO;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
 
     // 페이징
     private int page = 1;

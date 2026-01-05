@@ -7,7 +7,7 @@ import java.util.List;
 public interface ItemService {
     /* 조회 */
     // 전체 혹은 검색 품목 조회 및 페이지 계산
-    ItemResponseDto<ItemDto> getItemList(ItemSearchDto searchDto);
+    ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto);
     // 상세 품목 조회
     ItemDetailDto getItemDetail(String code);
 

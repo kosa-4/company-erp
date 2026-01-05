@@ -8,11 +8,11 @@ import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
 
-@Mapper
+@Mapper // MERGE 시 삭제
 public interface ItemMapper {
     /* 조회 */
     // item 조회
-    List<ItemDto> selectItemList(ItemSearchDto searchDto);
+    List<ItemDetailDto> selectItemList(ItemSearchDto searchDto);
     // item 수 계산
     int countItemList(ItemSearchDto searchDto);
     // 중복 item 체크

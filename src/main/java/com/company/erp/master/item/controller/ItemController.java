@@ -1,5 +1,6 @@
 package com.company.erp.master.item.controller;
 
+import com.company.erp.master.item.dto.ItemDetailDto;
 import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemResponseDto;
@@ -22,11 +23,11 @@ public class ItemController {
     // 품목 현황 조회 및 검색
     @GetMapping
     // ModelAttribute - get에서 사용 (url 파라미터 자동으로 mapping)
-    public ResponseEntity<ItemResponseDto<ItemDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
+    public ResponseEntity<ItemResponseDto<ItemDetailDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
         try{
 //            System.out.println(searchDto);
             // 검색 조건이 많을수록 dto가 유리
-            ItemResponseDto<ItemDto> items = itemService.getItemList(searchDto);
+            ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto);
 
             return ResponseEntity.ok().body(items);
         } catch (Exception e) {

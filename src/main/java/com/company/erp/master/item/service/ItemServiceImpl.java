@@ -15,13 +15,13 @@ public class ItemServiceImpl implements ItemService {
     ItemMapper itemMapper;
 
     @Override
-    public ItemResponseDto<ItemDto> getItemList(ItemSearchDto searchDto) {
+    public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto) {
         // 1. 총 품목 수 계산
         int totalCount = itemMapper.countItemList(searchDto);
         // 2. 총 페이지 계산
         int totalPage = (int)Math.ceil((double) totalCount / searchDto.getPageSize());
         // 3. Dto 반환
-        return new ItemResponseDto<ItemDto>(
+        return new ItemResponseDto<ItemDetailDto>(
                 itemMapper.selectItemList(searchDto),
                 searchDto.getPage(),
                 searchDto.getPageSize(),
