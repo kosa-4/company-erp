@@ -1,6 +1,7 @@
 package com.company.erp.master.item.controller;
 
-import com.company.erp.master.item.dto.ItemListDto;
+import com.company.erp.master.item.dto.ItemDto;
+
 import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
 import com.company.erp.master.item.service.ItemService;
@@ -13,23 +14,41 @@ import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
-@RequestMapping("/master/item")
+@RequestMapping("/items")
 public class ItemController {
     @Autowired
     ItemService itemService;
 
-    // 품목 현황 조회
+    // 품목 현황 조회 및 검색
     @GetMapping
-    // 쿼리 파라미터 자동으로 mapping
-    public ResponseEntity<ItemResponseDto<ItemListDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
+    // ModelAttribute - get에서 사용 (url 파라미터 자동으로 mapping)
+    public ResponseEntity<ItemResponseDto<ItemDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
         try{
 //            System.out.println(searchDto);
-            ItemResponseDto<ItemListDto> items = itemService.getItemPage(searchDto);
             // 검색 조건이 많을수록 dto가 유리
+            ItemResponseDto<ItemDto> items = itemService.getItemPage(searchDto);
+
             return ResponseEntity.ok(items);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    // 품목 등록
+    @PostMapping("/new")
+    public ResponseEntity<String> registerItem(@RequestBody ItemDto itemDto){
+        try{
+            itemService.registerItem(itemDto);
+            return ResponseEntity.ok("상품 등록이 완료되었습니다.");
+        }
+        catch (RuntimeException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
     }
 }

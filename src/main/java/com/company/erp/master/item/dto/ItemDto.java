@@ -14,11 +14,11 @@ public class ItemDto {
     private String MOD_USER_ID;
     private String DEL_FLAG;
     private String USE_FLAG;
-    private String USE_RMK;
+    private String USE_RMK; // 중지 사유
     private String ITEM_NM;
     private String ITEM_NM_ENG;
     private String ITEM_SPEC;
-    private String ITEM_RMK;
+    private String ITEM_RMK; // 품목 상세 설명
     private String MAKER_CD;
     private String MAKER_NM;
     private String MODEL_NO;
