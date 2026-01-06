@@ -52,7 +52,7 @@ async function apiClient<T>(
       'Content-Type': 'application/json',
       ...headers,
     },
-    credentials: 'include', // 세션 쿠키 자동 전송
+    credentials: 'include',
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -68,7 +68,6 @@ async function apiClient<T>(
 
     // 401: 로그인 필요 → 로그인 페이지로 이동
     if (response.status === 401) {
-      // 이미 로그인 페이지면 무한 리다이렉트 방지
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
@@ -80,6 +79,21 @@ async function apiClient<T>(
   // 204 No Content 처리
   if (response.status === 204) {
     return {} as T;
+  }
+
+  // 200 OK + 빈 body 처리
+  const contentType = response.headers.get('content-type');
+  const contentLength = response.headers.get('content-length');
+  
+  // Content-Length가 0이거나 Content-Type이 없으면 빈 body로 처리
+  if (contentLength === '0' || !contentType || !contentType.includes('application/json')) {
+    // body가 있는지 확인
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return {} as T;
+    }
+    // body가 있으면 JSON 파싱
+    return JSON.parse(text) as T;
   }
 
   return response.json();
