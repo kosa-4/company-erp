@@ -193,13 +193,7 @@ export default function ItemPage() {
 
       // 3. 데이터 존재 시 처리
       setSelectedItem(data.items[0]); // 첫번쨰 값만 입력
-      setIsDetailModalOpen(true); 
-      
-      // if(data.items[0] && data.items[0] > 0){        
-        
-      // } else {
-      //   alert("항목을 찾을 수 없습니다.");
-      // }     
+      setIsDetailModalOpen(true);     
            
     } catch(error){
       console.error("데이터를 가져오는 중 오류 발생:", error);
