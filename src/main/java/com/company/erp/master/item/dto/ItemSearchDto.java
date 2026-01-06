@@ -1,17 +1,15 @@
 package com.company.erp.master.item.dto;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
+@EqualsAndHashCode(callSuper = true) // 부모와 자식 필드 구분
 @Data
-public class ItemSearchDto {
-    private String ITEM_CD;
-    private String ITEM_NM;
-    private String USE_FLAG;
-    private LocalDateTime REG_DATE_FROM;
-    private LocalDateTime REG_DATE_TO;
-    private String MAKER_NM;
+public class ItemSearchDto extends ItemDto {
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
 
     // 페이징
     private int page = 1;

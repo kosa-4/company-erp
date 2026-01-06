@@ -2,30 +2,31 @@ package com.company.erp.master.item.dto;
 
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
 public class ItemDto {
-    private String ITEM_CD;
-    private LocalDateTime REG_DATE;
-    private String REG_USER_ID;
-    private LocalDateTime MOD_DATE;
-    private String MOD_USER_ID;
-    private String DEL_FLAG;
-    private String USE_FLAG;
-    private String USE_RMK;
-    private String ITEM_NM;
-    private String ITEM_NM_ENG;
-    private String ITEM_SPEC;
-    private String ITEM_RMK;
-    private String MAKER_CD;
-    private String MAKER_NM;
-    private String MODEL_NO;
-    private String DEPT_CD;
-    private String PROGRESS_CD;
-    private String RMK;
-    private String UNIT_CD;
+    private String itemCode; // 품목 코드
+    private LocalDate createdAt; // 등록 일자
+    private String createdBy; // 등록자
+    private LocalDate modifiedAt; // 수정 일자
+    private String modifiedBy; // 수정자
+    private String deleteYn; // 삭제 여부
+    private String useYn; // 사용 여부
+    private String stopReason; // 중지 사유
+    private String itemName; // 품목명
+    private String itemNameEn; // 품목 영문명
+    private String spec; // 규격
+    private String itemRemark; // 품목 상세 설명
+    private String manufacturerCode; // 제조사 코드
+    private String manufacturerName; // 제조사 명
+    private String modelNo ; // 제조 모델 번호
+    private String departmentCode; // 사용 부서
+    private String status; // 상태
+    private String remark; // 비고
+    private String unit; // 단위
 }
 /*
     ITEM_CD	품목코드	VARCHAR2(50)	PRIMARY KEY

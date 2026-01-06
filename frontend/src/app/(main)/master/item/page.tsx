@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -19,6 +19,7 @@ import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
 import { Console } from 'console';
 import { useRouter } from 'next/navigation';
+import { register } from 'module';
 
 // Mock 데이터
 // const mockItems: Item[] = [
@@ -101,7 +102,7 @@ export default function ItemPage() {
   const [items, setItems] = useState<Item[]>([]);
   const fetchItems = async () => {
   try {
-      const response = await fetch("http://localhost:8080/master/item");
+      const response = await fetch("http://localhost:8080/items");
 
       if (!response.ok) {
         console.error("품목 조회 실패", response.statusText);
@@ -114,11 +115,10 @@ export default function ItemPage() {
       if(data.items.length > 0){
         setItems(data.items);
       }
-      
-      // console.log("data ", data.items);
 
     } catch (err) {
       console.error("품목 조회 중 오류 발생", err);
+      alert("데이터 로드에 실패하였습니다.");
     }
   };
 
@@ -129,12 +129,12 @@ export default function ItemPage() {
 
   // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
-    ITEM_CD: '',
-    ITEM_NM: '',
-    USE_FLAG: '',
-    REG_DATE_FROM: '',
-    REG_DATE_TO: '',
-    MAKER_NM: '',
+    itemCode: '',
+    itemName: '',
+    useYn: '',
+    startDate: '',
+    endDate: '',
+    manufacturerName: '',
   });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -143,44 +143,82 @@ export default function ItemPage() {
 
   const handleSearch = async () => {
     setLoading(true);
+    try{
+      // url로 파라미터 전달
+      const response = await fetch ("http://localhost:8080/items?" +
+        new URLSearchParams(searchParams)
+      );
+
+      
+      if (!response.ok) {
+        // 오류 발생 시 catch로 이동
+        throw new Error(`조회 실패 ${response.status}`);
+      }
+  
+      // item 리스트 입력
+      const data: {[k:string]: any} = await response.json(); // k = key
+      setItems(data.items);
+
+    } catch(error){
+      console.error("데이터 가져오는 중 오류 발생", error);
+      alert("데이터 로드에 실패하였습니다.");
+    } finally{
+
+      // 성공 여부 상관없이 실행      
+      await new Promise(resolve => setTimeout(resolve, 500)); // 검색 로딩
+      setLoading(false);
+    }    
     
-    // url로 파라미터 전달
-    const response = await fetch ("http://localhost:8080/master/item?" +
-      new URLSearchParams(searchParams)
-    );
-
-    // item 리스트 입력
-    const data: {[k:string]: any} = await response.json();
-    setItems(data.items);
-    // console.log(data.items);
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
   };
 
   const handleReset = () => {
     // 검색창 초기화
     setSearchParams({
-      ITEM_CD: '',
-      ITEM_NM: '',
-      USE_FLAG: '',
-      REG_DATE_FROM: '',
-      REG_DATE_TO: '',
-      MAKER_NM: '',
+      itemCode: '',
+      itemName: '',
+      useYn: '',
+      startDate: '',
+      endDate: '',
+      manufacturerName: '',
     });
     // 리스트 초기화
     fetchItems();
   };
 
-  const handleRowClick = (item: Item) => {
-    setSelectedItem(item);
-    setIsDetailModalOpen(true);
-  };
+  /* 품목 상세 정보 */
 
-  // db 컬럼과 key 일치 필요
+  // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
+  // onRowClick?: (row: T) => void; 함수에 담아 실행
+  const handleRowClick = async (item: Item) => {
+    
+    try{
+      // 1. 선택한 컬럼의 code 설정
+      const code = {itemCode: item.itemCode};
+  
+      // 2. back 연동
+      const response = await fetch("http://localhost:8080/items?" +
+        new URLSearchParams(code)
+      )
+  
+      // 2-1 네트워크 오류 체크
+      if(!response.ok) throw new Error("서버 응답 오류");
+  
+      const data: {[k:string]: any} = await response.json(); // k = key
+
+      // 3. 데이터 존재 시 처리
+      setSelectedItem(data.items[0]); // 첫번쨰 값만 입력
+      setIsDetailModalOpen(true);     
+           
+    } catch(error){
+      console.error("데이터를 가져오는 중 오류 발생:", error);
+      alert("데이터 로드에 실패했습니다.");
+    }
+  };
+  
   const columns: ColumnDef<Item>[] = [
+    // response 키와 일치 필요
     {
-      key: 'item_CD',
+      key: 'itemCode',
       header: '품목코드',
       width: 140,
       align: 'center',
@@ -191,7 +229,7 @@ export default function ItemPage() {
       ),
     },
     {
-      key: 'item_NM',
+      key: 'itemName',
       header: '품목명',
       align: 'left',
     },
@@ -202,37 +240,75 @@ export default function ItemPage() {
       align: 'center',
     },
     {
-      key: 'item_SPEC',
+      key: 'spec',
       header: '규격',
       width: 200,
       align: 'left',
     },
     {
-      key: 'unit_CD',
+      key: 'unit',
       header: '단위',
       width: 60,
       align: 'center',
     },
     {
-      key: 'unit',
+      key: 'unitPrice',
       header: '단가',
       width: 120,
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
     {
-      key: 'maker_CD',
+      key: 'manufacturerCode',
       header: '제조사코드',
       width: 100,
       align: 'center',
     },
     {
-      key: 'maker_NM',
+      key: 'manufacturerName',
       header: '제조사명',
       width: 120,
       align: 'left',
     },
+    // {
+    //   key: 'reg_DATE',
+    //   header: '등록 일자',
+    //   width: 120,
+    //   align: 'left',
+    // },
+    // {
+    //   key: 'use_FLAG',
+    //   header: '사용 여부',
+    //   width: 100,
+    //   align: 'center',
+    // },
+    
   ];
+  const registerForm = useRef<HTMLFormElement>(null);
+  const handleSaveItem = async () => {
+    if(!registerForm.current){
+      return;
+    }
+    const formData = new FormData(registerForm.current);
+    const data = Object.fromEntries(formData.entries());
+    console.log("data ", data);
+    try{
+      const response = await fetch ("http://localhost:8080/items/new",{
+        method: 'POST',
+        headers:{
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if(!response.ok){
+        throw new Error(`입력 실패 ${response.status}`)
+      };
+    } catch(error){
+      console.error("데이터 입력 중 오류 발생:", error);
+      alert("데이터 입력에 실패했습니다.");
+    }
+  };
 
   return (
     <div>
@@ -250,19 +326,19 @@ export default function ItemPage() {
         <Input
           label="품목코드"
           placeholder="품목코드 입력"
-          value={searchParams.ITEM_CD}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, ITEM_CD: e.target.value }))}
+          value={searchParams.itemCode}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, itemCode: e.target.value }))}
         />
         <Input
           label="품목명"
           placeholder="품목명 입력"
-          value={searchParams.ITEM_NM}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, ITEM_NM: e.target.value }))}
+          value={searchParams.itemName}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, itemName: e.target.value }))}
         />
         <Select
           label="사용여부"
-          value={searchParams.USE_FLAG}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, USE_FLAG: e.target.value }))}
+          value={searchParams.useYn}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, useYn: e.target.value }))}
           options={[
             { value: '', label: '전체' },
             { value: 'Y', label: '사용' },
@@ -271,19 +347,19 @@ export default function ItemPage() {
         />
         <DatePicker
           label="등록일자 시작"
-          value={searchParams.REG_DATE_FROM}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, REG_DATE_FROM: e.target.value }))}
+          value={searchParams.startDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
         />
         <DatePicker
           label="등록일자 종료"
-          value={searchParams.REG_DATE_TO}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, REG_DATE_TO: e.target.value }))}
+          value={searchParams.endDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
         <Input
           label="제조사"
           placeholder="제조사명 입력"
-          value={searchParams.MAKER_NM}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, MAKER_NM: e.target.value }))}
+          value={searchParams.manufacturerName}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, manufacturerName: e.target.value }))}
         />
       </SearchPanel>
 
@@ -291,7 +367,7 @@ export default function ItemPage() {
         title="품목 목록"
         padding={false}
         actions={
-          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+          <Button variant="primary" onClick={() =>  setIsCreateModalOpen(true)}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -299,11 +375,8 @@ export default function ItemPage() {
           </Button>
         }
       >
-        {/* items 요소 확인 */}
-        {/* {(() => {
-          console.log(items);
-          return null;
-        })()} */}
+        {/* items 요소 출력 */}
+        
         <DataGrid
           columns={columns}
           data={items}
@@ -320,6 +393,7 @@ export default function ItemPage() {
       </section>
 
       {/* 상세/수정 모달 */}
+
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -336,9 +410,10 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <Input label="품목코드" value={selectedItem.itemCode} readOnly />
-              <Input label="품목명" value={selectedItem.itemName} />
-              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} />
-              <Select
+              <Input label="품목명" value={selectedItem.itemName} readOnly/>
+              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} readOnly/>
+              <Input label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
+              {/* <Select
                 label="품목종류"
                 value={selectedItem.itemType}
                 options={[
@@ -346,9 +421,10 @@ export default function ItemPage() {
                   { value: '사무용품', label: '사무용품' },
                   { value: '소모품', label: '소모품' },
                 ]}
-              />
-              <Input label="규격" value={selectedItem.spec || ''} />
-              <Select
+              /> */}
+              <Input label="규격" value={selectedItem.spec || ''} readOnly/>
+              <Input label="단위" value={selectedItem.unit || ''} readOnly/>
+              {/* <Select
                 label="단위"
                 value={selectedItem.unit}
                 options={[
@@ -356,19 +432,19 @@ export default function ItemPage() {
                   { value: 'SET', label: 'SET (세트)' },
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
-              />
-              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} />
-              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} />
-              <Input label="제조사명" value={selectedItem.manufacturerName || ''} />
-              <Input label="제조모델번호" value={selectedItem.modelNo || ''} />
+              /> */}
+              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/>
+              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
+              <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
+              <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
               <Input label="등록일자" value={selectedItem.createdAt} readOnly />
               <Input label="등록자" value={selectedItem.createdBy} readOnly />
             </div>
-            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} />
+            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
           </div>
         )}
       </Modal>
-
+      
       {/* 등록 모달 */}
       <Modal
         isOpen={isCreateModalOpen}
@@ -379,6 +455,7 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
+              handleSaveItem();
               alert('저장되었습니다.');
               setIsCreateModalOpen(false);
             }}
@@ -386,54 +463,58 @@ export default function ItemPage() {
           />
         }
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="품목코드" value="자동채번" readOnly />
-            <Input label="품목명" placeholder="품목명 입력" required />
-            <Input label="품목명(영문)" placeholder="영문 품목명 입력" />
-            <Select
-              label="품목종류"
-              placeholder="선택"
-              required
-              options={[
-                { value: '전자기기', label: '전자기기' },
-                { value: '사무용품', label: '사무용품' },
-                { value: '소모품', label: '소모품' },
-              ]}
-            />
-            <Input label="규격" placeholder="규격 입력" />
-            <Select
-              label="단위"
-              placeholder="선택"
-              required
-              options={[
-                { value: 'EA', label: 'EA (개)' },
-                { value: 'SET', label: 'SET (세트)' },
-                { value: 'BOX', label: 'BOX (박스)' },
-              ]}
-            />
-            <Input label="단가" type="number" placeholder="0" />
-            <Input label="제조사코드" placeholder="제조사코드 입력" />
-            <Input label="제조사명" placeholder="제조사명 입력" />
-            <Input label="제조모델번호" placeholder="모델번호 입력" />
-          </div>
-          
-          <div className="flex gap-6">
-            <label className="text-sm font-medium text-gray-700">사용여부</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
-                <span className="text-sm">사용</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="N" className="text-blue-600" />
-                <span className="text-sm">미사용</span>
-              </label>
+        <form ref={registerForm}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Input name='itemCode' label="품목코드" placeholder="자동채번" readOnly />
+              <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
+              <Select
+                name='itemType'
+                label="품목종류"
+                placeholder="선택"
+                required
+                options={[
+                  { value: '전자기기', label: '전자기기' },
+                  { value: '사무용품', label: '사무용품' },
+                  { value: '소모품', label: '소모품' },
+                ]}
+              />
+              <Input name='spec' label="규격" placeholder="규격 입력" />
+              <Select
+                name='unit'
+                label="단위"
+                placeholder="선택"
+                required
+                options={[
+                  { value: 'EA', label: 'EA (개)' },
+                  { value: 'SET', label: 'SET (세트)' },
+                  { value: 'BOX', label: 'BOX (박스)' },
+                ]}
+              />
+              {/* <Input name='unit' label="단가" type="number" placeholder="0" /> */}
+              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" />
+              <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
+              <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
             </div>
-          </div>
+            
+            <div className="flex gap-6">
+              <label className="text-sm font-medium text-gray-700">사용여부</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
+                  <span className="text-sm">사용</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="N" className="text-blue-600" />
+                  <span className="text-sm">미사용</span>
+                </label>
+              </div>
+            </div>
 
-          <Textarea label="비고" placeholder="비고 입력" rows={3} />
-        </div>
+            <Textarea label="비고" placeholder="비고 입력" rows={3} />
+          </div>
+        </form>
       </Modal>
     </div>
   );
