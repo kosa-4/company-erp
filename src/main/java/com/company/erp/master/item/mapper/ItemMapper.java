@@ -8,15 +8,15 @@ import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
 
-@Mapper // MERGE 시 삭제
-public interface ItemMapper {
+//@Mapper // MERGE 시 삭제
+public interface xItemMapper {
     /* 조회 */
     // item 조회
     List<ItemDetailDto> selectItemList(ItemSearchDto searchDto);
     // item 수 계산
     int countItemList(ItemSearchDto searchDto);
     // 중복 여부 체크
-    boolean existsByNameAndSpec(ItemDto itemDto);
+    boolean existsByNameAndSpec(ItemDetailDto itemDetailDto);
     // 상세 품목 조회
     ItemDetailDto selectItemByCode(String code);
 

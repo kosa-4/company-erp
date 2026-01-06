@@ -52,7 +52,7 @@
     </select>
 
     <!--중복 검사-->
-    <select id="existsByNameAndSpec" parameterType="com.company.erp.master.item.dto.ItemDto" resultType="boolean">
+    <select id="existsByNameAndSpec" parameterType="com.company.erp.master.item.dto.ItemDetailDto" resultType="boolean">
         select
             COUNT(*)
         from
@@ -127,24 +127,24 @@
     <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGL(
-                REG_DATE AS createdAt,
-                REG_USER_ID AS createdBy,
-                MOD_DATE AS modifiedAt,
-                MOD_USER_ID AS modifiedBy,
-                DEL_FLAG AS deleteYn,
-                USE_FLAG AS useYn,
-                USE_RMK AS stopReason,
-                ITEM_NM AS itemName,
-                ITEM_NM_ENG AS itemNameEn,
-                ITEM_SPEC AS spec,
-                ITEM_RMK AS itemRemark,
-                MAKER_CD AS manufacturerCode,
-                MAKER_NM AS manufacturerName,
-                MODEL_NO AS modelNo,
-                DEPT_CD AS departmentCode,
-                PROGRESS_CD AS status,
-                RMK AS remark,
-                UNIT_CD AS unit
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USE_FLAG,
+                USE_RMK,
+                ITEM_NM,
+                ITEM_NM_ENG,
+                ITEM_SPEC,
+                ITEM_RMK,
+                MAKER_CD,
+                MAKER_NM,
+                MODEL_NO,
+                DEPT_CD ,
+                PROGRESS_CD,
+                RMK,
+                UNIT_CD
             )
             VALUES(
                 now(),
@@ -171,17 +171,17 @@
     <insert id="insertItemMTGC" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGC(
-                ITEM_CD AS itemCode,
-                REG_DATE AS createdAt,
-                REG_USER_ID AS createdBy,
-                MOD_DATE AS modifiedAt,
-                MOD_USER_ID AS modifiedBy,
-                DEL_FLAG AS deleteYn,
-                ITEM_CLS AS itemType,
-                ITEM_CLS1 AS categoryL,
-                ITEM_CLS2 AS categoryM,
-                ITEM_CLS3 AS categoryS,
-                USE_FLAG AS useYn
+                ITEM_CD,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                ITEM_CLS,
+                ITEM_CLS1,
+                ITEM_CLS2,
+                ITEM_CLS3,
+                USE_FLAG
         VALUES
                 #{itemCode},
                 now(),
