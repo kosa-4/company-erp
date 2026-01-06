@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -19,6 +19,7 @@ import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
 import { Console } from 'console';
 import { useRouter } from 'next/navigation';
+import { register } from 'module';
 
 // Mock 데이터
 // const mockItems: Item[] = [
@@ -283,16 +284,31 @@ export default function ItemPage() {
     // },
     
   ];
-
+  const registerForm = useRef<HTMLFormElement>(null);
   const handleSaveItem = async () => {
+    if(!registerForm.current){
+      return;
+    }
+    const formData = new FormData(registerForm.current);
+    const data = Object.fromEntries(formData.entries());
+    console.log("data ", data);
     try{
-      const response = await fetch ("http://localhost:8080/items/new");
+      const response = await fetch ("http://localhost:8080/items/new",{
+        method: 'POST',
+        headers:{
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
 
       if(!response.ok){
-        throw new Error(`조회 실패 ${response.status}`)
-      }
+        throw new Error(`입력 실패 ${response.status}`)
+      };
+    } catch(error){
+      console.error("데이터 입력 중 오류 발생:", error);
+      alert("데이터 입력에 실패했습니다.");
     }
-  }
+  };
 
   return (
     <div>
@@ -439,6 +455,7 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
+              handleSaveItem();
               alert('저장되었습니다.');
               setIsCreateModalOpen(false);
             }}
@@ -446,54 +463,58 @@ export default function ItemPage() {
           />
         }
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="품목코드" value="자동채번" readOnly />
-            <Input label="품목명" placeholder="품목명 입력" required />
-            <Input label="품목명(영문)" placeholder="영문 품목명 입력" />
-            <Select
-              label="품목종류"
-              placeholder="선택"
-              required
-              options={[
-                { value: '전자기기', label: '전자기기' },
-                { value: '사무용품', label: '사무용품' },
-                { value: '소모품', label: '소모품' },
-              ]}
-            />
-            <Input label="규격" placeholder="규격 입력" />
-            <Select
-              label="단위"
-              placeholder="선택"
-              required
-              options={[
-                { value: 'EA', label: 'EA (개)' },
-                { value: 'SET', label: 'SET (세트)' },
-                { value: 'BOX', label: 'BOX (박스)' },
-              ]}
-            />
-            <Input label="단가" type="number" placeholder="0" />
-            <Input label="제조사코드" placeholder="제조사코드 입력" />
-            <Input label="제조사명" placeholder="제조사명 입력" />
-            <Input label="제조모델번호" placeholder="모델번호 입력" />
-          </div>
-          
-          <div className="flex gap-6">
-            <label className="text-sm font-medium text-gray-700">사용여부</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
-                <span className="text-sm">사용</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="N" className="text-blue-600" />
-                <span className="text-sm">미사용</span>
-              </label>
+        <form ref={registerForm}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Input name='itemCode' label="품목코드" placeholder="자동채번" readOnly />
+              <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
+              <Select
+                name='itemType'
+                label="품목종류"
+                placeholder="선택"
+                required
+                options={[
+                  { value: '전자기기', label: '전자기기' },
+                  { value: '사무용품', label: '사무용품' },
+                  { value: '소모품', label: '소모품' },
+                ]}
+              />
+              <Input name='spec' label="규격" placeholder="규격 입력" />
+              <Select
+                name='unit'
+                label="단위"
+                placeholder="선택"
+                required
+                options={[
+                  { value: 'EA', label: 'EA (개)' },
+                  { value: 'SET', label: 'SET (세트)' },
+                  { value: 'BOX', label: 'BOX (박스)' },
+                ]}
+              />
+              {/* <Input name='unit' label="단가" type="number" placeholder="0" /> */}
+              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" />
+              <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
+              <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
             </div>
-          </div>
+            
+            <div className="flex gap-6">
+              <label className="text-sm font-medium text-gray-700">사용여부</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
+                  <span className="text-sm">사용</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="N" className="text-blue-600" />
+                  <span className="text-sm">미사용</span>
+                </label>
+              </div>
+            </div>
 
-          <Textarea label="비고" placeholder="비고 입력" rows={3} />
-        </div>
+            <Textarea label="비고" placeholder="비고 입력" rows={3} />
+          </div>
+        </form>
       </Modal>
     </div>
   );
