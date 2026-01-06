@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 
 interface SelectOption {
   value: string;
@@ -33,7 +33,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     },
     ref
   ) => {
-    const selectId = props.id || props.name || `select-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const selectId = props.id || props.name || generatedId;
 
     return (
       <div className={`${fullWidth ? 'w-full' : ''}`}>

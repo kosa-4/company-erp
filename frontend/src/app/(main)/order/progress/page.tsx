@@ -1,21 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  PageHeader, 
-  Card, 
-  Button, 
-  Input, 
+import React, { useState, useEffect } from 'react';
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
   Select,
   DatePicker,
   DataGrid,
   SearchPanel,
   Badge,
   Modal,
-  ModalFooter
+  ModalFooter,
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
+import { PurchaseOrderDTO } from '@/types/purchaseOrder';
+import { getErrorMessage } from '@/lib/api/error';
 
 interface OrderProgress {
   poNo: string;
@@ -38,91 +41,8 @@ interface OrderProgress {
   remark: string;
 }
 
-const mockData: OrderProgress[] = [
-  {
-    poNo: 'PO-2024-0234',
-    poName: '개발팀 모니터 발주',
-    purchaseType: '일반',
-    buyer: '홍길동',
-    progressStatus: 'SENT',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    unitPrice: 340000,
-    orderQuantity: 10,
-    amount: 3400000,
-    deliveryDate: '2025-01-10',
-    paymentTerms: '당월말',
-    storageLocation: '본사 창고',
-    remark: '',
-  },
-  {
-    poNo: 'PO-2024-0233',
-    poName: '사무용품 발주',
-    purchaseType: '단가계약',
-    buyer: '홍길동',
-    progressStatus: 'APPROVED',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    unitPrice: 24000,
-    orderQuantity: 50,
-    amount: 1200000,
-    deliveryDate: '2025-01-08',
-    paymentTerms: '익월말',
-    storageLocation: '본사 창고',
-    remark: '',
-  },
-  {
-    poNo: 'PO-2024-0232',
-    poName: '키보드 마우스 발주',
-    purchaseType: '일반',
-    buyer: '홍길동',
-    progressStatus: 'PENDING',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    itemCode: 'ITM-2024-0003',
-    itemName: '무선 키보드 마우스 세트',
-    spec: '무선 2.4GHz, USB 수신기',
-    unit: 'SET',
-    unitPrice: 45000,
-    orderQuantity: 20,
-    amount: 900000,
-    deliveryDate: '2025-01-12',
-    paymentTerms: '당월말',
-    storageLocation: '본사 창고',
-    remark: '',
-  },
-  {
-    poNo: 'PO-2024-0231',
-    poName: '노트북 발주',
-    purchaseType: '일반',
-    buyer: '홍길동',
-    progressStatus: 'DELIVERED',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-    unit: 'EA',
-    unitPrice: 1450000,
-    orderQuantity: 5,
-    amount: 7250000,
-    deliveryDate: '2024-12-28',
-    paymentTerms: '당월말',
-    storageLocation: '본사 창고',
-    remark: '',
-  },
-];
-
 export default function OrderProgressPage() {
-  const [data] = useState<OrderProgress[]>(mockData);
+  const [data, setData] = useState<OrderProgress[]>([]);
   const [selectedRows, setSelectedRows] = useState<OrderProgress[]>([]);
   const [searchParams, setSearchParams] = useState({
     poNo: '',
@@ -135,12 +55,146 @@ export default function OrderProgressPage() {
   });
   const [loading, setLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedPo, setSelectedPo] = useState<OrderProgress | null>(null);
+  const [selectedPo, setSelectedPo] = useState<PurchaseOrderDTO | null>(null);
+
+  // 상태 표시명을 코드로 변환하는 함수
+  const statusDisplayToCode = (displayName: string): string => {
+    const statusMap: Record<string, string> = {
+      '저장': 'T',
+      '확정': 'D',
+      '승인': 'A',
+      '발주전송': 'S',
+      '납품완료': 'C',
+      '종결': 'E',
+    };
+    return statusMap[displayName] || displayName;
+  };
+
+  // 상태 코드를 표시명으로 변환하는 함수
+  const statusCodeToDisplay = (code: string): string => {
+    const statusMap: Record<string, string> = {
+      'T': '저장',
+      'D': '확정',
+      'A': '승인',
+      'S': '발주전송',
+      'C': '납품완료',
+      'E': '종결',
+    };
+    return statusMap[code] || code;
+  };
+
+  // PurchaseOrderDTO를 OrderProgress 형식으로 변환
+  const transformToOrderProgress = (orders: PurchaseOrderDTO[]): OrderProgress[] => {
+    const result: OrderProgress[] = [];
+    orders.forEach((order) => {
+      // items가 없으면 헤더 정보만 표시 (빈 품목으로)
+      if (!order.items || order.items.length === 0) {
+        result.push({
+          poNo: order.poNo || '',
+          poName: order.poName || '',
+          purchaseType: order.purchaseType || '',
+          buyer: order.purchaseManager || '',
+          progressStatus: mapStatusToProgressStatus(order.status || ''),
+          vendorCode: order.vendorCode || '',
+          vendorName: order.vendorName || '',
+          itemCode: '-',
+          itemName: '-',
+          spec: '-',
+          unit: '-',
+          unitPrice: 0,
+          orderQuantity: 0,
+          amount: Number(order.totalAmount || 0),
+          deliveryDate: '-',
+          paymentTerms: '-',
+          storageLocation: '-',
+          remark: order.remark || '',
+        });
+      } else {
+        // items가 있으면 각 품목별로 행 생성
+        order.items.forEach((item) => {
+          result.push({
+            poNo: order.poNo || '',
+            poName: order.poName || '',
+            purchaseType: order.purchaseType || '',
+            buyer: order.purchaseManager || '',
+            progressStatus: mapStatusToProgressStatus(order.status || ''),
+            vendorCode: order.vendorCode || '',
+            vendorName: order.vendorName || '',
+            itemCode: item.itemCode || '',
+            itemName: item.itemName || '',
+            spec: item.specification || '',
+            unit: item.unit || '',
+            unitPrice: Number(item.unitPrice || 0),
+            orderQuantity: item.orderQuantity || 0,
+            amount: Number(item.amount || 0),
+            deliveryDate: item.deliveryDate || '',
+            paymentTerms: item.paymentTerms || '',
+            storageLocation: item.storageLocation || '',
+            remark: item.remark || '',
+          });
+        });
+      }
+    });
+    return result;
+  };
+
+  // 상태 매핑 함수
+  const mapStatusToProgressStatus = (status: string): OrderProgress['progressStatus'] => {
+    const statusMap: Record<string, OrderProgress['progressStatus']> = {
+      '저장': 'SAVED',
+      '확정': 'CONFIRMED',
+      '승인': 'APPROVED',
+      '발주전송': 'SENT',
+      '납품완료': 'DELIVERED',
+      '종결': 'CLOSED',
+    };
+    return statusMap[status] || 'SAVED';
+  };
+
+  // API로 데이터 조회
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const result = await purchaseOrderApi.getList({
+        poNo: searchParams.poNo || undefined,
+        poName: searchParams.poName || undefined,
+        purchaseManager: searchParams.buyer || undefined,
+        vendorName: searchParams.vendor || undefined,
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
+        status: searchParams.status ? statusDisplayToCode(searchParams.status) : undefined,
+      });
+
+      // 안전한 처리: 배열이 아니거나 null인 경우 빈 배열로 처리
+      if (!result) {
+        console.warn('API 응답이 null입니다.');
+        setData([]);
+        return;
+      }
+
+      if (!Array.isArray(result)) {
+        console.error('API 응답이 배열이 아닙니다:', result);
+        setData([]);
+        return;
+      }
+
+      const transformedData = transformToOrderProgress(result);
+      setData(transformedData);
+    } catch (error) {
+      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기 로드
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSearch = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    await fetchData();
   };
 
   const handleReset = () => {
@@ -154,8 +208,6 @@ export default function OrderProgressPage() {
       status: '',
     });
   };
-
-
 
   const getStatusBadge = (status: OrderProgress['progressStatus']) => {
     const config = {
@@ -171,9 +223,14 @@ export default function OrderProgressPage() {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  const handleRowClick = (row: OrderProgress) => {
-    setSelectedPo(row);
-    setIsDetailModalOpen(true);
+  const handleRowClick = async (row: OrderProgress) => {
+    try {
+      const detail = await purchaseOrderApi.getDetail(row.poNo);
+      setSelectedPo(detail);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      alert('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
   };
 
   const columns: ColumnDef<OrderProgress>[] = [
@@ -204,24 +261,24 @@ export default function OrderProgressPage() {
     { key: 'itemName', header: '품목명', width: 150, align: 'left' },
     { key: 'spec', header: '규격', width: 150, align: 'left' },
     { key: 'unit', header: '단위', width: 60, align: 'center' },
-    { 
-      key: 'unitPrice', 
-      header: '단가', 
-      width: 100, 
+    {
+      key: 'unitPrice',
+      header: '단가',
+      width: 100,
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
-    { 
-      key: 'orderQuantity', 
-      header: '발주수량', 
-      width: 90, 
+    {
+      key: 'orderQuantity',
+      header: '발주수량',
+      width: 90,
       align: 'right',
       render: (value) => formatNumber(Number(value)),
     },
-    { 
-      key: 'amount', 
-      header: '금액', 
-      width: 120, 
+    {
+      key: 'amount',
+      header: '금액',
+      width: 120,
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
@@ -230,47 +287,104 @@ export default function OrderProgressPage() {
     { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
   ];
 
-  const handleApprove = () => {
-    const pendingItems = selectedRows.filter(r => r.progressStatus === 'PENDING');
-    if (pendingItems.length === 0) {
-      alert('승인대기 상태의 항목만 승인할 수 있습니다.');
+  const handleApprove = async () => {
+    const approvedItems = selectedRows.filter(
+      (r) => r.progressStatus === 'CONFIRMED' || r.progressStatus === 'SAVED'
+    );
+    if (approvedItems.length === 0) {
+      alert('확정 또는 저장 상태의 항목만 승인할 수 있습니다.');
       return;
     }
-    alert(`${pendingItems.length}건이 승인되었습니다.`);
-    setSelectedRows([]);
+
+    try {
+      const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
+      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.approve(poNo)));
+      alert(`${uniquePoNos.length}건이 승인되었습니다.`);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('승인 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
   };
 
-  const handleReject = () => {
-    const pendingItems = selectedRows.filter(r => r.progressStatus === 'PENDING');
-    if (pendingItems.length === 0) {
-      alert('승인대기 상태의 항목만 반려할 수 있습니다.');
+  const handleReject = async () => {
+    const approvedItems = selectedRows.filter(
+      (r) => r.progressStatus === 'CONFIRMED' || r.progressStatus === 'SAVED'
+    );
+    if (approvedItems.length === 0) {
+      alert('확정 또는 저장 상태의 항목만 반려할 수 있습니다.');
       return;
     }
     const reason = prompt('반려사유를 입력해주세요.');
     if (reason) {
-      alert(`${pendingItems.length}건이 반려되었습니다.`);
-      setSelectedRows([]);
+      try {
+        const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
+        await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.reject(poNo, reason)));
+        alert(`${uniquePoNos.length}건이 반려되었습니다.`);
+        setSelectedRows([]);
+        await fetchData();
+      } catch (error) {
+        alert('반려 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      }
     }
   };
 
-  const handleClose = () => {
-    const deliveredItems = selectedRows.filter(r => r.progressStatus === 'DELIVERED');
+  const handleClose = async () => {
+    const deliveredItems = selectedRows.filter((r) => r.progressStatus === 'DELIVERED');
     if (deliveredItems.length === 0) {
       alert('납품완료 상태의 항목만 종결할 수 있습니다.');
       return;
     }
-    alert(`${deliveredItems.length}건이 종결되었습니다.`);
-    setSelectedRows([]);
+    try {
+      const uniquePoNos = [...new Set(deliveredItems.map((item) => item.poNo))];
+      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.close(poNo)));
+      alert(`${uniquePoNos.length}건이 종결되었습니다.`);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('종결 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  const handleConfirm = async () => {
+    const savedItems = selectedRows.filter(
+      (r) => r.progressStatus === 'SAVED'
+    );
+    if (savedItems.length === 0) {
+      alert('저장 상태의 항목만 확정할 수 있습니다.');
+      return;
+    }
+    try {
+      const uniquePoNos = [...new Set(savedItems.map((item) => item.poNo))];
+      await Promise.all(
+        uniquePoNos.map((poNo) => purchaseOrderApi.confirm(poNo))
+      );
+      alert(`${uniquePoNos.length}건이 확정되었습니다.`);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
   };
 
   return (
     <div>
-      <PageHeader 
-        title="발주진행현황" 
+      <PageHeader
+        title="발주진행현황"
         subtitle="발주 진행 상황을 조회하고 관리합니다."
         icon={
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-6 h-6 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         }
       />
@@ -280,62 +394,83 @@ export default function OrderProgressPage() {
           label="PO번호"
           placeholder="PO번호 입력"
           value={searchParams.poNo}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, poNo: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, poNo: e.target.value }))
+          }
         />
         <Input
           label="발주명"
           placeholder="발주명 입력"
           value={searchParams.poName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, poName: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, poName: e.target.value }))
+          }
         />
         <Input
           label="발주담당자"
           placeholder="담당자명 입력"
           value={searchParams.buyer}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, buyer: e.target.value }))
+          }
         />
         <Input
           label="협력업체"
           placeholder="협력업체명 입력"
           value={searchParams.vendor}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, vendor: e.target.value }))
+          }
         />
         <DatePicker
           label="발주일자 시작"
           value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, startDate: e.target.value }))
+          }
         />
         <DatePicker
           label="발주일자 종료"
           value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, endDate: e.target.value }))
+          }
         />
         <Select
           label="진행상태"
           value={searchParams.status}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
+          onChange={(e) =>
+            setSearchParams((prev) => ({ ...prev, status: e.target.value }))
+          }
           options={[
             { value: '', label: '전체' },
-            { value: 'SAVED', label: '저장' },
-            { value: 'CONFIRMED', label: '확정' },
-            { value: 'PENDING', label: '승인대기' },
-            { value: 'APPROVED', label: '승인' },
-            { value: 'SENT', label: '발주전송' },
-            { value: 'DELIVERED', label: '납품완료' },
-            { value: 'CLOSED', label: '종결' },
+            { value: '저장', label: '저장' },
+            { value: '확정', label: '확정' },
+            { value: '승인', label: '승인' },
+            { value: '발주전송', label: '발주전송' },
+            { value: '납품완료', label: '납품완료' },
+            { value: '종결', label: '종결' },
           ]}
         />
       </SearchPanel>
 
-      <Card 
+      <Card
         title="발주진행 목록"
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="secondary">수정 및 확정</Button>
-            <Button variant="success" onClick={handleApprove}>승인</Button>
-            <Button variant="danger" onClick={handleReject}>반려</Button>
-            <Button variant="warning" onClick={handleClose}>종결</Button>
+            <Button variant="secondary" onClick={handleConfirm}>
+              수정 및 확정
+            </Button>
+            <Button variant="success" onClick={handleApprove}>
+              승인
+            </Button>
+            <Button variant="danger" onClick={handleReject}>
+              반려
+            </Button>
+            <Button variant="warning" onClick={handleClose}>
+              종결
+            </Button>
           </div>
         }
       >
@@ -369,7 +504,9 @@ export default function OrderProgressPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b">
               <h3 className="text-lg font-semibold">{selectedPo.poName}</h3>
-              {getStatusBadge(selectedPo.progressStatus)}
+              <Badge variant={selectedPo.status === '승인' ? 'green' : 'blue'}>
+                {selectedPo.status}
+              </Badge>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -387,7 +524,7 @@ export default function OrderProgressPage() {
               </div>
               <div>
                 <label className="text-sm text-gray-500">발주담당자</label>
-                <p className="font-medium">{selectedPo.buyer}</p>
+                <p className="font-medium">{selectedPo.purchaseManager}</p>
               </div>
             </div>
 
@@ -395,21 +532,39 @@ export default function OrderProgressPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="p-3 text-left text-sm font-semibold text-gray-600">품목코드</th>
-                    <th className="p-3 text-left text-sm font-semibold text-gray-600">품목명</th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">수량</th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">단가</th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">금액</th>
+                    <th className="p-3 text-left text-sm font-semibold text-gray-600">
+                      품목코드
+                    </th>
+                    <th className="p-3 text-left text-sm font-semibold text-gray-600">
+                      품목명
+                    </th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
+                      수량
+                    </th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
+                      단가
+                    </th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
+                      금액
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-t">
-                    <td className="p-3 text-sm">{selectedPo.itemCode}</td>
-                    <td className="p-3 text-sm">{selectedPo.itemName}</td>
-                    <td className="p-3 text-sm text-right">{formatNumber(selectedPo.orderQuantity)}</td>
-                    <td className="p-3 text-sm text-right">₩{formatNumber(selectedPo.unitPrice)}</td>
-                    <td className="p-3 text-sm text-right font-medium">₩{formatNumber(selectedPo.amount)}</td>
-                  </tr>
+                  {selectedPo.items?.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3 text-sm">{item.itemCode}</td>
+                      <td className="p-3 text-sm">{item.itemName}</td>
+                      <td className="p-3 text-sm text-right">
+                        {formatNumber(item.orderQuantity)}
+                      </td>
+                      <td className="p-3 text-sm text-right">
+                        ₩{formatNumber(Number(item.unitPrice))}
+                      </td>
+                      <td className="p-3 text-sm text-right font-medium">
+                        ₩{formatNumber(Number(item.amount))}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -418,7 +573,7 @@ export default function OrderProgressPage() {
               <div className="text-right">
                 <span className="text-gray-500 mr-4">총 발주금액:</span>
                 <span className="text-xl font-bold text-blue-600">
-                  ₩{formatNumber(selectedPo.amount)}
+                  ₩{formatNumber(Number(selectedPo.totalAmount || 0))}
                 </span>
               </div>
             </div>
@@ -428,4 +583,3 @@ export default function OrderProgressPage() {
     </div>
   );
 }
-
