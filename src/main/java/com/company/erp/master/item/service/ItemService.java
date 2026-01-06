@@ -44,13 +44,19 @@ public class ItemService {
         if(existsItem){
             throw new RuntimeException("동일한 이름과 규격의 품목이 존재합니다.");
         }
+
         // 2. 중복 아닐 시
+
         // 2-1. 체번 계산
         String itemCode = docNumService.generateDocNumStr(DocKey.IT);
         itemDetailDto.setItemCode(itemCode);
-        // 2-2. 품목 마스터 등록
+        // 2-2. enum 입력
+        itemDetailDto.setStatus(ItemStatus.REGISTERED.getValue());
+        itemDetailDto.setUseYn(ItemUse.YES.getValue());
+        itemDetailDto.setDeleteYn(ItemDelete.NO.getValue());
+        // 2-3. 품목 마스터 등록
         itemMapper.insertItemMTGL(itemDetailDto);
-        // 2-3. 품목 카테고리 등록
+        // 2-4. 품목 카테고리 등록
         itemMapper.insertItemMTGC(itemDetailDto);
     }
 }

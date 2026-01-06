@@ -151,8 +151,8 @@
                 #{createdBy},
                 now(),
                 #{modifiedBy},
-                'N',
-                'Y',
+                #{deleteYn},
+                #{useYn},
                 null,
                 #{itemName},
                 #{itemNameEn},
@@ -162,7 +162,7 @@
                 #{manufacturerName},
                 #{modelNo},
                 #{departmentCode},
-                'R',
+                #{status},
                 #{remark},
                 #{unit}
             )
@@ -188,11 +188,11 @@
                 #{createdBy},
                 now(),
                 #{modifiedBy},
-                'N',
+                #{deleteYn},
                 #{itemType},
                 #{categoryL},
                 #{categoryM},
                 #{categoryS},
-                'Y'
+                #{useYn}
     </insert>
 </mapper>
