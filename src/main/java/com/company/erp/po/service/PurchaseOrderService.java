@@ -88,6 +88,11 @@ public class PurchaseOrderService {
         dto.setStatus(PoStatusCode.toCode(dto.getStatus() != null ? dto.getStatus() : "저장"));
         dto.setPurchaseType(PurchaseType.toCode(dto.getPurchaseType() != null ? dto.getPurchaseType() : "일반"));
         
+        // items null 체크
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("발주 품목이 없습니다.");
+        }
+
         // 총액 계산
         BigDecimal totalAmount = dto.getItems().stream()
             .map(PurchaseOrderItemDTO::getAmount)
