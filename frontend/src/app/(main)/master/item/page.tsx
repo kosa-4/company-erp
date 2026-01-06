@@ -114,11 +114,10 @@ export default function ItemPage() {
       if(data.items.length > 0){
         setItems(data.items);
       }
-      
-      // console.log("data ", data.items);
 
     } catch (err) {
       console.error("품목 조회 중 오류 발생", err);
+      alert("데이터 로드에 실패하였습니다.");
     }
   };
 
@@ -143,18 +142,32 @@ export default function ItemPage() {
 
   const handleSearch = async () => {
     setLoading(true);
+    try{
+      // url로 파라미터 전달
+      const response = await fetch ("http://localhost:8080/items?" +
+        new URLSearchParams(searchParams)
+      );
+
+      
+      if (!response.ok) {
+        // 오류 발생 시 catch로 이동
+        throw new Error(`조회 실패 ${response.status}`);
+      }
+  
+      // item 리스트 입력
+      const data: {[k:string]: any} = await response.json(); // k = key
+      setItems(data.items);
+
+    } catch(error){
+      console.error("데이터 가져오는 중 오류 발생", error);
+      alert("데이터 로드에 실패하였습니다.");
+    } finally{
+
+      // 성공 여부 상관없이 실행      
+      await new Promise(resolve => setTimeout(resolve, 500)); // 검색 로딩
+      setLoading(false);
+    }    
     
-    // url로 파라미터 전달
-    const response = await fetch ("http://localhost:8080/items?" +
-      new URLSearchParams(searchParams)
-    );
-
-    // item 리스트 입력
-    const data: {[k:string]: any} = await response.json(); // k = key
-    setItems(data.items);
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
   };
 
   const handleReset = () => {
@@ -171,7 +184,7 @@ export default function ItemPage() {
     fetchItems();
   };
 
-  // 품목 상세 정보
+  /* 품목 상세 정보 */
 
   // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
   // onRowClick?: (row: T) => void; 함수에 담아 실행
@@ -271,6 +284,16 @@ export default function ItemPage() {
     
   ];
 
+  const handleSaveItem = async () => {
+    try{
+      const response = await fetch ("http://localhost:8080/items/new");
+
+      if(!response.ok){
+        throw new Error(`조회 실패 ${response.status}`)
+      }
+    }
+  }
+
   return (
     <div>
       <PageHeader 
@@ -336,7 +359,7 @@ export default function ItemPage() {
           </Button>
         }
       >
-        {/* items 요소 확인 */}
+        {/* items 요소 출력 */}
         
         <DataGrid
           columns={columns}
@@ -354,10 +377,7 @@ export default function ItemPage() {
       </section>
 
       {/* 상세/수정 모달 */}
-      {/* {(() => {
-          console.log(selectedItem?.itemCode)
-          return null;
-        })()} */}
+
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -374,9 +394,10 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <Input label="품목코드" value={selectedItem.itemCode} readOnly />
-              <Input label="품목명" value={selectedItem.itemName} />
-              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} />
-              <Select
+              <Input label="품목명" value={selectedItem.itemName} readOnly/>
+              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} readOnly/>
+              <Input label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
+              {/* <Select
                 label="품목종류"
                 value={selectedItem.itemType}
                 options={[
@@ -384,9 +405,10 @@ export default function ItemPage() {
                   { value: '사무용품', label: '사무용품' },
                   { value: '소모품', label: '소모품' },
                 ]}
-              />
-              <Input label="규격" value={selectedItem.spec || ''} />
-              <Select
+              /> */}
+              <Input label="규격" value={selectedItem.spec || ''} readOnly/>
+              <Input label="단위" value={selectedItem.unit || ''} readOnly/>
+              {/* <Select
                 label="단위"
                 value={selectedItem.unit}
                 options={[
@@ -394,15 +416,15 @@ export default function ItemPage() {
                   { value: 'SET', label: 'SET (세트)' },
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
-              />
-              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} />
-              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} />
-              <Input label="제조사명" value={selectedItem.manufacturerName || ''} />
-              <Input label="제조모델번호" value={selectedItem.modelNo || ''} />
+              /> */}
+              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/>
+              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
+              <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
+              <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
               <Input label="등록일자" value={selectedItem.createdAt} readOnly />
               <Input label="등록자" value={selectedItem.createdBy} readOnly />
             </div>
-            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} />
+            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
           </div>
         )}
       </Modal>
