@@ -124,7 +124,7 @@
     </select>
 
     <!--품목 마스터 테이블 등록-->
-    <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDtoDto">
+    <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGL(
                 REG_DATE AS createdAt,
