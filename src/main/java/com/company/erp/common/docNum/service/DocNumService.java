@@ -18,12 +18,12 @@ public class DocNumService {
     private static final LocalDate NO_RESET_DATE = LocalDate.of(1000, 1, 1);
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DocNumDTO generateDocNo(DocKey key) {
-        return generateDocNo(key, LocalDate.now());
+    public DocNumDTO generateDocNum(DocKey key) {
+        return generateDocNum(key, LocalDate.now());
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DocNumDTO generateDocNo(DocKey key, LocalDate baseDate) {
+    public DocNumDTO generateDocNum(DocKey key, LocalDate baseDate) {
 
         if (key == null) throw new IllegalArgumentException("DocKey는 필수로 넣어주세요.");
 
@@ -67,7 +67,7 @@ public class DocNumService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public String generateDocNoStr(DocKey key) {
-        return generateDocNo(key).getDocNo();
+    public String generateDocNumStr(DocKey key) {
+        return generateDocNum(key).getDocNo();
     }
 }
