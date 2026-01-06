@@ -52,7 +52,7 @@
     </select>
 
     <!--중복 검사-->
-    <select id="checkItemDuplicate" parameterType="com.company.erp.master.item.dto.ItemDto" resultType="int">
+    <select id="existsByNameAndSpec" parameterType="com.company.erp.master.item.dto.ItemDto" resultType="boolean">
         select
             COUNT(*)
         from
@@ -123,8 +123,8 @@
             i.ITEM_CD = #{code}
     </select>
 
-    <!--등록-->
-    <insert id="insertItem" parameterType="com.company.erp.master.item.dto.ItemDto">
+    <!--품목 마스터 테이블 등록-->
+    <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDtoDto">
         INSERT INTO
             MTGL(
                 REG_DATE AS createdAt,
@@ -162,9 +162,37 @@
                 #{manufacturerName},
                 #{modelNo},
                 #{departmentCode},
-                'r',
+                'R',
                 #{remark},
                 #{unit}
             )
+    </insert>
+    <!--품목 분류 테이블 등록-->
+    <insert id="insertItemMTGC" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
+        INSERT INTO
+            MTGC(
+                ITEM_CD AS itemCode,
+                REG_DATE AS createdAt,
+                REG_USER_ID AS createdBy,
+                MOD_DATE AS modifiedAt,
+                MOD_USER_ID AS modifiedBy,
+                DEL_FLAG AS deleteYn,
+                ITEM_CLS AS itemType,
+                ITEM_CLS1 AS categoryL,
+                ITEM_CLS2 AS categoryM,
+                ITEM_CLS3 AS categoryS,
+                USE_FLAG AS useYn
+        VALUES
+                #{itemCode},
+                now(),
+                #{createdBy},
+                now(),
+                #{modifiedBy},
+                'N',
+                #{itemType},
+                #{categoryL},
+                #{categoryM},
+                #{categoryS},
+                'Y'
     </insert>
 </mapper>

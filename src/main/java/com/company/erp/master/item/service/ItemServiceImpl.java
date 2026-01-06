@@ -37,14 +37,16 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public void registerItem(ItemDto itemDto) {
+    public void registerItem(ItemDetailDto itemDetailDto) {
         // 1. 중복 체크
-        int duplicateCount = itemMapper.checkItemDuplicate(itemDto);
-        if(duplicateCount > 0){
+        boolean existsItem = itemMapper.existsByNameAndSpec(itemDetailDto);
+        if(existsItem){
             throw new RuntimeException("동일한 이름과 규격의 품목이 존재합니다.");
         }
-
         // 2. 중복 아닐 시
-        itemMapper.insertItem(itemDto);
+        // 품목 마스터 등록
+        itemMapper.insertItemMTGL(itemDetailDto);
+        // 품목 카테고리 등록
+        itemMapper.insertItemMTGC(itemDetailDto);
     }
 }

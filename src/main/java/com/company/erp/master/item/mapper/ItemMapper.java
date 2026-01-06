@@ -15,12 +15,14 @@ public interface ItemMapper {
     List<ItemDetailDto> selectItemList(ItemSearchDto searchDto);
     // item 수 계산
     int countItemList(ItemSearchDto searchDto);
-    // 중복 item 체크
-    int checkItemDuplicate(ItemDto itemDto);
+    // 중복 여부 체크
+    boolean existsByNameAndSpec(ItemDto itemDto);
     // 상세 품목 조회
     ItemDetailDto selectItemByCode(String code);
 
     /* 등록 */
-    // item 등록
-    void insertItem(ItemDto itemDto);
+    // 품목 마스터 등록
+    void insertItemMTGL(ItemDetailDto itemDetailDto);
+    // 품목 카테고리 등록
+    void insertItemMTGC(ItemDetailDto itemDetailDto);
 }

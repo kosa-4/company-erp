@@ -13,5 +13,5 @@ public interface ItemService {
 
     /* 등록 */
     // 품목 등록
-    void registerItem(ItemDto itemDto);
+    void registerItem(ItemDetailDto itemDetailDto);
 }

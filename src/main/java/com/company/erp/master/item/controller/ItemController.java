@@ -51,9 +51,9 @@ public class ItemController {
 
     // 품목 등록
     @PostMapping("/new")
-    public ResponseEntity<String> registerItem(@RequestBody ItemDto itemDto){
+    public ResponseEntity<String> registerItem(@RequestBody ItemDetailDto itemDetailDto){
         try{
-            itemService.registerItem(itemDto);
+            itemService.registerItem(itemDetailDto);
             return ResponseEntity.ok().body("상품 등록이 완료되었습니다.");
         }
         catch (RuntimeException e){
