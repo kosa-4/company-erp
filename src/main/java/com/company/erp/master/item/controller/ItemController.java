@@ -5,13 +5,10 @@ import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
-import com.company.erp.master.item.service.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
