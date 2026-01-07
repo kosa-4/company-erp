@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId } from 'react';
 
 interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -11,7 +11,8 @@ interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
 
 const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
   ({ label, error, required = false, fullWidth = true, className = '', ...props }, ref) => {
-    const inputId = props.id || props.name || `date-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const inputId = props.id || props.name || generatedId;
 
     return (
       <div className={`${fullWidth ? 'w-full' : ''}`}>

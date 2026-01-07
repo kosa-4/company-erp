@@ -16,6 +16,9 @@ import {
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
+import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
+import { getErrorMessage } from '@/lib/api/error';
 
 interface PendingOrder {
   rfqNo: string;
@@ -75,6 +78,23 @@ export default function OrderPendingPage() {
   });
   const [loading, setLoading] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  
+  // 발주 작성 폼 상태
+  const [orderForm, setOrderForm] = useState({
+    poName: '',
+    poDate: new Date().toISOString().split('T')[0],
+    remark: '',
+    items: [] as Array<{
+      itemCode: string;
+      itemName: string;
+      unit: string;
+      orderQuantity: number;
+      unitPrice: number;
+      amount: number;
+      deliveryDate: string;
+      storageLocation: string;
+    }>,
+  });
 
   const handleSearch = async () => {
     setLoading(true);
@@ -91,8 +111,6 @@ export default function OrderPendingPage() {
       buyer: '',
     });
   };
-
-
 
   const columns: ColumnDef<PendingOrder>[] = [
     {
@@ -134,7 +152,110 @@ export default function OrderPendingPage() {
       alert('발주할 항목을 선택해주세요.');
       return;
     }
+    
+    // 선택된 항목을 발주 폼에 설정
+    const firstRow = selectedRows[0];
+    setOrderForm({
+      poName: firstRow.rfqName || '',
+      poDate: new Date().toISOString().split('T')[0],
+      remark: '',
+      items: selectedRows.map(row => ({
+        itemCode: row.rfqNo, // 실제로는 품목코드가 필요
+        itemName: row.rfqName,
+        unit: 'EA',
+        orderQuantity: row.quantity,
+        unitPrice: row.totalAmount / row.quantity,
+        amount: row.totalAmount,
+        deliveryDate: row.deliveryDate,
+        storageLocation: row.storageLocation,
+      })),
+    });
+    
     setIsOrderModalOpen(true);
+  };
+
+  const handleSaveOrder = async () => {
+    if (!orderForm.poName.trim()) {
+      alert('발주명을 입력해주세요.');
+      return;
+    }
+
+    if (orderForm.items.length === 0) {
+      alert('발주 품목이 없습니다.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const purchaseOrderData: PurchaseOrderDTO = {
+        poName: orderForm.poName,
+        poDate: orderForm.poDate,
+        vendorCode: selectedRows[0]?.vendorCode || '',
+        purchaseType: selectedRows[0]?.purchaseType || '일반',
+        remark: orderForm.remark,
+        items: orderForm.items.map(item => ({
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          unit: item.unit,
+          orderQuantity: item.orderQuantity,
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          deliveryDate: item.deliveryDate,
+          storageLocation: item.storageLocation,
+        } as PurchaseOrderItemDTO)),
+      };
+
+      await purchaseOrderApi.create(purchaseOrderData);
+      alert('발주가 저장되었습니다.');
+      setIsOrderModalOpen(false);
+      setSelectedRows([]);
+    } catch (error) {
+      alert('발주 저장 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!orderForm.poName.trim()) {
+      alert('발주명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const purchaseOrderData: PurchaseOrderDTO = {
+        poName: orderForm.poName,
+        poDate: orderForm.poDate,
+        vendorCode: selectedRows[0]?.vendorCode || '',
+        purchaseType: selectedRows[0]?.purchaseType || '일반',
+        status: '확정',
+        remark: orderForm.remark,
+        items: orderForm.items.map(item => ({
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          unit: item.unit,
+          orderQuantity: item.orderQuantity,
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          deliveryDate: item.deliveryDate,
+          storageLocation: item.storageLocation,
+        } as PurchaseOrderItemDTO)),
+      };
+
+      const created = await purchaseOrderApi.create(purchaseOrderData);
+      // 확정 처리
+      if (created.poNo) {
+        await purchaseOrderApi.confirm(created.poNo);
+      }
+      alert('발주가 확정되었습니다.');
+      setIsOrderModalOpen(false);
+      setSelectedRows([]);
+    } catch (error) {
+      alert('발주 확정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -220,12 +341,12 @@ export default function OrderPendingPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsOrderModalOpen(false)}>닫기</Button>
-            <Button variant="secondary">저장</Button>
-            <Button variant="primary" onClick={() => {
-              alert('발주가 확정되었습니다.');
-              setIsOrderModalOpen(false);
-              setSelectedRows([]);
-            }}>확정</Button>
+            <Button variant="secondary" onClick={handleSaveOrder} disabled={loading}>
+              {loading ? '저장 중...' : '저장'}
+            </Button>
+            <Button variant="primary" onClick={handleConfirmOrder} disabled={loading}>
+              {loading ? '확정 중...' : '확정'}
+            </Button>
           </>
         }
       >
@@ -233,11 +354,25 @@ export default function OrderPendingPage() {
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
             <Input label="PO번호" value="자동채번" readOnly />
-            <Input label="발주명" placeholder="발주명 입력" required />
-            <Input label="발주담당자" value="홍길동" readOnly />
+            <Input 
+              label="발주명" 
+              placeholder="발주명 입력" 
+              required 
+              value={orderForm.poName}
+              onChange={(e) => setOrderForm(prev => ({ ...prev, poName: e.target.value }))}
+            />
+            <Input label="발주담당자" value={selectedRows[0]?.buyer || ''} readOnly />
             <Input label="협력업체" value={selectedRows[0]?.vendorName || ''} readOnly />
-            <DatePicker label="발주일자" />
-            <Input label="발주총금액" value={`₩${formatNumber(selectedRows.reduce((sum, r) => sum + r.totalAmount, 0))}`} readOnly />
+            <DatePicker 
+              label="발주일자" 
+              value={orderForm.poDate}
+              onChange={(e) => setOrderForm(prev => ({ ...prev, poDate: e.target.value }))}
+            />
+            <Input 
+              label="발주총금액" 
+              value={`₩${formatNumber(selectedRows.reduce((sum, r) => sum + r.totalAmount, 0))}`} 
+              readOnly 
+            />
           </div>
 
           {/* 품목 목록 */}
@@ -257,7 +392,7 @@ export default function OrderPendingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedRows.map((row) => (
+                  {selectedRows.map((row, index) => (
                     <tr key={row.rfqNo} className="border-t">
                       <td className="p-3">{row.vendorName}</td>
                       <td className="p-3">{row.rfqName}</td>
@@ -267,6 +402,18 @@ export default function OrderPendingPage() {
                           type="number" 
                           defaultValue={row.quantity}
                           className="w-20 px-2 py-1 border rounded text-right"
+                          onChange={(e) => {
+                            const newQuantity = parseInt(e.target.value) || 0;
+                            const newAmount = (row.totalAmount / row.quantity) * newQuantity;
+                            setOrderForm(prev => ({
+                              ...prev,
+                              items: prev.items.map((item, i) => 
+                                i === index 
+                                  ? { ...item, orderQuantity: newQuantity, amount: newAmount }
+                                  : item
+                              ),
+                            }));
+                          }}
                         />
                       </td>
                       <td className="p-3 text-right font-medium">₩{formatNumber(row.totalAmount)}</td>
@@ -279,10 +426,15 @@ export default function OrderPendingPage() {
             </div>
           </div>
 
-          <Textarea label="비고" placeholder="비고 입력" rows={2} />
+          <Textarea 
+            label="비고" 
+            placeholder="비고 입력" 
+            rows={2}
+            value={orderForm.remark}
+            onChange={(e) => setOrderForm(prev => ({ ...prev, remark: e.target.value }))}
+          />
         </div>
       </Modal>
     </div>
   );
 }
-
