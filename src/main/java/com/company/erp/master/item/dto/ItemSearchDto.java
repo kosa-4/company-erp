@@ -12,7 +12,7 @@ public class ItemSearchDto extends ItemDto {
     private LocalDateTime endDate;
 
     // 페이징
-    private int page = 1;
+    private int page;
     private int pageSize = 5;
 
     // 가져올 행의 초기 인덱스(시작 위치) 계산
