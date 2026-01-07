@@ -127,6 +127,7 @@
     <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGL(
+                ITEM_CD,
                 REG_DATE,
                 REG_USER_ID,
                 MOD_DATE,
@@ -147,8 +148,9 @@
                 UNIT_CD
             )
             VALUES(
+                #{itemCode},
                 now(),
-                #{createdBy},
+                "임시 추후 수정",
                 now(),
                 #{modifiedBy},
                 #{deleteYn},
@@ -182,10 +184,11 @@
                 ITEM_CLS2,
                 ITEM_CLS3,
                 USE_FLAG
-        VALUES
+            )
+        VALUES(
                 #{itemCode},
                 now(),
-                #{createdBy},
+                "임시 추후 수정",
                 now(),
                 #{modifiedBy},
                 #{deleteYn},
@@ -194,5 +197,6 @@
                 #{categoryM},
                 #{categoryS},
                 #{useYn}
+            )
     </insert>
 </mapper>

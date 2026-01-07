@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 //@Mapper // MERGE 시 삭제
-public interface xItemMapper {
+public interface ItemMapper {
     /* 조회 */
     // item 조회
     List<ItemDetailDto> selectItemList(ItemSearchDto searchDto);
