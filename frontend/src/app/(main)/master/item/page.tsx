@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -16,93 +16,125 @@ import {
 } from '@/components/ui';
 import { Item, ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { data } from 'framer-motion/client';
+import { Console } from 'console';
+import { useRouter } from 'next/navigation';
+import { register } from 'module';
 
 // Mock 데이터
-const mockItems: Item[] = [
-  {
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    itemNameEn: 'Laptop 15 inch',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '컴퓨터',
-    categoryS: '노트북',
-    spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-    unit: 'EA',
-    unitPrice: 1500000,
-    manufacturerCode: 'MFR001',
-    manufacturerName: '삼성전자',
-    modelNo: 'NT950XCR-A58A',
-    useYn: 'Y',
-    remark: '업무용 표준 사양',
-    createdAt: '2024-01-15',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    itemNameEn: '27 inch Monitor',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '모니터',
-    categoryS: 'LED 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    unitPrice: 350000,
-    manufacturerCode: 'MFR002',
-    manufacturerName: 'LG전자',
-    modelNo: '27QN880',
-    useYn: 'Y',
-    createdAt: '2024-01-20',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0003',
-    itemName: '무선 키보드 마우스 세트',
-    itemNameEn: 'Wireless Keyboard Mouse Set',
-    itemType: '전자기기',
-    categoryL: '전산장비',
-    categoryM: '주변기기',
-    categoryS: '입력장치',
-    spec: '무선 2.4GHz, USB 수신기',
-    unit: 'SET',
-    unitPrice: 45000,
-    manufacturerCode: 'MFR003',
-    manufacturerName: '로지텍',
-    modelNo: 'MK540',
-    useYn: 'Y',
-    createdAt: '2024-02-01',
-    createdBy: 'admin',
-  },
-  {
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    itemNameEn: 'A4 Copy Paper',
-    itemType: '사무용품',
-    categoryL: '사무용품',
-    categoryM: '용지',
-    categoryS: '복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    unitPrice: 25000,
-    manufacturerCode: 'MFR004',
-    manufacturerName: '한솔제지',
-    modelNo: 'COPY-A4-80',
-    useYn: 'Y',
-    createdAt: '2024-02-10',
-    createdBy: 'admin',
-  },
-];
+// const mockItems: Item[] = [
+//   {
+//     itemCode: 'ITM-2024-0001',
+//     itemName: '노트북 (15인치)',
+//     itemNameEn: 'Laptop 15 inch',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '컴퓨터',
+//     categoryS: '노트북',
+//     spec: '15.6" FHD, i7, 16GB, 512GB SSD',
+//     unit: 'EA',
+//     unitPrice: 1500000,
+//     manufacturerCode: 'MFR001',
+//     manufacturerName: '삼성전자',
+//     modelNo: 'NT950XCR-A58A',
+//     useYn: 'Y',
+//     remark: '업무용 표준 사양',
+//     createdAt: '2024-01-15',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0002',
+//     itemName: '27인치 모니터',
+//     itemNameEn: '27 inch Monitor',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '모니터',
+//     categoryS: 'LED 모니터',
+//     spec: '27" QHD, IPS, 75Hz',
+//     unit: 'EA',
+//     unitPrice: 350000,
+//     manufacturerCode: 'MFR002',
+//     manufacturerName: 'LG전자',
+//     modelNo: '27QN880',
+//     useYn: 'Y',
+//     createdAt: '2024-01-20',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0003',
+//     itemName: '무선 키보드 마우스 세트',
+//     itemNameEn: 'Wireless Keyboard Mouse Set',
+//     itemType: '전자기기',
+//     categoryL: '전산장비',
+//     categoryM: '주변기기',
+//     categoryS: '입력장치',
+//     spec: '무선 2.4GHz, USB 수신기',
+//     unit: 'SET',
+//     unitPrice: 45000,
+//     manufacturerCode: 'MFR003',
+//     manufacturerName: '로지텍',
+//     modelNo: 'MK540',
+//     useYn: 'Y',
+//     createdAt: '2024-02-01',
+//     createdBy: 'admin',
+//   },
+//   {
+//     itemCode: 'ITM-2024-0004',
+//     itemName: 'A4 복사용지',
+//     itemNameEn: 'A4 Copy Paper',
+//     itemType: '사무용품',
+//     categoryL: '사무용품',
+//     categoryM: '용지',
+//     categoryS: '복사용지',
+//     spec: 'A4, 80g, 500매/박스',
+//     unit: 'BOX',
+//     unitPrice: 25000,
+//     manufacturerCode: 'MFR004',
+//     manufacturerName: '한솔제지',
+//     modelNo: 'COPY-A4-80',
+//     useYn: 'Y',
+//     createdAt: '2024-02-10',
+//     createdBy: 'admin',
+//   },
+// ];
 
 export default function ItemPage() {
-  const [items] = useState<Item[]>(mockItems);
+  const [items, setItems] = useState<Item[]>([]);
+  const fetchItems = async () => {
+  try {
+      const response = await fetch("http://localhost:8080/items");
+
+      if (!response.ok) {
+        console.error("품목 조회 실패", response.statusText);
+        return;
+      }
+
+      const data: {[k:string]: any} = await response.json();
+
+      // 검색 결과가 존재할 때만 리스트 출력
+      if(data.items.length > 0){
+        setItems(data.items);
+      }
+
+    } catch (err) {
+      console.error("품목 조회 중 오류 발생", err);
+      alert("데이터 로드에 실패하였습니다.");
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+    
+  }, []); 
+
+  // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
     itemName: '',
     useYn: '',
     startDate: '',
     endDate: '',
-    manufacturer: '',
+    manufacturerName: '',
   });
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -111,29 +143,80 @@ export default function ItemPage() {
 
   const handleSearch = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    try{
+      // url로 파라미터 전달
+      const response = await fetch ("http://localhost:8080/items?" +
+        new URLSearchParams(searchParams)
+      );
+
+      
+      if (!response.ok) {
+        // 오류 발생 시 catch로 이동
+        throw new Error(`조회 실패 ${response.status}`);
+      }
+  
+      // item 리스트 입력
+      const data: {[k:string]: any} = await response.json(); // k = key
+      setItems(data.items);
+
+    } catch(error){
+      console.error("데이터 가져오는 중 오류 발생", error);
+      alert("데이터 로드에 실패하였습니다.");
+    } finally{
+
+      // 성공 여부 상관없이 실행      
+      await new Promise(resolve => setTimeout(resolve, 500)); // 검색 로딩
+      setLoading(false);
+    }    
+    
   };
 
   const handleReset = () => {
+    // 검색창 초기화
     setSearchParams({
       itemCode: '',
       itemName: '',
       useYn: '',
       startDate: '',
       endDate: '',
-      manufacturer: '',
+      manufacturerName: '',
     });
+    // 리스트 초기화
+    fetchItems();
   };
 
-  const handleRowClick = (item: Item) => {
-    setSelectedItem(item);
-    setIsDetailModalOpen(true);
+  /* 품목 상세 정보 */
+
+  // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
+  // onRowClick?: (row: T) => void; 함수에 담아 실행
+  const handleRowClick = async (item: Item) => {
+    
+    try{
+      // 1. 선택한 컬럼의 code 설정
+      const code = {itemCode: item.itemCode};
+  
+      // 2. back 연동
+      const response = await fetch("http://localhost:8080/items?" +
+        new URLSearchParams(code)
+      )
+  
+      // 2-1 네트워크 오류 체크
+      if(!response.ok) throw new Error("서버 응답 오류");
+  
+      const data: {[k:string]: any} = await response.json(); // k = key
+
+      // 3. 데이터 존재 시 처리
+      setSelectedItem(data.items[0]); // 첫번쨰 값만 입력
+      setIsDetailModalOpen(true);     
+           
+    } catch(error){
+      console.error("데이터를 가져오는 중 오류 발생:", error);
+      alert("데이터 로드에 실패했습니다.");
+    }
   };
-
-
-
+  
   const columns: ColumnDef<Item>[] = [
+    // response 키와 일치 필요
     {
       key: 'itemCode',
       header: '품목코드',
@@ -187,7 +270,47 @@ export default function ItemPage() {
       width: 120,
       align: 'left',
     },
+    // {
+    //   key: 'reg_DATE',
+    //   header: '등록 일자',
+    //   width: 120,
+    //   align: 'left',
+    // },
+    // {
+    //   key: 'use_FLAG',
+    //   header: '사용 여부',
+    //   width: 100,
+    //   align: 'center',
+    // },
+    
   ];
+  /* 등록 */
+  const registerForm = useRef<HTMLFormElement>(null);
+  const handleSaveItem = async () => {
+    if(!registerForm.current){
+      return;
+    }
+    const formData = new FormData(registerForm.current);
+    const data = Object.fromEntries(formData.entries());
+    console.log("data ", data);
+    try{
+      const response = await fetch ("http://localhost:8080/items/new",{
+        method: 'POST',
+        headers:{
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if(!response.ok){
+        throw new Error(`입력 실패 ${response.status}`)
+      };
+      alert('저장되었습니다.');
+    } catch(error){
+      console.error("데이터 입력 중 오류 발생:", error);
+      alert();
+    }
+  };
 
   return (
     <div>
@@ -237,8 +360,8 @@ export default function ItemPage() {
         <Input
           label="제조사"
           placeholder="제조사명 입력"
-          value={searchParams.manufacturer}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, manufacturer: e.target.value }))}
+          value={searchParams.manufacturerName}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, manufacturerName: e.target.value }))}
         />
       </SearchPanel>
 
@@ -246,7 +369,7 @@ export default function ItemPage() {
         title="품목 목록"
         padding={false}
         actions={
-          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+          <Button variant="primary" onClick={() =>  setIsCreateModalOpen(true)}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -254,6 +377,8 @@ export default function ItemPage() {
           </Button>
         }
       >
+        {/* items 요소 출력 */}
+        
         <DataGrid
           columns={columns}
           data={items}
@@ -262,9 +387,15 @@ export default function ItemPage() {
           loading={loading}
           emptyMessage="등록된 품목이 없습니다."
         />
+        
       </Card>
 
+      <section>
+
+      </section>
+
       {/* 상세/수정 모달 */}
+
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -281,9 +412,10 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <Input label="품목코드" value={selectedItem.itemCode} readOnly />
-              <Input label="품목명" value={selectedItem.itemName} />
-              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} />
-              <Select
+              <Input label="품목명" value={selectedItem.itemName} readOnly/>
+              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} readOnly/>
+              <Input label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
+              {/* <Select
                 label="품목종류"
                 value={selectedItem.itemType}
                 options={[
@@ -291,9 +423,10 @@ export default function ItemPage() {
                   { value: '사무용품', label: '사무용품' },
                   { value: '소모품', label: '소모품' },
                 ]}
-              />
-              <Input label="규격" value={selectedItem.spec || ''} />
-              <Select
+              /> */}
+              <Input label="규격" value={selectedItem.spec || ''} readOnly/>
+              <Input label="단위" value={selectedItem.unit || ''} readOnly/>
+              {/* <Select
                 label="단위"
                 value={selectedItem.unit}
                 options={[
@@ -301,19 +434,19 @@ export default function ItemPage() {
                   { value: 'SET', label: 'SET (세트)' },
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
-              />
-              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} />
-              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} />
-              <Input label="제조사명" value={selectedItem.manufacturerName || ''} />
-              <Input label="제조모델번호" value={selectedItem.modelNo || ''} />
+              /> */}
+              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/>
+              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
+              <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
+              <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
               <Input label="등록일자" value={selectedItem.createdAt} readOnly />
               <Input label="등록자" value={selectedItem.createdBy} readOnly />
             </div>
-            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} />
+            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
           </div>
         )}
       </Modal>
-
+      
       {/* 등록 모달 */}
       <Modal
         isOpen={isCreateModalOpen}
@@ -324,61 +457,71 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              alert('저장되었습니다.');
+              handleSaveItem();              
               setIsCreateModalOpen(false);
             }}
             confirmText="저장"
           />
         }
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="품목코드" value="자동채번" readOnly />
-            <Input label="품목명" placeholder="품목명 입력" required />
-            <Input label="품목명(영문)" placeholder="영문 품목명 입력" />
-            <Select
-              label="품목종류"
-              placeholder="선택"
-              required
-              options={[
-                { value: '전자기기', label: '전자기기' },
-                { value: '사무용품', label: '사무용품' },
-                { value: '소모품', label: '소모품' },
-              ]}
-            />
-            <Input label="규격" placeholder="규격 입력" />
-            <Select
-              label="단위"
-              placeholder="선택"
-              required
-              options={[
-                { value: 'EA', label: 'EA (개)' },
-                { value: 'SET', label: 'SET (세트)' },
-                { value: 'BOX', label: 'BOX (박스)' },
-              ]}
-            />
-            <Input label="단가" type="number" placeholder="0" />
-            <Input label="제조사코드" placeholder="제조사코드 입력" />
-            <Input label="제조사명" placeholder="제조사명 입력" />
-            <Input label="제조모델번호" placeholder="모델번호 입력" />
-          </div>
-          
-          <div className="flex gap-6">
-            <label className="text-sm font-medium text-gray-700">사용여부</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
-                <span className="text-sm">사용</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="N" className="text-blue-600" />
-                <span className="text-sm">미사용</span>
-              </label>
+        <form ref={registerForm}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Input name='itemCode' label="품목코드" placeholder="자동채번" readOnly />
+              <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
+              <Select
+                name='itemType'
+                label="품목종류"
+                placeholder="선택"
+                required
+                options={[
+                  { value: '전자기기', label: '전자기기' },
+                  { value: '사무용품', label: '사무용품' },
+                  { value: '소모품', label: '소모품' },
+                ]}
+              />
+              <Input name='itemNameEn' label="품목 대분류" placeholder="영문 품목명 입력" />
+              <Input name='itemNameEn' label="품목 중분류" placeholder="영문 품목명 입력" />
+              <Input name='itemNameEn' label="품목 소분류" placeholder="영문 품목명 입력" />
+              
+              <Input name='spec' label="중지 사유" placeholder="규격 입력" />
+              <Input name='spec' label="등록 일자" placeholder="규격 입력" />
+              <Input name='spec' label="규격" placeholder="규격 입력" />
+              <Select
+                name='unit'
+                label="단위"
+                placeholder="선택"
+                required
+                options={[
+                  { value: 'EA', label: 'EA (개)' },
+                  { value: 'SET', label: 'SET (세트)' },
+                  { value: 'BOX', label: 'BOX (박스)' },
+                ]}
+              />
+              {/* <Input name='unit' label="단가" type="number" placeholder="0" /> */}
+              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" />
+              <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
+              <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
+              <Input name='modelNo' label="등록자" placeholder="모델번호 입력" />
             </div>
+            <div className="flex gap-6">
+              <label className="text-sm font-medium text-gray-700">사용여부</label>
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" checked/>
+                      <span className="text-sm">사용</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="useYn" value="N" className="text-blue-600" disabled/>
+                      <span className="text-sm">미사용</span>
+                    </label>
+                  </div>
+                </div>              
+              
+            <Textarea label="비고" placeholder="비고 입력" rows={3} />
           </div>
-
-          <Textarea label="비고" placeholder="비고 입력" rows={3} />
-        </div>
+        </form>
       </Modal>
     </div>
   );
