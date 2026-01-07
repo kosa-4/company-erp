@@ -284,6 +284,7 @@ export default function ItemPage() {
     // },
     
   ];
+  /* 등록 */
   const registerForm = useRef<HTMLFormElement>(null);
   const handleSaveItem = async () => {
     if(!registerForm.current){
@@ -304,9 +305,10 @@ export default function ItemPage() {
       if(!response.ok){
         throw new Error(`입력 실패 ${response.status}`)
       };
+      alert('저장되었습니다.');
     } catch(error){
       console.error("데이터 입력 중 오류 발생:", error);
-      alert("데이터 입력에 실패했습니다.");
+      alert();
     }
   };
 
@@ -455,8 +457,7 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              handleSaveItem();
-              alert('저장되었습니다.');
+              handleSaveItem();              
               setIsCreateModalOpen(false);
             }}
             confirmText="저장"
@@ -480,6 +481,12 @@ export default function ItemPage() {
                   { value: '소모품', label: '소모품' },
                 ]}
               />
+              <Input name='itemNameEn' label="품목 대분류" placeholder="영문 품목명 입력" />
+              <Input name='itemNameEn' label="품목 중분류" placeholder="영문 품목명 입력" />
+              <Input name='itemNameEn' label="품목 소분류" placeholder="영문 품목명 입력" />
+              
+              <Input name='spec' label="중지 사유" placeholder="규격 입력" />
+              <Input name='spec' label="등록 일자" placeholder="규격 입력" />
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
                 name='unit'
@@ -496,22 +503,22 @@ export default function ItemPage() {
               <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" />
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
+              <Input name='modelNo' label="등록자" placeholder="모델번호 입력" />
             </div>
-            
             <div className="flex gap-6">
               <label className="text-sm font-medium text-gray-700">사용여부</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
-                  <span className="text-sm">사용</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="radio" name="useYn" value="N" className="text-blue-600" />
-                  <span className="text-sm">미사용</span>
-                </label>
-              </div>
-            </div>
-
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" checked/>
+                      <span className="text-sm">사용</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="useYn" value="N" className="text-blue-600" disabled/>
+                      <span className="text-sm">미사용</span>
+                    </label>
+                  </div>
+                </div>              
+              
             <Textarea label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
