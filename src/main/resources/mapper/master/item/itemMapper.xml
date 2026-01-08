@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.item.mapper.ItemMapper">
+    <!--조회-->
+    <select id="selectItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="com.company.erp.master.item.dto.ItemDetailDto">
+        SELECT
+            i.ITEM_CD AS itemCode,
+            i.ITEM_NM AS itemName,
+            id.ITEM_CLS AS itemType,
+            i.ITEM_SPEC AS spec,
+            i.UNIT_CD AS unit,
+            COALESCE(pr.UNIT_PRC, 0) AS unitPrice,
+            i.MAKER_CD AS manufacturerCode,
+            i.MAKER_NM AS manufacturerName
+        FROM
+            MTGL i
+        LEFT JOIN
+            PRDT pr
+        ON
+            i.ITEM_CD = pr.ITEM_CD
+        LEFT JOIN
+            MTGC id
+        ON
+            i.ITEM_CD = id.ITEM_CD
+
+        <where>
+            i.DEL_FLAG = 'N'
+            <if test="itemCode != null and itemCode != ''">
+                AND i.ITEM_CD LIKE CONCAT('%', #{itemCode}, '%')
+            </if>
+            <if test="itemName != null and itemName != ''">
+                AND i.ITEM_NM LIKE CONCAT('%', #{itemName}, '%')
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND i.USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND i.REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND i.REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="manufacturerName != null and manufacturerName != ''">
+                AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
+            </if>
+        </where>
+        ORDER BY
+            i.ITEM_CD ASC
+        LIMIT #{pageSize}
+        OFFSET #{offset} <!--알아서 get으로 호출-->
+    </select>
+
+    <!--중복 검사-->
+    <select id="existsByNameAndSpec" parameterType="com.company.erp.master.item.dto.ItemDetailDto" resultType="boolean">
+        select
+            COUNT(*)
+        from
+            MTGL
+        where
+            ITEM_NM = #{itemName}
+        AND
+            ITEM_SPEC = #{spec}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--개수-->
+    <select id="countItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="int">
+        SELECT
+            COUNT(*) AS item_count
+        FROM
+            MTGL
+        <where>
+            DEL_FLAG = 'N'
+            <if test="itemCode != null and itemCode != ''">
+                AND ITEM_CD LIKE CONCAT('%', #{itemCode}, '%')
+            </if>
+            <if test="itemName != null and itemName != ''">
+                AND ITEM_NM LIKE CONCAT('%', #{itemName}, '%')
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="manufacturerName != null and manufacturerName != ''">
+                AND MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!--상세 품목 조회-->
+    <select id="selectItemByCode" parameterType="String" resultType="com.company.erp.master.item.dto.ItemDetailDto">
+        SELECT
+            i.ITEM_CD AS itemCode,
+            i.ITEM_NM AS itemName,
+            i.ITEM_NM_ENG AS itemNameEn,
+            id.ITEM_CLS AS itemType,
+            i.ITEM_SPEC AS spec,
+            i.UNIT_CD AS unit,
+            i.MAKER_CD AS manufacturerCode,
+            i.MAKER_NM AS manufacturerName,
+            i.MODEL_NO AS modelNo,
+            i.USE_FLAG AS useYn,
+            i.RMK AS remark
+        FROM
+            MTGL i
+        LEFT JOIN
+            PRDT pr
+        ON
+            i.ITEM_CD = pr.ITEM_CD
+        LEFT JOIN
+            MTGC id
+        ON
+            i.ITEM_CD = id.ITEM_CD
+        WHERE
+            i.ITEM_CD = #{code}
+    </select>
+
+    <!--품목 마스터 테이블 저장-->
+    <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
+        INSERT INTO
+            MTGL(
+                ITEM_CD,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USE_FLAG,
+                USE_RMK,
+                ITEM_NM,
+                ITEM_NM_ENG,
+                ITEM_SPEC,
+                ITEM_RMK,
+                MAKER_CD,
+                MAKER_NM,
+                MODEL_NO,
+                DEPT_CD ,
+                PROGRESS_CD,
+                RMK,
+                UNIT_CD
+            )
+            VALUES(
+                #{itemCode},
+                now(),
+                "임시 추후 수정",
+                now(),
+                #{modifiedBy},
+                #{deleteYn},
+                #{useYn},
+                null,
+                #{itemName},
+                #{itemNameEn},
+                #{spec},
+                #{itemRemark},
+                #{manufacturerCode},
+                #{manufacturerName},
+                #{modelNo},
+                #{departmentCode},
+                #{status},
+                #{remark},
+                #{unit}
+            )
+    </insert>
+    <!--품목 분류 테이블 저장-->
+    <insert id="insertItemMTGC" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
+        INSERT INTO
+            MTGC(
+                ITEM_CD,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                ITEM_CLS,
+                ITEM_CLS1,
+                ITEM_CLS2,
+                ITEM_CLS3,
+                USE_FLAG
+            )
+        VALUES(
+                #{itemCode},
+                now(),
+                "임시 추후 수정",
+                now(),
+                #{modifiedBy},
+                #{deleteYn},
+                #{itemType},
+                #{categoryL},
+                #{categoryM},
+                #{categoryS},
+                #{useYn}
+            )
+    </insert>
+</mapper>
