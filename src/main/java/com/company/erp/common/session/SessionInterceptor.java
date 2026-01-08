@@ -36,7 +36,10 @@ public class SessionInterceptor implements HandlerInterceptor {
             sessionRegistry.unregisterBySessionId(sessionId);
 
             // 세션 종료
-            safeInvalidate(session);
+            try {
+                session.invalidate();
+            } catch (IllegalStateException ignore) {
+            }
 
             return reject(response, SessionConst.STATUS_MULTI_LOGIN); // 441
         }
@@ -64,13 +67,5 @@ public class SessionInterceptor implements HandlerInterceptor {
     private boolean reject(HttpServletResponse response, int status) {
         response.setStatus(status);
         return false;
-    }
-
-    // 세션 종료
-    private void safeInvalidate(HttpSession session) {
-        try {
-            session.invalidate();
-        } catch (IllegalStateException ignore) {
-        }
     }
 }
