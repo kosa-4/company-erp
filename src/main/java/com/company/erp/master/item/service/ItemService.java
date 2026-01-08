@@ -32,11 +32,12 @@ public class ItemService {
         );
     }
 
+    /* 상세 품목 조회 */
     public ItemDetailDto getItemDetail(String code) {
         return itemMapper.selectItemByCode(code);
     }
 
-    /* 등록 */
+    /* 저장 */
     @Transactional
     public void registerItem(ItemDetailDto itemDetailDto) {
         // 1. 중복 체크
