@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -14,12 +14,14 @@ import {
   Modal,
   ModalFooter
 } from '@/components/ui';
+
 import { Item, ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
 import { Console } from 'console';
 import { useRouter } from 'next/navigation';
 import { register } from 'module';
+import { Router } from 'lucide-react';
 
 // Mock 데이터
 // const mockItems: Item[] = [
@@ -98,34 +100,47 @@ import { register } from 'module';
 //   },
 // ];
 
+interface ItemDetail{
+  itemCode: string,
+  itemName: string,
+  itemNameEn: string,
+  itemType: string,
+  spec: string,
+  unit: string,
+  unitPrice: number,
+  manufacturerName: string,
+  manufacturerCode: string,
+  modelNo: string,
+  createdAt: string,
+  createdBy: string,
+  remark: string,
+}
+
 export default function ItemPage() {
   const [items, setItems] = useState<Item[]>([]);
-  const fetchItems = async () => {
-  try {
-      const response = await fetch("http://localhost:8080/items");
+  // const fetchItems = async () => {
+  // try {
+  //     const response = await fetch("http://localhost:8080/items");
 
-      if (!response.ok) {
-        console.error("품목 조회 실패", response.statusText);
-        return;
-      }
+  //     if (!response.ok) {
+  //       console.error("품목 조회 실패", response.statusText);
+  //       return;
+  //     }
 
-      const data: {[k:string]: any} = await response.json();
+  //     const data: {[k:string]: any} = await response.json();
 
-      // 검색 결과가 존재할 때만 리스트 출력
-      if(data.items.length > 0){
-        setItems(data.items);
-      }
+  //     // 검색 결과가 존재할 때만 리스트 출력
+  //     if(data.items.length > 0){
+  //       setItems(data.items);
+  //     }
 
-    } catch (err) {
-      console.error("품목 조회 중 오류 발생", err);
-      alert("데이터 로드에 실패하였습니다.");
-    }
-  };
+  //   } catch (err) {
+  //     console.error("품목 조회 중 오류 발생", err);
+  //     alert("데이터 로드에 실패하였습니다.");
+  //   }
+  // };
 
-  useEffect(() => {
-    fetchItems();
-    
-  }, []); 
+  
 
   // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
@@ -135,41 +150,64 @@ export default function ItemPage() {
     startDate: '',
     endDate: '',
     manufacturerName: '',
+    page: String(1),
   });
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(String(1));
+  const [totalPage, setTotalPage] = useState("");
 
-  const handleSearch = async () => {
+  /* 검색 및 조회 */
+
+  const fetchItems = async () => {
     setLoading(true);
     try{
-      // url로 파라미터 전달
+      // 1. url로 파라미터 전달
       const response = await fetch ("http://localhost:8080/items?" +
         new URLSearchParams(searchParams)
       );
-
+      // console.log("searchparam ", searchParams.page);
       
       if (!response.ok) {
         // 오류 발생 시 catch로 이동
         throw new Error(`조회 실패 ${response.status}`);
       }
   
-      // item 리스트 입력
+      // 2. item 리스트 입력
       const data: {[k:string]: any} = await response.json(); // k = key
       setItems(data.items);
+      setTotalPage(data.totalPage);
 
     } catch(error){
       console.error("데이터 가져오는 중 오류 발생", error);
       alert("데이터 로드에 실패하였습니다.");
     } finally{
 
-      // 성공 여부 상관없이 실행      
+      // 3. 성공 여부 상관없이 실행      
       await new Promise(resolve => setTimeout(resolve, 500)); // 검색 로딩
       setLoading(false);
     }    
     
   };
+
+  const handlePrevPage = () => {
+    const prevPage = (Number(page) - 1).toString()
+    setPage(prevPage);  
+    setSearchParams(prev => ({...prev, page: prevPage}));
+  }
+
+  const handleNextPage = () => {
+    const nextPage = (Number(page) + 1).toString()
+    setPage(nextPage);  
+    setSearchParams(prev => ({...prev, page: nextPage}));
+  }
+
+  const handleSearchList = () => {
+    setPage(String(1));
+    setSearchParams(prev => ({...prev, page:page}));
+  }
 
   const handleReset = () => {
     // 검색창 초기화
@@ -180,35 +218,41 @@ export default function ItemPage() {
       startDate: '',
       endDate: '',
       manufacturerName: '',
+      page: '',
     });
     // 리스트 초기화
     fetchItems();
   };
 
-  /* 품목 상세 정보 */
+  useEffect(() => {
+    fetchItems();
+    
+  }, [searchParams.page]); 
 
+  
+
+  /* 품목 상세 정보 */
+    
+  const handleRowClick = async (item: Item) => {
   // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
   // onRowClick?: (row: T) => void; 함수에 담아 실행
-  const handleRowClick = async (item: Item) => {
-    
     try{
       // 1. 선택한 컬럼의 code 설정
-      const code = {itemCode: item.itemCode};
-  
+      const code = item.itemCode;
+      
       // 2. back 연동
-      const response = await fetch("http://localhost:8080/items?" +
-        new URLSearchParams(code)
-      )
-  
+      const response = await fetch(`http://localhost:8080/items/${code}`)
+      
       // 2-1 네트워크 오류 체크
       if(!response.ok) throw new Error("서버 응답 오류");
   
-      const data: {[k:string]: any} = await response.json(); // k = key
-
+      const data = await response.json(); // k = key
+      
       // 3. 데이터 존재 시 처리
-      setSelectedItem(data.items[0]); // 첫번쨰 값만 입력
+      setSelectedItem(data);
+       
       setIsDetailModalOpen(true);     
-           
+      console.log("type of data ",typeof data);
     } catch(error){
       console.error("데이터를 가져오는 중 오류 발생:", error);
       alert("데이터 로드에 실패했습니다.");
@@ -285,15 +329,21 @@ export default function ItemPage() {
     
   ];
   /* 등록 */
-  const registerForm = useRef<HTMLFormElement>(null);
+  const registerForm = useRef<HTMLFormElement>(null); // form 태그 첨조
+
+  // 품목 등록
   const handleSaveItem = async () => {
+    
+    // form 태그가 null일 시 -> 오류 방지
     if(!registerForm.current){
       return;
     }
+    // 1. form 데이터 저장
     const formData = new FormData(registerForm.current);
     const data = Object.fromEntries(formData.entries());
-    console.log("data ", data);
+    
     try{
+      // form 데이터 전송
       const response = await fetch ("http://localhost:8080/items/new",{
         method: 'POST',
         headers:{
@@ -311,6 +361,30 @@ export default function ItemPage() {
       alert();
     }
   };
+  
+  // 체번 표시
+  // const router = useRouter();
+  
+  // const [docNum, setDocNum] = useState<string>("");
+  // const fetchDocNum = async () => {
+    
+  //   // 데이터 요청
+  //   try{
+  //     const response = await fetch("http://localhost:8080/items/docNum");
+
+  //     if(!response.ok){
+  //       console.error("문서 번호 조회 실패", response.statusText);
+  //     }
+      
+  //     const data = await response.text(); // json 형태가 아니라 text 형태일 시
+  //     // console.log("data ",data);
+  //     setDocNum(data);
+  //     router.push(`?code=${data}`);
+  //   } catch(err){
+  //     console.error("문서 번호 조회 중 오류 발생", err);
+  //     alert("문서 번호 로드에 실패하였습니다.");
+  //   }
+  // };
 
   return (
     <div>
@@ -324,7 +398,7 @@ export default function ItemPage() {
         }
       />
 
-      <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
+      <SearchPanel onSearch={handleSearchList} onReset={handleReset} loading={loading}>
         <Input
           label="품목코드"
           placeholder="품목코드 입력"
@@ -369,7 +443,9 @@ export default function ItemPage() {
         title="품목 목록"
         padding={false}
         actions={
-          <Button variant="primary" onClick={() =>  setIsCreateModalOpen(true)}>
+          <Button variant="primary" onClick={() =>  {
+              setIsCreateModalOpen(true); 
+            }}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -377,8 +453,7 @@ export default function ItemPage() {
           </Button>
         }
       >
-        {/* items 요소 출력 */}
-        
+        {/* items 요소 출력 */}        
         <DataGrid
           columns={columns}
           data={items}
@@ -386,16 +461,10 @@ export default function ItemPage() {
           onRowClick={handleRowClick}
           loading={loading}
           emptyMessage="등록된 품목이 없습니다."
-        />
-        
+        />        
       </Card>
 
-      <section>
-
-      </section>
-
       {/* 상세/수정 모달 */}
-
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -447,7 +516,7 @@ export default function ItemPage() {
         )}
       </Modal>
       
-      {/* 등록 모달 */}
+      {/* 등록 모달 */}      
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -467,7 +536,7 @@ export default function ItemPage() {
         <form ref={registerForm}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <Input name='itemCode' label="품목코드" placeholder="자동채번" readOnly />
+              <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
               <Select
@@ -481,12 +550,12 @@ export default function ItemPage() {
                   { value: '소모품', label: '소모품' },
                 ]}
               />
-              <Input name='itemNameEn' label="품목 대분류" placeholder="영문 품목명 입력" />
-              <Input name='itemNameEn' label="품목 중분류" placeholder="영문 품목명 입력" />
-              <Input name='itemNameEn' label="품목 소분류" placeholder="영문 품목명 입력" />
+              <Input name='categoryL' label="품목 대분류" placeholder="품목 대분류 입력" />
+              <Input name='categoryM' label="품목 중분류" placeholder="품목 중분류 입력" />
+              <Input name='categoryS' label="품목 소분류" placeholder="품목 소분류 입력" />
               
-              <Input name='spec' label="중지 사유" placeholder="규격 입력" />
-              <Input name='spec' label="등록 일자" placeholder="규격 입력" />
+              <Input name='stopReason' label="중지 사유" placeholder="중지 사유" readOnly/>
+              <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/>
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
                 name='unit'
@@ -499,17 +568,17 @@ export default function ItemPage() {
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
               />
-              {/* <Input name='unit' label="단가" type="number" placeholder="0" /> */}
-              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" />
+              
+              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/>
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
-              <Input name='modelNo' label="등록자" placeholder="모델번호 입력" />
+              <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
             </div>
             <div className="flex gap-6">
               <label className="text-sm font-medium text-gray-700">사용여부</label>
                 <div className="flex gap-4">
                     <label className="flex items-center gap-2">
-                      <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" checked/>
+                      <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600"/>
                       <span className="text-sm">사용</span>
                     </label>
                     <label className="flex items-center gap-2">
@@ -519,11 +588,28 @@ export default function ItemPage() {
                   </div>
                 </div>              
               
-            <Textarea label="비고" placeholder="비고 입력" rows={3} />
+            <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
       </Modal>
+      {/* {console.log(page)} */}
+      <section className='mt-8'>
+        <div className='flex justify-center gap-x-4'>
+          <button
+            onClick={handlePrevPage}
+            disabled={page === "1"}
+          >
+            &lt;
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={page === totalPage}
+          >
+            &gt;
+          </button>
+            
+        </div>
+      </section>
     </div>
   );
 }
-
