@@ -1,5 +1,8 @@
 package com.company.erp.master.item.controller;
 
+import com.company.erp.common.docNum.dto.DocNumDTO;
+import com.company.erp.common.docNum.service.DocKey;
+import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.master.item.dto.ItemDetailDto;
 import com.company.erp.master.item.dto.ItemDto;
 
@@ -17,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 public class ItemController {
     @Autowired
     ItemService itemService;
+    @Autowired
+    DocNumService docNumService;
 
     // 품목 현황 조회 및 검색
     @GetMapping
@@ -36,9 +41,9 @@ public class ItemController {
 
     // 상세 품목 조회
     @GetMapping("/{code}")
-    public ResponseEntity<ItemDto> getItemDetail(@PathVariable String code){
+    public ResponseEntity<ItemDetailDto> getItemDetail(@PathVariable String code){
         try{
-            ItemDto item = itemService.getItemDetail(code);
+            ItemDetailDto item = itemService.getItemDetail(code);
 
             return ResponseEntity.ok().body(item);
         } catch (Exception e) {
@@ -47,7 +52,19 @@ public class ItemController {
         }
     }
 
-    // 품목 등록
+    // 품목 등록 시 체번 표시
+//    @GetMapping("/docNum")
+//    public ResponseEntity<String> getDocNum(){
+//        try{
+//            String docNum = docNumService.generateDocNumStr(DocKey.IT);
+//            return ResponseEntity.ok().body(docNum);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
+
+    // 품목 저장
     @PostMapping("/new")
     public ResponseEntity<String> registerItem(@RequestBody ItemDetailDto itemDetailDto){
         try{

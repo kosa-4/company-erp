@@ -103,7 +103,6 @@
             id.ITEM_CLS AS itemType,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
-            COALESCE(pr.UNIT_PRC, 0) AS unitPrice, <!--단가 정보가 없을 시 0으로 표시-->
             i.MAKER_CD AS manufacturerCode,
             i.MAKER_NM AS manufacturerName,
             i.MODEL_NO AS modelNo,
@@ -123,7 +122,7 @@
             i.ITEM_CD = #{code}
     </select>
 
-    <!--품목 마스터 테이블 등록-->
+    <!--품목 마스터 테이블 저장-->
     <insert id="insertItemMTGL" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGL(
@@ -169,7 +168,7 @@
                 #{unit}
             )
     </insert>
-    <!--품목 분류 테이블 등록-->
+    <!--품목 분류 테이블 저장-->
     <insert id="insertItemMTGC" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
             MTGC(

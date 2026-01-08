@@ -20,9 +20,9 @@ public interface ItemMapper {
     // 상세 품목 조회
     ItemDetailDto selectItemByCode(String code);
 
-    /* 등록 */
-    // 품목 마스터 등록
+    /* 저장 */
+    // 품목 마스터 저장
     void insertItemMTGL(ItemDetailDto itemDetailDto);
-    // 품목 카테고리 등록
+    // 품목 카테고리 저장
     void insertItemMTGC(ItemDetailDto itemDetailDto);
 }
