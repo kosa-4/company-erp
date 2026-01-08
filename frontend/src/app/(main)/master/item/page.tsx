@@ -235,18 +235,6 @@ export default function ItemPage() {
       width: 120,
       align: 'left',
     },
-    // {
-    //   key: 'reg_DATE',
-    //   header: '등록 일자',
-    //   width: 120,
-    //   align: 'left',
-    // },
-    // {
-    //   key: 'use_FLAG',
-    //   header: '사용 여부',
-    //   width: 100,
-    //   align: 'center',
-    // },
     
   ];
   /* 저장 */
