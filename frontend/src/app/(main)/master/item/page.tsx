@@ -168,7 +168,7 @@ export default function ItemPage() {
       const response = await fetch ("http://localhost:8080/items?" +
         new URLSearchParams(searchParams)
       );
-      console.log("searchparam ", searchParams.page);
+      // console.log("searchparam ", searchParams.page);
       
       if (!response.ok) {
         // 오류 발생 시 catch로 이동
@@ -204,10 +204,10 @@ export default function ItemPage() {
     setSearchParams(prev => ({...prev, page: nextPage}));
   }
 
-  useEffect(() => {
-    fetchItems();
-    
-  }, [searchParams]); 
+  const handleSearchList = () => {
+    setPage(String(1));
+    setSearchParams(prev => ({...prev, page:page}));
+  }
 
   const handleReset = () => {
     // 검색창 초기화
@@ -218,11 +218,18 @@ export default function ItemPage() {
       startDate: '',
       endDate: '',
       manufacturerName: '',
-      page: String(1),
+      page: '',
     });
     // 리스트 초기화
     fetchItems();
   };
+
+  useEffect(() => {
+    fetchItems();
+    
+  }, [searchParams.page]); 
+
+  
 
   /* 품목 상세 정보 */
     
@@ -391,7 +398,7 @@ export default function ItemPage() {
         }
       />
 
-      <SearchPanel onSearch={fetchItems} onReset={handleReset} loading={loading}>
+      <SearchPanel onSearch={handleSearchList} onReset={handleReset} loading={loading}>
         <Input
           label="품목코드"
           placeholder="품목코드 입력"
@@ -446,8 +453,7 @@ export default function ItemPage() {
           </Button>
         }
       >
-        {/* items 요소 출력 */}
-        
+        {/* items 요소 출력 */}        
         <DataGrid
           columns={columns}
           data={items}
@@ -455,16 +461,10 @@ export default function ItemPage() {
           onRowClick={handleRowClick}
           loading={loading}
           emptyMessage="등록된 품목이 없습니다."
-        />
-        
+        />        
       </Card>
 
-      <section>
-
-      </section>
-
       {/* 상세/수정 모달 */}
-
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -613,4 +613,3 @@ export default function ItemPage() {
     </div>
   );
 }
-
