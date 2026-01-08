@@ -23,83 +23,6 @@ import { useRouter } from 'next/navigation';
 import { register } from 'module';
 import { Router } from 'lucide-react';
 
-// Mock 데이터
-// const mockItems: Item[] = [
-//   {
-//     itemCode: 'ITM-2024-0001',
-//     itemName: '노트북 (15인치)',
-//     itemNameEn: 'Laptop 15 inch',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '컴퓨터',
-//     categoryS: '노트북',
-//     spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-//     unit: 'EA',
-//     unitPrice: 1500000,
-//     manufacturerCode: 'MFR001',
-//     manufacturerName: '삼성전자',
-//     modelNo: 'NT950XCR-A58A',
-//     useYn: 'Y',
-//     remark: '업무용 표준 사양',
-//     createdAt: '2024-01-15',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0002',
-//     itemName: '27인치 모니터',
-//     itemNameEn: '27 inch Monitor',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '모니터',
-//     categoryS: 'LED 모니터',
-//     spec: '27" QHD, IPS, 75Hz',
-//     unit: 'EA',
-//     unitPrice: 350000,
-//     manufacturerCode: 'MFR002',
-//     manufacturerName: 'LG전자',
-//     modelNo: '27QN880',
-//     useYn: 'Y',
-//     createdAt: '2024-01-20',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0003',
-//     itemName: '무선 키보드 마우스 세트',
-//     itemNameEn: 'Wireless Keyboard Mouse Set',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '주변기기',
-//     categoryS: '입력장치',
-//     spec: '무선 2.4GHz, USB 수신기',
-//     unit: 'SET',
-//     unitPrice: 45000,
-//     manufacturerCode: 'MFR003',
-//     manufacturerName: '로지텍',
-//     modelNo: 'MK540',
-//     useYn: 'Y',
-//     createdAt: '2024-02-01',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0004',
-//     itemName: 'A4 복사용지',
-//     itemNameEn: 'A4 Copy Paper',
-//     itemType: '사무용품',
-//     categoryL: '사무용품',
-//     categoryM: '용지',
-//     categoryS: '복사용지',
-//     spec: 'A4, 80g, 500매/박스',
-//     unit: 'BOX',
-//     unitPrice: 25000,
-//     manufacturerCode: 'MFR004',
-//     manufacturerName: '한솔제지',
-//     modelNo: 'COPY-A4-80',
-//     useYn: 'Y',
-//     createdAt: '2024-02-10',
-//     createdBy: 'admin',
-//   },
-// ];
-
 interface ItemDetail{
   itemCode: string,
   itemName: string,
@@ -138,9 +61,7 @@ export default function ItemPage() {
   //     console.error("품목 조회 중 오류 발생", err);
   //     alert("데이터 로드에 실패하였습니다.");
   //   }
-  // };
-
-  
+  // };  
 
   // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
@@ -328,18 +249,19 @@ export default function ItemPage() {
     // },
     
   ];
-  /* 등록 */
-  const registerForm = useRef<HTMLFormElement>(null); // form 태그 첨조
+  /* 저장 */
+  // form 태그 내용 저장
+  const saveForm = useRef<HTMLFormElement>(null); 
 
-  // 품목 등록
-  const handleSaveItem = async () => {
+  // 품목 저장
+  const saveItem = async () => {
     
     // form 태그가 null일 시 -> 오류 방지
-    if(!registerForm.current){
+    if(!saveForm.current){
       return;
     }
     // 1. form 데이터 저장
-    const formData = new FormData(registerForm.current);
+    const formData = new FormData(saveForm.current);
     const data = Object.fromEntries(formData.entries());
     
     try{
@@ -358,7 +280,6 @@ export default function ItemPage() {
       alert('저장되었습니다.');
     } catch(error){
       console.error("데이터 입력 중 오류 발생:", error);
-      alert();
     }
   };
   
@@ -526,14 +447,14 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              handleSaveItem();              
+              saveItem();              
               setIsCreateModalOpen(false);
             }}
             confirmText="저장"
           />
         }
       >
-        <form ref={registerForm}>
+        <form ref={saveForm}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
