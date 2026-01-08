@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface CategoryMapper {
     List<CategoryDto> selectItemClassList();
-    void insertCategory(CategoryDto categoryDto);
-    boolean existsCategory(CategoryDto categoryDto);
+    void insertCategory(List<CategoryDto> categoryDto);
+    int existsCategory(List<CategoryDto> categoryDto);
+    boolean existsParentCategory(String parentCls);
 }

@@ -15,7 +15,7 @@
     </select>
 
     <!--품목 분류 저장-->
-    <insert id="insertCategory" parameterType="com.company.erp.master.category.dto.CategoryDto">
+    <insert id="insertCategory" parameterType="java.util.List">
         INSERT INTO
             MTCA(
                 ITEM_CLS,
@@ -29,31 +29,49 @@
                 DEL_FLAG,
                 USE_FLAG
             )
-        VALUES(
-            #{itemCls},
-            #{parentItemCls},
-            #{itemLvl},
-            #{itemClsNm},
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.itemCls},
+            #{item.parentItemCls},
+            #{item.itemLvl},
+            #{item.itemClsNm},
             NOW(),
             "추후 수정",
             NULL,
             NULL,
             "N",
             "Y"
-        )
+            )
+        </foreach>
     </insert>
 
-    <!--중복 체크-->
-    <select id="existsCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">
+    <!--대량 중복 체크-->
+    <select id="existsCategory" parameterType="java.util.List" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            MTCA
+        WHERE
+        <foreach collection="list" item="item" separator="OR">
+            (
+                ITEM_CLS_NM = #{item.itemClsNm}
+            AND
+                PARENT_ITEM_CLS = #{item.parentItemCls} <!--같은 부모 내에서 중복 되는 경우 부모가 다르면 상관 없음-->
+            AND
+                ITEM_LVL = #{item.itemLvl}
+            )
+        </foreach>
+
+    </select>
+
+    <!--부모 코드 존재 여부 체크-->
+    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">
         SELECT
             COUNT(*)
         FROM
             MTCA
         WHERE
             ITEM_CLS_NM = #{itemClsNm}
-        AND
-            PARENT_ITEM_CLS = #{parentItemCls} <!--같은 부모 내에서 중복 되는 경우 부모가 다르면 상관 없음-->
-        AND
-            ITEM_LVL = #{itemLvl}
     </select>
 </mapper>

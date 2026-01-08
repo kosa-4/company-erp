@@ -30,7 +30,7 @@ public class CategoryController {
 
     /* 카테고리 저장 */
     @PostMapping("/new")
-    public ResponseEntity<String> registerCategory(@RequestBody CategoryDto categoryDto){
+    public ResponseEntity<String> registerCategory(@RequestBody List<CategoryDto> categoryDto){
         try{
 //            System.out.println("response: " + categoryDto.getI);
             categoryService.registerCategory(categoryDto);
