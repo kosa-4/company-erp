@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.category.mapper.CategoryMapper">
+    <!--품목 분류 조회-->
+    <select id="selectItemClassList" resultType="com.company.erp.master.category.dto.CategoryDto">
+        SELECT
+            ITEM_CLS AS itemCls,
+            ITEM_CLS_NM AS itemClsNm,
+            USE_FLAG AS useFlag
+        FROM
+            MTCA
+        WHERE
+            ITEM_LVL = 0
+    </select>
+
+    <!--품목 분류 저장-->
+    <insert id="insertCategory" parameterType="com.company.erp.master.category.dto.CategoryDto">
+        INSERT INTO
+            MTCA(
+                ITEM_CLS,
+                PARENT_ITEM_CLS,
+                ITEM_LVL,
+                ITEM_CLS_NM,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USE_FLAG
+            )
+        VALUES(
+            #{itemCls},
+            #{parentItemCls},
+            #{itemLvl},
+            #{itemClsNm},
+            NOW(),
+            "추후 수정",
+            NULL,
+            NULL,
+            "N",
+            "Y"
+        )
+    </insert>
+
+    <!--중복 체크-->
+    <select id="existsCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">
+        SELECT
+            COUNT(*)
+        FROM
+            MTCA
+        WHERE
+            ITEM_CLS_NM = #{itemClsNm}
+        AND
+            PARENT_ITEM_CLS = #{parentItemCls} <!--같은 부모 내에서 중복 되는 경우 부모가 다르면 상관 없음-->
+        AND
+            ITEM_LVL = #{itemLvl}
+    </select>
+</mapper>

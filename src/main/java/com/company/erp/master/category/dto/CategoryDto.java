@@ -1,7 +1,10 @@
-package com.company.erp.master.item.dto;
+package com.company.erp.master.category.dto;
+
+import lombok.Data;
 
 import java.time.LocalDate;
 
+@Data
 public class CategoryDto {
     private String itemCls;
     private String parentItemCls;
