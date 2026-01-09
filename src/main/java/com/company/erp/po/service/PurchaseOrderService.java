@@ -10,6 +10,8 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.company.erp.common.docNum.service.DocKey;
+import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.po.dto.PurchaseOrderDTO;
 import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.*;
@@ -22,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class PurchaseOrderService {
 
     private final PurchaseOrderMapper purchaseOrderMapper;
-    private final DocNoService docNoService;
+    private final DocNumService docNumService;
 
     // 목록 조회
     public List<PurchaseOrderDTO> getList(
@@ -39,16 +41,6 @@ public class PurchaseOrderService {
         params.put("status", status);
         
         List<PurchaseOrderDTO> list = purchaseOrderMapper.selectList(params);
-
-        // 상태값 변환 (코드 -> 표시명)
-        list.forEach(dto -> {
-            if (dto.getStatus() != null) {
-                dto.setStatus(PoStatusCode.toDisplayName(dto.getStatus()));
-            }
-            if (dto.getPurchaseType() != null) {
-                dto.setPurchaseType(PurchaseType.toDisplayName(dto.getPurchaseType()));
-            }
-        });
         return list;
     }
 
@@ -62,13 +54,6 @@ public class PurchaseOrderService {
         List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(poNo);
         header.setItems(items);
 
-        // 상태값 변환
-        if (header.getStatus() != null) {
-            header.setStatus(PoStatusCode.toDisplayName(header.getStatus()));
-        }
-        if (header.getPurchaseType() != null) {
-            header.setPurchaseType(PurchaseType.toDisplayName(header.getPurchaseType()));
-        }
         return header;   
     }
 
@@ -76,18 +61,13 @@ public class PurchaseOrderService {
     @Transactional
     public PurchaseOrderDTO create(PurchaseOrderDTO dto) {
         // 발주번호 생성
-        String poNo = docNoService.generatePoNo();
+        String poNo = docNumService.generateDocNumStr(DocKey.PO);
         dto.setPoNo(poNo);
         
         // poDate가 null 이면 오늘 날짜로 설정
         if (dto.getPoDate() == null) {
             dto.setPoDate(LocalDate.now());
-        }
-        
-        // 상태값 변환 (표시명 -> 코드)
-        dto.setStatus(PoStatusCode.toCode(dto.getStatus() != null ? dto.getStatus() : "저장"));
-        dto.setPurchaseType(PurchaseType.toCode(dto.getPurchaseType() != null ? dto.getPurchaseType() : "일반"));
-        
+        }        
         // items null 체크
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new IllegalArgumentException("발주 품목이 없습니다.");
@@ -131,7 +111,6 @@ public class PurchaseOrderService {
         }
 
         dto.setPoNo(poNo);
-        dto.setPurchaseType(PurchaseType.toCode(dto.getPurchaseType()));
         
         // 총액 재계산
         BigDecimal totalAmount = dto.getItems().stream()
@@ -187,7 +166,7 @@ public class PurchaseOrderService {
     public Boolean reject(String poNo, String rejectReason) {
         // 반려 상태는 별도 처리 필요 (현재는 상태 변경만)
         String currentUserId = getCurrentUserId();
-        return updateStatus(poNo, PoStatusCode.SAVED.getCode(), currentUserId);
+        return updateStatus(poNo, PoStatusCode.REJECTED.getCode(), currentUserId);
     }
 
     // 발주 전송
