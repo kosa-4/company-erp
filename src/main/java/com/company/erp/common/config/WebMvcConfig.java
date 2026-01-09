@@ -14,18 +14,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final SessionInterceptor sessionInterceptor;
 
-    /**
-     * CORS 허용 Origin 목록
-     *
-     * - application.properties 에서 설정:
-     *     app.cors.allowed-origins=http://localhost:3000
-     *
-     * - 환경변수로 override 가능:
-     *     APP_CORS_ALLOWED_ORIGINS=http://localhost:3001
-     *
-     * - 값이 없으면 기본값(http://localhost:3000) 사용
-     * - 여러 개를 허용하려면 콤마(,)로 구분
-     */
+    /*
+     properties에서 app.cors.allowed-origins 부분
+     여러 개 허용 시 콤마로 구분: http://localhost:3000,http://localhost:3001
+    */
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
@@ -33,16 +25,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         this.sessionInterceptor = sessionInterceptor;
     }
 
-    /**
-     * 인터셉터 등록
-     *
-     * - 모든 요청("/**")에 대해 SessionInterceptor를 적용한다.
-     * - /error, /favicon.ico 는 스프링 기본 처리 경로이므로 제외한다.
-     *
-     * - 로그인 / 회원가입과 같이
-     *   "세션 없이 접근 가능한 API"는
-     *   컨트롤러 메서드에 @SessionIgnore 로 제외 처리한다.
-     */
+    /*
+     모든 요청(/**)에 대해 SessionInterceptor를 적용 (스프링 기본 처리 경로 제외)
+     로그인, 회원가입과 같이 세션 필요 없는 모듈의 컨트롤러에서 @SessionIgnore 필수
+    */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(sessionInterceptor)
@@ -53,16 +39,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 );
     }
 
-    /**
-     * CORS 전역 설정
-     *
-     * - 프론트엔드(Next.js)에서 오는 요청을 허용하기 위함
-     * - 세션 기반 인증을 사용하므로 allowCredentials(true) 필수
-     *
-     * 주의:
-     * - allowedOrigins 에 "*" 사용 불가 (쿠키 사용 시 스펙상 불가능)
-     * - 반드시 정확한 Origin(host + port)을 명시해야 한다.
-     */
+    // 프론트엔드에서 오는 요청을 허용하기 위함(리액트, 뷰 등 백엔드랑 서버 다른 프론트)
     @Override
     public void addCorsMappings(CorsRegistry registry) {
 
@@ -72,7 +49,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .filter(s -> !s.isEmpty())      // 빈 값 제거
                 .toArray(String[]::new);
 
-        registry.addMapping("/**")               // 모든 API 경로에 CORS 적용
+        registry.addMapping("/**")     // 모든 API 경로에 CORS 적용
                 .allowedOrigins(origins)         // 허용할 프론트 Origin 목록
                 .allowedMethods(
                         "GET", "POST", "PUT",
