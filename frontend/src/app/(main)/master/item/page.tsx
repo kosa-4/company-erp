@@ -86,7 +86,7 @@ export default function ItemPage() {
     setLoading(true);
     try{
       // 1. url로 파라미터 전달
-      const response = await fetch ("http://localhost:8080/items?" +
+      const response = await fetch ("/api/v1/items?" +
         new URLSearchParams(searchParams)
       );
       // console.log("searchparam ", searchParams.page);
@@ -162,7 +162,7 @@ export default function ItemPage() {
       const code = item.itemCode;
       
       // 2. back 연동
-      const response = await fetch(`http://localhost:8080/items/${code}`)
+      const response = await fetch(`/api/v1/items/${code}`)
       
       // 2-1 네트워크 오류 체크
       if(!response.ok) throw new Error("서버 응답 오류");
@@ -254,7 +254,7 @@ export default function ItemPage() {
     
     try{
       // form 데이터 전송
-      const response = await fetch ("http://localhost:8080/items/new",{
+      const response = await fetch ("/api/v1/items/new",{
         method: 'POST',
         headers:{
           'Content-type': 'application/json',
