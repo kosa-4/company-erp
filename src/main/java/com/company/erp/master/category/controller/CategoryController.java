@@ -1,6 +1,7 @@
 package com.company.erp.master.category.controller;
 
 import com.company.erp.master.category.dto.CategoryDto;
+import com.company.erp.master.category.dto.CategoryListDto;
 import com.company.erp.master.category.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -9,18 +10,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:3000")
+//@CrossOrigin(origins = "http://localhost:3000")
 @RestController
-@RequestMapping("/categories")
+@RequestMapping("/api/v1/categories")
 public class CategoryController {
     @Autowired
     CategoryService categoryService;
 
     /* class 조회 */
-    @GetMapping
-    public ResponseEntity<List<CategoryDto>> getItemClassList(){
+    @GetMapping()
+    public ResponseEntity<List<CategoryListDto>> getCategoryList(@ModelAttribute CategoryListDto  categoryListDto) {
         try{
-            List<CategoryDto> classes = categoryService.getItemClassList();
+            List<CategoryListDto> classes = categoryService.getCategoryList(categoryListDto);
             return ResponseEntity.ok().body(classes);
         } catch(Exception e){
             e.printStackTrace();
