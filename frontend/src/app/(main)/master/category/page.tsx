@@ -87,7 +87,7 @@ export default function CategoryPage() {
     const saveCategory = async () => {
         // 값 여부 확인
         const data = inputDatas.filter(d => d.itemCls.trim() !== '' && d.itemClsNm.trim() !== '');
-
+        
         if(data.length === 0){
             alert("저장할 데이터를 입력해주세요");
             return;
@@ -101,7 +101,7 @@ export default function CategoryPage() {
                 },
                 body: JSON.stringify(data),
             });
-
+            console.log("response ", response);
             if(!response.ok){
                 throw new Error(`입력 실패 ${response.status}`)
             };
@@ -110,7 +110,7 @@ export default function CategoryPage() {
             // 4-2.input 초기화
             setInputDatas([]);
             // 4-3. 카테고리 출력
-            // fetchCategories();
+            fetchCategories(parentCls);
         } catch(err){
             console.error("데이터 입력 중 오류 발생", err);
         }
