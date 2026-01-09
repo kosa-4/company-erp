@@ -25,7 +25,7 @@ interface OrderProgress {
   poName: string;
   purchaseType: string;
   buyer: string;
-  progressStatus: 'SAVED' | 'CONFIRMED' | 'PENDING' | 'APPROVED' | 'SENT' | 'DELIVERED' | 'CLOSED';
+  progressStatus: 'SAVED' | 'CONFIRMED' | 'REJECTED' | 'PENDING' | 'APPROVED' | 'SENT' | 'DELIVERED' | 'CLOSED';
   vendorCode: string;
   vendorName: string;
   itemCode: string;
@@ -57,24 +57,12 @@ export default function OrderProgressPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDTO | null>(null);
 
-  // 상태 표시명을 코드로 변환하는 함수
-  const statusDisplayToCode = (displayName: string): string => {
-    const statusMap: Record<string, string> = {
-      '저장': 'T',
-      '확정': 'D',
-      '승인': 'A',
-      '발주전송': 'S',
-      '납품완료': 'C',
-      '종결': 'E',
-    };
-    return statusMap[displayName] || displayName;
-  };
-
-  // 상태 코드를 표시명으로 변환하는 함수
+  // 코드 -> 표시명
   const statusCodeToDisplay = (code: string): string => {
     const statusMap: Record<string, string> = {
       'T': '저장',
       'D': '확정',
+      'R': '반려',
       'A': '승인',
       'S': '발주전송',
       'C': '납품완료',
@@ -141,12 +129,13 @@ export default function OrderProgressPage() {
   // 상태 매핑 함수
   const mapStatusToProgressStatus = (status: string): OrderProgress['progressStatus'] => {
     const statusMap: Record<string, OrderProgress['progressStatus']> = {
-      '저장': 'SAVED',
-      '확정': 'CONFIRMED',
-      '승인': 'APPROVED',
-      '발주전송': 'SENT',
-      '납품완료': 'DELIVERED',
-      '종결': 'CLOSED',
+      'T': 'SAVED',
+      'D': 'CONFIRMED',
+      'R': 'REJECTED',
+      'A': 'APPROVED',
+      'S': 'SENT',
+      'C': 'DELIVERED',
+      'E': 'CLOSED',
     };
     return statusMap[status] || 'SAVED';
   };
@@ -162,7 +151,7 @@ export default function OrderProgressPage() {
         vendorName: searchParams.vendor || undefined,
         startDate: searchParams.startDate || undefined,
         endDate: searchParams.endDate || undefined,
-        status: searchParams.status ? statusDisplayToCode(searchParams.status) : undefined,
+        status: searchParams.status || undefined,
       });
 
       // 안전한 처리: 배열이 아니거나 null인 경우 빈 배열로 처리
@@ -213,6 +202,7 @@ export default function OrderProgressPage() {
     const config = {
       SAVED: { variant: 'gray' as const, label: '저장' },
       CONFIRMED: { variant: 'blue' as const, label: '확정' },
+      REJECTED: { variant: 'red' as const, label: '반려' },
       PENDING: { variant: 'yellow' as const, label: '승인대기' },
       APPROVED: { variant: 'green' as const, label: '승인' },
       SENT: { variant: 'blue' as const, label: '발주전송' },
@@ -444,12 +434,13 @@ export default function OrderProgressPage() {
           }
           options={[
             { value: '', label: '전체' },
-            { value: '저장', label: '저장' },
-            { value: '확정', label: '확정' },
-            { value: '승인', label: '승인' },
-            { value: '발주전송', label: '발주전송' },
-            { value: '납품완료', label: '납품완료' },
-            { value: '종결', label: '종결' },
+            { value: 'T', label: '저장' },
+            { value: 'D', label: '확정' },
+            { value: 'R', label: '반려' },
+            { value: 'A', label: '승인' },
+            { value: 'S', label: '발주전송' },
+            { value: 'C', label: '납품완료' },
+            { value: 'E', label: '종결' },
           ]}
         />
       </SearchPanel>
@@ -504,8 +495,16 @@ export default function OrderProgressPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b">
               <h3 className="text-lg font-semibold">{selectedPo.poName}</h3>
-              <Badge variant={selectedPo.status === '승인' ? 'green' : 'blue'}>
-                {selectedPo.status}
+              <Badge 
+                variant={
+                  selectedPo.status === 'A' ? 'green' : 
+                  selectedPo.status === 'R' ? 'red' : 
+                  selectedPo.status === 'E' ? 'gray' : 
+                  selectedPo.status === 'C' ? 'green' : 
+                  'blue'
+                }
+              >
+                {statusCodeToDisplay(selectedPo.status || '')}
               </Badge>
             </div>
 
