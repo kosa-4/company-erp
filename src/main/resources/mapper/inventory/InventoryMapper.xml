@@ -93,8 +93,7 @@
         SELECT 
             h.GR_NUM       AS grNo,
             h.PO_NUM       AS poNo,
-            h.GR_DATE      AS documentDate,
-            h.GR_DATE      AS postingDate,
+            h.GR_DATE      AS receiveDate,
             h.GR_AMT       AS totalAmount,
             c.CODE_NAME    AS status,
             h.RMK          AS remark,
@@ -151,8 +150,7 @@
         SELECT 
             h.GR_NUM       AS grNo,
             h.PO_NUM       AS poNo,
-            h.GR_DATE      AS documentDate,
-            h.GR_DATE      AS postingDate,
+            h.GR_DATE      AS receiveDate,
             h.GR_AMT       AS totalAmount,
             c.CODE_NAME    AS status,
             h.RMK          AS remark,
@@ -247,7 +245,7 @@
         ) VALUES (
             #{dto.grNo}, 
             #{dto.poNo}, 
-            #{dto.documentDate}, 
+            #{dto.receiveDate}, 
             #{dto.totalAmount},
             #{dto.status},
             #{dto.receiverId},
@@ -301,7 +299,7 @@
     <update id="updateGrHeader" parameterType="Map">
         UPDATE GRHD 
         SET 
-            GR_DATE     = #{dto.documentDate},
+            GR_DATE     = #{dto.receiveDate},
             GR_AMT      = #{dto.totalAmount},
             PROGRESS_CD = #{dto.status},
             RMK         = #{dto.remark},

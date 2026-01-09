@@ -13,8 +13,7 @@ public class GrHeaderDTO {
     private String poNo;              // 발주번호 - PO_NUM
     
     // 일자 정보
-    private LocalDate documentDate;   // 입고일자(문서기준) - GR_DATE
-    private LocalDate postingDate;    // 입고일자(업무기준) - GR_DATE (동일 필드)
+    private LocalDate receiveDate;    // 입고일자 - GR_DATE
     
     // 금액 정보
     private BigDecimal totalAmount;   // 입고금액 - GR_AMT

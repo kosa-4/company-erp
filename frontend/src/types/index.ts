@@ -212,8 +212,7 @@ export interface PoDetail {
 export interface GrHeader {
   grNo: string;
   poNo: string;
-  documentDate: string;
-  postingDate: string;
+  receiveDate: string;
   totalAmount: number;
   status: 'PARTIAL' | 'COMPLETE' | 'CANCELED';
   remark?: string;
