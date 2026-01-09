@@ -75,12 +75,12 @@
     </select>
 
     <!--부모 코드 존재 여부 체크-->
-    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">
-        SELECT
-            COUNT(*)
-        FROM
-            MTCA
-        WHERE
-            ITEM_CLS_NM = #{itemClsNm}
-    </select>
+<!--    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">-->
+<!--        SELECT-->
+<!--            COUNT(*)-->
+<!--        FROM-->
+<!--            MTCA-->
+<!--        WHERE-->
+<!--            ITEM_CLS_NM = #{itemClsNm}-->
+<!--    </select>-->
 </mapper>

@@ -23,12 +23,12 @@ public class CategoryService {
 
     /* 저장 */
     @Transactional
-    public void registerCategory(List<CategoryDto> categoryDto){
+    public void registerCategory(List<CategoryListDto> categoryListDto){
 
         // 1. 데이터 가공 (프론트에서도 가능하나 조작 위험 방지를 위해 서비스에서 가공)
-        List<CategoryDto> filteredList = new ArrayList<>();
+        List<CategoryListDto> filteredList = new ArrayList<>();
 
-        for(CategoryDto dto: categoryDto){
+        for(CategoryListDto dto: categoryListDto){
             // 1-1. 분류 체크
             switch (dto.getItemLvl()){
                 case 0:
@@ -42,7 +42,7 @@ public class CategoryService {
 //                        throw new RuntimeException("존재하지 않는 부모 코드입니다.");
 //                    }
                     String parentCls = dto.getParentItemCls();
-                    dto.setItemCls(parentCls + dto.getItemLvl());
+                    dto.setItemCls(parentCls.concat(String.valueOf(dto.getItemCls())));
 
                     filteredList.add(dto);
                     break;

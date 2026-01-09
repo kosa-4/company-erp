@@ -31,10 +31,10 @@ public class CategoryController {
 
     /* 카테고리 저장 */
     @PostMapping("/new")
-    public ResponseEntity<String> registerCategory(@RequestBody List<CategoryDto> categoryDto){
+    public ResponseEntity<String> registerCategory(@RequestBody List<CategoryListDto> categoryListDto){
         try{
 //            System.out.println("response: " + categoryDto.getI);
-            categoryService.registerCategory(categoryDto);
+            categoryService.registerCategory(categoryListDto);
             return ResponseEntity.ok().body("카테고리 등록이 완료되었습니다.");
         } catch(RuntimeException e){
             return ResponseEntity.badRequest().body(e.getMessage());
