@@ -16,7 +16,11 @@ public class CategoryService {
     CategoryMapper categoryMapper;
 
     /* 조회 */
-    // 카테고리 목록 조회
+    // 전체 카테고리 조회
+    public List<CategoryListDto> getAllCategories(){
+        return categoryMapper.selectAllCategories();
+    }
+    // 선택된 카테고리 목록 조회
     public List<CategoryListDto> getCategoryList(CategoryListDto  categoryListDto) {
         return categoryMapper.selectCategoryList(categoryListDto);
     }

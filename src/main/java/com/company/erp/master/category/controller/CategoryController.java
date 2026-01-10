@@ -16,9 +16,19 @@ import java.util.List;
 public class CategoryController {
     @Autowired
     CategoryService categoryService;
+    /* 전체 카테고리 조회 */
+    @GetMapping("/all")
+    public ResponseEntity<List<CategoryListDto>> getAllCategories() {
+        try{
+            List<CategoryListDto> categories = categoryService.getAllCategories();
+            return ResponseEntity.ok().body(categories);
+        } catch(Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
-    /* 카테고리 조회 */
-    @GetMapping()
+    /* 선택한 대상의 자식 카테고리 조회 */
+    @GetMapping
     public ResponseEntity<List<CategoryListDto>> getCategoryList(@ModelAttribute CategoryListDto  categoryListDto) {
         try{
             List<CategoryListDto> classes = categoryService.getCategoryList(categoryListDto);
