@@ -13,11 +13,12 @@ import {
   Badge,
   Modal,
   ModalFooter,
+  Textarea,
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
-import { PurchaseOrderDTO } from '@/types/purchaseOrder';
+import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
 import { getErrorMessage } from '@/lib/api/error';
 
 interface OrderProgress {
@@ -56,6 +57,27 @@ export default function OrderProgressPage() {
   const [loading, setLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDTO | null>(null);
+
+  // 수정 모달 상태
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPo, setEditingPo] = useState<PurchaseOrderDTO | null>(null);
+  const [editForm, setEditForm] = useState({
+    poName: '',
+    poDate: '',
+    remark: '',
+    items: [] as Array<{
+      itemCode: string;
+      itemName: string;
+      specification: string;
+      unit: string;
+      orderQuantity: number;
+      unitPrice: number;
+      amount: number;
+      deliveryDate: string;
+      storageLocation: string;
+      remark: string;
+    }>,
+  });
 
   // 코드 -> 표시명
   const statusCodeToDisplay = (code: string): string => {
@@ -279,10 +301,10 @@ export default function OrderProgressPage() {
 
   const handleApprove = async () => {
     const approvedItems = selectedRows.filter(
-      (r) => r.progressStatus === 'CONFIRMED' || r.progressStatus === 'SAVED'
+      (r) => r.progressStatus === 'CONFIRMED'
     );
     if (approvedItems.length === 0) {
-      alert('확정 또는 저장 상태의 항목만 승인할 수 있습니다.');
+      alert('확정 상태의 항목만 승인할 수 있습니다.');
       return;
     }
 
@@ -298,17 +320,17 @@ export default function OrderProgressPage() {
   };
 
   const handleReject = async () => {
-    const approvedItems = selectedRows.filter(
-      (r) => r.progressStatus === 'CONFIRMED' || r.progressStatus === 'SAVED'
+    const rejectItems = selectedRows.filter(
+      (r) => r.progressStatus === 'CONFIRMED'
     );
-    if (approvedItems.length === 0) {
-      alert('확정 또는 저장 상태의 항목만 반려할 수 있습니다.');
+    if (rejectItems.length === 0) {
+      alert('확정 상태의 항목만 반려할 수 있습니다.');
       return;
     }
     const reason = prompt('반려사유를 입력해주세요.');
     if (reason) {
       try {
-        const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
+        const uniquePoNos = [...new Set(rejectItems.map((item) => item.poNo))];
         await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.reject(poNo, reason)));
         alert(`${uniquePoNos.length}건이 반려되었습니다.`);
         setSelectedRows([]);
@@ -354,6 +376,113 @@ export default function OrderProgressPage() {
       await fetchData();
     } catch (error) {
       alert('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 발주전송
+  const handleSend = async () => {
+    const approvedItems = selectedRows.filter(
+      (r) => r.progressStatus === 'APPROVED'
+    );
+    if (approvedItems.length === 0) {
+      alert('승인 상태의 항목만 발주전송할 수 있습니다.');
+      return;
+    }
+    try {
+      const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
+      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.send(poNo)));
+      alert(`${uniquePoNos.length}건이 발주전송되었습니다.`);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('발주전송 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 수정 모달 열기
+  const handleEdit = async () => {
+    const savedItems = selectedRows.filter((r) => r.progressStatus === 'SAVED');
+    if (savedItems.length === 0) {
+      alert('저장 상태의 항목만 수정할 수 있습니다.');
+      return;
+    }
+    if (savedItems.length > 1) {
+      const uniquePoNos = [...new Set(savedItems.map((item) => item.poNo))];
+      if (uniquePoNos.length > 1) {
+        alert('한 번에 하나의 발주만 수정할 수 있습니다.');
+        return;
+      }
+    }
+
+    try {
+      const poNo = savedItems[0].poNo;
+      const detail = await purchaseOrderApi.getDetail(poNo);
+      setEditingPo(detail);
+      setEditForm({
+        poName: detail.poName || '',
+        poDate: detail.poDate || '',
+        remark: detail.remark || '',
+        items: detail.items?.map((item) => ({
+          itemCode: item.itemCode || '',
+          itemName: item.itemName || '',
+          specification: item.specification || '',
+          unit: item.unit || '',
+          orderQuantity: item.orderQuantity || 0,
+          unitPrice: Number(item.unitPrice) || 0,
+          amount: Number(item.amount) || 0,
+          deliveryDate: item.deliveryDate || '',
+          storageLocation: item.storageLocation || '',
+          remark: item.remark || '',
+        })) || [],
+      });
+      setIsEditModalOpen(true);
+    } catch (error) {
+      alert('발주 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 수정 저장
+  const handleSaveEdit = async () => {
+    if (!editingPo || !editingPo.poNo) return;
+
+    if (!editForm.poName.trim()) {
+      alert('발주명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updateData: PurchaseOrderDTO = {
+        poNo: editingPo.poNo,
+        poName: editForm.poName,
+        poDate: editForm.poDate,
+        vendorCode: editingPo.vendorCode,
+        purchaseType: editingPo.purchaseType,
+        remark: editForm.remark,
+        items: editForm.items.map((item) => ({
+          itemCode: item.itemCode,
+          itemName: item.itemName,
+          specification: item.specification,
+          unit: item.unit,
+          orderQuantity: item.orderQuantity,
+          unitPrice: item.unitPrice,
+          amount: item.orderQuantity * item.unitPrice,
+          deliveryDate: item.deliveryDate,
+          storageLocation: item.storageLocation,
+          remark: item.remark,
+        } as PurchaseOrderItemDTO)),
+      };
+
+      await purchaseOrderApi.update(editingPo.poNo, updateData);
+      alert('발주가 수정되었습니다.');
+      setIsEditModalOpen(false);
+      setEditingPo(null);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('발주 수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -450,11 +579,17 @@ export default function OrderProgressPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleConfirm}>
-              수정 및 확정
+            <Button variant="secondary" onClick={handleEdit}>
+              수정
+            </Button>
+            <Button variant="primary" onClick={handleConfirm}>
+              확정
             </Button>
             <Button variant="success" onClick={handleApprove}>
               승인
+            </Button>
+            <Button variant="info" onClick={handleSend}>
+              발주전송
             </Button>
             <Button variant="danger" onClick={handleReject}>
               반려
@@ -495,13 +630,13 @@ export default function OrderProgressPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b">
               <h3 className="text-lg font-semibold">{selectedPo.poName}</h3>
-              <Badge 
+              <Badge
                 variant={
-                  selectedPo.status === 'A' ? 'green' : 
-                  selectedPo.status === 'R' ? 'red' : 
-                  selectedPo.status === 'E' ? 'gray' : 
-                  selectedPo.status === 'C' ? 'green' : 
-                  'blue'
+                  selectedPo.status === 'A' ? 'green' :
+                    selectedPo.status === 'R' ? 'red' :
+                      selectedPo.status === 'E' ? 'gray' :
+                        selectedPo.status === 'C' ? 'green' :
+                          'blue'
                 }
               >
                 {statusCodeToDisplay(selectedPo.status || '')}
@@ -576,6 +711,141 @@ export default function OrderProgressPage() {
                 </span>
               </div>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 수정 모달 */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="발주 수정"
+        size="xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>닫기</Button>
+            <Button variant="primary" onClick={handleSaveEdit} disabled={loading}>
+              {loading ? '저장 중...' : '저장'}
+            </Button>
+          </>
+        }
+      >
+        {editingPo && (
+          <div className="space-y-6">
+            {/* 기본 정보 */}
+            <div className="grid grid-cols-3 gap-4">
+              <Input label="PO번호" value={editingPo.poNo || ''} readOnly />
+              <Input
+                label="발주명"
+                placeholder="발주명 입력"
+                required
+                value={editForm.poName}
+                onChange={(e) => setEditForm(prev => ({ ...prev, poName: e.target.value }))}
+              />
+              <Input label="발주담당자" value={editingPo.purchaseManager || ''} readOnly />
+              <Input label="협력업체" value={editingPo.vendorName || ''} readOnly />
+              <DatePicker
+                label="발주일자"
+                value={editForm.poDate}
+                onChange={(e) => setEditForm(prev => ({ ...prev, poDate: e.target.value }))}
+              />
+              <Input
+                label="발주총금액"
+                value={`₩${formatNumber(editForm.items.reduce((sum, item) => sum + (item.orderQuantity * item.unitPrice), 0))}`}
+                readOnly
+              />
+            </div>
+
+            {/* 품목 목록 */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">품목 목록</h4>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                      <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                      <th className="p-3 text-center font-semibold text-gray-600">납기일</th>
+                      <th className="p-3 text-left font-semibold text-gray-600">비고</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editForm.items.map((item, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="p-3">{item.itemCode}</td>
+                        <td className="p-3">{item.itemName}</td>
+                        <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
+                        <td className="p-3 text-right">
+                          <input
+                            type="number"
+                            value={item.orderQuantity}
+                            className="w-20 px-2 py-1 border rounded text-right"
+                            onChange={(e) => {
+                              const newQuantity = parseInt(e.target.value) || 0;
+                              setEditForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) =>
+                                  i === index
+                                    ? { ...it, orderQuantity: newQuantity, amount: newQuantity * it.unitPrice }
+                                    : it
+                                ),
+                              }));
+                            }}
+                          />
+                        </td>
+                        <td className="p-3 text-right font-medium">₩{formatNumber(item.orderQuantity * item.unitPrice)}</td>
+                        <td className="p-3 text-center">
+                          <input
+                            type="date"
+                            value={item.deliveryDate}
+                            className="px-2 py-1 border rounded"
+                            onChange={(e) => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) =>
+                                  i === index
+                                    ? { ...it, deliveryDate: e.target.value }
+                                    : it
+                                ),
+                              }));
+                            }}
+                          />
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="text"
+                            value={item.remark}
+                            placeholder="비고"
+                            className="w-24 px-2 py-1 border rounded"
+                            onChange={(e) => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                items: prev.items.map((it, i) =>
+                                  i === index
+                                    ? { ...it, remark: e.target.value }
+                                    : it
+                                ),
+                              }));
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Textarea
+              label="비고"
+              placeholder="비고 입력"
+              rows={2}
+              value={editForm.remark}
+              onChange={(e) => setEditForm(prev => ({ ...prev, remark: e.target.value }))}
+            />
           </div>
         )}
       </Modal>
