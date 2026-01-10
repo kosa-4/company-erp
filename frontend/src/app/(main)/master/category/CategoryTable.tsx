@@ -6,41 +6,50 @@ import { div, h2 } from "framer-motion/client";
 
 interface ICategoryProps{
     title:any,
+    selected: any,
     categories:any,
     inputDatas:any,
-    filteredCateByCls:any,
+    // filteredCateByCls:any,
     fetchCategories:any,
     handleAddRow:any,
     handleInputChange:any,
     saveCategory:any,
     maxLength:any,
-    itemCls:any,
+    // itemCls:any,
     // setItemCls:any,
     itemType: any,
     itemLvl: any,
+    parentCls:any,
     childItemType:any,
+    isChecked:boolean,
     handleChildItemType:any,
+    handleSelectedCheck: any
     // handleParentCls: any,
 }
 
 export default function CategoryTable({ 
     title, 
+    selected,
     categories, 
     inputDatas,
-    filteredCateByCls,
+    // filteredCateByCls,
     fetchCategories,
     handleAddRow,
     handleInputChange,
+    handleSelectedCheck,
     saveCategory,
     maxLength, 
-    itemCls, 
+    // itemCls, 
     // setItemCls, 
     itemType,
     itemLvl,
     childItemType, 
+    isChecked,
+    parentCls,
     handleChildItemType,
     // handleParentCls
 } :ICategoryProps){
+    const isSelectedLvl = isChecked && selected && (itemLvl === selected.itemLvl);
     return(
         <div>
             {/* 품목 종류 */}
@@ -66,29 +75,31 @@ export default function CategoryTable({
                         </thead>
                         
                         {/* 조회된 카테고리 출력 */}
-                        
                         <tbody>
-                            {/* {console.log(filteredCateByCls)} */}
-                            {filteredCateByCls.length > 0 && (
-                                <tr className={`border-b text-xs hover:bg-blue-50 cursor-pointer ${filteredCateByCls.active ? 'bg-orange-50' : ''}`}>
+                            {console.log("isChecked: ", isChecked)}
+                            {/* {console.log("childItemType: ",childItemType)} */}
+                            { isSelectedLvl && (
+                                // <tr className={`border-b text-xs hover:bg-blue-50 cursor-pointer ${category.active ? 'bg-orange-50' : ''}`}>
+                                <tr className={`border-b text-xs hover:bg-blue-50 cursor-pointer `}>
                                     <td className="p-1 border-r text-gray-400">
                                         {1}
                                     </td>
                                     <td className="p-1 border-r">
                                         <input 
                                         type="checkbox" 
-                                        value={filteredCateByCls.itemCls}
-                                        onChange={(e) => handleChildItemType(e,childItemType)}
+                                        value={selected && selected.itemCls}
+                                        defaultChecked
+                                        onChange={(e) => handleSelectedCheck(e)}
                                         />
                                     </td>
                                     <td className="p-1 border-r text-orange-600 font-medium underline">
-                                        {filteredCateByCls.itemCls}
+                                        {selected &&  selected.itemCls}
                                     </td>
                                     <td className="p-1 border-r text-left px-2">
-                                        {filteredCateByCls.itemClsNm}
+                                        {selected && selected.itemClsNm}
                                     </td>
                                     <td className="p-1">
-                                        {filteredCateByCls.useFlag ? "사용" : "미사용"}
+                                        {selected && selected.useFlag ? "사용" : "미사용"}
                                     </td>
                                 </tr>
                             )}
@@ -118,7 +129,7 @@ export default function CategoryTable({
                                 </tr>
                             ))}
 
-                            {!categories && !filteredCateByCls && (
+                            {!isSelectedLvl && !categories &&  (
                                 <tr><td colSpan={5} className="h-20 text-gray-400 italic">데이터가 없습니다.</td></tr>
                             )}
                             </tbody>
@@ -174,21 +185,21 @@ export default function CategoryTable({
                 {/* 하단 컨트롤바 */}
                 <div className="p-1 border-t bg-gray-50 flex items-center justify-between text-[10px]">
                     <div className="flex gap-2 items-center">
-                        <button 
+                        {/* <button 
                         className="p-1 border bg-white"
                         onClick={fetchCategories}
-                        >🔍</button>
+                        >🔍</button> */}
                         {handleAddRow && (
                             <button 
                             className="p-1 border bg-white text-green-600"
                             value={itemType}
-                            onClick={(e) => handleAddRow(e, itemLvl)}
+                            onClick={(e) => handleAddRow(e, itemLvl, parentCls)}
                             >➕</button>
                         )}
                         {saveCategory && (
                             <button 
                             className="p-1 border bg-white"
-                            onClick={saveCategory}
+                            onClick={() => saveCategory(parentCls)}
                             >💾</button>
                         )}
                         <button className="p-1 border bg-white">⋯</button>

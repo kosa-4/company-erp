@@ -14,16 +14,18 @@ interface Category {
 }
 
 export default function CategoryPage() {
+    
     const [categories, setCategories] = useState<Category[]>([]);
-    const [itemCls, setItemCls] = useState("");
+    
     const [parentCls, setParentCls] = useState("");
     const [selectedType, setSelectedType] = useState("MAIN");
 
     // 1. 카테고리 조회
     const fetchCategories = async (parentCls: string) => {
         try{
-            // 1. 데이터 요청
-            console.log("parentCls ", parentCls)
+            // 1. 데이터 요청 
+            // 선택한 부모 카테고리의 하위 카테고리 반환
+            // parentCls가 null일 시 품목 종류 카테고리 반환
             const param = {"parentItemCls": parentCls}
             const response = await fetch("/api/v1/categories?" +
                 new URLSearchParams(param)
@@ -36,7 +38,7 @@ export default function CategoryPage() {
 
             // 2. 응답 값 저장
             const data = await response.json();
-            
+            // console.log("data ", data)
             setCategories(data);
         } catch(error){
             console.error("데이터 로드 중 오류 발생", error);
@@ -44,48 +46,89 @@ export default function CategoryPage() {
         }
     }
 
-    // 2. 행 추가
-    const [inputDatas, setInputDatas] = useState<Category[]>([])
-    // const [itemLvl, setItemLvl] = useState(0);
     
-    // 2-1. input 생성
-    // console.log(parentCls);
-    const handleAddRow = (e:any, itemLvl:number) =>{        
+    
+    // 품목 종류에서 선택된 부모 카테고리
+    const [selectedMain, setSelectedMain] = useState<Category>();
+    // 대분류에서 선택된 부모 카테고리
+    const [selectedClass1, setSelectedClass1] = useState<Category>();
+    // 중분류에서 선택된 부모 카테고리
+    const [selectedClass2, setSelectedClass2] = useState<Category>();
+
+    // const [itemCls, setItemCls] = useState("");
+    // 2. 단일 카테고리 조회 (선택된 부모 카테고리 호출)
+    const fetchCategoryByName = async () => {
+        try{
+            
+            // 1. 파라미터 전달 (선택된 부모 카테고리)
+            const response = await fetch(`/api/v1/categories/${parentCls}`)
+            
+            // 1-1. 네트워크 오류 체크
+            if(!response.ok) throw new Error("서버 응답 오류");
+
+            const data = await response.json();
+            
+            // 2. 선택된 카테고리에 따라 다른 값 입력
+            switch(selectedType){
+                case "CLASS1":
+                    setSelectedMain(data);
+                case "CLASS2":
+                    setSelectedClass1(data);
+                case "CLASS3":
+                    setSelectedClass2(data);
+                default:
+                    
+            }
+            
+        } catch(err){
+            console.error("데이터 로딩 중 오류 발생", err)
+            alert("데이터 로드에 실패했습니다.")
+        }
+    };
+
+    // 3. 행 추가
+    const [inputDatas, setInputDatas] = useState<Category[]>([])
+    
+    // 3-1. input 생성
+    const handleAddRow = (e:any, itemLvl:number, parentCls:string) =>{        
         setSelectedType(e.target.value);
-        // setItemLvl(itemLvl)
         setParentCls(parentCls)
 
-        // 2-1. 초기값 세팅
+        // 초기값 세팅
         const newInput = {
             itemCls: '',
             itemClsNm:'',
             useFlag: true,
             itemLvl: itemLvl,
-            parentItemCls:parentCls,
+            parentItemCls: parentCls === "" ? null : parentCls,
         };
 
-        // 2-2. null인 경우 처리
+        // null인 경우 처리
         if (!Array.isArray(inputDatas)) {
             setInputDatas([newInput]);
             return;
         }
 
-        // 2-3. 입력값 최신화
+        // 입력값 최신화
         setInputDatas([...inputDatas, newInput]);
         
     }  
 
-    // 3. 변경 사항 저장
+    // 4. 변경 사항 저장
     const handleInputChange = (index: number, field: keyof Category, value:any) => {
+        // 4-1. 해당 열과 같은 인덱스를 가진 곳에 변경된 input값 저장
         const updatedInput = inputDatas.map((data, i) => 
             i === index ? {...data, [field]: value} : data
         );
+
+        // 4-2. 변경된 input 값 업데이트
         setInputDatas(updatedInput);
     }
 
-    // 4. 카테고리 저장
-    const saveCategory = async () => {
-        // 값 여부 확인
+    // 5. 카테고리 저장
+    const saveCategory = async (parentCls: string) => {
+
+        // 5-1. 입력 여부 확인
         const data = inputDatas.filter(d => d.itemCls.trim() !== '' && d.itemClsNm.trim() !== '');
         
         if(data.length === 0){
@@ -93,7 +136,7 @@ export default function CategoryPage() {
             return;
         }
         try{
-            // 4-1. 데이터 요청
+            // 5-2.. 데이터 요청
             const response = await fetch ("/api/v1/categories/new", {
                 method: 'POST',
                 headers:{
@@ -101,46 +144,54 @@ export default function CategoryPage() {
                 },
                 body: JSON.stringify(data),
             });
-            console.log("response ", response);
+            
             if(!response.ok){
                 throw new Error(`입력 실패 ${response.status}`)
             };
 
             alert("저장되었습니다.");
-            // 4-2.input 초기화
+            // 5-3.input 초기화
             setInputDatas([]);
-            // 4-3. 카테고리 출력
+            // 5-4. 카테고리 출력
             fetchCategories(parentCls);
         } catch(err){
             console.error("데이터 입력 중 오류 발생", err);
         }
     };
-
-    // // 필터
-    // const filteredCate = categories.filter((c) =>
-    //     c.parentItemCls === parentCls
-    // )
-
-    const filteredCateByCls = categories.filter((c) => 
-        c.itemCls === itemCls     
-          
-    )
     
-    const handleChildItemType = (e: any, type:any) => {
+    // 5. 체크 리스트 제어
+
+    const [isChecked, setIsChecked] = useState(false);
+    
+    const handleChildItemType = (e: any, type:any) => {        
+
         const {value, checked} = e.target;
-        if(checked){
-            setItemCls(value);        
-            setParentCls(value);
-            setSelectedType(type);
-            fetchCategories(value);
-            
-        } else{
-            setItemCls("");
-            setParentCls("");
+
+        // 1. 체크 해제 시
+        if(!checked){
+            setIsChecked(false);
             setSelectedType("MAIN");
-            fetchCategories("");
         }
 
+        // 2. 체크 시
+        setIsChecked(true);
+        setParentCls(value);
+        setSelectedType(type);
+
+        // 3. 자식 리스트 출력
+        fetchCategories(value);
+
+        // 4. 입력창 초기화
+        setInputDatas([]);         
+    }
+
+    const handleSelectedCheck = (e:any) => {
+        const {checked} = e.target;
+        if(!checked){
+            setIsChecked(false);
+            setSelectedType("MAIN");
+        }
+        setIsChecked(true);
         
     }
     
@@ -148,6 +199,11 @@ export default function CategoryPage() {
         fetchCategories("");
     },[])
 
+    useEffect(() => {
+        fetchCategoryByName();
+    },[selectedType])
+
+    
 
   return (
     <div>
@@ -166,42 +222,119 @@ export default function CategoryPage() {
             <div className="grid grid-cols-3 gap-2 h-[600px]">
                 
                 {/* 1. 품목 종류 테이블 */}
+                
                 <CategoryTable 
+                // 테이블 기본 정보 전달
                 title="품목 종류"   
+                itemType="MAIN"
+                childItemType="CLASS1"
+                parentCls={parentCls}
+                itemLvl={0}
+                maxLength={2}
+
+                // input 함수 전달
+                fetchCategories={fetchCategories}
+                handleInputChange={handleInputChange}
+                handleChildItemType={(selectedType === "MAIN" && handleChildItemType)}
+                handleSelectedCheck={handleSelectedCheck}
+
+                // 카테고리 리스트 출력
                 categories={(selectedType === "MAIN" && categories)}
                 inputDatas={(selectedType === "MAIN" && inputDatas)}
-                filteredCateByCls={(selectedType === "MAIN" && filteredCateByCls)}
-                fetchCategories={fetchCategories}
+
+                // 버튼 클릭 함수 전달
                 handleAddRow={(selectedType === "MAIN" && handleAddRow)}
-                handleInputChange={handleInputChange}
                 saveCategory={(selectedType === "MAIN" && saveCategory)}
-                maxLength={2}
-                itemCls={itemCls}
-                itemType="MAIN"
-                itemLvl={0}
-                childItemType="CLASS1"
-                handleChildItemType={handleChildItemType}
-                // handleParentCls={handleParentCls}       
-                />
                 
+                // 선택된 카테고리 출력
+                isChecked={isChecked}
+                selected={selectedMain}
+                
+                />               
+                    
                 {/* 2. 대분류 테이블 */}
                 <CategoryTable 
+                // 테이블 기본 정보 전달
                 title="대분류"
+                itemType="CLASS1"
+                childItemType="CLASS2"
+                parentCls={parentCls}
+                itemLvl={1}
+                maxLength={1}
+
+                // input 함수 전달
+                fetchCategories={fetchCategories}
+                handleInputChange={handleInputChange}
+                handleChildItemType={(selectedType === "CLASS1" && handleChildItemType)}
+                handleSelectedCheck={handleSelectedCheck}                     
+
+                // 카테고리 리스트 출력
                 categories={(selectedType === "CLASS1" && categories)}
                 inputDatas={(selectedType === "CLASS1" && inputDatas)}
-                filteredCateByCls={(selectedType === "CLASS1" && filteredCateByCls)}
-                fetchCategories={fetchCategories}
+                
+                // 버튼 함수 전달
                 handleAddRow={(selectedType === "CLASS1" && handleAddRow)}
-                handleInputChange={handleInputChange}
                 saveCategory={(selectedType === "CLASS1" && saveCategory)}
-                maxLength={3}
-                itemCls={itemCls}
-                itemType="CLASS1"
-                itemLvl={1}
-                childItemType="CLASS2"
-                handleChildItemType={handleChildItemType}     
-                // handleParentCls={handleParentCls}             
+                
+                // 선택된 카테고리 출력
+                isChecked={isChecked}
+                selected={selectedClass1}
                 />
+                {/* 3. 중분류 테이블 */}
+                <CategoryTable 
+                // 테이블 기본 정보 전달
+                title="중분류"
+                itemType="CLASS2"
+                childItemType="CLASS3"
+                parentCls={parentCls}
+                itemLvl={2}
+                maxLength={1}
+
+                // input 함수 전달
+                fetchCategories={fetchCategories}
+                handleInputChange={handleInputChange}
+                handleChildItemType={(selectedType === "CLASS2" && handleChildItemType)}
+                handleSelectedCheck={handleSelectedCheck}
+
+                // 카테고리 리스트 출력
+                categories={(selectedType === "CLASS2" && categories)}
+                inputDatas={(selectedType === "CLASS2" && inputDatas)}
+                
+                // 버튼 함수 전달
+                handleAddRow={(selectedType === "CLASS2" && handleAddRow)}
+                saveCategory={(selectedType === "CLASS2" && saveCategory)}
+                
+                // 선택된 카테고리 출력
+                isChecked={isChecked}
+                selected={selectedClass2}
+                />
+
+                {/* 중분류 테이블 */}
+                {/* <CategoryTable 
+                // 테이블 기본 정보 전달
+                title="중분류"
+                itemType="CLASS2"
+                childItemType="CLASS3"
+                itemLvl={2}
+                maxLength={1}
+
+                // input 함수 전달
+                fetchCategories={fetchCategories}
+                handleInputChange={handleInputChange}
+                handleChildItemType={handleChildItemType}
+
+                // 카테고리 리스트 출력
+                categories={(selectedType === "CLASS2" && categories)}
+                inputDatas={(selectedType === "CLASS2" && inputDatas)}
+                
+                // 버튼 함수 전달
+                handleAddRow={(selectedType === "CLASS2" && handleAddRow)}
+                saveCategory={(selectedType === "CLASS2" && saveCategory)}
+                
+                // 선택된 카테고리 출력
+                isChecked={(selectedType === "CLASS3" && isChecked)}
+                category={(selectedType === "CLASS3" && category)}
+                /> */}
 
                 {/* 3. 중분류 테이블 */}
                 {/* <CategoryTable 

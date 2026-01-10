@@ -173,7 +173,7 @@ export default function ItemPage() {
       setSelectedItem(data);
        
       setIsDetailModalOpen(true);     
-      console.log("type of data ",typeof data);
+      // console.log("type of data ",typeof data);
     } catch(error){
       console.error("데이터를 가져오는 중 오류 발생:", error);
       alert("데이터 로드에 실패했습니다.");
