@@ -16,9 +16,14 @@ public class CategoryService {
     CategoryMapper categoryMapper;
 
     /* 조회 */
-    // item class 조회
+    // 카테고리 목록 조회
     public List<CategoryListDto> getCategoryList(CategoryListDto  categoryListDto) {
         return categoryMapper.selectCategoryList(categoryListDto);
+    }
+
+    // 단일 카테고리 조회
+    public CategoryListDto getCategoryByCode(String itemCls){
+        return categoryMapper.selectCategoryByCode(itemCls);
     }
 
     /* 저장 */
@@ -34,18 +39,13 @@ public class CategoryService {
                 case 0:
                     filteredList.add(dto);
                     break;
-                case 1:
-//                    String parentCls = dto.getItemCls().substring(0,2);
-//
-//                    // 1-2. 부모 클래스 존재 여부 확인
-//                    if(!categoryMapper.existsParentCategory(parentCls)){
-//                        throw new RuntimeException("존재하지 않는 부모 코드입니다.");
-//                    }
+                case 1, 2, 3:
                     String parentCls = dto.getParentItemCls();
                     dto.setItemCls(parentCls.concat(String.valueOf(dto.getItemCls())));
 
                     filteredList.add(dto);
                     break;
+
             }
         }
         // 2. 가공된 데이터가 존재하지 않을 시 예외 처리

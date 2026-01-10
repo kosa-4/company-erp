@@ -17,12 +17,24 @@ public class CategoryController {
     @Autowired
     CategoryService categoryService;
 
-    /* class 조회 */
+    /* 카테고리 조회 */
     @GetMapping()
     public ResponseEntity<List<CategoryListDto>> getCategoryList(@ModelAttribute CategoryListDto  categoryListDto) {
         try{
             List<CategoryListDto> classes = categoryService.getCategoryList(categoryListDto);
             return ResponseEntity.ok().body(classes);
+        } catch(Exception e){
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /* 단일 카테고리 조회 */
+    @GetMapping("/{itemCls}")
+    public ResponseEntity<CategoryListDto> getCategoryByCode(@PathVariable("itemCls") String itemCls) {
+        try{
+            CategoryListDto category = categoryService.getCategoryByCode(itemCls);
+            return ResponseEntity.ok().body(category);
         } catch(Exception e){
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
