@@ -4,7 +4,7 @@
 
     <!-- ========== 입고대상조회 ========== -->
     <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
-    <select id="selectPendingPOList" parameterType="map" resultType="com.company.erp.inventory.dto.GoodsReceiptDTO">
+    <select id="selectPendingPOList" parameterType="map" resultType="com.company.erp.po.dto.PurchaseOrderDTO">
         SELECT 
             h.PO_NUM as poNo,
             h.PO_SUBJECT as poName,
