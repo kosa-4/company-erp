@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.common.login.mapper.LoginMapper">
+
+    <select id="findLoginUser" parameterType="string" resultType="map">
+        SELECT
+            'B'       AS comType,
+            NULL      AS vendorCd,
+            USER_ID   AS userId,
+            USER_PW   AS password
+        FROM by_user
+        WHERE USER_ID = #{userId}
+          AND DEL_FLAG = 'N'
+
+        UNION ALL
+
+        SELECT
+            'V'        AS comType,
+            VENDOR_CD  AS vendorCd,
+            USER_ID    AS userId,
+            PASSWORD   AS password
+        FROM vn_user
+        WHERE USER_ID = #{userId}
+          AND DEL_FLAG = 'N'
+    </select>
+
+</mapper>
