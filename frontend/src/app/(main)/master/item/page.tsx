@@ -274,12 +274,14 @@ export default function ItemPage() {
       console.error("데이터 입력 중 오류 발생:", error);
     }
   };
-
-  // 카테고리 타입 정의
   
-  /* 카테고리 조회 */
-  const [selectedNode, setSelectedNode] = useState<Category | null>(null);
-  const [categories, setCategories] = useState<Category[] | null>(null);
+  /* 카테고리 영역 */
+  const cateMap = useRef<{[key: string]: Category}>({});
+  // 불필요한 랜더링 방지 및 데이터 성격 상 useRef 사용
+
+  const [selectedCate, setSelectedCate] = useState<Category | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[] | undefined>(undefined);
+  const [isCateModalOpen, setIsCateModalOpen] = useState(false);
   // 1. 데이터 요청
   const fetchCategories = async () => {
     try{
@@ -288,24 +290,23 @@ export default function ItemPage() {
       if(!response.ok) throw new Error("서버 응답 오류");
       
       const data = await response.json(); 
-      
+
       const tree:Category[] = makeTree(data);
-      setCategories(tree);
+      setCategories(tree);     
 
     } catch(err){
       console.error("데이터 로딩 중 오류 발생")
       alert("데이터 로드 실패")
     }
   }
+  // 2. 트리구조로 변환  
 
-  // 2. 트리구조로 변환
   const makeTree = (categories: Category[]) => {
-    const map: {[key: string] : Category} = {};
     const top: Category[] = [];
 
     // 2-1. 모든 카테고리 맵에 등록
     categories.forEach(c => {
-      map[c.itemCls] = {...c, children: []};
+      cateMap.current[c.itemCls] = {...c, children: []};
     });
 
     // 2-2. 부모-자식 관계 연결
@@ -313,13 +314,42 @@ export default function ItemPage() {
       const parentCls = c.parentItemCls;
       // 부모 클래스가 일치할 시 부모 클래스의 children 배열에 추가
       
-      if(parentCls && map[parentCls]){        
-        map[parentCls].children?.push(map[c.itemCls]);
+      if(parentCls && cateMap.current[parentCls]){        
+        cateMap.current[parentCls].children?.push(cateMap.current[c.itemCls]);
       } else{
-        top.push(map[c.itemCls]);
+        top.push(cateMap.current[c.itemCls]);
       }
     });
+    // console.log("map ", map);
     return top;
+  }
+  
+  // 3. 부모 카테고리 입력
+  const [selectedPath, setSelectedPath] = useState<Category[]>([])
+  const handleSelect = (category: Category | undefined) => {
+    // 3-1. 현재 클릭한 카테고리 저장
+    // setSelectedCate(category);
+
+    const path:Category[] = [];
+    let currentCate: Category | undefined = category;
+    
+    // 3-2. 상위 카테고리가 없는 최상위 카테고리까지 순회
+    while(currentCate && currentCate.parentItemCls){
+      // 선택된 카테고리 배열에 추가
+      path.push(currentCate);
+
+      // 상위 카테고리로 교체
+      const parentId = currentCate.parentItemCls;
+      currentCate = cateMap.current[parentId]
+
+      // 상위 카테고리가 없으면 중단
+      if(!currentCate) break;
+    }
+    if(currentCate) path.push(currentCate);
+
+    const reversePath:Category[] = path.reverse()
+
+    setSelectedPath(reversePath);
   }
   
   // 체번 표시
@@ -499,24 +529,31 @@ export default function ItemPage() {
               
               <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
-              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
-              {/* <Select
-                name='itemType'
-                label="품목종류"
-                placeholder="선택"
-                required
-                options={[
-                  { value: '전자기기', label: '전자기기' },
-                  { value: '사무용품', label: '사무용품' },
-                  { value: '소모품', label: '소모품' },
-                ]}
-              /> */}
-              <Input name='categoryType' label="품목 분류" placeholder="품목 분류 입력" readOnly/>
-              <Input name='categoryL' label="품목 대분류" placeholder="품목 대분류 입력" readOnly/>
-              <Input name='categoryM' label="품목 중분류" placeholder="품목 중분류 입력" readOnly/>
-              <Input name='categoryS' label="품목 소분류" placeholder="품목 소분류 입력" readOnly/>
-              
-              {/* <Input name='stopReason' label="중지 사유" placeholder="중지 사유" readOnly/> */}
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
+              <Input 
+              name='categoryType' 
+              label="품목 분류" 
+              placeholder="품목 분류 입력" 
+              value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
+              onClick={() => setIsCateModalOpen(true)}/>
+              <Input 
+              name='categoryL' 
+              label="품목 대분류" 
+              placeholder="품목 대분류" 
+              value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
+              readOnly/>
+              <Input 
+              name='categoryM' 
+              label="품목 중분류" 
+              placeholder="품목 중분류"
+              value={selectedPath[2] ? selectedPath[2].itemClsNm : ''}  
+              readOnly/>
+              <Input 
+              name='categoryS' 
+              label="품목 소분류" 
+              placeholder="품목 소분류 입력" 
+              value={selectedPath[3] ? selectedPath[3].itemClsNm : ''}  
+              readOnly/>
               <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/>
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
@@ -554,63 +591,69 @@ export default function ItemPage() {
           </div>
         </form>
       </Modal>
+
       {/* 카테고리 모달 */}      
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="품목 카테고리"
-        size="lg"
-        footer={
-          <ModalFooter
-            onClose={() => setIsCreateModalOpen(false)}
-            onConfirm={() => {
-              fetchCategories();
-              // setIsCreateModalOpen(false);
-            }}
-            confirmText="저장"
-          />
-        }
-      >
-        <div className="flex flex-col h-[500px] w-full bg-white">
-            {/* 상단 검색바 (선택 사항) */}
-            <div className="p-4 border-b">
-              <input 
-                type="text" 
-                placeholder="분류명 검색..." 
-                className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+      {isCateModalOpen && (
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCateModalOpen(false)}
+          title="품목 카테고리"
+          size="lg"
+          footer={
+            <ModalFooter
+              onClose={() => setIsCateModalOpen(false)}
+              onConfirm={() => {
+                
+                handleSelect(selectedCate);
+                // console.log(selectedCate)
+                // setIsCreateModalOpen(false);
+              }}
+              confirmText="저장"
+            />
+          }
+        >
+          <button onClick={() => fetchCategories()}>조회</button>
+          <div className="flex flex-col h-[500px] w-full bg-white">
+              {/* 상단 검색바 (선택 사항) */}
+              <div className="p-4 border-b">
+                <input 
+                  type="text" 
+                  placeholder="분류명 검색..." 
+                  className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-            {/* 트리 리스트 영역 */}
-            <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
-              {categories && categories.length > 0 ? (
-                categories.map((root) => (
-                  <TreeItem 
-                    key={root.itemCls} 
-                    node={root} 
-                    onSelect={setSelectedNode} 
-                    selectedId={selectedNode?.itemCls} 
-                  />
-                ))
-              ) : (
-                <div className="text-center py-10 text-gray-400 text-sm">
-                  데이터를 불러오는 중입니다...
+              {/* 트리 리스트 영역 */}
+              <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
+                {categories && categories.length > 0 ? (
+                  categories.map((root) => (
+                    <TreeItem 
+                      key={root.itemCls} 
+                      root={root} 
+                      onSelect={setSelectedCate} 
+                      selectedId={selectedCate?.itemCls} 
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-gray-400 text-sm">
+                    데이터를 불러오는 중입니다...
+                  </div>
+                )}
+              </div>
+
+              {/* 하단 선택 정보 표시 */}
+              <div className="p-4 border-t bg-white flex justify-between items-center">
+                <div className="text-sm">
+                  <span className="text-gray-500">선택된 분류: </span>
+                  <span className="font-bold text-blue-600">{selectedCate?.itemClsNm || '없음'}</span>
                 </div>
-              )}
-            </div>
-
-            {/* 하단 선택 정보 표시 */}
-            <div className="p-4 border-t bg-white flex justify-between items-center">
-              <div className="text-sm">
-                <span className="text-gray-500">선택된 분류: </span>
-                <span className="font-bold text-blue-600">{selectedNode?.itemClsNm || '없음'}</span>
               </div>
             </div>
-          </div>
-        
-        
-      </Modal>
-      {/* {console.log(page)} */}
+          
+          
+        </Modal>
+      )}
+      
       <section className='mt-8'>
         <div className='flex justify-center gap-x-4'>
           <button

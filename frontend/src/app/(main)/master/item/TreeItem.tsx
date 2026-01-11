@@ -7,29 +7,29 @@ export interface Category {
     itemClsNm: string,
     useFlag: boolean,
     itemLvl:number,
-    parentItemCls:any,
+    parentItemCls:string,
     children?: Category[],
     top: any
   }
 
 interface Props {
-  node: Category;
+  root: Category;
   onSelect: (node: Category) => void;
   selectedId?: string;
 }
 
-const TreeItem = ({ node, onSelect, selectedId }: Props) => {
+const TreeItem = ({ root, onSelect, selectedId }: Props) => {
   // console.log(node);
-  const [isOpen, setIsOpen] = useState(true); // 기본적으로 열려있게 설정
-  const hasChildren = node.children && node.children.length > 0;
-  const isSelected = selectedId === node.itemCls;
+  const [isOpen, setIsOpen] = useState(false); // 기본적으로 딛겨있게 설정
+  const hasChildren = root.children && root.children.length > 0;
+  const isSelected = selectedId === root.itemCls;
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation(); // 부모로 클릭 이벤트가 퍼지는 것 방지
     if (hasChildren) {
       setIsOpen(!isOpen); // 현재 상태의 반대로 바꿈 (토글)
     }
-    onSelect(node); // 항목 선택도 동시에 처리
+    onSelect(root); // 항목 선택도 동시에 처리
   };
 
   return (
@@ -51,16 +51,16 @@ const TreeItem = ({ node, onSelect, selectedId }: Props) => {
         </div>
 
         {/* 카테고리 이름 */}
-        <span className="text-sm">{node.itemClsNm}</span>
+        <span className="text-sm">{root.itemClsNm}</span>
       </div>
 
       {/* 3. 토글 영역: isOpen이 true이고 자식이 있을 때만 렌더링 */}
       {isOpen && hasChildren && (
         <div className="ml-4 border-l border-gray-200">
-          {node.children?.map((child) => (
+          {root.children?.map((child) => (
             <TreeItem 
               key={child.itemCls} 
-              node={child} 
+              root={child} 
               onSelect={onSelect} 
               selectedId={selectedId} 
             />
