@@ -63,6 +63,9 @@ public class PurchaseOrderService {
         // 발주번호 생성
         String poNo = docNumService.generateDocNumStr(DocKey.PO);
         dto.setPoNo(poNo);
+
+        // 초기 상태 강제 설정 (저장 상태)
+        dto.setStatus(PoStatusCode.SAVED.getCode());
         
         // poDate가 null 이면 오늘 날짜로 설정
         if (dto.getPoDate() == null) {
@@ -100,7 +103,6 @@ public class PurchaseOrderService {
         // 실제 인증 정보에서 사용자 ID 가져오기
         return "SYSTEM"; // 임시값 - 실제 구현 시 제거
     }
-
     // 수정
     @Transactional
     public PurchaseOrderDTO update(String poNo, PurchaseOrderDTO dto) {
@@ -109,28 +111,29 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다 : " + poNo);
         }
-
+        // 저장(T) 상태에서만 수정 가능
+        if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                "저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus()
+            );
+        }
         dto.setPoNo(poNo);
         
         // 총액 재계산
         BigDecimal totalAmount = dto.getItems().stream()
-        .map(PurchaseOrderItemDTO::getAmount)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            .map(PurchaseOrderItemDTO::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
-
         // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
-
-        // 헤더 수정 (modUserId 별도 전달)
+        // 헤더 수정
         purchaseOrderMapper.updateHeader(dto, currentUserId);
-
-        // 기존 품목 삭제 후 재동록
+        // 기존 품목 삭제 후 재등록
         purchaseOrderMapper.deleteItems(poNo);
         for (PurchaseOrderItemDTO item : dto.getItems()) {
             item.setPoNo(poNo);
             purchaseOrderMapper.insertItem(item, currentUserId);
         }
-
         return getDetail(poNo);
     }
 
@@ -140,6 +143,12 @@ public class PurchaseOrderService {
         PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+        // 저장(T) 상태에서만 삭제 가능
+        if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                "저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus()
+            );
         }
 
         purchaseOrderMapper.deleteHeader(poNo);
@@ -164,10 +173,26 @@ public class PurchaseOrderService {
     // 반려
     @Transactional
     public Boolean reject(String poNo, String rejectReason) {
-        // 반려 상태는 별도 처리 필요 (현재는 상태 변경만)
+        // 반려 사유 필수 검증
+        if (rejectReason == null || rejectReason.isBlank()) {
+            throw new IllegalArgumentException("반려 사유는 필수입니다.");
+        }
+        PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
+        if (existing == null) {
+            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+        // 상태 전이 검증 (확정 → 반려)
+        validateStatusTransition(existing.getStatus(), PoStatusCode.REJECTED.getCode());
         String currentUserId = getCurrentUserId();
-        return updateStatus(poNo, PoStatusCode.REJECTED.getCode(), currentUserId);
+        purchaseOrderMapper.updateStatusWithReason(
+            poNo, 
+            PoStatusCode.REJECTED.getCode(), 
+            rejectReason, 
+            currentUserId
+        );
+        return true;
     }
+
 
     // 발주 전송
     @Transactional
@@ -183,14 +208,26 @@ public class PurchaseOrderService {
         return updateStatus(poNo, PoStatusCode.CLOSED.getCode(), currentUserId);
     }
 
-    // 상태 변경 공통 메서드
-    private Boolean updateStatus(String poNo, String status, String userId) {
+    // 상태 전이 검증 메서드
+    private void validateStatusTransition(String currentStatus, String nextStatus) {
+        PoStatusCode current = PoStatusCode.fromCode(currentStatus);
+        
+        if (!current.canTransitionTo(nextStatus)) {
+            throw new IllegalStateException(
+                String.format("상태 전이 불가: %s → %s", currentStatus, nextStatus)
+            );
+        }
+    }
+
+    // 상태 변경 공통 메서드 (검증 추가)
+    private Boolean updateStatus(String poNo, String nextStatus, String userId) {
         PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-
-        purchaseOrderMapper.updateStatus(poNo, status, userId);
+        // 상태 전이 검증
+        validateStatusTransition(existing.getStatus(), nextStatus);
+        purchaseOrderMapper.updateStatus(poNo, nextStatus, userId);
         return true;
     }
 
