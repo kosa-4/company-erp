@@ -3,11 +3,24 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronDown, 
+  User, 
+  Bell, 
+  Building2, 
+  FileText, 
+  Package, 
+  Users, 
+  Home,
+  Search,
+  LogOut
+} from 'lucide-react';
 
 interface NavItem {
   name: string;
   href: string;
-  icon?: string;
+  icon: React.ElementType;
   children?: { name: string; href: string }[];
 }
 
@@ -16,7 +29,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: 'My Page',
     href: '/vendor/mypage',
-    icon: '👤',
+    icon: User,
     children: [
       { name: '프로필', href: '/vendor/mypage/profile' },
       { name: '공지사항', href: '/vendor/mypage/notice' },
@@ -25,7 +38,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '기준정보',
     href: '/vendor/master',
-    icon: '📋',
+    icon: Building2,
     children: [
       { name: '협력업체 변경신청', href: '/vendor/master/info' },
       { name: '담당자관리', href: '/vendor/master/users' },
@@ -34,7 +47,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '견적관리',
     href: '/vendor/rfq',
-    icon: '📝',
+    icon: FileText,
     children: [
       { name: '견적현황', href: '/vendor/rfq/submit' },
       { name: '견적결과', href: '/vendor/rfq/result' },
@@ -43,7 +56,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '발주관리',
     href: '/vendor/order',
-    icon: '📦',
+    icon: Package,
     children: [
       { name: '발주서 조회', href: '/vendor/order/list' },
     ],
@@ -60,70 +73,93 @@ interface NavItemProps {
 const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onToggle }) => {
   const pathname = usePathname();
   const hasChildren = item.children && item.children.length > 0;
-  
   const isChildActive = item.children?.some(child => pathname === child.href) ?? false;
   const shouldExpand = isOpen || isChildActive;
+  const Icon = item.icon;
 
   return (
-    <div className="mb-0.5">
+    <div className="mb-1">
       {hasChildren ? (
         <>
-          <button
+          <motion.button
             onClick={onToggle}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 group
+            whileHover={{ x: 4 }}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group
               ${isChildActive 
-                ? 'bg-emerald-100 text-emerald-700' 
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-100' 
+                : 'text-stone-600 hover:bg-stone-50'
               }`}
           >
             <div className="flex items-center gap-3">
-              <span className="text-lg opacity-70 group-hover:opacity-100">{item.icon}</span>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                isChildActive 
+                  ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/30' 
+                  : 'bg-stone-100 group-hover:bg-stone-200'
+              }`}>
+                <Icon className={`w-4 h-4 ${isChildActive ? 'text-white' : 'text-stone-500 group-hover:text-stone-700'}`} />
+              </div>
               <span className="font-medium text-sm">{item.name}</span>
             </div>
-            <svg
-              className={`w-4 h-4 transition-transform duration-200 text-stone-400 ${shouldExpand ? 'rotate-180' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <motion.div
+              animate={{ rotate: shouldExpand ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              <ChevronDown className="w-4 h-4 text-stone-400" />
+            </motion.div>
+          </motion.button>
           
-          <div
-            className={`overflow-hidden transition-all duration-200 ${
-              shouldExpand ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-            }`}
-          >
-            <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-200 space-y-0.5">
-              {item.children?.map((child) => (
-                <Link
-                  key={child.href}
-                  href={child.href}
-                  className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200
-                    ${pathname === child.href
-                      ? 'bg-emerald-500 text-white font-medium shadow-sm'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                >
-                  {child.name}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <AnimatePresence>
+            {shouldExpand && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-1 ml-4 pl-4 border-l-2 border-stone-100 space-y-1">
+                  {item.children?.map((child, idx) => (
+                    <motion.div
+                      key={child.href}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <Link
+                        href={child.href}
+                        className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200
+                          ${pathname === child.href
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium shadow-md shadow-emerald-500/25'
+                            : 'text-stone-500 hover:bg-stone-50 hover:text-stone-700'
+                          }`}
+                      >
+                        {child.name}
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       ) : (
-        <Link
-          href={item.href}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
-            ${isActive
-              ? 'bg-emerald-500 text-white font-medium shadow-sm'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-        >
-          <span className={`text-lg ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{item.icon}</span>
-          <span className="font-medium text-sm">{item.name}</span>
-        </Link>
+        <motion.div whileHover={{ x: 4 }}>
+          <Link
+            href={item.href}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group
+              ${isActive
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'text-stone-600 hover:bg-stone-50'
+              }`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isActive ? 'bg-white/20' : 'bg-stone-100 group-hover:bg-stone-200'
+            }`}>
+              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-500'}`} />
+            </div>
+            <span className="font-medium text-sm">{item.name}</span>
+          </Link>
+        </motion.div>
       )}
     </div>
   );
@@ -146,43 +182,71 @@ const VendorSidebar: React.FC = () => {
   };
 
   return (
-    <aside 
-      className="fixed left-0 top-0 h-screen w-[260px] z-40 bg-gray-50/60 backdrop-blur-sm border-r border-gray-200"
+    <motion.aside 
+      initial={{ x: -260 }}
+      animate={{ x: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      className="fixed left-0 top-0 h-screen w-[260px] z-40 bg-white/80 backdrop-blur-xl border-r border-stone-200/50"
     >
       {/* Logo Area */}
-      <div className="h-16 flex items-center px-5 border-b border-stone-200">
-        <Link href="/vendor" className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-sm">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+      <div className="h-16 flex items-center px-5 border-b border-stone-100">
+        <Link href="/vendor" className="flex items-center gap-3 group">
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30"
+          >
+            <Building2 className="w-5 h-5 text-white" />
+          </motion.div>
           <div>
-            <h1 className="text-gray-900 font-bold text-base tracking-tight">Vendor Portal</h1>
-            <p className="text-gray-400 text-xs">협력사 포탈</p>
+            <h1 className="text-stone-900 font-bold text-base tracking-tight group-hover:text-emerald-600 transition-colors">Vendor Portal</h1>
+            <p className="text-stone-400 text-xs">협력사 포탈</p>
           </div>
         </Link>
       </div>
 
       {/* Search */}
-      <div className="px-4 py-3">
-        <div className="relative">
+      <div className="px-4 py-4">
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-focus-within:text-emerald-500 transition-colors" />
           <input
             type="text"
             placeholder="Search..."
-            className="w-full pl-9 pr-8 py-2 bg-gray-100 border-0 rounded-lg text-sm text-gray-700 placeholder-gray-400
+            className="w-full pl-9 pr-3 py-2.5 bg-stone-50 border-0 rounded-xl text-sm text-stone-700 placeholder-stone-400
               focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all duration-200"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium bg-gray-200 px-1.5 py-0.5 rounded">⌘K</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-stone-400 font-medium bg-stone-100 px-1.5 py-0.5 rounded">⌘K</span>
         </div>
       </div>
 
+      {/* Home Link */}
+      <div className="px-3 mb-2">
+        <motion.div whileHover={{ x: 4 }}>
+          <Link
+            href="/vendor"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group
+              ${pathname === '/vendor'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'text-stone-600 hover:bg-stone-50'
+              }`}
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              pathname === '/vendor' ? 'bg-white/20' : 'bg-stone-100 group-hover:bg-stone-200'
+            }`}>
+              <Home className={`w-4 h-4 ${pathname === '/vendor' ? 'text-white' : 'text-stone-500'}`} />
+            </div>
+            <span className="font-medium text-sm">홈</span>
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* Divider */}
+      <div className="px-5 mb-3">
+        <div className="h-px bg-gradient-to-r from-transparent via-stone-200 to-transparent" />
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto custom-scrollbar h-[calc(100vh-180px)]">
-        <div className="space-y-0.5">
+      <nav className="flex-1 px-3 overflow-y-auto custom-scrollbar h-[calc(100vh-280px)]">
+        <div className="space-y-1">
           {vendorNavigationItems.map((item) => (
             <NavItemComponent
               key={item.href}
@@ -195,25 +259,26 @@ const VendorSidebar: React.FC = () => {
         </div>
       </nav>
 
-      {/* User Section - 협력사 정보 */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-white font-medium text-sm">협</span>
+      {/* User Section */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-stone-100 bg-gradient-to-t from-white to-transparent">
+        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 transition-colors cursor-pointer group">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-md">
+            <span className="text-white font-semibold text-sm">협</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">(주)협력사</p>
-            <p className="text-xs text-gray-500 truncate">홍길동 담당자</p>
+            <p className="text-sm font-semibold text-stone-900 truncate">(주)협력사</p>
+            <p className="text-xs text-stone-500 truncate">홍길동 담당자</p>
           </div>
-          <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          >
+            <LogOut className="w-4 h-4" />
+          </motion.button>
         </div>
       </div>
-
-    </aside>
+    </motion.aside>
   );
 };
 
