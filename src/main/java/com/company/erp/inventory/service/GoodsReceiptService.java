@@ -18,6 +18,8 @@ import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
 import com.company.erp.inventory.mapper.GoodsReceiptMapper;
 import com.company.erp.po.dto.PurchaseOrderDTO;
+import com.company.erp.po.enums.PoStatusCode;
+import com.company.erp.po.mapper.PurchaseOrderMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +29,7 @@ public class GoodsReceiptService {
 
     private final GoodsReceiptMapper goodsReceiptMapper;
     private final DocNumService docNumService;
+    private final PurchaseOrderMapper purchaseOrderMapper;
 
     // 입고대상조회: 입고 가능한 PO 목록
     public List<PurchaseOrderDTO> getPendingPOList(
@@ -222,6 +225,11 @@ public class GoodsReceiptService {
 
         // 헤더 상태 업데이트
         goodsReceiptMapper.updateHeaderStatus(grNo, newStatus, userId);
+
+        // 입고완료(GRE) 상태가 되면 PO 상태를 'C'(완료)로 자동 변경
+        if (GoodsReceiptStatus.COMPLETED.equals(newStatus)) {
+            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.DELIVERED.getCode(), userId);
+        }
     }
 
     // 현재 사용자 ID 가져오기 (인증 정보에서)
