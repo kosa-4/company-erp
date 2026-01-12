@@ -4,28 +4,38 @@
 
     <!-- ========== 입고대상조회 ========== -->
     <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
-    <select id="selectPendingPOList" parameterType="map" resultType="com.company.erp.po.dto.PurchaseOrderDTO">
-        SELECT 
-            h.PO_NUM as poNo,
-            h.PO_SUBJECT as poName,
-            h.PO_DATE as grDate,
-            h.CTRL_USER_ID as ctrlUserName,
-            v.VENDOR_NM as vendorName
-        FROM POHD h
-        LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD
-        WHERE h.PROGRESS_CD = 'S'
-          AND h.DEL_FLAG = 'N'
-          AND NOT EXISTS (
-              SELECT 1 FROM GRHD g 
-              WHERE g.PO_NUM = h.PO_NUM 
-                AND g.PROGRESS_CD = 'GRE'
-                AND g.DEL_FLAG = 'N'
-          )
+    <select id="selectPendingPOList" parameterType="map"
+        resultType="com.company.erp.po.dto.PurchaseOrderDTO">
+        SELECT
+            h.PO_NUM AS poNo,
+            h.PO_SUBJECT AS poName,
+            h.PO_DATE AS poDate,
+            h.CTRL_USER_ID AS ctrlUserName,
+            v.VENDOR_NM AS vendorName
+        FROM
+            POHD h
+            LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD
+        WHERE
+            h.PROGRESS_CD = 'S'
+            AND h.CHECK_FLAG = 'Y'
+            AND h.DEL_FLAG = 'N'
+            AND NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    GRHD g
+                WHERE
+                    g.PO_NUM = h.PO_NUM
+                    AND g.PROGRESS_CD = 'GRE'
+                    AND g.DEL_FLAG = 'N'
+            )
         <if test="poNo != null and poNo != ''">
-            AND h.PO_NUM LIKE CONCAT('%', #{poNo}, '%')
+            AND h.PO_NUM LIKE CONCAT('%', #{poNo},
+            '%')
         </if>
         <if test="vendorName != null and vendorName != ''">
-            AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName},
+            '%')
         </if>
         <if test="startDate != null and startDate != ''">
             AND h.PO_DATE &gt;= #{startDate}
@@ -33,30 +43,45 @@
         <if test="endDate != null and endDate != ''">
             AND h.PO_DATE &lt;= #{endDate}
         </if>
-        ORDER BY h.PO_DATE DESC
+        ORDER BY
+            h.PO_DATE DESC
     </select>
 
     <!-- ========== 입고현황 ========== -->
     <!-- 입고 목록 조회 -->
-    <select id="selectList" parameterType="map" resultType="com.company.erp.inventory.dto.GoodsReceiptDTO">
-        SELECT 
-            h.GR_NUM as grNo,
-            h.PO_NUM as poNo,
-            h.GR_DATE as grDate,
-            h.GR_AMT as totalAmount,
-            h.PROGRESS_CD as status,
-            h.RMK as remark,
-            v.VENDOR_NM as vendorName,
-            (SELECT bu.USER_NM FROM BY_USER bu WHERE bu.USER_ID = h.CTRL_USER_ID LIMIT 1) as ctrlUserName
-        FROM GRHD h
-        LEFT JOIN POHD p ON h.PO_NUM = p.PO_NUM
-        LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD
-        WHERE h.DEL_FLAG = 'N'
+    <select id="selectList" parameterType="map"
+        resultType="com.company.erp.inventory.dto.GoodsReceiptDTO">
+        SELECT
+            h.GR_NUM AS grNo,
+            h.PO_NUM AS poNo,
+            h.GR_DATE AS grDate,
+            h.GR_AMT AS totalAmount,
+            h.PROGRESS_CD AS status,
+            h.RMK AS remark,
+            v.VENDOR_NM AS vendorName,
+            (
+                SELECT
+                    bu.USER_NM
+                FROM
+                    BY_USER bu
+                WHERE
+                    bu.USER_ID = h.CTRL_USER_ID
+                LIMIT
+                    1
+            ) AS ctrlUserName
+        FROM
+            GRHD h
+            LEFT JOIN POHD p ON h.PO_NUM = p.PO_NUM
+            LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD
+        WHERE
+            h.DEL_FLAG = 'N'
         <if test="grNo != null and grNo != ''">
-            AND h.GR_NUM LIKE CONCAT('%', #{grNo}, '%')
+            AND h.GR_NUM LIKE CONCAT('%', #{grNo},
+            '%')
         </if>
         <if test="vendorName != null and vendorName != ''">
-            AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName},
+            '%')
         </if>
         <if test="status != null and status != ''">
             AND h.PROGRESS_CD = #{status}
@@ -67,159 +92,215 @@
         <if test="endDate != null and endDate != ''">
             AND h.GR_DATE &lt;= #{endDate}
         </if>
-        ORDER BY h.REG_DATE DESC
+        ORDER BY
+            h.REG_DATE DESC
     </select>
 
     <!-- 입고 헤더 단건 조회 -->
-    <select id="selectHeader" parameterType="String" resultType="com.company.erp.inventory.dto.GoodsReceiptDTO">
-        SELECT 
-            h.GR_NUM as grNo,
-            h.PO_NUM as poNo,
-            h.GR_DATE as grDate,
-            h.GR_AMT as totalAmount,
-            h.PROGRESS_CD as status,
-            h.RMK as remark,
-            v.VENDOR_NM as vendorName,
-            (SELECT bu.USER_NM FROM BY_USER bu WHERE bu.USER_ID = h.CTRL_USER_ID LIMIT 1) as ctrlUserName
-        FROM GRHD h
-        LEFT JOIN POHD p ON h.PO_NUM = p.PO_NUM
-        LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD
-        WHERE h.GR_NUM = #{grNo}
-          AND h.DEL_FLAG = 'N'
+    <select id="selectHeader" parameterType="String"
+        resultType="com.company.erp.inventory.dto.GoodsReceiptDTO">
+        SELECT
+            h.GR_NUM AS grNo,
+            h.PO_NUM AS poNo,
+            h.GR_DATE AS grDate,
+            h.GR_AMT AS totalAmount,
+            h.PROGRESS_CD AS status,
+            h.RMK AS remark,
+            v.VENDOR_NM AS vendorName,
+            (
+                SELECT
+                    bu.USER_NM
+                FROM
+                    BY_USER bu
+                WHERE
+                    bu.USER_ID = h.CTRL_USER_ID
+                LIMIT
+                    1
+            ) AS ctrlUserName
+        FROM
+            GRHD h
+            LEFT JOIN POHD p ON h.PO_NUM = p.PO_NUM
+            LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD
+        WHERE
+            h.GR_NUM = #{grNo}
+        AND h.DEL_FLAG = 'N'
     </select>
 
     <!-- 입고 상세 품목 목록 조회 -->
-    <select id="selectItems" parameterType="String" resultType="com.company.erp.inventory.dto.GoodsReceiptItemDTO">
-        SELECT 
-            d.GR_NUM as grNo,
-            d.ITEM_CD as itemCode,
-            d.ITEM_DESC as itemDesc,
-            d.ITEM_SPEC as itemSpec,
-            d.UNIT_CD as unitCode,
-            d.GR_QT as grQuantity,
-            d.GR_AMT as grAmount,
-            d.VENDOR_CD as vendorCode,
-            v.VENDOR_NM as vendorName,
-            d.CTRL_USER_ID as ctrlUserId,
-            d.WH_CD as warehouseCode,
-            d.GR_DATE as grDate,
-            d.RMK as remark,
-            d.STATUS_CD as statusCode,
-            d.CANCLE_RMK as cancelRemark,
-            pd.UNIT_PRC as unitPrice,
-            pd.PO_QT as orderQty,
-            pd.PO_AMT as orderAmount,
-            (SELECT COALESCE(SUM(gd2.GR_QT), 0) 
-             FROM GRDT gd2 
-             JOIN GRHD gh2 ON gd2.GR_NUM = gh2.GR_NUM
-             WHERE gh2.PO_NUM = h.PO_NUM 
-               AND gd2.ITEM_CD = d.ITEM_CD
-               AND gd2.STATUS_CD = 'N'
-               AND gd2.DEL_FLAG = 'N') as accumulatedQty
-        FROM GRDT d
-        INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM
-        LEFT JOIN PODT pd ON h.PO_NUM = pd.PO_NUM AND d.ITEM_CD = pd.ITEM_CD
-        LEFT JOIN VNGL v ON d.VENDOR_CD = v.VENDOR_CD
-        WHERE d.GR_NUM = #{grNo}
-          AND d.DEL_FLAG = 'N'
+    <select id="selectItems" parameterType="String"
+        resultType="com.company.erp.inventory.dto.GoodsReceiptItemDTO">
+        SELECT
+            d.GR_NUM AS grNo,
+            d.ITEM_CD AS itemCode,
+            d.ITEM_DESC AS itemDesc,
+            d.ITEM_SPEC AS itemSpec,
+            d.UNIT_CD AS unitCode,
+            d.GR_QT AS grQuantity,
+            d.GR_AMT AS grAmount,
+            d.VENDOR_CD AS vendorCode,
+            v.VENDOR_NM AS vendorName,
+            d.CTRL_USER_ID AS ctrlUserId,
+            d.WH_CD AS warehouseCode,
+            d.GR_DATE AS grDate,
+            d.RMK AS remark,
+            d.STATUS_CD AS statusCode,
+            d.CANCLE_RMK AS cancelRemark,
+            pd.UNIT_PRC AS unitPrice,
+            pd.PO_QT AS orderQty,
+            pd.PO_AMT AS orderAmount,
+            (
+                SELECT
+                    COALESCE(SUM(gd2.GR_QT), 0)
+                FROM
+                    GRDT gd2
+                    JOIN GRHD gh2 ON gd2.GR_NUM = gh2.GR_NUM
+                WHERE
+                    gh2.PO_NUM = h.PO_NUM
+                    AND gd2.ITEM_CD = d.ITEM_CD
+                    AND gd2.STATUS_CD = 'N'
+                    AND gd2.DEL_FLAG = 'N'
+            ) AS accumulatedQty
+        FROM
+            GRDT d
+            INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM
+            LEFT JOIN PODT pd ON h.PO_NUM = pd.PO_NUM
+            AND d.ITEM_CD = pd.ITEM_CD
+            LEFT JOIN VNGL v ON d.VENDOR_CD = v.VENDOR_CD
+        WHERE
+            d.GR_NUM = #{grNo}
+        AND d.DEL_FLAG = 'N'
     </select>
 
     <!-- ========== 입고처리 ========== -->
     <!-- 입고 헤더 등록 -->
     <insert id="insertHeader">
-        INSERT INTO GRHD (
-            GR_NUM, PO_NUM, GR_DATE, GR_AMT, PROGRESS_CD, 
-            CTRL_USER_ID, RMK, REG_DATE, REG_USER_ID, DEL_FLAG
-        ) VALUES (
-            #{dto.grNo}, #{dto.poNo}, #{dto.grDate}, #{dto.totalAmount}, #{dto.status},
-            #{regUserId}, #{dto.remark}, NOW(), #{regUserId}, 'N'
-        )
+        INSERT INTO GRHD ( GR_NUM, PO_NUM, GR_DATE, GR_AMT, PROGRESS_CD,
+        CTRL_USER_ID, RMK, REG_DATE, REG_USER_ID, DEL_FLAG ) VALUES ( #{dto.grNo},
+        #{dto.poNo},
+        #{dto.grDate},
+        #{dto.totalAmount},
+        #{dto.status},
+        #{regUserId},
+        #{dto.remark},
+        NOW(), #{regUserId},
+        'N' )
     </insert>
 
     <!-- 입고 상세 품목 등록 -->
     <insert id="insertItem">
-        INSERT INTO GRDT (
-            GR_NUM, ITEM_CD, ITEM_DESC, ITEM_SPEC, UNIT_CD,
-            GR_QT, GR_AMT, VENDOR_CD, CTRL_USER_ID, WH_CD,
-            GR_DATE, RMK, STATUS_CD, REG_DATE, REG_USER_ID, DEL_FLAG
-        ) VALUES (
-            #{item.grNo}, #{item.itemCode}, #{item.itemDesc}, #{item.itemSpec}, #{item.unitCode},
-            #{item.grQuantity}, #{item.grAmount}, #{item.vendorCode}, #{item.ctrlUserId}, #{item.warehouseCode},
-            #{item.grDate}, #{item.remark}, #{item.statusCode}, NOW(), #{item.ctrlUserId}, 'N'
-        )
+        INSERT INTO GRDT ( GR_NUM, ITEM_CD, ITEM_DESC, ITEM_SPEC, UNIT_CD,
+        GR_QT, GR_AMT, VENDOR_CD, CTRL_USER_ID, WH_CD, GR_DATE, RMK, STATUS_CD, REG_DATE,
+        REG_USER_ID, DEL_FLAG ) VALUES ( #{item.grNo},
+        #{item.itemCode},
+        #{item.itemDesc},
+        #{item.itemSpec},
+        #{item.unitCode},
+        #{item.grQuantity},
+        #{item.grAmount},
+        #{item.vendorCode},
+        #{item.ctrlUserId},
+        #{item.warehouseCode},
+        #{item.grDate},
+        #{item.remark},
+        #{item.statusCode},
+        NOW(), #{item.ctrlUserId},
+        'N' )
     </insert>
 
     <!-- ========== 입고조정 ========== -->
     <!-- 상세 품목 수정 (입고수량, 저장위치만) -->
     <update id="updateItem">
-        UPDATE GRDT 
-        SET GR_QT = #{item.grQuantity},
-            GR_AMT = #{item.grAmount},
-            WH_CD = #{item.warehouseCode},
-            MOD_DATE = NOW(),
-            MOD_USER_ID = #{modUserId}
-        WHERE GR_NUM = #{item.grNo}
-          AND ITEM_CD = #{item.itemCode}
+        UPDATE GRDT
+        SET
+            GR_QT = #{item.grQuantity},
+        GR_AMT = #{item.grAmount},
+        WH_CD = #{item.warehouseCode},
+        MOD_DATE = NOW(),
+        MOD_USER_ID = #{modUserId}
+        WHERE
+            GR_NUM = #{item.grNo}
+        AND ITEM_CD = #{item.itemCode}
     </update>
 
     <!-- 상세 품목 취소 처리 -->
     <update id="cancelItem">
-        UPDATE GRDT 
-        SET STATUS_CD = 'C',
+        UPDATE GRDT
+        SET
+            STATUS_CD = 'C',
             CANCLE_RMK = #{cancelRemark},
-            MOD_DATE = NOW(),
-            MOD_USER_ID = #{modUserId}
-        WHERE GR_NUM = #{grNo}
-          AND ITEM_CD = #{itemCode}
+        MOD_DATE = NOW(),
+        MOD_USER_ID = #{modUserId}
+        WHERE
+            GR_NUM = #{grNo}
+        AND ITEM_CD = #{itemCode}
     </update>
 
     <!-- 헤더 상태 업데이트 -->
     <update id="updateHeaderStatus">
-        UPDATE GRHD 
-        SET PROGRESS_CD = #{status},
-            MOD_DATE = NOW(),
-            MOD_USER_ID = #{modUserId}
-        WHERE GR_NUM = #{grNo}
+        UPDATE GRHD
+        SET
+            PROGRESS_CD = #{status},
+        MOD_DATE = NOW(),
+        MOD_USER_ID = #{modUserId}
+        WHERE
+            GR_NUM = #{grNo}
     </update>
 
     <!-- ========== 상태 계산용 ========== -->
     <!-- 특정 PO의 누적 입고수량 조회 (정상 상태만) -->
     <select id="selectAccumulatedQty" parameterType="String" resultType="java.math.BigDecimal">
-        SELECT COALESCE(SUM(d.GR_QT), 0)
-        FROM GRDT d
-        INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM
-        WHERE h.PO_NUM = #{poNo}
-          AND d.STATUS_CD = 'N'
-          AND d.DEL_FLAG = 'N'
-          AND h.DEL_FLAG = 'N'
+        SELECT
+            COALESCE(SUM(d.GR_QT), 0)
+        FROM
+            GRDT d
+            INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM
+        WHERE
+            h.PO_NUM = #{poNo}
+        AND d.STATUS_CD = 'N'
+        AND d.DEL_FLAG = 'N'
+        AND h.DEL_FLAG = 'N'
     </select>
 
     <!-- 특정 PO의 발주수량 합계 조회 -->
     <select id="selectOrderQty" parameterType="String" resultType="java.math.BigDecimal">
-        SELECT COALESCE(SUM(PO_QT), 0)
-        FROM PODT
-        WHERE PO_NUM = #{poNo}
-          AND DEL_FLAG = 'N'
+        SELECT
+            COALESCE(SUM(PO_QT), 0)
+        FROM
+            PODT
+        WHERE
+            PO_NUM = #{poNo}
+        AND DEL_FLAG = 'N'
     </select>
 
     <!-- 특정 GR의 모든 DT가 취소 상태인지 확인 -->
     <select id="isAllItemsCancelled" parameterType="String" resultType="boolean">
-        SELECT CASE 
-            WHEN COUNT(*) = 0 THEN true
-            WHEN SUM(CASE WHEN STATUS_CD = 'N' THEN 1 ELSE 0 END) = 0 THEN true
-            ELSE false
-        END
-        FROM GRDT
-        WHERE GR_NUM = #{grNo}
-          AND DEL_FLAG = 'N'
+        SELECT
+            CASE
+                WHEN COUNT(*) = 0 THEN TRUE
+                WHEN SUM(
+                    CASE
+                        WHEN STATUS_CD = 'N' THEN 1
+                        ELSE 0
+                    END
+                ) = 0 THEN TRUE
+                ELSE FALSE
+            END
+        FROM
+            GRDT
+        WHERE
+            GR_NUM = #{grNo}
+        AND DEL_FLAG = 'N'
     </select>
 
     <!-- GR 번호로 PO 번호 조회 -->
     <select id="selectPoNoByGrNo" parameterType="String" resultType="String">
-        SELECT PO_NUM
-        FROM GRHD
-        WHERE GR_NUM = #{grNo}
-          AND DEL_FLAG = 'N'
+        SELECT
+            PO_NUM
+        FROM
+            GRHD
+        WHERE
+            GR_NUM = #{grNo}
+        AND DEL_FLAG = 'N'
     </select>
 
 </mapper>
