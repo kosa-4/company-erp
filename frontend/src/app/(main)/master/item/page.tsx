@@ -88,13 +88,22 @@ export default function ItemPage() {
 
   const fetchItems = async () => {
     setLoading(true);
-    try{
+    try {
+      // [수정] 백엔드 에러 방지: page가 없거나 빈 문자열("")이면 "1"을 기본값으로 사용
+      // 이렇게 하면 절대 빈 값이 넘어가지 않아 서버가 좋아합니다.
+      const safeParams = {
+          ...searchParams,
+          page: searchParams.page || "1" 
+      };
+
       // 1. url로 파라미터 전달
+      // searchParams 대신 위에서 만든 safeParams를 넣습니다.
       const response = await fetch ("/api/v1/items?" +
-        new URLSearchParams(searchParams)
+        new URLSearchParams(safeParams as any) 
       );
-      // console.log("searchparam ", searchParams.page);
       
+      // console.log("보낸 파라미터 확인: ", safeParams);
+
       if (!response.ok) {
         // 오류 발생 시 catch로 이동
         throw new Error(`조회 실패 ${response.status}`);
@@ -115,7 +124,7 @@ export default function ItemPage() {
       setLoading(false);
     }    
     
-  };
+};
 
   const handlePrevPage = () => {
     const prevPage = (Number(page) - 1).toString()
@@ -149,10 +158,10 @@ export default function ItemPage() {
     fetchItems();
   };
 
-  // useEffect(() => {
-  //   fetchItems();
+  useEffect(() => {
+    fetchItems();
     
-  // }, [searchParams.page]); 
+  }, [searchParams]); 
 
   
 
@@ -175,7 +184,7 @@ export default function ItemPage() {
       
       // 3. 데이터 존재 시 처리
       setSelectedItem(data);
-       
+      console.log("data ",data);
       setIsDetailModalOpen(true);     
       // console.log("type of data ",typeof data);
     } catch(error){
@@ -220,13 +229,13 @@ export default function ItemPage() {
       width: 60,
       align: 'center',
     },
-    {
-      key: 'unitPrice',
-      header: '단가',
-      width: 120,
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
+    // {
+    //   key: 'unitPrice',
+    //   header: '단가',
+    //   width: 120,
+    //   align: 'right',
+    //   render: (value) => `₩${formatNumber(Number(value))}`,
+    // },
     {
       key: 'manufacturerCode',
       header: '제조사코드',
@@ -351,6 +360,7 @@ export default function ItemPage() {
 
     setSelectedPath(reversePath);
   }
+  console.log("selectedItem ", selectedItem);
   
   // 체번 표시
   // const router = useRouter();
@@ -467,6 +477,7 @@ export default function ItemPage() {
           </>
         }
       >
+        
         {selectedItem && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -494,11 +505,11 @@ export default function ItemPage() {
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
               /> */}
-              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/>
+              {/* <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/> */}
               <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
               <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
               <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-              <Input label="등록일자" value={selectedItem.createdAt} readOnly />
+              <Input label="등록일자" value={selectedItem.createdAt || ""} readOnly />
               <Input label="등록자" value={selectedItem.createdBy} readOnly />
             </div>
             <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
@@ -531,11 +542,14 @@ export default function ItemPage() {
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
               <Input 
-              name='categoryType' 
+              name='itemType' 
               label="품목 분류" 
               placeholder="품목 분류 입력" 
               value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
-              onClick={() => setIsCateModalOpen(true)}/>
+              onClick={() => {
+                setIsCateModalOpen(true)
+                fetchCategories();
+                }}/>
               <Input 
               name='categoryL' 
               label="품목 대분류" 
@@ -568,7 +582,7 @@ export default function ItemPage() {
                 ]}
               />
               
-              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/>
+              {/* <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/> */}
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
@@ -587,6 +601,7 @@ export default function ItemPage() {
                   </div>
                 </div>              
               
+            <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} />
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
@@ -606,13 +621,13 @@ export default function ItemPage() {
                 
                 handleSelect(selectedCate);
                 // console.log(selectedCate)
-                // setIsCreateModalOpen(false);
+                setIsCateModalOpen(false);
               }}
               confirmText="저장"
             />
           }
         >
-          <button onClick={() => fetchCategories()}>조회</button>
+          {/* <button onClick={fetchItems}>조회</button> */}
           <div className="flex flex-col h-[500px] w-full bg-white">
               {/* 상단 검색바 (선택 사항) */}
               <div className="p-4 border-b">
@@ -670,9 +685,6 @@ export default function ItemPage() {
           </button>
             
         </div>
-        <button onClick={fetchCategories}>
-          카테고리
-        </button>
       </section>
     </div>
   );
