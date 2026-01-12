@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Building2 } from 'lucide-react';
 import DashboardUI from './DashboardUI';
 
 interface HeroProps {
@@ -82,18 +82,31 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
           transition={{ delay: 0.5 }}
           className="flex items-center justify-center gap-4"
         >
-          <button 
+          <motion.button 
             onClick={onGetStarted}
-            className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-full font-medium transition-all hover:shadow-[0_10px_30px_rgba(79,70,229,0.3)] shadow-[0_5px_15px_rgba(79,70,229,0.2)]"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="group flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-8 py-3.5 rounded-full font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
           >
             Purchase ERP <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
             onClick={onLogin}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-8 py-3 rounded-full font-medium transition-all border border-slate-200 shadow-sm hover:shadow-md"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-8 py-3.5 rounded-full font-medium transition-all border border-slate-200 shadow-sm hover:shadow-lg"
           >
             로그인
-          </button>
+          </motion.button>
+          <motion.a 
+            href="/vendor"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-3.5 rounded-full font-medium transition-all shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40"
+          >
+            <Building2 className="w-4 h-4" />
+            협력사
+          </motion.a>
         </motion.div>
       </div>
 
