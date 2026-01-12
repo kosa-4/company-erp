@@ -3,35 +3,39 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, ChevronDown, User, Settings, LogOut, MessageSquare, HelpCircle } from 'lucide-react';
-import { User as UserType } from '@/types';
+import { Bell, ChevronDown, User, Settings, LogOut, MessageSquare } from 'lucide-react';
 
-interface HeaderProps {
-  user?: UserType;
+interface VendorUser {
+  id: string;
+  userId: string;
+  userName: string;
+  email: string;
+  vendorCode: string;
+  vendorName: string;
+}
+
+interface VendorHeaderProps {
+  user?: VendorUser;
 }
 
 // 임시 Mock 사용자 데이터
-const mockUser: UserType = {
+const mockVendorUser: VendorUser = {
   id: '1',
-  userId: 'admin',
+  userId: 'vendor01',
   userName: '홍길동',
-  email: 'admin@company.com',
-  companyCode: 'COMP001',
-  companyName: '(주)테스트회사',
-  departmentCode: 'DEPT001',
-  departmentName: '구매팀',
-  userType: 'BUYER',
-  role: 'MANAGER',
+  email: 'vendor@partner.com',
+  vendorCode: 'VND001',
+  vendorName: '(주)협력사',
 };
 
-const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
+const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
   const notifications = [
-    { id: 1, title: '새로운 구매요청이 등록되었습니다.', time: '5분 전', unread: true },
-    { id: 2, title: '견적서가 도착했습니다.', time: '30분 전', unread: true },
-    { id: 3, title: '발주서 승인이 완료되었습니다.', time: '1시간 전', unread: false },
+    { id: 1, title: '새로운 발주서가 도착했습니다.', time: '10분 전', unread: true },
+    { id: 2, title: '견적 요청이 접수되었습니다.', time: '1시간 전', unread: true },
+    { id: 3, title: '시스템 점검 안내', time: '3시간 전', unread: false },
   ];
 
   return (
@@ -51,11 +55,11 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
         >
           <div>
             <h2 className="text-lg font-bold text-stone-900">
-              Welcome, <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{user.userName}</span>
+              Welcome, <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{user.vendorName}</span>
             </h2>
           </div>
-          <span className="px-3 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-            {user.role === 'ADMIN' ? '관리자' : user.role === 'MANAGER' ? '담당자' : '사용자'}
+          <span className="px-3 py-1 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+            협력사
           </span>
         </motion.div>
 
@@ -96,12 +100,12 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
                         className={`px-4 py-3 hover:bg-stone-50 cursor-pointer transition-colors ${
-                          notification.unread ? 'bg-blue-50/30' : ''
+                          notification.unread ? 'bg-emerald-50/30' : ''
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           {notification.unread && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full mt-1.5 flex-shrink-0" />
                           )}
                           <div className={notification.unread ? '' : 'ml-5'}>
                             <p className={`text-sm ${notification.unread ? 'text-stone-900 font-medium' : 'text-stone-600'}`}>
@@ -113,7 +117,7 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
                       </motion.div>
                     ))}
                   </div>
-                  <Link href="/mypage/notice" className="block p-3 text-center text-sm text-blue-600 font-medium hover:bg-stone-50 border-t border-stone-100">
+                  <Link href="/vendor/mypage/notice" className="block p-3 text-center text-sm text-teal-600 font-medium hover:bg-stone-50 border-t border-stone-100">
                     전체 알림 보기
                   </Link>
                 </motion.div>
@@ -129,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 p-1.5 pr-3 rounded-xl hover:bg-stone-50 transition-colors"
             >
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+              <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/20">
                 <span className="text-white font-semibold text-sm">
                   {user.userName.charAt(0)}
                 </span>
@@ -151,24 +155,22 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
                   className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-stone-100 overflow-hidden"
                 >
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-stone-100">
+                  <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border-b border-stone-100">
                     <p className="font-semibold text-stone-900">{user.userName}</p>
                     <p className="text-sm text-stone-500 mt-0.5">{user.email}</p>
                     <div className="mt-2 flex gap-2">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                        {user.role === 'ADMIN' ? '관리자' : user.role === 'MANAGER' ? '담당자' : '사용자'}
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                        협력사
                       </span>
                       <span className="px-2 py-0.5 bg-stone-100 text-stone-600 text-xs rounded-full">
-                        {user.departmentName}
+                        {user.vendorName}
                       </span>
                     </div>
                   </div>
                   <div className="py-2">
                     {[
-                      { href: '/mypage/profile', icon: User, label: '내 정보 수정' },
-                      { href: '/mypage/notice', icon: MessageSquare, label: '공지사항' },
-                      { href: '/settings', icon: Settings, label: 'Settings' },
-                      { href: '/help', icon: HelpCircle, label: 'Help & Center' },
+                      { href: '/vendor/mypage/profile', icon: User, label: '내 정보 수정' },
+                      { href: '/vendor/mypage/notice', icon: MessageSquare, label: '공지사항' },
                     ].map((item, idx) => (
                       <motion.div
                         key={item.href}
@@ -216,4 +218,4 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
   );
 };
 
-export default Header;
+export default VendorHeader;
