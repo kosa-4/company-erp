@@ -1,4 +1,4 @@
-package com.company.erp.po.exception;
+package com.company.erp.common.exception;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@RestControllerAdvice(basePackages = "com.company.erp.po")
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // 잘못된 파라미터로 발생한 예외 처리
