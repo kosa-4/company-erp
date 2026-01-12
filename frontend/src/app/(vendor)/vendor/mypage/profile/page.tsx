@@ -1,158 +1,286 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Mail, Phone, Save } from 'lucide-react';
+import { PageHeader, Card, Input, Button, Select } from '@/components/ui';
+
+interface VendorProfileForm {
+  // 협력사 정보
+  vendorName: string;
+  vendorNameEn: string;
+  businessType: string;
+  businessNo: string;
+  ceoName: string;
+  zipCode: string;
+  address: string;
+  addressDetail: string;
+  phone: string;
+  industry: string;
+  // 계정 정보
+  userName: string;
+  userId: string;
+  email: string;
+  password: string;
+  passwordConfirm: string;
+}
 
 export default function VendorProfilePage() {
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState<VendorProfileForm>({
+    // 협력사 정보
+    vendorName: '(주)협력사',
+    vendorNameEn: 'Vendor Co., Ltd.',
+    businessType: '법인',
+    businessNo: '123-45-67890',
+    ceoName: '홍길동',
+    zipCode: '06234',
+    address: '서울시 강남구 테헤란로 123',
+    addressDetail: '협력빌딩 5층',
+    phone: '02-1234-5678',
+    industry: 'IT서비스',
+    // 계정 정보
     userName: '홍길동',
     userId: 'vendor01',
     email: 'vendor@partner.com',
-    phone: '010-1234-5678',
-    department: '영업팀',
+    password: '',
+    passwordConfirm: '',
   });
-  const [isEditing, setIsEditing] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [errors, setErrors] = useState<Partial<VendorProfileForm>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = () => {
-    alert('프로필이 저장되었습니다.');
-    setIsEditing(false);
-  };
-
-  const inputClassName = (editable: boolean) => `
-    w-full px-4 py-3 rounded-lg text-sm transition-all
-    ${editable 
-      ? 'bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
-      : 'bg-gray-100 border border-gray-100 cursor-not-allowed text-gray-600'
+    setForm(prev => ({ ...prev, [name]: value }));
+    
+    // 에러 초기화
+    if (errors[name as keyof VendorProfileForm]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
     }
-  `;
+  };
+
+  const validateForm = () => {
+    const newErrors: Partial<VendorProfileForm> = {};
+
+    if (form.password && form.password.length < 8) {
+      newErrors.password = '비밀번호는 8자 이상이어야 합니다.';
+    }
+
+    if (form.password && form.password !== form.passwordConfirm) {
+      newErrors.passwordConfirm = '비밀번호가 일치하지 않습니다.';
+    }
+
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = '올바른 이메일 형식을 입력해주세요.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setIsSaving(true);
+    
+    // API 호출 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setIsSaving(false);
+    alert('저장되었습니다.');
+  };
+
+  const businessTypeOptions = [
+    { value: '법인', label: '법인' },
+    { value: '개인', label: '개인' },
+    { value: '일반과세자', label: '일반과세자' },
+    { value: '간이과세자', label: '간이과세자' },
+  ];
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">프로필</h1>
-          <p className="text-gray-500 mt-1">내 계정 정보를 확인하고 수정합니다.</p>
-        </div>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
-          >
-            수정하기
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsEditing(false)}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              저장
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="max-w-4xl">
+      <PageHeader 
+        title="내 정보 수정" 
+        subtitle="협력사 및 계정 정보를 확인하고 수정할 수 있습니다."
+        icon={
+          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        }
+      />
 
-      {/* Profile Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <User className="w-10 h-10 text-emerald-500" />
-            </div>
-            <div className="text-white">
-              <h2 className="text-2xl font-bold">{formData.userName}</h2>
-              <p className="text-emerald-100">{formData.department} · 담당자</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">사용자명</label>
-            <input
-              type="text"
-              name="userName"
-              value={formData.userName}
+      <form onSubmit={handleSubmit}>
+        {/* 협력사 정보 */}
+        <Card className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
+            협력사 정보
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="협력사명"
+              name="vendorName"
+              value={form.vendorName}
+              readOnly
+              required
+            />
+            <Input
+              label="협력사명 (영문)"
+              name="vendorNameEn"
+              value={form.vendorNameEn}
               onChange={handleChange}
-              disabled={!isEditing}
-              className={inputClassName(isEditing)}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">아이디</label>
-            <input
-              type="text"
-              name="userId"
-              value={formData.userId}
-              disabled
-              className={inputClassName(false)}
-            />
-            <p className="text-xs text-gray-400 mt-1">아이디는 변경할 수 없습니다.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                이메일
-              </div>
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
+            <Select
+              label="사업형태"
+              name="businessType"
+              value={form.businessType}
               onChange={handleChange}
-              disabled={!isEditing}
-              className={inputClassName(isEditing)}
+              options={businessTypeOptions}
+              required
+            />
+            <Input
+              label="사업자등록번호"
+              name="businessNo"
+              value={form.businessNo}
+              readOnly
+              helperText="사업자등록번호는 변경할 수 없습니다."
+            />
+            <Input
+              label="대표자명"
+              name="ceoName"
+              value={form.ceoName}
+              onChange={handleChange}
+              required
+            />
+            <Input
+              label="업종"
+              name="industry"
+              value={form.industry}
+              onChange={handleChange}
+              required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                연락처
+          {/* 주소 */}
+          <div className="mt-6 space-y-4">
+            <div className="flex gap-3">
+              <div className="w-32">
+                <Input
+                  label="우편번호"
+                  name="zipCode"
+                  value={form.zipCode}
+                  readOnly
+                  required
+                />
               </div>
-            </label>
-            <input
-              type="tel"
+              <div className="flex items-end">
+                <Button type="button" variant="secondary">
+                  검색
+                </Button>
+              </div>
+            </div>
+            <Input
+              label="기본주소"
+              name="address"
+              value={form.address}
+              readOnly
+              required
+            />
+            <Input
+              label="상세주소"
+              name="addressDetail"
+              value={form.addressDetail}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* 전화번호 */}
+          <div className="mt-6">
+            <Input
+              label="전화번호"
               name="phone"
-              value={formData.phone}
+              type="tel"
+              value={form.phone}
               onChange={handleChange}
-              disabled={!isEditing}
-              className={inputClassName(isEditing)}
+              placeholder="02-0000-0000"
+              required
             />
           </div>
+        </Card>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">부서</label>
-            <input
-              type="text"
-              name="department"
-              value={formData.department}
+        {/* 계정 정보 */}
+        <Card className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
+            계정 정보
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="사용자명"
+              name="userName"
+              value={form.userName}
               onChange={handleChange}
-              disabled={!isEditing}
-              className={inputClassName(isEditing)}
+              required
+            />
+            <Input
+              label="아이디"
+              name="userId"
+              value={form.userId}
+              readOnly
+              helperText="아이디는 변경할 수 없습니다."
+            />
+            <div className="md:col-span-2">
+              <Input
+                label="이메일"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                error={errors.email}
+                required
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* 비밀번호 변경 */}
+        <Card className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
+            비밀번호 변경
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="새 비밀번호"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="8자 이상 입력"
+              error={errors.password}
+              helperText="영문, 숫자, 특수문자 조합 권장"
+            />
+            <Input
+              label="비밀번호 확인"
+              name="passwordConfirm"
+              type="password"
+              value={form.passwordConfirm}
+              onChange={handleChange}
+              placeholder="비밀번호를 다시 입력"
+              error={errors.passwordConfirm}
             />
           </div>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="secondary">
+            취소
+          </Button>
+          <Button type="submit" variant="primary" loading={isSaving}>
+            저장
+          </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
