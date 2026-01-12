@@ -4,6 +4,22 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Building2, Search } from 'lucide-react';
 
+// 다음 우편번호 API 타입 선언
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          roadAddress: string;
+          jibunAddress: string;
+          buildingName: string;
+        }) => void;
+      }) => { open: () => void };
+    };
+  }
+}
+
 interface AuthModalProps {
   mode: 'login' | 'signup';
   onClose: () => void;
@@ -18,8 +34,10 @@ interface VendorFormData {
   ceoName: string;
   zipCode: string;
   address: string;
+  addressDetail: string;
   phone: string;
   industry: string;
+  userName: string;
   userId: string;
   password: string;
   passwordConfirm: string;
@@ -34,8 +52,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     ceoName: '',
     zipCode: '',
     address: '',
+    addressDetail: '',
     phone: '',
     industry: '',
+    userName: '',
     userId: '',
     password: '',
     passwordConfirm: '',
@@ -44,6 +64,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // 다음 우편번호 검색
+  const handleAddressSearch = () => {
+    if (!window.daum?.Postcode) {
+      alert('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        // 도로명 주소 + 건물명 조합
+        let fullAddress = data.roadAddress;
+        if (data.buildingName) {
+          fullAddress += ` (${data.buildingName})`;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          zipCode: data.zonecode,
+          address: fullAddress,
+        }));
+      }
+    }).open();
   };
 
   const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none";
@@ -210,7 +254,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                           />
                           <button 
                             type="button"
-                            className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded-lg transition-colors flex items-center gap-1"
+                            onClick={handleAddressSearch}
+                            className="px-4 py-2.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
                           >
                             <Search className="w-4 h-4" />
                             검색
@@ -219,15 +264,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       </div>
                     </div>
                     <div>
-                      <label className={labelClassName}>주소 *</label>
+                      <label className={labelClassName}>기본주소 *</label>
                       <input 
                         type="text"
                         name="address"
                         value={formData.address}
+                        className={`${inputClassName} bg-slate-100 cursor-not-allowed`}
+                        placeholder="우편번호 검색 시 자동 입력됩니다"
+                        readOnly
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClassName}>상세주소</label>
+                      <input 
+                        type="text"
+                        name="addressDetail"
+                        value={formData.addressDetail}
                         onChange={handleInputChange}
                         className={inputClassName}
-                        placeholder="상세주소를 입력해주세요"
-                        required
+                        placeholder="동/호수 등 상세주소를 입력해주세요"
                       />
                     </div>
                   </div>
@@ -254,7 +310,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
+                    <div>
+                      <label className={labelClassName}>사용자명 *</label>
+                      <input 
+                        type="text"
+                        name="userName"
+                        value={formData.userName}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="홍길동"
+                        required
+                      />
+                    </div>
+
+                    <div>
                       <label className={labelClassName}>아이디 *</label>
                       <input 
                         type="text"
