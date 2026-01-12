@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Building2 } from 'lucide-react';
 import DashboardUI from './DashboardUI';
 
 interface HeroProps {
@@ -94,6 +94,13 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
           >
             로그인
           </button>
+          <a 
+            href="/vendor"
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-full font-medium transition-all shadow-sm hover:shadow-md"
+          >
+            <Building2 className="w-4 h-4" />
+            협력사
+          </a>
         </motion.div>
       </div>
 

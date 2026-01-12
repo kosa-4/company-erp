@@ -39,6 +39,7 @@ interface VendorFormData {
   industry: string;
   userName: string;
   userId: string;
+  email: string;
   password: string;
   passwordConfirm: string;
 }
@@ -57,6 +58,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     industry: '',
     userName: '',
     userId: '',
+    email: '',
     password: '',
     passwordConfirm: '',
   });
@@ -332,6 +334,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         onChange={handleInputChange}
                         className={inputClassName}
                         placeholder="영문, 숫자 조합 6자 이상"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className={labelClassName}>이메일 *</label>
+                      <input 
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="example@company.com"
                         required
                       />
                     </div>
