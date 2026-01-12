@@ -16,6 +16,7 @@ export const navigationItems: NavItem[] = [
     icon: '📋',
     children: [
       { name: '품목 현황', href: '/master/item', icon: '' },
+      { name: '품목 카테고리', href: '/master/category', icon: '' },
       { name: '협력업체 현황', href: '/master/vendor', icon: '' },
       { name: '협력업체 사용자 관리', href: '/master/vendor-user', icon: '' },
     ],

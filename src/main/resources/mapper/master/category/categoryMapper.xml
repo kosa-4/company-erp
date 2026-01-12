@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.category.mapper.CategoryMapper">
+    <!--전체 품목 분류 조회-->
+    <select id="selectAllCategories" resultType="com.company.erp.master.category.dto.CategoryListDto">
+        SELECT
+            ITEM_CLS AS itemCls,
+            ITEM_CLS_NM AS itemClsNm,
+            USE_FLAG AS useFlag,
+            ITEM_LVL AS itemLvl,
+            PARENT_ITEM_CLS AS parentItemCls
+        FROM
+            MTCA
+    </select>
+
+    <!--품목 분류 조회-->
+    <select id="selectCategoryList" parameterType="com.company.erp.master.category.dto.CategoryListDto" resultType="com.company.erp.master.category.dto.CategoryListDto">
+        SELECT
+            ITEM_CLS AS itemCls,
+            ITEM_CLS_NM AS itemClsNm,
+            USE_FLAG AS useFlag,
+            ITEM_LVL AS itemLvl,
+            PARENT_ITEM_CLS AS parentItemCls
+        FROM
+            MTCA
+        <where>
+
+            <if test="parentItemCls == null or parentItemCls == ''">
+                AND PARENT_ITEM_CLS IS NULL
+            </if>
+            <if test="parentItemCls != null and parentItemCls != ''">
+                AND PARENT_ITEM_CLS = #{parentItemCls}
+            </if>
+        </where>
+    </select>
+
+    <!--단일 품목 조회-->
+    <select id="selectCategoryByCode" parameterType="String" resultType="com.company.erp.master.category.dto.CategoryListDto">
+        SELECT
+            ITEM_CLS AS itemCls,
+            ITEM_CLS_NM AS itemClsNm,
+            USE_FLAG AS useFlag,
+            ITEM_LVL AS itemLvl,
+            PARENT_ITEM_CLS AS parentItemCls
+        FROM
+            MTCA
+        WHERE
+            ITEM_CLS = #{itemCls}
+    </select>
+
+    <!--품목 분류 저장-->
+    <insert id="insertCategory" parameterType="java.util.List">
+        INSERT INTO
+            MTCA(
+                ITEM_CLS,
+                PARENT_ITEM_CLS,
+                ITEM_LVL,
+                ITEM_CLS_NM,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USE_FLAG
+            )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.itemCls},
+            #{item.parentItemCls},
+            #{item.itemLvl},
+            #{item.itemClsNm},
+            NOW(),
+            "추후 수정",
+            NULL,
+            NULL,
+            "N",
+            "Y"
+            )
+        </foreach>
+    </insert>
+    
+    <!--자식 카테고리의 마지막 번호 체크-->
+    <select id="selectMaxChild" parameterType="String" resultType="String">
+        SELECT
+            MAX(ITEM_CLS)
+        FROM
+            MTCA
+        WHERE
+            PARENT_ITEM_CLS = #{parentItemCls}
+    </select>
+
+    <!--대량 중복 체크-->
+    <select id="existsCategory" parameterType="java.util.List" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            MTCA
+        WHERE
+        <foreach collection="list" item="item" separator="OR">
+            (
+                ITEM_CLS_NM = #{item.itemClsNm}
+            AND
+                PARENT_ITEM_CLS = #{item.parentItemCls} <!--같은 부모 내에서 중복 되는 경우 부모가 다르면 상관 없음-->
+            AND
+                ITEM_LVL = #{item.itemLvl}
+            )
+        </foreach>
+
+    </select>
+
+    <!--부모 코드 존재 여부 체크-->
+<!--    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">-->
+<!--        SELECT-->
+<!--            COUNT(*)-->
+<!--        FROM-->
+<!--            MTCA-->
+<!--        WHERE-->
+<!--            ITEM_CLS_NM = #{itemClsNm}-->
+<!--    </select>-->
+</mapper>
