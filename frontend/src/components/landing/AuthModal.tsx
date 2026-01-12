@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Building2, Search } from 'lucide-react';
 
 interface AuthModalProps {
   mode: 'login' | 'signup';
@@ -10,7 +10,45 @@ interface AuthModalProps {
   onSwitchMode: (mode: 'login' | 'signup') => void;
 }
 
+interface VendorFormData {
+  vendorName: string;
+  vendorNameEn: string;
+  businessType: string;
+  businessNo: string;
+  ceoName: string;
+  zipCode: string;
+  address: string;
+  phone: string;
+  industry: string;
+  userId: string;
+  password: string;
+  passwordConfirm: string;
+}
+
 const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) => {
+  const [formData, setFormData] = useState<VendorFormData>({
+    vendorName: '',
+    vendorNameEn: '',
+    businessType: '',
+    businessNo: '',
+    ceoName: '',
+    zipCode: '',
+    address: '',
+    phone: '',
+    industry: '',
+    userId: '',
+    password: '',
+    passwordConfirm: '',
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none";
+  const labelClassName = "block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -28,64 +66,263 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 20, stiffness: 300 }}
-        className="relative w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden"
+        className={`relative w-full ${mode === 'signup' ? 'max-w-2xl' : 'max-w-md'} bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col`}
       >
         {/* Decorative Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400"></div>
         
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 transition-colors p-1 rounded-md hover:bg-slate-100"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 transition-colors p-1 rounded-md hover:bg-slate-100 z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-8">
-          <div className="text-center mb-8">
+        <div className="p-8 overflow-y-auto flex-1">
+          <div className="text-center mb-6">
+            {mode === 'signup' && (
+              <div className="flex items-center justify-center mb-3">
+                <div className="p-3 bg-indigo-100 rounded-full">
+                  <Building2 className="w-6 h-6 text-indigo-600" />
+                </div>
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              {mode === 'login' ? 'Welcome back' : 'Create an account'}
+              {mode === 'login' ? '로그인' : '협력사 회원가입'}
             </h2>
             <p className="text-sm text-slate-500">
-              {mode === 'login' ? '교육생 계정으로 로그인하세요.' : 'KOSA 양성과정 지원을 시작하세요.'}
+              {mode === 'login' ? 'ID / PW 입력' : '협력사 회원가입을 위해 아래 정보를 입력해주세요.'}
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">이름</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none"
-                  placeholder="홍길동"
-                />
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">이메일</label>
-              <input 
-                type="email" 
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none"
-                placeholder="name@example.com"
-              />
-            </div>
+            {mode === 'signup' ? (
+              <>
+                {/* 협력사 정보 섹션 */}
+                <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
+                    협력사 정보
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 협력사명 */}
+                    <div>
+                      <label className={labelClassName}>협력사명 *</label>
+                      <input 
+                        type="text"
+                        name="vendorName"
+                        value={formData.vendorName}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="(주)협력사"
+                        required
+                      />
+                    </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">비밀번호</label>
-              <input 
-                type="password" 
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none"
-                placeholder="••••••••"
-              />
-            </div>
+                    {/* 협력사명 (영문) */}
+                    <div>
+                      <label className={labelClassName}>협력사명 (영문)</label>
+                      <input 
+                        type="text"
+                        name="vendorNameEn"
+                        value={formData.vendorNameEn}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="Vendor Co., Ltd."
+                      />
+                    </div>
+
+                    {/* 사업형태 */}
+                    <div>
+                      <label className={labelClassName}>사업형태 *</label>
+                      <select 
+                        name="businessType"
+                        value={formData.businessType}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        required
+                      >
+                        <option value="">선택해주세요</option>
+                        <option value="법인">법인</option>
+                        <option value="개인">개인</option>
+                        <option value="일반과세자">일반과세자</option>
+                        <option value="간이과세자">간이과세자</option>
+                      </select>
+                    </div>
+
+                    {/* 사업자등록번호 */}
+                    <div>
+                      <label className={labelClassName}>사업자등록번호 *</label>
+                      <input 
+                        type="text"
+                        name="businessNo"
+                        value={formData.businessNo}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="000-00-00000"
+                        required
+                      />
+                    </div>
+
+                    {/* 대표자명 */}
+                    <div>
+                      <label className={labelClassName}>대표자명 *</label>
+                      <input 
+                        type="text"
+                        name="ceoName"
+                        value={formData.ceoName}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="홍길동"
+                        required
+                      />
+                    </div>
+
+                    {/* 업종 */}
+                    <div>
+                      <label className={labelClassName}>업종 *</label>
+                      <input 
+                        type="text"
+                        name="industry"
+                        value={formData.industry}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="제조업, IT서비스 등"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* 주소 */}
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className={labelClassName}>우편번호 *</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            name="zipCode"
+                            value={formData.zipCode}
+                            onChange={handleInputChange}
+                            className={`${inputClassName} flex-1`}
+                            placeholder="00000"
+                            readOnly
+                          />
+                          <button 
+                            type="button"
+                            className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            <Search className="w-4 h-4" />
+                            검색
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClassName}>주소 *</label>
+                      <input 
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="상세주소를 입력해주세요"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* 전화번호 */}
+                  <div>
+                    <label className={labelClassName}>전화번호 *</label>
+                    <input 
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className={inputClassName}
+                      placeholder="02-0000-0000"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* 계정 정보 섹션 */}
+                <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
+                    계정 정보
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className={labelClassName}>아이디 *</label>
+                      <input 
+                        type="text"
+                        name="userId"
+                        value={formData.userId}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="영문, 숫자 조합 6자 이상"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClassName}>비밀번호 *</label>
+                      <input 
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClassName}>비밀번호 확인 *</label>
+                      <input 
+                        type="password"
+                        name="passwordConfirm"
+                        value={formData.passwordConfirm}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className={labelClassName}>아이디</label>
+                  <input 
+                    type="text" 
+                    className={inputClassName}
+                    placeholder="ID"
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClassName}>비밀번호</label>
+                  <input 
+                    type="password" 
+                    className={inputClassName}
+                    placeholder="••••••••"
+                  />
+                </div>
+              </>
+            )}
 
             <motion.button 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors shadow-lg shadow-indigo-500/30"
+              className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg shadow-indigo-500/30"
             >
-              {mode === 'login' ? '로그인' : '회원가입'}
+              {mode === 'login' ? '로그인' : '회원가입 신청'}
             </motion.button>
           </form>
 
@@ -113,3 +350,4 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 };
 
 export default AuthModal;
+
