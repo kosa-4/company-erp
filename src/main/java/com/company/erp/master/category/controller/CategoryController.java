@@ -1,5 +1,6 @@
 package com.company.erp.master.category.controller;
 
+import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.master.category.dto.CategoryDto;
 import com.company.erp.master.category.dto.CategoryListDto;
 import com.company.erp.master.category.service.CategoryService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 //@CrossOrigin(origins = "http://localhost:3000")
+@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/categories")
 public class CategoryController {
