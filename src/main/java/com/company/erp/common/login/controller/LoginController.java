@@ -2,7 +2,6 @@ package com.company.erp.common.login.controller;
 
 import com.company.erp.common.login.dto.LoginRequest;
 import com.company.erp.common.login.dto.LoginResponse;
-import com.company.erp.common.login.mapper.LoginMapper;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.login.service.LoginService;
 import com.company.erp.common.session.SessionUser;
@@ -10,8 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,35 +18,33 @@ public class LoginController {
     private final LoginService loginService;
     private final DuplicateLoginService duplicateLoginService;
 
-    // comType/vendorCd 세션 저장하려면 필요
-    private final LoginMapper loginMapper;
-
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest req, HttpServletRequest request) {
 
-        LoginResponse result = loginService.login(req);
-        if (!result.isSuccess()) {
-            return result;
+        // ip 확보
+        String ipAddress = clientIp(request);
+
+        try {
+            // 서비스에서 인증 + 유저 정보 조회 (comType/vendorCd 포함) + SessionUser 생성까지 끝냄
+            SessionUser sessionUser = loginService.login(req, ipAddress);
+
+            // 세션 생성
+            HttpSession session = request.getSession(true);
+
+            // 중복 로그인 처리 + registry 등록 + 세션 저장
+            duplicateLoginService.handleLoginSuccess(sessionUser, session);
+
+            // 성공
+            return LoginResponse.ok("로그인 성공");
+
+        } catch (IllegalArgumentException e) {
+            // 입력값/인증 실패
+            return LoginResponse.fail(e.getMessage());
+
+        } catch (IllegalStateException e) {
+            // 데이터/alias 등 서버 처리 문제
+            return LoginResponse.fail("로그인 처리 중 오류가 발생했습니다.");
         }
-
-        // 성공 시 세션 생성
-        HttpSession session = request.getSession(true);
-
-        // SessionUser 생성 (로그인 성공 후에만)
-        String ip = clientIp(request);
-        SessionUser sessionUser = new SessionUser(req.getUserId(), ip);
-
-        // 중복 로그인 처리 + registry 등록 + 세션 저장 ( 키 = SessionUser.class.getName() )
-        duplicateLoginService.handleLoginSuccess(sessionUser, session);
-
-        // (선택) 구매사/협력사 구분이 필요하면 세션에 같이 저장
-        Map<String, Object> user = loginMapper.findLoginUser(req.getUserId());
-        if (user != null && !user.isEmpty()) {
-            session.setAttribute("COM_TYPE", user.get("comType"));   // 'B' or 'V'
-            session.setAttribute("VENDOR_CD", user.get("vendorCd")); // 구매사면 null
-        }
-
-        return result;
     }
 
     private String clientIp(HttpServletRequest request) {

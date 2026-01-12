@@ -4,7 +4,7 @@
 
 <mapper namespace="com.company.erp.common.login.mapper.LoginMapper">
 
-    <select id="findLoginUser" parameterType="string" resultType="map">
+    <select id="findLoginUser" resultType="map">
         SELECT
             'B'       AS comType,
             NULL      AS vendorCd,
@@ -24,6 +24,8 @@
         FROM vn_user
         WHERE USER_ID = #{userId}
           AND DEL_FLAG = 'N'
+
+        LIMIT 1
     </select>
 
 </mapper>
