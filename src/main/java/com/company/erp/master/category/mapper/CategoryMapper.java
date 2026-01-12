@@ -10,6 +10,7 @@ public interface CategoryMapper {
     List<CategoryListDto> selectCategoryList(CategoryListDto categoryListDto);
     CategoryListDto selectCategoryByCode(String itemCls);
     void insertCategory(List<CategoryListDto> categoryListDto);
+    String selectMaxChild(String parentItemCls);
     int existsCategory(List<CategoryListDto> categoryListDto);
     boolean existsParentCategory(String parentCls);
 }

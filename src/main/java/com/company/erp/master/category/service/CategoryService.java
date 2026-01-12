@@ -45,7 +45,13 @@ public class CategoryService {
                     break;
                 case 1, 2, 3:
                     String parentCls = dto.getParentItemCls();
-                    dto.setItemCls(parentCls.concat(String.valueOf(dto.getItemCls())));
+                    String maxChildCls = categoryMapper.selectMaxChild(parentCls);
+                    if(maxChildCls != null){
+                        int itemCls =  Integer.parseInt(maxChildCls.substring(parentCls.length()));
+                        dto.setItemCls(parentCls.concat(String.valueOf(itemCls + 1)));
+                    } else {
+                        dto.setItemCls(parentCls.concat("1"));
+                    }
 
                     filteredList.add(dto);
                     break;

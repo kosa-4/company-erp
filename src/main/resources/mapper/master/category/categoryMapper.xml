@@ -80,6 +80,16 @@
             )
         </foreach>
     </insert>
+    
+    <!--자식 카테고리의 마지막 번호 체크-->
+    <select id="selectMaxChild" parameterType="String" resultType="String">
+        SELECT
+            MAX(ITEM_CLS)
+        FROM
+            MTCA
+        WHERE
+            PARENT_ITEM_CLS = #{parentItemCls}
+    </select>
 
     <!--대량 중복 체크-->
     <select id="existsCategory" parameterType="java.util.List" resultType="int">
