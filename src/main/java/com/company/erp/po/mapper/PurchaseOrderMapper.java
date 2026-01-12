@@ -37,4 +37,9 @@ public interface PurchaseOrderMapper {
     int updateStatus(@Param("poNo") String poNo,
                      @Param("status") String status,
                      @Param("userId") String userId);
+
+    int updateStatusWithReason(@Param("poNo") String poNo,
+                           @Param("status") String status,
+                           @Param("rejectReason") String rejectReason,
+                           @Param("userId") String userId);
 }

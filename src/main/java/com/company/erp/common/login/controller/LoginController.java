@@ -19,6 +19,7 @@ public class LoginController {
     private final DuplicateLoginService duplicateLoginService;
 
     @PostMapping("/login")
+
     public ApiResponse login(@RequestBody LoginRequest req, HttpServletRequest request) {
 
         // ip 확보
@@ -35,7 +36,6 @@ public class LoginController {
 
         // 성공
         return ApiResponse.ok("로그인 성공");
-
     }
 
     private String clientIp(HttpServletRequest request) {
