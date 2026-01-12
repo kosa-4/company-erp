@@ -30,6 +30,7 @@ public class SessionInterceptor implements HandlerInterceptor {
 
         String sessionId = session.getId();
 
+
         // 2) 중복로그인 강퇴 대상이면 remove 성공한 첫 요청만 실제 강퇴 처리 -> 동시 요청 시 중복 invalidate 방지
         if (sessionRegistry.removeLogoutTarget(sessionId)) {
             // 레지스트리 정리(양방향 맵/표식)
@@ -45,8 +46,11 @@ public class SessionInterceptor implements HandlerInterceptor {
         }
 
         // 3) 로그인 사용자 확인
-        SessionUser loginUser = (SessionUser) session.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = session.getAttribute(SessionUser.class.getName());
+        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
         if (loginUser == null) {
+            // 세션은 있는데 loginUser가 없으면 registry 찌꺼기 정리(만료/비정상 세션 방어)
+            sessionRegistry.unregisterBySessionId(sessionId);
             return reject(response, SessionConst.STATUS_NO_SESSION); // 440
         }
 

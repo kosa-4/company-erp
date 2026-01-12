@@ -107,6 +107,9 @@
             i.MAKER_NM AS manufacturerName,
             i.MODEL_NO AS modelNo,
             i.USE_FLAG AS useYn,
+            i.RMK AS remark,
+            i.REG_DATE AS createdAt,
+            i.REG_USER_ID AS createdBy,
             i.RMK AS remark
         FROM
             MTGL i

@@ -16,89 +16,14 @@ import {
 } from '@/components/ui';
 
 import { Item, ColumnDef } from '@/types';
+import TreeItem from './TreeItem';
 import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
 import { Console } from 'console';
 import { useRouter } from 'next/navigation';
 import { register } from 'module';
 import { Router } from 'lucide-react';
-
-// Mock 데이터
-// const mockItems: Item[] = [
-//   {
-//     itemCode: 'ITM-2024-0001',
-//     itemName: '노트북 (15인치)',
-//     itemNameEn: 'Laptop 15 inch',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '컴퓨터',
-//     categoryS: '노트북',
-//     spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-//     unit: 'EA',
-//     unitPrice: 1500000,
-//     manufacturerCode: 'MFR001',
-//     manufacturerName: '삼성전자',
-//     modelNo: 'NT950XCR-A58A',
-//     useYn: 'Y',
-//     remark: '업무용 표준 사양',
-//     createdAt: '2024-01-15',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0002',
-//     itemName: '27인치 모니터',
-//     itemNameEn: '27 inch Monitor',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '모니터',
-//     categoryS: 'LED 모니터',
-//     spec: '27" QHD, IPS, 75Hz',
-//     unit: 'EA',
-//     unitPrice: 350000,
-//     manufacturerCode: 'MFR002',
-//     manufacturerName: 'LG전자',
-//     modelNo: '27QN880',
-//     useYn: 'Y',
-//     createdAt: '2024-01-20',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0003',
-//     itemName: '무선 키보드 마우스 세트',
-//     itemNameEn: 'Wireless Keyboard Mouse Set',
-//     itemType: '전자기기',
-//     categoryL: '전산장비',
-//     categoryM: '주변기기',
-//     categoryS: '입력장치',
-//     spec: '무선 2.4GHz, USB 수신기',
-//     unit: 'SET',
-//     unitPrice: 45000,
-//     manufacturerCode: 'MFR003',
-//     manufacturerName: '로지텍',
-//     modelNo: 'MK540',
-//     useYn: 'Y',
-//     createdAt: '2024-02-01',
-//     createdBy: 'admin',
-//   },
-//   {
-//     itemCode: 'ITM-2024-0004',
-//     itemName: 'A4 복사용지',
-//     itemNameEn: 'A4 Copy Paper',
-//     itemType: '사무용품',
-//     categoryL: '사무용품',
-//     categoryM: '용지',
-//     categoryS: '복사용지',
-//     spec: 'A4, 80g, 500매/박스',
-//     unit: 'BOX',
-//     unitPrice: 25000,
-//     manufacturerCode: 'MFR004',
-//     manufacturerName: '한솔제지',
-//     modelNo: 'COPY-A4-80',
-//     useYn: 'Y',
-//     createdAt: '2024-02-10',
-//     createdBy: 'admin',
-//   },
-// ];
+import { Category } from './TreeItem';
 
 interface ItemDetail{
   itemCode: string,
@@ -115,6 +40,8 @@ interface ItemDetail{
   createdBy: string,
   remark: string,
 }
+
+
 
 export default function ItemPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -138,9 +65,7 @@ export default function ItemPage() {
   //     console.error("품목 조회 중 오류 발생", err);
   //     alert("데이터 로드에 실패하였습니다.");
   //   }
-  // };
-
-  
+  // };  
 
   // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
@@ -163,13 +88,22 @@ export default function ItemPage() {
 
   const fetchItems = async () => {
     setLoading(true);
-    try{
+    try {
+      // [수정] 백엔드 에러 방지: page가 없거나 빈 문자열("")이면 "1"을 기본값으로 사용
+      // 이렇게 하면 절대 빈 값이 넘어가지 않아 서버가 좋아합니다.
+      const safeParams = {
+          ...searchParams,
+          page: searchParams.page || "1" 
+      };
+
       // 1. url로 파라미터 전달
-      const response = await fetch ("http://localhost:8080/items?" +
-        new URLSearchParams(searchParams)
+      // searchParams 대신 위에서 만든 safeParams를 넣습니다.
+      const response = await fetch ("/api/v1/items?" +
+        new URLSearchParams(safeParams as any) 
       );
-      // console.log("searchparam ", searchParams.page);
       
+      // console.log("보낸 파라미터 확인: ", safeParams);
+
       if (!response.ok) {
         // 오류 발생 시 catch로 이동
         throw new Error(`조회 실패 ${response.status}`);
@@ -190,7 +124,7 @@ export default function ItemPage() {
       setLoading(false);
     }    
     
-  };
+};
 
   const handlePrevPage = () => {
     const prevPage = (Number(page) - 1).toString()
@@ -227,7 +161,7 @@ export default function ItemPage() {
   useEffect(() => {
     fetchItems();
     
-  }, [searchParams.page]); 
+  }, [searchParams]); 
 
   
 
@@ -241,7 +175,7 @@ export default function ItemPage() {
       const code = item.itemCode;
       
       // 2. back 연동
-      const response = await fetch(`http://localhost:8080/items/${code}`)
+      const response = await fetch(`/api/v1/items/${code}`)
       
       // 2-1 네트워크 오류 체크
       if(!response.ok) throw new Error("서버 응답 오류");
@@ -250,9 +184,9 @@ export default function ItemPage() {
       
       // 3. 데이터 존재 시 처리
       setSelectedItem(data);
-       
+      console.log("data ",data);
       setIsDetailModalOpen(true);     
-      console.log("type of data ",typeof data);
+      // console.log("type of data ",typeof data);
     } catch(error){
       console.error("데이터를 가져오는 중 오류 발생:", error);
       alert("데이터 로드에 실패했습니다.");
@@ -295,13 +229,13 @@ export default function ItemPage() {
       width: 60,
       align: 'center',
     },
-    {
-      key: 'unitPrice',
-      header: '단가',
-      width: 120,
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
+    // {
+    //   key: 'unitPrice',
+    //   header: '단가',
+    //   width: 120,
+    //   align: 'right',
+    //   render: (value) => `₩${formatNumber(Number(value))}`,
+    // },
     {
       key: 'manufacturerCode',
       header: '제조사코드',
@@ -314,37 +248,26 @@ export default function ItemPage() {
       width: 120,
       align: 'left',
     },
-    // {
-    //   key: 'reg_DATE',
-    //   header: '등록 일자',
-    //   width: 120,
-    //   align: 'left',
-    // },
-    // {
-    //   key: 'use_FLAG',
-    //   header: '사용 여부',
-    //   width: 100,
-    //   align: 'center',
-    // },
     
   ];
-  /* 등록 */
-  const registerForm = useRef<HTMLFormElement>(null); // form 태그 첨조
+  /* 저장 */
+  // form 태그 내용 저장
+  const saveForm = useRef<HTMLFormElement>(null); 
 
-  // 품목 등록
-  const handleSaveItem = async () => {
+  // 품목 저장
+  const saveItem = async () => {
     
     // form 태그가 null일 시 -> 오류 방지
-    if(!registerForm.current){
+    if(!saveForm.current){
       return;
     }
     // 1. form 데이터 저장
-    const formData = new FormData(registerForm.current);
+    const formData = new FormData(saveForm.current);
     const data = Object.fromEntries(formData.entries());
     
     try{
       // form 데이터 전송
-      const response = await fetch ("http://localhost:8080/items/new",{
+      const response = await fetch ("/api/v1/items/new",{
         method: 'POST',
         headers:{
           'Content-type': 'application/json',
@@ -358,9 +281,86 @@ export default function ItemPage() {
       alert('저장되었습니다.');
     } catch(error){
       console.error("데이터 입력 중 오류 발생:", error);
-      alert();
     }
   };
+  
+  /* 카테고리 영역 */
+  const cateMap = useRef<{[key: string]: Category}>({});
+  // 불필요한 랜더링 방지 및 데이터 성격 상 useRef 사용
+
+  const [selectedCate, setSelectedCate] = useState<Category | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[] | undefined>(undefined);
+  const [isCateModalOpen, setIsCateModalOpen] = useState(false);
+  // 1. 데이터 요청
+  const fetchCategories = async () => {
+    try{
+      const response = await fetch(`/api/v1/categories/all`);
+
+      if(!response.ok) throw new Error("서버 응답 오류");
+      
+      const data = await response.json(); 
+
+      const tree:Category[] = makeTree(data);
+      setCategories(tree);     
+
+    } catch(err){
+      console.error("데이터 로딩 중 오류 발생")
+      alert("데이터 로드 실패")
+    }
+  }
+  // 2. 트리구조로 변환  
+
+  const makeTree = (categories: Category[]) => {
+    const top: Category[] = [];
+
+    // 2-1. 모든 카테고리 맵에 등록
+    categories.forEach(c => {
+      cateMap.current[c.itemCls] = {...c, children: []};
+    });
+
+    // 2-2. 부모-자식 관계 연결
+    categories.forEach(c => {
+      const parentCls = c.parentItemCls;
+      // 부모 클래스가 일치할 시 부모 클래스의 children 배열에 추가
+      
+      if(parentCls && cateMap.current[parentCls]){        
+        cateMap.current[parentCls].children?.push(cateMap.current[c.itemCls]);
+      } else{
+        top.push(cateMap.current[c.itemCls]);
+      }
+    });
+    // console.log("map ", map);
+    return top;
+  }
+  
+  // 3. 부모 카테고리 입력
+  const [selectedPath, setSelectedPath] = useState<Category[]>([])
+  const handleSelect = (category: Category | undefined) => {
+    // 3-1. 현재 클릭한 카테고리 저장
+    // setSelectedCate(category);
+
+    const path:Category[] = [];
+    let currentCate: Category | undefined = category;
+    
+    // 3-2. 상위 카테고리가 없는 최상위 카테고리까지 순회
+    while(currentCate && currentCate.parentItemCls){
+      // 선택된 카테고리 배열에 추가
+      path.push(currentCate);
+
+      // 상위 카테고리로 교체
+      const parentId = currentCate.parentItemCls;
+      currentCate = cateMap.current[parentId]
+
+      // 상위 카테고리가 없으면 중단
+      if(!currentCate) break;
+    }
+    if(currentCate) path.push(currentCate);
+
+    const reversePath:Category[] = path.reverse()
+
+    setSelectedPath(reversePath);
+  }
+  console.log("selectedItem ", selectedItem);
   
   // 체번 표시
   // const router = useRouter();
@@ -477,6 +477,7 @@ export default function ItemPage() {
           </>
         }
       >
+        
         {selectedItem && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -504,11 +505,11 @@ export default function ItemPage() {
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
               /> */}
-              <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/>
+              {/* <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/> */}
               <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
               <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
               <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-              <Input label="등록일자" value={selectedItem.createdAt} readOnly />
+              <Input label="등록일자" value={selectedItem.createdAt || ""} readOnly />
               <Input label="등록자" value={selectedItem.createdBy} readOnly />
             </div>
             <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
@@ -526,35 +527,47 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              handleSaveItem();              
+              saveItem();              
               setIsCreateModalOpen(false);
             }}
             confirmText="저장"
           />
         }
       >
-        <form ref={registerForm}>
+        <form ref={saveForm}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
+              
               <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
-              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
-              <Select
-                name='itemType'
-                label="품목종류"
-                placeholder="선택"
-                required
-                options={[
-                  { value: '전자기기', label: '전자기기' },
-                  { value: '사무용품', label: '사무용품' },
-                  { value: '소모품', label: '소모품' },
-                ]}
-              />
-              <Input name='categoryL' label="품목 대분류" placeholder="품목 대분류 입력" />
-              <Input name='categoryM' label="품목 중분류" placeholder="품목 중분류 입력" />
-              <Input name='categoryS' label="품목 소분류" placeholder="품목 소분류 입력" />
-              
-              <Input name='stopReason' label="중지 사유" placeholder="중지 사유" readOnly/>
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
+              <Input 
+              name='itemType' 
+              label="품목 분류" 
+              placeholder="품목 분류 입력" 
+              value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
+              onClick={() => {
+                setIsCateModalOpen(true)
+                fetchCategories();
+                }}/>
+              <Input 
+              name='categoryL' 
+              label="품목 대분류" 
+              placeholder="품목 대분류" 
+              value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
+              readOnly/>
+              <Input 
+              name='categoryM' 
+              label="품목 중분류" 
+              placeholder="품목 중분류"
+              value={selectedPath[2] ? selectedPath[2].itemClsNm : ''}  
+              readOnly/>
+              <Input 
+              name='categoryS' 
+              label="품목 소분류" 
+              placeholder="품목 소분류 입력" 
+              value={selectedPath[3] ? selectedPath[3].itemClsNm : ''}  
+              readOnly/>
               <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/>
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
@@ -569,7 +582,7 @@ export default function ItemPage() {
                 ]}
               />
               
-              <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/>
+              {/* <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/> */}
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
@@ -588,11 +601,74 @@ export default function ItemPage() {
                   </div>
                 </div>              
               
+            <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} />
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
       </Modal>
-      {/* {console.log(page)} */}
+
+      {/* 카테고리 모달 */}      
+      {isCateModalOpen && (
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCateModalOpen(false)}
+          title="품목 카테고리"
+          size="lg"
+          footer={
+            <ModalFooter
+              onClose={() => setIsCateModalOpen(false)}
+              onConfirm={() => {
+                
+                handleSelect(selectedCate);
+                // console.log(selectedCate)
+                setIsCateModalOpen(false);
+              }}
+              confirmText="저장"
+            />
+          }
+        >
+          {/* <button onClick={fetchItems}>조회</button> */}
+          <div className="flex flex-col h-[500px] w-full bg-white">
+              {/* 상단 검색바 (선택 사항) */}
+              <div className="p-4 border-b">
+                <input 
+                  type="text" 
+                  placeholder="분류명 검색..." 
+                  className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* 트리 리스트 영역 */}
+              <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
+                {categories && categories.length > 0 ? (
+                  categories.map((root) => (
+                    <TreeItem 
+                      key={root.itemCls} 
+                      root={root} 
+                      onSelect={setSelectedCate} 
+                      selectedId={selectedCate?.itemCls} 
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-gray-400 text-sm">
+                    데이터를 불러오는 중입니다...
+                  </div>
+                )}
+              </div>
+
+              {/* 하단 선택 정보 표시 */}
+              <div className="p-4 border-t bg-white flex justify-between items-center">
+                <div className="text-sm">
+                  <span className="text-gray-500">선택된 분류: </span>
+                  <span className="font-bold text-blue-600">{selectedCate?.itemClsNm || '없음'}</span>
+                </div>
+              </div>
+            </div>
+          
+          
+        </Modal>
+      )}
+      
       <section className='mt-8'>
         <div className='flex justify-center gap-x-4'>
           <button

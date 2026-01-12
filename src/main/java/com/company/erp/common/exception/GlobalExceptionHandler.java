@@ -1,4 +1,4 @@
-package com.company.erp.po.exception;
+package com.company.erp.common.exception;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@RestControllerAdvice(basePackages = "com.company.erp.po")
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // 잘못된 파라미터로 발생한 예외 처리
@@ -48,6 +48,15 @@ public class GlobalExceptionHandler {
         Map<String, String> error = new HashMap<>();
         error.put("message", "서버 오류가 발생했습니다: " + e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    // 상태 전이 오류 등 비즈니스 로직 예외 처리
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException e) {
+        log.error("IllegalStateException: {}", e.getMessage(), e);
+        Map<String, String> error = new HashMap<>();
+        error.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error); // 409 Conflict
     }
 
 
