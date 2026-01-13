@@ -2,8 +2,36 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.company.erp.common.signup.mapper.SignUpMapper">
-    <!--협력사 회원 가입-->
-    <insert id="insertVendorUser" parameterType="com.company.erp.common.signup.dto.SignUpDto">
+    <!--협력사 업체 정보 저장-->
+    <insert id="insertVendor" parameterType="com.company.erp.common.signup.dto.VendorDto">
+        INSERT INTO
+        VNCH(
+        VENDOR_CD AS vendorCode,
+        REG_DATE AS vendorCode,
+        REG_USER_ID AS vendorCode,
+        MOD_DATE AS vendorCode,
+        MOD_USER_ID AS vendorCode,
+        DEL_FLAG AS vendorCode,
+        USE_FLAG AS vendorCode,
+        VENDOR_NM AS vendorCode,
+        VENDOR_ENG_NM AS vendorCode,
+        REG_TYPE AS vendorCode,
+        IRS_NO AS vendorCode,
+        CEO_USER_NM AS vendorCode,
+        ZIP_CD AS vendorCode,
+        ADDR AS vendorCode,
+        ADDR_DT AS vendorCode,
+        TEL_NO AS vendorCode,
+        FAX_NO AS vendorCode,
+        EMAIL AS vendorCode,
+        FOUNDATION_DATE AS vendorCode,
+        INDUSTRY_TYPE AS vendorCode,
+        RMK AS vendorCode,
+        PROGRESS_CD AS vendorCode,
+        SIGN_DATE AS vendorCode,
+    </insert>
+    <!--협력사 유저 정보 저장-->
+    <insert id="insertUser" parameterType="com.company.erp.common.signup.dto.UserDto">
         INSERT INTO
             VN_USER(
                 VENDOR_CD,

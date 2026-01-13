@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class SignUpDto {
+public class UserDto {
     // 파라미터에 @Valid 붙여줘야 함
     @NotBlank(message = "협력사 코드는 필수입니다.")
     private String vendorCd;
