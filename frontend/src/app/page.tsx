@@ -1,29 +1,60 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Hero, AuthModal } from '@/components/landing';
+import { useAuth } from '@/contexts/AuthContext';
 
+/**
+ * 랜딩 페이지
+ * 
+ * "Purchase ERP" 버튼 클릭 시:
+ * - 세션 있으면 → comType에 따라 해당 페이지로 이동
+ *   - B (구매사) → /home
+ *   - V (협력사) → /vendor/home
+ * - 세션 없으면 → 로그인 모달 표시
+ */
 export default function LandingPage() {
   const router = useRouter();
+  const { user, isLoading, checkSession } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
-  const handleGetStarted = () => {
-    // Purchase ERP 버튼 - 홈 페이지로 이동
-    router.push('/home');
-  };
+  /**
+   * "Purchase ERP" 버튼 클릭 핸들러
+   * - 세션 확인 후 라우팅 또는 로그인 모달 표시
+   */
+  const handleGetStarted = async () => {
+    // 세션 다시 확인 (최신 상태 반영)
+    await checkSession();
 
-  const openLogin = () => {
-    // 로그인 버튼 - 로그인 모달 표시
-    setAuthMode('login');
-    setIsAuthModalOpen(true);
+    if (user) {
+      // 세션 있으면 → comType에 따라 페이지 이동
+      if (user.comType === 'B') {
+        router.push('/home');
+      } else {
+        router.push('/vendor/home');
+      }
+    } else {
+      // 세션 없으면 → 로그인 모달 표시
+      setAuthMode('login');
+      setIsAuthModalOpen(true);
+    }
   };
 
   const closeModal = () => {
     setIsAuthModalOpen(false);
   };
+
+  // 로딩 중일 때 표시할 내용 (선택)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fdfbf7]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#fdfbf7] text-slate-900 selection:bg-indigo-500/30 font-sans">
@@ -37,7 +68,7 @@ export default function LandingPage() {
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <main className="flex-grow flex flex-col items-center justify-center pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-          <Hero onGetStarted={handleGetStarted} onLogin={openLogin} />
+          <Hero onGetStarted={handleGetStarted} />
         </main>
 
         <footer className="w-full py-6 text-center text-slate-500 text-sm border-t border-slate-200 backdrop-blur-sm">
