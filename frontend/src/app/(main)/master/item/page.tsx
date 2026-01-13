@@ -44,30 +44,17 @@ interface ItemDetail{
 
 
 export default function ItemPage() {
+  /* 검색 및 조회 */
+
+  // 1. 상태 정의
+  // 1-1. 품목 리스트 출력
   const [items, setItems] = useState<Item[]>([]);
-  // const fetchItems = async () => {
-  // try {
-  //     const response = await fetch("http://localhost:8080/items");
+  const [page, setPage] = useState(String(1));
+  const [totalPage, setTotalPage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  //     if (!response.ok) {
-  //       console.error("품목 조회 실패", response.statusText);
-  //       return;
-  //     }
-
-  //     const data: {[k:string]: any} = await response.json();
-
-  //     // 검색 결과가 존재할 때만 리스트 출력
-  //     if(data.items.length > 0){
-  //       setItems(data.items);
-  //     }
-
-  //   } catch (err) {
-  //     console.error("품목 조회 중 오류 발생", err);
-  //     alert("데이터 로드에 실패하였습니다.");
-  //   }
-  // };  
-
-  // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
+  // 1-2. 검색 파라미터
+  // * URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
     itemName: '',
@@ -77,15 +64,13 @@ export default function ItemPage() {
     manufacturerName: '',
     page: String(1),
   });
+
+  // 1-3. 모달 및 상세 페이지 관련 상태
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(String(1));
-  const [totalPage, setTotalPage] = useState("");
-
-  /* 검색 및 조회 */
-
+  
+  // 2. 품목 조회
   const fetchItems = async () => {
     setLoading(true);
     try {
@@ -102,8 +87,6 @@ export default function ItemPage() {
         new URLSearchParams(safeParams as any) 
       );
       
-      // console.log("보낸 파라미터 확인: ", safeParams);
-
       if (!response.ok) {
         // 오류 발생 시 catch로 이동
         throw new Error(`조회 실패 ${response.status}`);
