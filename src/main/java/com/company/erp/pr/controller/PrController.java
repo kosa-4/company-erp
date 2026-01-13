@@ -1,6 +1,5 @@
 package com.company.erp.pr.controller;
 
-import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.pr.dto.PrItemDTO;
 import com.company.erp.pr.dto.PrListResponse;
 import com.company.erp.pr.dto.PrRequest;
@@ -9,11 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/pr")
+@RequestMapping("/api/v1/pr")
 @RequiredArgsConstructor
 public class PrController {
 
@@ -22,7 +22,6 @@ public class PrController {
     //구매요청화면 초기 데이터 조회
     @GetMapping("/init")
     public ResponseEntity<Map<String,Object>> initPurchase(){
-
         Map<String, Object> initData = prService.initPurchaseData();
 
         return ResponseEntity.ok(initData);
@@ -45,11 +44,13 @@ public class PrController {
 
     //구매요청 등록
     @PostMapping("/save")
-    public ResponseEntity<String> savePurchaseRequest(@RequestBody PrRequest prRequest){
+    public ResponseEntity<Map<String,String>> savePurchaseRequest(@RequestBody PrRequest prRequest){
 
         prService.insertPr(prRequest);
 
-        return ResponseEntity.ok().body("구매요청 등록 완료");
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "구매요청 등록 완료");
+        return ResponseEntity.ok(response);
     }
 
     //품목선택 팝업에서의 품목 조회
