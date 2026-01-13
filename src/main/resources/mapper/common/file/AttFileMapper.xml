@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.common.file.mapper.AttFileMapper">
+
+    <resultMap id="AttFileMap"
+               type="com.company.erp.common.file.model.AttFileEntity">
+
+        <id     column="FILE_NUM"     property="fileNum"/>
+
+        <result column="REF_TYPE"     property="refType"/>
+        <result column="REF_NO"       property="refNo"/>
+
+        <result column="REG_DATE"     property="regDate"/>
+        <result column="REG_USER_ID"  property="regUserId"/>
+
+        <result column="MOD_DATE"     property="modDate"/>
+        <result column="MOD_USER_ID"  property="modUserId"/>
+
+        <result column="DEL_FLAG"     property="delFlag"/>
+
+        <result column="ORIGIN_NAME"  property="originName"/>
+        <result column="SAVE_NAME"    property="saveName"/>
+        <result column="FILE_PATH"    property="filePath"/>
+
+        <result column="FILE_SIZE"    property="fileSize"/>
+        <result column="CONTENT_TYPE" property="contentType"/>
+
+        <result column="VENDOR_CD"    property="vendorCd"/>
+    </resultMap>
+
+    <!-- 파일 메타 저장 -->
+    <insert id="insert">
+        INSERT INTO ATT_FILE (
+            FILE_NUM,
+            REF_TYPE,
+            REF_NO,
+            REG_DATE,
+            REG_USER_ID,
+            DEL_FLAG,
+            ORIGIN_NAME,
+            SAVE_NAME,
+            FILE_PATH,
+            FILE_SIZE,
+            CONTENT_TYPE,
+            VENDOR_CD
+        ) VALUES (
+            #{fileNum},
+            #{refType},
+            #{refNo},
+            NOW(),
+            #{regUserId},
+            'N',
+            #{originName},
+            #{saveName},
+            #{filePath},
+            #{fileSize},
+            #{contentType},
+            #{vendorCd}
+                 )
+    </insert>
+
+    <!-- 파일 단건 조회 -->
+    <select id="findByFileNum" resultMap="AttFileMap">
+        SELECT *
+        FROM ATT_FILE
+        WHERE FILE_NUM = #{fileNum}
+    </select>
+
+    <!-- 문서별 첨부파일 목록 -->
+    <select id="findByRef" resultMap="AttFileMap">
+        SELECT *
+        FROM ATT_FILE
+        WHERE REF_TYPE = #{refType}
+          AND REF_NO   = #{refNo}
+          AND DEL_FLAG = 'N'
+        ORDER BY REG_DATE DESC, FILE_NUM DESC
+    </select>
+
+    <!-- 논리 삭제 -->
+    <update id="markDeleted">
+        UPDATE ATT_FILE
+        SET
+            DEL_FLAG = 'Y',
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        WHERE FILE_NUM = #{fileNum}
+          AND DEL_FLAG = 'N'
+    </update>
+
+</mapper>

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Building2, Search } from 'lucide-react';
+import { X, Building2, Search, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 다음 우편번호 API 타입 선언
 declare global {
@@ -45,6 +46,16 @@ interface VendorFormData {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) => {
+  // 인증 컨텍스트에서 login 함수 가져오기
+  const { login } = useAuth();
+
+  // 로그인 폼 상태
+  const [loginId, setLoginId] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 회원가입 폼 상태
   const [formData, setFormData] = useState<VendorFormData>({
     vendorName: '',
     vendorNameEn: '',
@@ -62,6 +73,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     password: '',
     passwordConfirm: '',
   });
+
+  /**
+   * 로그인 처리
+   * - 성공 시 AuthContext의 login 함수가 comType에 따라 자동 라우팅
+   *   - B (구매사) → /home
+   *   - V (협력사) → /vendor/home
+   */
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await login(loginId, loginPassword);
+      // 로그인 성공 시 AuthContext에서 라우팅 처리
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -381,32 +414,53 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
               </>
             ) : (
               <>
+                {/* 로그인 에러 메시지 */}
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
+
                 <div>
                   <label className={labelClassName}>아이디</label>
                   <input 
                     type="text" 
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
                     className={inputClassName}
                     placeholder="ID"
+                    disabled={isLoading}
                   />
                 </div>
 
                 <div>
                   <label className={labelClassName}>비밀번호</label>
                   <input 
-                    type="password" 
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     className={inputClassName}
                     placeholder="••••••••"
+                    disabled={isLoading}
                   />
                 </div>
               </>
             )}
 
             <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg shadow-indigo-500/30"
+              type={mode === 'login' ? 'submit' : 'button'}
+              onClick={mode === 'login' ? handleLogin : undefined}
+              disabled={isLoading}
+              whileHover={{ scale: isLoading ? 1 : 1.02 }}
+              whileTap={{ scale: isLoading ? 1 : 0.98 }}
+              className={`w-full text-white font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg flex items-center justify-center gap-2 ${
+                isLoading 
+                  ? 'bg-indigo-400 cursor-not-allowed' 
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
+              }`}
             >
-              {mode === 'login' ? '로그인' : '회원가입 신청'}
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {mode === 'login' ? (isLoading ? '로그인 중...' : '로그인') : '회원가입 신청'}
             </motion.button>
           </form>
 
