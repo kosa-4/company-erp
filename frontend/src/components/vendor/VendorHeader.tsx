@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, ChevronDown, User, Settings, LogOut, MessageSquare } from 'lucide-react';
+import { Bell, ChevronDown, User, LogOut, MessageSquare } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VendorUser {
   id: string;
@@ -29,8 +30,18 @@ const mockVendorUser: VendorUser = {
 };
 
 const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) => {
+  const { logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  /**
+   * 로그아웃 핸들러
+   * - 세션 종료 후 랜딩 페이지로 이동
+   */
+  const handleLogout = async () => {
+    setShowUserMenu(false);
+    await logout();
+  };
 
   const notifications = [
     { id: 1, title: '새로운 발주서가 도착했습니다.', time: '10분 전', unread: true },
@@ -190,6 +201,7 @@ const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) =>
                   </div>
                   <div className="border-t border-stone-100 py-2">
                     <motion.button 
+                      onClick={handleLogout}
                       whileHover={{ x: 4 }}
                       className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
