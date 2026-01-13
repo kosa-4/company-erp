@@ -23,11 +23,6 @@ public class LoginController {
     private final LoginService loginService;
     private final DuplicateLoginService duplicateLoginService;
 
-    /**
-     * 로그인 API
-     * - 성공 시 사용자 정보(userId, comType, vendorCd) 반환
-     * - comType: 'B'(구매사), 'V'(협력사)
-     */
     @SessionIgnore
     @PostMapping("/login")
     public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req, HttpServletRequest request) {
