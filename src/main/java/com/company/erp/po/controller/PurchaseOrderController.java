@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class PurchaseOrderController {
     private final PurchaseOrderService purchaseOrderService;
 
-    //목록 조회
+    // 목록 조회
     @GetMapping
     public ResponseEntity<List<PurchaseOrderDTO>> getList(
             @RequestParam(required = false) String poNo, // PO_NUM
@@ -41,15 +41,15 @@ public class PurchaseOrderController {
                 poNo, poName, purchaseManager, vendorName, startDate, endDate, status);
         return ResponseEntity.ok(list);
     }
-    
-    //상세 조회
+
+    // 상세 조회
     @GetMapping("/{no}")
     public ResponseEntity<PurchaseOrderDTO> getDetail(@PathVariable String no) {
         PurchaseOrderDTO dto = purchaseOrderService.getDetail(no);
         return ResponseEntity.ok(dto);
     }
-    
-    //등록
+
+    // 등록
     @PostMapping
     public ResponseEntity<PurchaseOrderDTO> create(@RequestBody PurchaseOrderDTO dto) {
         PurchaseOrderDTO created = purchaseOrderService.create(dto);
@@ -59,9 +59,8 @@ public class PurchaseOrderController {
     // 수정
     @PutMapping("/{no}")
     public ResponseEntity<PurchaseOrderDTO> update(
-        @PathVariable String no,
-        @RequestBody PurchaseOrderDTO dto
-    ) {
+            @PathVariable String no,
+            @RequestBody PurchaseOrderDTO dto) {
         PurchaseOrderDTO updated = purchaseOrderService.update(no, dto);
         return ResponseEntity.ok(updated);
     }
@@ -90,9 +89,8 @@ public class PurchaseOrderController {
     // 반려
     @PostMapping("/{no}/reject")
     public ResponseEntity<Void> reject(
-        @PathVariable String no,
-        @RequestBody Map<String, String> body
-    ) {
+            @PathVariable String no,
+            @RequestBody Map<String, String> body) {
         String rejectReason = body.get("rejectReason");
         purchaseOrderService.reject(no, rejectReason);
         return ResponseEntity.ok().build();
@@ -111,5 +109,12 @@ public class PurchaseOrderController {
         purchaseOrderService.close(no);
         return ResponseEntity.ok().build();
     }
-    
+
+    // 협력사 수신확인
+    @PutMapping("/{no}/vendor-confirm")
+    public ResponseEntity<Void> vendorConfirm(@PathVariable String no) {
+        purchaseOrderService.vendorConfirm(no);
+        return ResponseEntity.ok().build();
+    }
+
 }

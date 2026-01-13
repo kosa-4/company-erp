@@ -39,7 +39,7 @@ public class PurchaseOrderService {
         params.put("startDate", startDate);
         params.put("endDate", endDate);
         params.put("status", status);
-        
+
         List<PurchaseOrderDTO> list = purchaseOrderMapper.selectList(params);
         return list;
     }
@@ -48,13 +48,13 @@ public class PurchaseOrderService {
     public PurchaseOrderDTO getDetail(String poNo) {
         PurchaseOrderDTO header = purchaseOrderMapper.selectHeader(poNo);
         if (header == null) {
-            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);   
+            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-        
+
         List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(poNo);
         header.setItems(items);
 
-        return header;   
+        return header;
     }
 
     // 등록
@@ -66,11 +66,11 @@ public class PurchaseOrderService {
 
         // 초기 상태 강제 설정 (저장 상태)
         dto.setStatus(PoStatusCode.SAVED.getCode());
-        
+
         // poDate가 null 이면 오늘 날짜로 설정
         if (dto.getPoDate() == null) {
             dto.setPoDate(LocalDate.now());
-        }        
+        }
         // items null 체크
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new IllegalArgumentException("발주 품목이 없습니다.");
@@ -78,11 +78,11 @@ public class PurchaseOrderService {
 
         // 총액 계산
         BigDecimal totalAmount = dto.getItems().stream()
-            .map(PurchaseOrderItemDTO::getAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(PurchaseOrderItemDTO::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID 가져오기 
+        // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
 
         // 헤더 등록 (regUserId 별도 전달)
@@ -96,13 +96,14 @@ public class PurchaseOrderService {
         return getDetail(poNo);
     }
 
-     // 현재 사용자 ID 가져오기 (인증 정보에서)
+    // 현재 사용자 ID 가져오기 (인증 정보에서)
     // TODO: 실제 인증 시스템 연동 시 구현 필요
     // - 세션: HttpSession에서 사용자 정보 가져오기
     private String getCurrentUserId() {
         // 실제 인증 정보에서 사용자 ID 가져오기
         return "SYSTEM"; // 임시값 - 실제 구현 시 제거
     }
+
     // 수정
     @Transactional
     public PurchaseOrderDTO update(String poNo, PurchaseOrderDTO dto) {
@@ -114,15 +115,14 @@ public class PurchaseOrderService {
         // 저장(T) 상태에서만 수정 가능
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                "저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus()
-            );
+                    "저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
         dto.setPoNo(poNo);
-        
+
         // 총액 재계산
         BigDecimal totalAmount = dto.getItems().stream()
-            .map(PurchaseOrderItemDTO::getAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(PurchaseOrderItemDTO::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
         // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
@@ -147,8 +147,7 @@ public class PurchaseOrderService {
         // 저장(T) 상태에서만 삭제 가능
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                "저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus()
-            );
+                    "저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
 
         purchaseOrderMapper.deleteHeader(poNo);
@@ -185,14 +184,12 @@ public class PurchaseOrderService {
         validateStatusTransition(existing.getStatus(), PoStatusCode.REJECTED.getCode());
         String currentUserId = getCurrentUserId();
         purchaseOrderMapper.updateStatusWithReason(
-            poNo, 
-            PoStatusCode.REJECTED.getCode(), 
-            rejectReason, 
-            currentUserId
-        );
+                poNo,
+                PoStatusCode.REJECTED.getCode(),
+                rejectReason,
+                currentUserId);
         return true;
     }
-
 
     // 발주 전송
     @Transactional
@@ -208,14 +205,30 @@ public class PurchaseOrderService {
         return updateStatus(poNo, PoStatusCode.CLOSED.getCode(), currentUserId);
     }
 
+    // 협력사 수신확인
+    @Transactional
+    public Boolean vendorConfirm(String poNo) {
+        PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
+        if (existing == null) {
+            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+        // 발주전송(S) 상태에서만 수신확인 가능
+        if (!PoStatusCode.SENT.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                    "발주전송 상태에서만 수신확인할 수 있습니다. 현재 상태: " + existing.getStatus());
+        }
+        String currentUserId = getCurrentUserId();
+        purchaseOrderMapper.updateVendorConfirm(poNo, currentUserId);
+        return true;
+    }
+
     // 상태 전이 검증 메서드
     private void validateStatusTransition(String currentStatus, String nextStatus) {
         PoStatusCode current = PoStatusCode.fromCode(currentStatus);
-        
+
         if (!current.canTransitionTo(nextStatus)) {
             throw new IllegalStateException(
-                String.format("상태 전이 불가: %s → %s", currentStatus, nextStatus)
-            );
+                    String.format("상태 전이 불가: %s → %s", currentStatus, nextStatus));
         }
     }
 

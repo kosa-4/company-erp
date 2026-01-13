@@ -1,9 +1,10 @@
-package com.company.erp.po.exception;
+package com.company.erp.common.exception;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.file.exception.FileException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@RestControllerAdvice(basePackages = "com.company.erp.po")
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // 잘못된 파라미터로 발생한 예외 처리
@@ -59,6 +60,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error); // 409 Conflict
     }
 
+    // 파일 오류 예외 처리
+    @ExceptionHandler(FileException.class)
+    public ApiResponse handleFile(FileException e) {
+        return ApiResponse.fail(e.getMessage());
+    }
 
 
 }

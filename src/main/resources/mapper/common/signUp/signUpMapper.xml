@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.common.signup.mapper.SignUpMapper">
+    <!--협력사 회원 가입-->
+    <insert id="insertVendorUser" parameterType="com.company.erp.common.signup.dto.SignUpDto">
+        INSERT INTO
+            VN_USER(
+                VENDOR_CD,
+                USER_ID,
+                USER_NM,
+                USER_NM_ENG,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                BLOCK_FLAG,
+                BLOCK_RMK,
+                BLOCK_DATE,
+                PASSWORD,
+                USER_TYPE,
+                PW_WRONG_CNT,
+                EMAIL,
+                TEL_NUM,
+                FAX_NUM,
+                ROLE,
+                SIGN_DATE,
+                PROGRESS_CD,
+                COM_TYPE
+            )
+        VALUES(
+            #{vendorCd},
+            #{userId},
+            #{userNm},
+            #{userNmEng},
+            NOW(),
+            "추후 추가",
+            "N",
+            "N",
+            NULL,
+            NULL,
+            #{password},
+            "일반",
+            0,
+            #{email},
+            #{telNum},
+            #{telNum},
+            #{faxNum},
+            #{role},
+            NULL,
+            NULL,
+            NULL,
+            "V"
+    </insert>
+
+    <!--중복 아이디 체크-->
+    <select id="existsUserId" parameterType="String" resultType="boolean">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            USER_ID=#{userId}
+    </select>
+<!--    &lt;!&ndash;회사 정보 조회&ndash;&gt;-->
+<!--    <select id=""-->
+</mapper>
