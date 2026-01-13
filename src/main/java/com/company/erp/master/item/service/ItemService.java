@@ -47,7 +47,6 @@ public class ItemService {
         }
 
         // 2. 중복 아닐 시
-
         // 2-1. 체번 계산
         String itemCode = docNumService.generateDocNumStr(DocKey.IT);
         itemDetailDto.setItemCode(itemCode);
