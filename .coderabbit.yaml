@@ -1,0 +1,15 @@
+version: "2"
+
+# 1. 리뷰 언어 설정 (한국어)
+language: "ko"
+
+reviews:
+  # 2. 자동 리뷰 설정
+  auto_review:
+    enabled: true
+    # PR의 도착지(Target)가 아래 브랜치일 때만 리뷰가 실행됩니다.
+    base_branches:
+      - "develop"
+
+  # (선택 사항) 리뷰 강도나 스타일 등 추가 설정이 필요하면 여기에 작성합니다.
+  # 기본값으로 두어도 무방합니다.
