@@ -7,10 +7,14 @@ import DashboardUI from './DashboardUI';
 
 interface HeroProps {
   onGetStarted: () => void;
-  onLogin: () => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
+/**
+ * 랜딩 페이지 히어로 섹션
+ * - "Purchase ERP" 버튼만 표시
+ * - 클릭 시 세션 확인 후 라우팅 또는 로그인 모달 표시
+ */
+const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parallax Logic
@@ -80,20 +84,17 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-4"
+          className="flex items-center justify-center"
         >
-          <button 
+          {/* Purchase ERP 버튼만 표시 */}
+          <motion.button 
             onClick={onGetStarted}
-            className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-full font-medium transition-all hover:shadow-[0_10px_30px_rgba(79,70,229,0.3)] shadow-[0_5px_15px_rgba(79,70,229,0.2)]"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="group flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-8 py-3.5 rounded-full font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
           >
             Purchase ERP <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button 
-            onClick={onLogin}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-8 py-3 rounded-full font-medium transition-all border border-slate-200 shadow-sm hover:shadow-md"
-          >
-            로그인
-          </button>
+          </motion.button>
         </motion.div>
       </div>
 
