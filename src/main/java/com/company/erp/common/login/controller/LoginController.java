@@ -9,6 +9,10 @@ import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,10 +23,14 @@ public class LoginController {
     private final LoginService loginService;
     private final DuplicateLoginService duplicateLoginService;
 
+    /**
+     * 로그인 API
+     * - 성공 시 사용자 정보(userId, comType, vendorCd) 반환
+     * - comType: 'B'(구매사), 'V'(협력사)
+     */
     @SessionIgnore
     @PostMapping("/login")
-
-    public ApiResponse login(@RequestBody LoginRequest req, HttpServletRequest request) {
+    public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req, HttpServletRequest request) {
 
         // ip 확보
         String ipAddress = clientIp(request);
@@ -36,13 +44,41 @@ public class LoginController {
         // 중복 로그인 처리 + registry 등록 + 세션 저장
         duplicateLoginService.handleLoginSuccess(sessionUser, session);
 
-        // 성공
-        return ApiResponse.ok("로그인 성공");
+        // 사용자 정보를 함께 반환 (프론트엔드에서 comType으로 라우팅 분기)
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("userId", sessionUser.getUserId());
+        userData.put("comType", sessionUser.getComType()); // B: 구매사, V: 협력사
+        userData.put("vendorCd", sessionUser.getVendorCd());
+
+        return ApiResponse.ok(userData);
+    }
+
+    /**
+     * 세션 확인 API
+     * - 페이지 새로고침 시 세션 유효성 확인
+     * - 유효한 세션이면 사용자 정보 반환
+     */
+    @SessionIgnore
+    @GetMapping("/session")
+    public ApiResponse<?> getSession(HttpSession session) {
+        SessionUser user = (SessionUser) session.getAttribute(SessionUser.class.getName());
+
+        if (user == null) {
+            return ApiResponse.fail("세션이 존재하지 않습니다.");
+        }
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("userId", user.getUserId());
+        userData.put("comType", user.getComType());
+        userData.put("vendorCd", user.getVendorCd());
+
+        return ApiResponse.ok(userData);
     }
 
     private String clientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
+        if (xff != null && !xff.isBlank())
+            return xff.split(",")[0].trim();
         return request.getRemoteAddr();
     }
 }
