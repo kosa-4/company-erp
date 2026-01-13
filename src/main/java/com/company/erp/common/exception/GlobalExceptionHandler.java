@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.file.exception.FileException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -59,6 +60,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error); // 409 Conflict
     }
 
+    // 파일 오류 예외 처리
+    @ExceptionHandler(FileException.class)
+    public ApiResponse handleFile(FileException e) {
+        return ApiResponse.fail(e.getMessage());
+    }
 
 
 }
