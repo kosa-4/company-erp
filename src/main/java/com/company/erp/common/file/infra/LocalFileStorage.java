@@ -72,4 +72,22 @@ public class LocalFileStorage implements FileStorage {
 
         return new FileSystemResource(p.toFile());
     }
+
+    @Override
+    public void delete(String absolutePath) throws IOException {
+        if (props.getBaseDir() == null || props.getBaseDir().isBlank()) {
+            throw new IllegalStateException("파일 저장 경로(app.file.base-dir)가 설정되어 있지 않습니다.");
+        }
+        if (absolutePath == null || absolutePath.isBlank()) return;
+
+        Path base = Paths.get(props.getBaseDir()).normalize().toAbsolutePath();
+        Path p = Paths.get(absolutePath).normalize().toAbsolutePath();
+
+        // base-dir 밖 삭제 차단
+        if (!p.startsWith(base)) {
+            throw new SecurityException("유효하지 않은 파일 삭제 요청입니다.");
+        }
+
+        Files.deleteIfExists(p);
+    }
 }

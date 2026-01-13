@@ -12,4 +12,7 @@ public interface FileStorage {
 
     // 실제 파일 절대경로로 다운로드용 Resource 로드
     Resource loadAsResource(String absolutePath);
+
+    // 절대경로로 실제 저장소에서 삭제 (보상 처리용)
+    void delete(String absolutePath) throws IOException;
 }
