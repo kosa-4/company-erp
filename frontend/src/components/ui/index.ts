@@ -9,4 +9,4 @@ export { default as DataGrid } from './DataGrid';
 export { default as SearchPanel } from './SearchPanel';
 export { default as PageHeader } from './PageHeader';
 export { default as Card } from './Card';
-
+export { default as Skeleton, TableRowSkeleton, CardSkeleton, StatCardSkeleton } from './Skeleton';
