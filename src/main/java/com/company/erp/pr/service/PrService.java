@@ -122,6 +122,7 @@ public class PrService {
 
 
     //구매요청 삭제
+    @Transactional
     public void deletePrRequest(String prNum){
         PrHdDTO prHd = prMapper.selectPrNum(prNum);
 
