@@ -4,6 +4,7 @@ import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.login.dto.LoginRequest;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.login.service.LoginService;
+import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -18,6 +19,7 @@ public class LoginController {
     private final LoginService loginService;
     private final DuplicateLoginService duplicateLoginService;
 
+    @SessionIgnore
     @PostMapping("/login")
 
     public ApiResponse login(@RequestBody LoginRequest req, HttpServletRequest request) {
