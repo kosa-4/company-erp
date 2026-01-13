@@ -11,7 +11,6 @@
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
             COALESCE(pr.UNIT_PRC, 0) AS unitPrice,
-            i.MAKER_CD AS manufacturerCode,
             i.MAKER_NM AS manufacturerName
         FROM
             MTGL i
@@ -103,7 +102,6 @@
             id.ITEM_CLS AS itemType,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
-            i.MAKER_CD AS manufacturerCode,
             i.MAKER_NM AS manufacturerName,
             i.MODEL_NO AS modelNo,
             i.USE_FLAG AS useYn,
@@ -141,7 +139,6 @@
                 ITEM_NM_ENG,
                 ITEM_SPEC,
                 ITEM_RMK,
-                MAKER_CD,
                 MAKER_NM,
                 MODEL_NO,
                 DEPT_CD ,
@@ -171,6 +168,7 @@
                 #{unit}
             )
     </insert>
+
     <!--품목 분류 테이블 저장-->
     <insert id="insertItemMTGC" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
         INSERT INTO
@@ -201,4 +199,26 @@
                 #{useYn}
             )
     </insert>
+
+    <!--품목 수정-->
+    <update id="updateItem" parameterType="com.company.erp.master.item.dto.ItemDetailDto">
+        UPDATE
+        MTGL
+        <set>
+            MOD_DATE = NOW(),
+            MOD_USER_ID = "추후 수정"
+            <if test="itemName != null"> <!--앞 쉼표 추천-->
+                , ITEM_NM = #{itemName}
+            </if>
+            <if test="itemNameEn != null">
+                , ITEM_NM_ENG = #{itemNameEn}
+            </if>
+            <if test="remark != null">
+                , RMK = #{remark}
+            </if>
+        </set>
+        WHERE
+            ITEM_CD = #{itemCode}
+
+    </update>
 </mapper>

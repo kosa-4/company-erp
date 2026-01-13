@@ -60,4 +60,23 @@ public class ItemService {
         // 2-4. 품목 카테고리 등록
         itemMapper.insertItemMTGC(itemDetailDto);
     }
+
+    /* 수정 */
+    @Transactional
+    public void updateItem(ItemDetailDto itemDetailDto) {
+        // 품목 존재 여부 확인
+        ItemDetailDto item = itemMapper.selectItemByCode(itemDetailDto.getItemCode());
+        if(item == null){
+            throw new IllegalStateException("존재하지 않는 품목입니다.");
+        }
+        
+        // 상태 확인
+        String status =  item.getStatus();
+        if("A".equals(status)){
+            throw new IllegalStateException("승인 완료된 품목으로 수정이 불가합니다.");
+        }
+        
+        // 업데이트
+        itemMapper.updateItem(itemDetailDto);
+    }
 }
