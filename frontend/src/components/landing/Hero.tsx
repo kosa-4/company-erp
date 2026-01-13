@@ -2,15 +2,19 @@
 
 import React, { useRef } from 'react';
 import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
-import { ArrowRight, Sparkles, Building2 } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import DashboardUI from './DashboardUI';
 
 interface HeroProps {
   onGetStarted: () => void;
-  onLogin: () => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
+/**
+ * 랜딩 페이지 히어로 섹션
+ * - "Purchase ERP" 버튼만 표시
+ * - 클릭 시 세션 확인 후 라우팅 또는 로그인 모달 표시
+ */
+const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parallax Logic
@@ -80,8 +84,9 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-4"
+          className="flex items-center justify-center"
         >
+          {/* Purchase ERP 버튼만 표시 */}
           <motion.button 
             onClick={onGetStarted}
             whileHover={{ scale: 1.05, y: -2 }}
@@ -90,23 +95,6 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted, onLogin }) => {
           >
             Purchase ERP <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </motion.button>
-          <motion.button 
-            onClick={onLogin}
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-8 py-3.5 rounded-full font-medium transition-all border border-slate-200 shadow-sm hover:shadow-lg"
-          >
-            로그인
-          </motion.button>
-          <motion.a 
-            href="/vendor"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-3.5 rounded-full font-medium transition-all shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40"
-          >
-            <Building2 className="w-4 h-4" />
-            협력사
-          </motion.a>
         </motion.div>
       </div>
 
