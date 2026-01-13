@@ -251,7 +251,7 @@ export default function ItemPage() {
     
   ];
   /* 저장 */
-  // form 태그 내용 저장
+  // form 내부 input 값을 한번에 긁어옴
   const saveForm = useRef<HTMLFormElement>(null); 
 
   // 품목 저장
@@ -283,6 +283,38 @@ export default function ItemPage() {
       console.error("데이터 입력 중 오류 발생:", error);
     }
   };
+
+  /* 수정 */
+  const updateItem = async () => {
+    console.log("수정 데이터 확인: ", saveForm.current);
+    if(!saveForm.current){
+      return
+    }
+    // 1. form input 끌어와서 저장
+    const formData = new FormData(saveForm.current);
+    
+    const data = Object.fromEntries(formData.entries());
+    
+    try{
+      // form 데이터 전송
+      const response = await fetch ("/api/v1/items/update",{
+        method: 'PUT',
+        headers:{
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if(!response.ok){
+        throw new Error(`수정 실패 ${response.status}`)
+      };
+      alert('수정되었습니다.');
+      setIsDetailModalOpen(false); // 수정 후 모달 닫기
+      fetchItems(); // 수정 후 리스트 갱신
+    } catch(error){
+      console.error("데이터 수정 중 오류 발생:", error);
+    }
+  }
   
   /* 카테고리 영역 */
   const cateMap = useRef<{[key: string]: Category}>({});
@@ -360,31 +392,8 @@ export default function ItemPage() {
 
     setSelectedPath(reversePath);
   }
-  console.log("selectedItem ", selectedItem);
   
-  // 체번 표시
-  // const router = useRouter();
-  
-  // const [docNum, setDocNum] = useState<string>("");
-  // const fetchDocNum = async () => {
-    
-  //   // 데이터 요청
-  //   try{
-  //     const response = await fetch("http://localhost:8080/items/docNum");
 
-  //     if(!response.ok){
-  //       console.error("문서 번호 조회 실패", response.statusText);
-  //     }
-      
-  //     const data = await response.text(); // json 형태가 아니라 text 형태일 시
-  //     // console.log("data ",data);
-  //     setDocNum(data);
-  //     router.push(`?code=${data}`);
-  //   } catch(err){
-  //     console.error("문서 번호 조회 중 오류 발생", err);
-  //     alert("문서 번호 로드에 실패하였습니다.");
-  //   }
-  // };
 
   return (
     <div>
@@ -473,47 +482,32 @@ export default function ItemPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            <Button variant="primary">수정</Button>
+            <Button variant="primary" onClick={updateItem}>수정</Button>
           </>
         }
       >
         
         {selectedItem && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="품목코드" value={selectedItem.itemCode} readOnly />
-              <Input label="품목명" value={selectedItem.itemName} readOnly/>
-              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} readOnly/>
-              <Input label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
-              {/* <Select
-                label="품목종류"
-                value={selectedItem.itemType}
-                options={[
-                  { value: '전자기기', label: '전자기기' },
-                  { value: '사무용품', label: '사무용품' },
-                  { value: '소모품', label: '소모품' },
-                ]}
-              /> */}
-              <Input label="규격" value={selectedItem.spec || ''} readOnly/>
-              <Input label="단위" value={selectedItem.unit || ''} readOnly/>
-              {/* <Select
-                label="단위"
-                value={selectedItem.unit}
-                options={[
-                  { value: 'EA', label: 'EA (개)' },
-                  { value: 'SET', label: 'SET (세트)' },
-                  { value: 'BOX', label: 'BOX (박스)' },
-                ]}
-              /> */}
-              {/* <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/> */}
-              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
-              <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
-              <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-              <Input label="등록일자" value={selectedItem.createdAt || ""} readOnly />
-              <Input label="등록자" value={selectedItem.createdBy} readOnly />
+          <form ref={saveForm}>
+            <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">               
+                  <Input name='itemCode' label="품목코드" value={selectedItem.itemCode} readOnly />
+                  <Input name='itemName' label="품목명" defaultValue={selectedItem.itemName || ''} />
+                  <Input name='itemNameEn' label="품목명(영문)" defaultValue={selectedItem.itemNameEn || ''} />
+                  <Input name='itemType'label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
+                  
+                  <Input name='spec' label="규격" value={selectedItem.spec || ''} readOnly/>
+                  <Input name='unit' label="단위" value={selectedItem.unit || ''} readOnly/>
+                  
+                  {/* <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/> */}
+                  <Input name='manufacturerName' label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
+                  <Input name='modelNo' label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
+                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt || ""} readOnly />
+                  <Input name='createdBy' label="등록자" value={selectedItem.createdBy} readOnly />
+                </div>
+                <Textarea name='remark' label="비고" defaultValue={selectedItem.remark || ''} rows={3}/>
             </div>
-            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
-          </div>
+          </form>
         )}
       </Modal>
       

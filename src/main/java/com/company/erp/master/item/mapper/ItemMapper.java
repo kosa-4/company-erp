@@ -25,4 +25,7 @@ public interface ItemMapper {
     void insertItemMTGL(ItemDetailDto itemDetailDto);
     // 품목 카테고리 저장
     void insertItemMTGC(ItemDetailDto itemDetailDto);
+
+    /* 수정 */
+    void updateItem(ItemDetailDto itemDetailDto);
 }
