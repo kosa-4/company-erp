@@ -29,9 +29,13 @@ export const metadata: Metadata = {
 };
 
 /**
- * 루트 레이아웃
- * - AuthProvider: 로그인 상태 전역 관리
- * - 모든 페이지에서 useAuth() 훅 사용 가능
+ * Application root layout that wraps pages with global providers, fonts, and necessary scripts.
+ *
+ * Renders an <html lang="ko"> document, injects the Daum Postcode script, applies configured font CSS variables,
+ * and wraps `children` with the `AuthProvider` to enable global authentication state and the `useAuth()` hook.
+ *
+ * @param children - The page content to render inside the root layout
+ * @returns The root HTML element containing head and body with applied providers and scripts
  */
 export default function RootLayout({
   children,

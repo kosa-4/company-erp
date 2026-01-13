@@ -23,29 +23,43 @@ public class ApiResponse<T> {
     private final T data;
 
     /**
-     * 성공 응답 (메시지만)
+     * Create a successful API response that contains only a message.
+     *
+     * @param message the message to include in the response
+     * @return an ApiResponse with `success` set to `true`, the provided `message`, and `data` set to `null`
      */
     public static ApiResponse<Void> ok(String message) {
         return new ApiResponse<>(true, message, null);
     }
 
     /**
-     * 성공 응답 (데이터만)
-     * - 로그인 시 사용자 정보 반환 등에 사용
+     * Create a successful ApiResponse that carries response data.
+     *
+     * @param <T>  the type of the response data
+     * @param data the response payload to include in the ApiResponse
+     * @return     an ApiResponse containing the provided data and no message
      */
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, null, data);
     }
 
     /**
-     * 성공 응답 (메시지 + 데이터)
+     * Create a successful ApiResponse containing both a message and data.
+     *
+     * @param message a human-readable message describing the result
+     * @param data    the payload to include in the response
+     * @param <T>     the type of the response data
+     * @return        an ApiResponse with success = true, the provided message, and the provided data
      */
     public static <T> ApiResponse<T> ok(String message, T data) {
         return new ApiResponse<>(true, message, data);
     }
 
     /**
-     * 실패 응답
+     * Create a failure API response containing an error message.
+     *
+     * @param message the failure message to include in the response
+     * @return `ApiResponse<Void>` with `success` set to `false`, the provided message, and `data` set to `null`
      */
     public static ApiResponse<Void> fail(String message) {
         return new ApiResponse<>(false, message, null);

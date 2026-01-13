@@ -24,9 +24,13 @@ public class LoginController {
     private final DuplicateLoginService duplicateLoginService;
 
     /**
-     * 로그인 API
-     * - 성공 시 사용자 정보(userId, comType, vendorCd) 반환
-     * - comType: 'B'(구매사), 'V'(협력사)
+     * Authenticate the client and return the authenticated user's session data.
+     *
+     * Creates an HTTP session and registers it for duplicate-login management as a side effect.
+     *
+     * @param req     the login request containing user credentials and related fields
+     * @param request the HTTP servlet request used to determine the client's IP and create the session
+     * @return        a map with keys `userId`, `comType`, and `vendorCd`; `comType` is `B` for buyer and `V` for supplier
      */
     @SessionIgnore
     @PostMapping("/login")
@@ -54,9 +58,12 @@ public class LoginController {
     }
 
     /**
-     * 세션 확인 API
-     * - 페이지 새로고침 시 세션 유효성 확인
-     * - 유효한 세션이면 사용자 정보 반환
+     * Validate the current HTTP session and return the authenticated user's basic information.
+     *
+     * Checks the provided HttpSession for a SessionUser and, if present, returns a map with
+     * the user's `userId`, `comType`, and `vendorCd`.
+     *
+     * @return An ApiResponse containing a Map with keys `userId`, `comType`, and `vendorCd` when a session exists; an error ApiResponse with the message "세션이 존재하지 않습니다." otherwise.
      */
     @SessionIgnore
     @GetMapping("/session")
@@ -75,6 +82,12 @@ public class LoginController {
         return ApiResponse.ok(userData);
     }
 
+    /**
+     * Determine the client's IP address, preferring the first entry of the X-Forwarded-For header when present.
+     *
+     * @param request the HTTP servlet request containing headers and remote address
+     * @return the client IP address: the first IP from the `X-Forwarded-For` header if present and non-blank, otherwise `request.getRemoteAddr()`
+     */
     private String clientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank())

@@ -6,11 +6,12 @@ import { MainLayout } from '@/components/layout';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * 구매사(B) 전용 레이아웃
- * 
- * - comType이 'B'인 사용자만 접근 가능
- * - 로그인 안 됨 → 랜딩 페이지로 리다이렉트
- * - 협력사(V)가 접근 시 → /vendor/home으로 리다이렉트
+ * Layout that restricts access to buyer users (comType `'B'`) and redirects others.
+ *
+ * Redirects unauthenticated users to `/` and users with comType `'V'` to `/vendor/home`.
+ *
+ * @param children - Content to render inside the buyer main layout when access is allowed
+ * @returns The buyer main layout containing `children` when the current user is a buyer; `null` while redirecting or blocked, or a loading indicator during authentication checks
  */
 export default function MainAppLayout({
   children,

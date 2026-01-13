@@ -7,13 +7,13 @@ import { Hero, AuthModal } from '@/components/landing';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * 랜딩 페이지
- * 
- * "Purchase ERP" 버튼 클릭 시:
- * - 세션 있으면 → comType에 따라 해당 페이지로 이동
- *   - B (구매사) → /home
- *   - V (협력사) → /vendor/home
- * - 세션 없으면 → 로그인 모달 표시
+ * Landing page that routes authenticated users to their home or opens a login modal for unauthenticated users.
+ *
+ * Displays a loading spinner while authentication state is loading. When the "Purchase ERP" action is triggered,
+ * the component re-checks the session: if a user exists it navigates to `/home` for company type 'B' or `/vendor/home`
+ * for other company types; if no user exists it opens the authentication modal in login mode.
+ *
+ * @returns The React element for the landing page.
  */
 export default function LandingPage() {
   const router = useRouter();

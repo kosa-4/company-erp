@@ -19,10 +19,13 @@ interface ApiOptions extends Omit<RequestInit, "body"> {
 }
 
 /**
- * 기본 API 호출 함수
- * @param endpoint - API 엔드포인트 (예: '/items', '/users/1')
- * @param options - 요청 옵션
- * @returns 응답 데이터
+ * Send a session-based JSON HTTP request to the backend and return the parsed response.
+ *
+ * Builds a request to /api/v1{endpoint} with optional query parameters and a JSON body, includes credentials and merged headers, handles empty/204 responses by returning an empty object, redirects the browser to /login for session-related statuses (401, 440) and shows an alert then redirects for status 441, and throws an ApiError containing status, statusText, and any parsed error body when the response is not ok.
+ *
+ * @param endpoint - Path appended to /api/v1 (for example, '/items' or '/users/1')
+ * @param options - Request options; may include `params` (query key/value pairs), `body` (object to be JSON-stringified), and additional headers
+ * @returns The response payload parsed as `T`; returns `{}` when the response has no content
  */
 async function apiClient<T>(
   endpoint: string,

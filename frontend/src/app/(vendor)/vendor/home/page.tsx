@@ -124,9 +124,12 @@ const QuickLinkCard: React.FC<{
 );
 
 /**
- * 협력사(Vendor) 홈 페이지
- * - comType이 'V'인 사용자만 접근 가능
- * - 협력사 전용 대시보드 및 빠른 링크 제공
+ * Render the vendor portal home page with animated stats, quick links, recent RFQs, and notices.
+ *
+ * Accessible only to users whose company type (`comType`) is 'V'. The page personalizes the greeting using
+ * the authenticated user's `userId` and presents a dashboard of vendor-specific actions and summaries.
+ *
+ * @returns The React element for the vendor home page.
  */
 export default function VendorHomePage() {
   const { user } = useAuth();

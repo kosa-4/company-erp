@@ -25,9 +25,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * 인증 컨텍스트 Provider
- * - 로그인/로그아웃 상태 관리
- * - comType에 따른 페이지 라우팅 처리
+ * Provides authentication context and manages user session state and routing.
+ *
+ * Manages current user and loading state, restores session on mount, and exposes
+ * `login`, `logout`, and `checkSession` actions. `login` updates state and
+ * navigates based on `comType` ('B' → /home, 'V' → /vendor/home). `logout`
+ * clears session and navigates to the root.
+ *
+ * @returns A React context provider element that supplies `user`, `isLoading`,
+ * `login`, `logout`, and `checkSession` to descendant components.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -144,16 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * 인증 컨텍스트 사용 훅
- * 
- * 사용 예시:
- * const { user, login, logout } = useAuth();
- * 
- * // 로그인 실행
- * await login('userId', 'password');
- * 
- * // 사용자 타입 확인
- * if (user?.comType === 'B') { ... }
+ * Accesses the authentication context for the current React component tree.
+ *
+ * @returns The authentication context containing `user`, `isLoading`, `login`, `logout`, and `checkSession`.
+ * @throws Error if the hook is used outside of an AuthProvider.
  */
 export function useAuth() {
   const context = useContext(AuthContext);

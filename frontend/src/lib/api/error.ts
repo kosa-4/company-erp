@@ -33,7 +33,14 @@ const ERROR_MESSAGES: Record<number, string> = {
 };
 
 /**
- * 에러에서 사용자 친화적 메시지 추출
+ * Produce a user-facing error message from an unknown error value.
+ *
+ * For an ApiError, returns the server-provided `data.message` when present; otherwise returns
+ * a mapped message for the ApiError `status` or a default message that includes the status code.
+ * For a standard Error, returns `error.message` if present. For all other values, returns a generic
+ * unknown-error message.
+ *
+ * @returns A user-friendly message describing the error.
  */
 export function getErrorMessage(error: unknown): string {
   // ApiError인 경우

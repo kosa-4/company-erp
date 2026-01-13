@@ -6,11 +6,13 @@ import { VendorLayout } from '@/components/vendor';
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * 협력사(V) 전용 레이아웃
- * 
- * - comType이 'V'인 사용자만 접근 가능
- * - 로그인 안 됨 → 랜딩 페이지로 리다이렉트
- * - 구매사(B)가 접근 시 → /home으로 리다이렉트
+ * Layout wrapper that restricts access to vendor users (company type 'V').
+ *
+ * Shows a full-screen loading indicator while authentication is in progress.
+ * Unauthenticated visitors are redirected to '/', and users with company type 'B' are redirected to '/home'.
+ *
+ * @param children - Content to render inside the vendor layout
+ * @returns The vendor layout containing `children` when the current user has company type 'V'; otherwise `null` while redirects or authentication are in progress
  */
 export default function VendorAppLayout({
   children,
