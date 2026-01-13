@@ -28,7 +28,7 @@ export default function CategoryPage() {
     const fetchCategories = async () => {
         try {
             // 캐시 방지를 위해 timestamp 추가
-            const response = await fetch(`/api/v1/categories/all?t=${Date.now()}`);
+            const response = await fetch("/api/v1/categories/all");
             if (!response.ok) throw new Error("서버 응답 오류");
 
             const rawData = await response.text();
