@@ -12,6 +12,9 @@ public enum DocKey {
     PO(ResetUnit.DAILY, "PO", "yyMMdd", "", 4, "PO2601050001"),
     GR(ResetUnit.DAILY, "GR", "yyMMdd", "", 4, "GR2601050001"),
 
+    //파일
+    FL(ResetUnit.DAILY, "FL", "yyMMdd", "", 4, "FL2601050001"),
+
     // 품목
     IT(ResetUnit.YEARLY, "IT", "yyyy", "IT-", 6, "IT-2026-000012"),
 
