@@ -253,7 +253,7 @@ export default function VendorPage() {
     };
   };
 
-  // const [isChecked, setIsChecked] = useState(false);
+  
   /* 승인 */
   const approveVendor = async () => {
     try{
@@ -276,6 +276,29 @@ export default function VendorPage() {
       console.error("협력업체 승인 중 오류 발생:", error);
     }; 
   };
+
+  /* 반려 */
+  const rejectVendor = async () => {
+    try{
+      // 1. API 요청
+      const response = await fetch(`/api/v1/vendors/reject`, {
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(selectedVendors),
+      });
+      if(!response.ok){
+        throw new Error('협력업체 반려에 실패했습니다.');
+      } 
+
+      // 2. 승인 성공 알림
+      alert('선택한 협력업체가 반려되었습니다.');
+    } catch(error){
+      // 3. 오류 처리
+      console.error("협력업체 반려 중 오류 발생:", error);
+    }; 
+  }
 
   return (
     <div>
@@ -346,7 +369,7 @@ export default function VendorPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="success" onClick={approveVendor}>승인</Button>
-            <Button variant="danger">반려</Button>
+            <Button variant="danger" onClick={rejectVendor}>반려</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
