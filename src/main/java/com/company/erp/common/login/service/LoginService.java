@@ -39,13 +39,16 @@ public class LoginService {
             throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        String comType = (String) user.get("comType");
-        String vendorCd = (String) user.get("vendorCd");
+        String comType   = (String) user.get("comType");
+        String vendorCd  = (String) user.get("vendorCd");
+        String userName  = (String) user.get("userName");
+        String deptCd    = (String) user.get("deptCd");
+        String deptName  = (String) user.get("deptName");
 
         if (comType == null || comType.isBlank()) {
             throw new IllegalStateException("로그인 처리 중 오류가 발생했습니다.");
         }
 
-        return new SessionUser(userId, ipAddress, comType, vendorCd);
+        return new SessionUser(userId, ipAddress, comType, vendorCd, userName, deptCd, deptName);
     }
 }

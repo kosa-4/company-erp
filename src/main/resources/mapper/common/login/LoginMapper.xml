@@ -6,26 +6,35 @@
 
     <select id="findLoginUser" resultType="map">
         SELECT
-            'B'       AS comType,
-            NULL      AS vendorCd,
-            USER_ID   AS userId,
-            USER_PW   AS password
-        FROM by_user
-        WHERE USER_ID = #{userId}
-          AND DEL_FLAG = 'N'
+            'B'               AS comType,
+            NULL              AS vendorCd,
+            u.USER_ID         AS userId,
+            u.USER_PW         AS password,
+            u.USER_NM         AS userName,
+            u.DEPT_CD         AS deptCd,
+            d.DEPT_NM         AS deptName
+        FROM by_user u
+                 LEFT JOIN dept d
+                           ON d.DEPT_CD  = u.DEPT_CD
+                               AND d.DEL_FLAG = 'N'
+        WHERE u.USER_ID  = #{userId}
+          AND u.DEL_FLAG = 'N'
 
         UNION ALL
 
         SELECT
-            'V'        AS comType,
-            VENDOR_CD  AS vendorCd,
-            USER_ID    AS userId,
-            PASSWORD   AS password
-        FROM vn_user
-        WHERE USER_ID = #{userId}
-          AND DEL_FLAG = 'N'
+            'V'               AS comType,
+            v.VENDOR_CD       AS vendorCd,
+            v.USER_ID         AS userId,
+            v.PASSWORD        AS password,
+            v.USER_NM         AS userName,
+            NULL              AS deptCd,
+            NULL              AS deptName
+        FROM vn_user v
+        WHERE v.USER_ID  = #{userId}
+          AND v.DEL_FLAG = 'N'
 
-        LIMIT 1
+            LIMIT 1
     </select>
 
 </mapper>
