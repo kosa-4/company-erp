@@ -1,7 +1,7 @@
 package com.company.erp.common.signup.service;
 
 import com.company.erp.common.login.service.DuplicateLoginService;
-import com.company.erp.common.signup.dto.SignUpDto;
+import com.company.erp.common.signup.dto.UserDto;
 import com.company.erp.common.signup.mapper.SignUpMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,8 +14,8 @@ public class SignUpService {
     private PasswordEncoder passwordEncoder;
 
     @Transactional
-    public void registerVendorUser(SignUpDto signUpDto) {
-        boolean existsUserId = signUpMapper.existsUserId(signUpDto.getUserId());
+    public void registerUser(UserDto userDto) {
+        boolean existsUserId = signUpMapper.existsUserId(userDto.getUserId());
 
         // 1. 아이디 중복 체크
         if (existsUserId) {
@@ -24,11 +24,11 @@ public class SignUpService {
         }
 
         // 2. 비밀번호 암호화
-        String encryptedPassword = passwordEncoder.encode(signUpDto.getPassword());
-        signUpDto.setPassword(encryptedPassword);
+        String encryptedPassword = passwordEncoder.encode(userDto.getPassword());
+        userDto.setPassword(encryptedPassword);
 
         // 3. 최종 db 저장
-        signUpMapper.insertVendorUser(signUpDto);
+        signUpMapper.insertUser(userDto);
 
     }
 }
