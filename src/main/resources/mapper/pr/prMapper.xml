@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.company.erp.pr.mapper.PrMapper">
+
+    <insert id="insertPrHd" parameterType="com.company.erp.pr.dto.PrHdDTO">
+        INSERT INTO PRHD
+        (PR_NUM, REG_DATE,REG_USER_ID,DEL_FLAG,PR_SUBJECT,
+         DEPT_CD, PR_AMT, REQ_USER_ID,
+         RMK,PROGRESS_CD,PC_TYPE)
+        values
+        (#{prNum},now(),#{regUserId},'N', #{prSubject}, #{deptCd},
+        #{prAmt},#{reqUserId},#{rmk},
+
+        (SELECT CODE FROM CODD
+         WHERE CODE_GROUP='PROGRESS_CD'
+         AND CODE_NAME= #{progressCd}
+         AND USE_YN = 'Y'),
+
+        (SELECT CODE FROM CODD
+         WHERE CODE_GROUP='PC_TYPE'
+         AND CODE_NAME= #{pcType}
+         AND USE_YN='Y')
+        )
+    </insert>
+
+    <insert id="insertPrDt">
+        INSERT INTO PRDT
+        ( PR_NUM, ITEM_CD, ITEM_DESC, ITEM_SPEC,
+        UNIT_CD, PR_QT, UNIT_PRC, PR_AMT, DELY_DATE,
+        RMK, DEL_FLAG, REG_DATE, REG_USER_ID )
+        VALUES
+        <foreach collection="prDtList" item="dt" separator=",">
+            ( #{dt.prNum}, #{dt.itemCd}, #{dt.itemDesc},
+            #{dt.itemSpec}, #{dt.unitCd}, #{dt.prQt},
+            #{dt.unitPrc}, #{dt.prAmt}, #{dt.delyDate},
+            #{dt.rmk}, 'N', NOW(), #{dt.regUserId} )
+        </foreach>
+    </insert>
+
+    <select id="selectPrItem" resultType="com.company.erp.pr.dto.PrItemDTO">
+        SELECT ITEM_CD, ITEM_NM, ITEM_SPEC, UNIT_CD
+        FROM MTGL
+        WHERE DEL_FLAG = 'N'
+    </select>
+
+
+    <select id="selectPrItemInfo" resultType="com.company.erp.pr.dto.PrItemDTO">
+        SELECT ITEM_CD, ITEM_NM,ITEM_SPEC,UNIT_CD,RMK
+        FROM MTGL
+        WHERE DEL_FLAG='N'
+        AND
+        ITEM_CD IN
+        <foreach collection="itemCdList" item="itemCd" open="(" separator="," close=")">
+            #{itemCd}
+        </foreach>
+    </select>
+
+    <select id="selectPrNum" parameterType="String" resultType="com.company.erp.pr.dto.PrHdDTO">
+        SELECT PR_NUM, DEL_FLAG
+        FROM PRHD
+        WHERE PR_NUM = #{prNum}
+    </select>
+
+    <update id="deletePrHd">
+        UPDATE PRHD
+        SET
+        DEL_FLAG = 'Y'
+        WHERE PR_NUM = #{prNum}
+        AND
+        DEL_FLAG='N'
+    </update>
+
+    <update id="deletePrDt">
+        UPDATE PRDT
+        SET
+        DEL_FLAG = 'Y'
+        WHERE PR_NUM = #{prNum}
+        AND
+        DEL_FLAG='N'
+    </update>
+
+
+    <select id="selectPrList" resultType="com.company.erp.pr.dto.PrListResponse">
+        SELECT ST.CODE_NAME AS progressCd, PT.CODE_NAME AS pcType,
+        HD.PR_NUM AS prNum, HD.REQ_USER_ID AS reqUserId, HD.DEPT_CD AS deptNm,
+        DT.UNIT_CD AS unitCd, DT.REG_DATE AS regDate,
+        DT.ITEM_CD AS itemCd, DT.ITEM_DESC AS itemDesc,
+        DT.PR_QT AS prQt, DT.UNIT_PRC AS unitPrc,
+        DT.PR_AMT AS prAmt, DT.DELY_DATE AS delyDate
+        from PRDT DT JOIN PRHD HD
+        ON DT.PR_NUM = HD.PR_NUM
+
+        LEFT JOIN CODD ST
+        ON ST.CODE_GROUP = 'PROGRESS_CD'
+        AND ST.CODE = HD.PROGRESS_CD
+        AND ST.USE_YN = 'Y'
+
+        LEFT JOIN CODD PT
+        ON PT.CODE_GROUP = 'PC_TYPE'
+        AND PT.CODE = HD.PC_TYPE
+        AND PT.USE_YN = 'Y'
+
+        LEFT JOIN BY_USER U
+        ON HD.REQ_USER_ID = U.USER_ID
+
+        <!--부서처리 다시 할 예정-->
+<!--        LEFT JOIN DEPT DPT-->
+<!--        ON HD.DEPT_CD = DPT.DEPT_CD-->
+
+        WHERE HD.DEL_FLAG = 'N'
+        AND DT.DEL_FLAG = 'N'
+
+        ORDER BY HD.PR_NUM DESC
+
+    </select>
+
+</mapper>

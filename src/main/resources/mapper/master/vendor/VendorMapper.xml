@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
+    <!--협력사 조회-->
+    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> <!--자동으로 list 반환-->
+        SELECT
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            REG_TYPE AS businessType,
+            CEO_USER_NM AS ceoName,
+            ADDR AS address,
+            INDUSTRY_TYPE AS businessItem,
+            USE_FLAG AS useYn,
+            PROGRESS_CD AS status,
+            REG_DATE AS createdAt
+        FROM
+            VNGL
+        <where>
+            DEL_FLAG = 'N'
+            <if test="vendorCode != null and vendorCode != ''">
+                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND REG_TYPE = #{businessType}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="businessItem != null and businessItem != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            </if>
+        </where>
+        ORDER BY
+            VENDOR_CD ASC
+    </select>
+
+    <!--협력사 저장-->
+    <insert id="insertVendorVNGL" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        INSERT INTO
+        VNGL(
+            VENDOR_CD,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            USE_FLAG,
+            VENDOR_NM,
+            VENDOR_ENG_NM,
+            REG_TYPE,
+            IRS_NO,
+            CEO_USER_NM,
+            ZIP_CD,
+            ADDR,
+            ADDR_DT,
+            TEL_NO,
+            FAX_NO,
+            EMAIL,
+            FOUNDATION_DATE,
+            INDUSTRY_TYPE,
+            ATT_FILE_NUM,
+            RMK,
+            PROGRESS_CD,
+            SIGN_DATE
+        )
+        VALUES(
+            #{vendorCode},
+            NOW(),
+            #{createdBy},
+            NULL,
+            NULL,
+            "N",
+            #{useYn},
+            #{vendorName},
+            #{vendorEngName},
+            #{businessType},
+            #{businessNo},
+            #{ceoName},
+            #{zipCode},
+            #{address},
+            #{addressDetail},
+            #{tel},
+            #{fax},
+            #{email},
+            #{foundationAt},
+            #{businessItem},
+            #{attFileNum},
+            #{remark},
+            #{status},
+            NULL
+        )
+    </insert>
+    
+    <!--사업자 번호 중복 체크-->
+    <select id="existsByBusinessNo" parameterType="String" resultType="boolean">
+        SELECT
+            COUNT(*)
+        FROM
+            VNGL
+        WHERE
+            IRS_NO = #{businessNo}
+    </select>
+</mapper>

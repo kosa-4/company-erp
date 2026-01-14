@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Package, LogOut } from 'lucide-react';
 import { navigationItems } from '@/constants/navigation';
 import { NavItem } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItemProps {
   item: NavItem;
@@ -113,6 +114,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
 
   const toggleItem = (href: string) => {
@@ -125,6 +127,14 @@ const Sidebar: React.FC = () => {
       }
       return newSet;
     });
+  };
+
+  /**
+   * 로그아웃 핸들러
+   * - 세션 종료 후 랜딩 페이지로 이동
+   */
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -183,16 +193,20 @@ const Sidebar: React.FC = () => {
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-stone-100 bg-gradient-to-t from-white to-transparent">
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 transition-colors cursor-pointer group">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white font-semibold text-sm">홍</span>
+            <span className="text-white font-semibold text-sm">
+              {user?.userId?.charAt(0)?.toUpperCase() || '홍'}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-900 truncate">홍길동</p>
-            <p className="text-xs text-stone-500 truncate">구매팀</p>
+            <p className="text-sm font-semibold text-stone-900 truncate">{user?.userId || '홍길동'}</p>
+            <p className="text-xs text-stone-500 truncate">담당자</p>
           </div>
           <motion.button 
+            onClick={handleLogout}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="로그아웃"
           >
             <LogOut className="w-4 h-4" />
           </motion.button>

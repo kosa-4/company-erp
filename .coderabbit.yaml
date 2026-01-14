@@ -1,0 +1,15 @@
+# 1. 리뷰 언어 설정 (한국어)
+language: "ko-KR"
+
+reviews:
+  # 2. 자동 리뷰 설정
+  auto_review:
+    enabled: true
+    # PR의 도착지(Target)가 아래 브랜치일 때만 리뷰가 실행됩니다.
+    base_branches:
+      - "develop"
+
+  # AI에게 명확한 페르소나와 언어 지침을 줍니다.
+  tone_instructions: |
+    모든 답변과 설명은 반드시 한국어로 작성하세요. 
+    전문 용어는 가급적 한국어로 풀어서 설명하거나 병기하세요.

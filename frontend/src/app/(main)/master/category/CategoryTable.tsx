@@ -211,6 +211,7 @@ export default function CategoryTable({
                                                 <option value="N">N</option>
                                             </select>
                                         </td>
+        
                                     </tr>
                                 )
                             ))}

@@ -7,15 +7,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronDown, 
   User, 
-  Bell, 
   Building2, 
   FileText, 
   Package, 
-  Users, 
   Home,
   Search,
   LogOut
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
   name: string;
@@ -167,6 +166,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
 
 const VendorSidebar: React.FC = () => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
 
   const toggleItem = (href: string) => {
@@ -181,6 +181,14 @@ const VendorSidebar: React.FC = () => {
     });
   };
 
+  /**
+   * 로그아웃 핸들러
+   * - 세션 종료 후 랜딩 페이지로 이동
+   */
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <motion.aside 
       initial={{ x: -260 }}
@@ -188,9 +196,9 @@ const VendorSidebar: React.FC = () => {
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       className="fixed left-0 top-0 h-screen w-[260px] z-40 bg-white/80 backdrop-blur-xl border-r border-stone-200/50"
     >
-      {/* Logo Area */}
+      {/* Logo Area - 클릭 시 랜딩페이지로 이동 */}
       <div className="h-16 flex items-center px-5 border-b border-stone-100">
-        <Link href="/vendor" className="flex items-center gap-3 group">
+        <Link href="/" className="flex items-center gap-3 group">
           <motion.div 
             whileHover={{ scale: 1.05, rotate: 5 }}
             className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30"
@@ -263,16 +271,20 @@ const VendorSidebar: React.FC = () => {
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-stone-100 bg-gradient-to-t from-white to-transparent">
         <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-stone-50 transition-colors cursor-pointer group">
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white font-semibold text-sm">협</span>
+            <span className="text-white font-semibold text-sm">
+              {user?.userId?.charAt(0)?.toUpperCase() || '협'}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-900 truncate">(주)협력사</p>
-            <p className="text-xs text-stone-500 truncate">홍길동 담당자</p>
+            <p className="text-sm font-semibold text-stone-900 truncate">{user?.vendorCd || '(주)협력사'}</p>
+            <p className="text-xs text-stone-500 truncate">{user?.userId || '담당자'}</p>
           </div>
           <motion.button 
+            onClick={handleLogout}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+            className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="로그아웃"
           >
             <LogOut className="w-4 h-4" />
           </motion.button>
