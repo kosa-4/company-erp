@@ -138,7 +138,6 @@
                 ITEM_NM,
                 ITEM_NM_ENG,
                 ITEM_SPEC,
-<!--                ITEM_RMK,-->
                 MAKER_NM,
                 MODEL_NO,
                 DEPT_CD ,
@@ -158,8 +157,6 @@
                 #{itemName},
                 #{itemNameEn},
                 #{spec},
-<!--                #{itemRemark},-->
-<!--                #{manufacturerCode},-->
                 #{manufacturerName},
                 #{modelNo},
                 #{departmentCode},
