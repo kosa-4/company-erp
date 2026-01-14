@@ -22,7 +22,7 @@ import com.company.erp.po.dto.PurchaseOrderDTO;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/v1/goods-receipts")
+@RequestMapping("/api/v1/goods-receipts")
 @RequiredArgsConstructor
 public class GoodsReceiptController {
 

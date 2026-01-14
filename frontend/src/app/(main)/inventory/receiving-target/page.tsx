@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { goodsReceiptApi, PendingPODTO, GoodsReceiptDTO } from '@/lib/api/goodsReceipt';
+import { getErrorMessage } from '@/lib/api/error';
 
 interface ReceivingTarget {
   poNo: string;
@@ -32,75 +34,122 @@ interface ReceivingTarget {
   amount: number;
 }
 
-const mockData: ReceivingTarget[] = [
-  {
-    poNo: 'PO-2024-0234',
-    poName: '개발팀 모니터 발주',
-    buyer: '홍길동',
-    poDate: '2024-12-26',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    unitPrice: 340000,
-    orderQuantity: 10,
-    storageLocation: '본사 창고',
-    amount: 3400000,
-  },
-  {
-    poNo: 'PO-2024-0233',
-    poName: '사무용품 발주',
-    buyer: '홍길동',
-    poDate: '2024-12-25',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    unitPrice: 24000,
-    orderQuantity: 50,
-    storageLocation: '본사 창고',
-    amount: 1200000,
-  },
-];
+interface ReceivingFormItem {
+  itemCode: string;
+  itemName: string;
+  spec: string;
+  unit: string;
+  unitPrice: number;
+  orderQuantity: number;
+  receivedQuantity: number;
+  receivedAmount: number;
+  storageLocation: string;
+}
 
 export default function ReceivingTargetPage() {
-  const [data] = useState<ReceivingTarget[]>(mockData);
+  const [data, setData] = useState<ReceivingTarget[]>([]);
   const [selectedRows, setSelectedRows] = useState<ReceivingTarget[]>([]);
   const [searchParams, setSearchParams] = useState({
     poNo: '',
     poName: '',
-    buyer: '',
     vendor: '',
-    item: '',
     startDate: '',
     endDate: '',
   });
   const [loading, setLoading] = useState(false);
   const [isReceivingModalOpen, setIsReceivingModalOpen] = useState(false);
+  
+  // 입고 폼 상태
+  const [grDate, setGrDate] = useState(new Date().toISOString().split('T')[0]);
+  const [remark, setRemark] = useState('');
+  const [receivingItems, setReceivingItems] = useState<ReceivingFormItem[]>([]);
+
+  // 데이터 조회
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const result = await goodsReceiptApi.getPendingPOList({
+        poNo: searchParams.poNo || undefined,
+        poName: searchParams.poName || undefined,
+        vendorName: searchParams.vendor || undefined,
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
+      });
+
+      if (!result || !Array.isArray(result)) {
+        setData([]);
+        return;
+      }
+
+      // PO 데이터를 ReceivingTarget 형식으로 변환
+      const transformed: ReceivingTarget[] = [];
+      result.forEach((po: PendingPODTO) => {
+        if (po.items && po.items.length > 0) {
+          po.items.forEach((item) => {
+            transformed.push({
+              poNo: po.poNo || '',
+              poName: po.poName || '',
+              buyer: po.ctrlUserName || '',
+              poDate: po.poDate || '',
+              vendorCode: po.vendorCode || '',
+              vendorName: po.vendorName || '',
+              itemCode: item.itemCode || '',
+              itemName: item.itemName || '',
+              spec: item.specification || '',
+              unit: item.unit || '',
+              unitPrice: Number(item.unitPrice) || 0,
+              orderQuantity: item.orderQuantity || 0,
+              storageLocation: item.storageLocation || '본사 창고',
+              amount: Number(item.amount) || 0,
+            });
+          });
+        } else {
+          // items가 없으면 헤더 정보만
+          transformed.push({
+            poNo: po.poNo || '',
+            poName: po.poName || '',
+            buyer: po.ctrlUserName || '',
+            poDate: po.poDate || '',
+            vendorCode: po.vendorCode || '',
+            vendorName: po.vendorName || '',
+            itemCode: '-',
+            itemName: '-',
+            spec: '-',
+            unit: '-',
+            unitPrice: 0,
+            orderQuantity: 0,
+            storageLocation: '-',
+            amount: 0,
+          });
+        }
+      });
+      setData(transformed);
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기 로드
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSearch = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    await fetchData();
   };
 
   const handleReset = () => {
     setSearchParams({
       poNo: '',
       poName: '',
-      buyer: '',
       vendor: '',
-      item: '',
       startDate: '',
       endDate: '',
     });
   };
-
-
 
   const columns: ColumnDef<ReceivingTarget>[] = [
     {
@@ -115,7 +164,6 @@ export default function ReceivingTargetPage() {
     { key: 'poName', header: '발주명', width: 150, align: 'left' },
     { key: 'buyer', header: '발주담당자', width: 100, align: 'center' },
     { key: 'poDate', header: '발주일자', width: 100, align: 'center' },
-    { key: 'vendorCode', header: '협력사코드', width: 130, align: 'center' },
     { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
     { key: 'itemCode', header: '품목코드', width: 130, align: 'center' },
     { key: 'itemName', header: '품목명', width: 140, align: 'left' },
@@ -150,8 +198,88 @@ export default function ReceivingTargetPage() {
       alert('입고 처리할 항목을 선택해주세요.');
       return;
     }
+    
+    // 입고 폼 초기화
+    setGrDate(new Date().toISOString().split('T')[0]);
+    setRemark('');
+    setReceivingItems(selectedRows.map(row => ({
+      itemCode: row.itemCode,
+      itemName: row.itemName,
+      spec: row.spec,
+      unit: row.unit,
+      unitPrice: row.unitPrice,
+      orderQuantity: row.orderQuantity,
+      receivedQuantity: row.orderQuantity, // 기본값: 발주수량
+      receivedAmount: row.amount,
+      storageLocation: row.storageLocation,
+    })));
+    
     setIsReceivingModalOpen(true);
   };
+
+  // 수량 변경 시 금액 업데이트
+  const handleQuantityChange = (index: number, newQuantity: number) => {
+    setReceivingItems(prev => prev.map((item, i) => 
+      i === index 
+        ? { ...item, receivedQuantity: newQuantity, receivedAmount: item.unitPrice * newQuantity }
+        : item
+    ));
+  };
+
+  // 저장위치 변경
+  const handleStorageChange = (index: number, newStorage: string) => {
+    setReceivingItems(prev => prev.map((item, i) => 
+      i === index ? { ...item, storageLocation: newStorage } : item
+    ));
+  };
+
+  // 입고 저장
+  const handleSaveReceiving = async () => {
+    if (receivingItems.some(item => item.receivedQuantity <= 0)) {
+      alert('입고수량을 확인해주세요.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const grData: GoodsReceiptDTO = {
+        poNo: selectedRows[0]?.poNo,
+        grDate: grDate,
+        totalAmount: receivingItems.reduce((sum, item) => sum + item.receivedAmount, 0),
+        status: 'GRP', // 입고처리 상태
+        remark: remark,
+        items: receivingItems.map(item => ({
+          itemCode: item.itemCode,
+          itemDesc: item.itemName,
+          itemSpec: item.spec,
+          unitCode: item.unit,
+          grQuantity: item.receivedQuantity,
+          grAmount: item.receivedAmount,
+          warehouseCode: item.storageLocation,
+          grDate: grDate,
+          statusCode: 'N',
+        })),
+      };
+
+      await goodsReceiptApi.create(grData);
+      setIsReceivingModalOpen(false);
+      setSelectedRows([]);
+      
+      const moveToList = window.confirm('성공적으로 입고 처리되었습니다.\n\n입고현황으로 이동하시겠습니까?');
+      if (moveToList) {
+        window.location.href = '/inventory/receiving-list';
+      } else {
+        await fetchData();
+      }
+    } catch (error) {
+      alert('입고 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 총 입고금액 계산
+  const totalReceivingAmount = receivingItems.reduce((sum, item) => sum + item.receivedAmount, 0);
 
   return (
     <div>
@@ -179,22 +307,10 @@ export default function ReceivingTargetPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, poName: e.target.value }))}
         />
         <Input
-          label="발주담당자"
-          placeholder="담당자명 입력"
-          value={searchParams.buyer}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
-        />
-        <Input
           label="협력업체"
           placeholder="협력업체명 입력"
           value={searchParams.vendor}
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
-        />
-        <Input
-          label="품목명/품목코드"
-          placeholder="품목 검색"
-          value={searchParams.item}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, item: e.target.value }))}
         />
         <DatePicker
           label="발주일자 시작"
@@ -235,32 +351,36 @@ export default function ReceivingTargetPage() {
         size="xl"
         footer={
           <>
+            <Button variant="primary" onClick={handleSaveReceiving} disabled={loading}>
+              {loading ? '저장 중...' : '저장'}
+            </Button>
             <Button variant="secondary" onClick={() => setIsReceivingModalOpen(false)}>닫기</Button>
-            <Button variant="primary" onClick={() => {
-              alert('입고가 처리되었습니다.');
-              setIsReceivingModalOpen(false);
-              setSelectedRows([]);
-            }}>저장</Button>
           </>
         }
       >
         <div className="space-y-6">
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
-            <Input label="입고번호" value="자동채번" readOnly />
-            <DatePicker label="입고일자 (문서기준)" />
-            <DatePicker label="입고일자 (업무기준)" />
-            <Input label="입고금액" value={`₩${formatNumber(selectedRows.reduce((sum, r) => sum + r.amount, 0))}`} readOnly />
+            <Input label="입고번호" value="" placeholder="저장 시 자동생성" readOnly />
+            <DatePicker 
+              label="입고일자" 
+              value={grDate}
+              onChange={(e) => setGrDate(e.target.value)}
+            />
+            <Input 
+              label="입고금액" 
+              value={`₩${formatNumber(totalReceivingAmount)}`} 
+              readOnly 
+            />
           </div>
 
-          <Textarea label="비고" placeholder="비고 입력" rows={2} />
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">첨부파일</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer">
-              <p className="text-sm text-gray-500">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
-            </div>
-          </div>
+          <Textarea 
+            label="비고" 
+            placeholder="비고 입력" 
+            rows={2}
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+          />
 
           {/* 입고 품목 목록 */}
           <div>
@@ -276,35 +396,35 @@ export default function ReceivingTargetPage() {
                     <th className="p-3 text-right font-semibold text-gray-600">입고수량</th>
                     <th className="p-3 text-right font-semibold text-gray-600">입고금액</th>
                     <th className="p-3 text-left font-semibold text-gray-600">저장위치</th>
-                    <th className="p-3 text-center font-semibold text-gray-600">입고일시</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedRows.map((row) => (
-                    <tr key={row.poNo} className="border-t">
-                      <td className="p-3">{row.itemCode}</td>
-                      <td className="p-3">{row.itemName}</td>
-                      <td className="p-3 text-right">₩{formatNumber(row.unitPrice)}</td>
-                      <td className="p-3 text-right">{formatNumber(row.orderQuantity)}</td>
+                  {receivingItems.map((item, index) => (
+                    <tr key={item.itemCode} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
+                      <td className="p-3 text-right">{formatNumber(item.orderQuantity)}</td>
                       <td className="p-3 text-right">
                         <input 
                           type="number" 
-                          defaultValue={row.orderQuantity}
+                          value={item.receivedQuantity}
+                          min={0}
+                          max={item.orderQuantity}
                           className="w-20 px-2 py-1 border rounded text-right"
+                          onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
                         />
                       </td>
-                      <td className="p-3 text-right font-medium">₩{formatNumber(row.amount)}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(item.receivedAmount)}</td>
                       <td className="p-3">
-                        <select className="px-2 py-1 border rounded text-sm">
+                        <select 
+                          className="px-2 py-1 border rounded text-sm"
+                          value={item.storageLocation}
+                          onChange={(e) => handleStorageChange(index, e.target.value)}
+                        >
                           <option value="본사 창고">본사 창고</option>
                           <option value="지사 창고">지사 창고</option>
                         </select>
-                      </td>
-                      <td className="p-3 text-center">
-                        <input 
-                          type="datetime-local" 
-                          className="px-2 py-1 border rounded text-sm"
-                        />
                       </td>
                     </tr>
                   ))}
@@ -317,4 +437,3 @@ export default function ReceivingTargetPage() {
     </div>
   );
 }
-
