@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @SessionIgnore
 @RestController
-@RequestMapping("api/v1/vendors")
+@RequestMapping("/api/v1/vendors")
 public class VendorController {
     @Autowired
     private VendorService vendorService;
@@ -22,7 +22,7 @@ public class VendorController {
     /* 조회 */
     @GetMapping
     public ResponseEntity<VendorResponseDto<VendorListDto>> getVendorList(VendorSearchDto vendorSearchDto) {
-        VendorResponseDto<VendorListDto> vendors =  vendorService.getVendorList(vendorSearchDto);
+        VendorResponseDto<VendorListDto> vendors = vendorService.getVendorList(vendorSearchDto);
         return ResponseEntity.ok(vendors);
     }
 
