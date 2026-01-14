@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class VendorService {
@@ -58,32 +59,38 @@ public class VendorService {
 
     // 2. 구매사에서 승인
     @Transactional
-    public void approveVendor(String askNum, String sessionId) {
-        
-        // 1) 선택된 협력사 정보 조회
-        VendorRegisterDto vendor = vendorMapper.selectVendorByAskNum(askNum);
-        if(vendor == null) {
-            throw new IllegalStateException("해당 협력사가 존재하지 않습니다");
+    public void approveVendor(List<VendorRegisterDto> vendorRegisterDtoList, String sessionId) {
+
+        // 1) 단일 dto 반환 (일괄 처리 건수가 많지 않으므로 서비스 레이어에서 for문으로 처리)
+        for(VendorRegisterDto dto : vendorRegisterDtoList) {
+            String askNum = dto.getAskNum();
+            // 1) 선택된 협력사 정보 조회
+            VendorRegisterDto vendor = vendorMapper.selectVendorByAskNum(askNum);
+
+            if(vendor == null) {
+                throw new IllegalStateException("해당 협력사가 존재하지 않습니다");
+            }
+//            System.out.println("vendor 데이터 확인: " + vendor);
+            // 2) 입력값 설정
+            vendor.setModifiedBy(sessionId);
+            vendor.setModifiedAt(LocalDate.now());
+            vendor.setSignDate(LocalDate.now());
+//            vendor.setUseYn("Y");
+
+            // 3) 마스터 테이블 추가
+            vendorMapper.insertVendorVNGL(vendor);
+
+            // 4) 대기 테이블 업데이트
+            VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
+            vendorUpdateDto.setModifiedAt(LocalDate.now());
+            vendorUpdateDto.setModifiedBy(sessionId);
+            vendorUpdateDto.setAskNum(askNum);
+            vendorUpdateDto.setDelFlag("Y");
+            vendorUpdateDto.setStatus("A");
+            vendorUpdateDto.setSignUserId(sessionId);
+
+            vendorMapper.updateVNCHByAskNum(vendorUpdateDto);
         }
-
-        // 2) 입력값 설정
-        vendor.setModifiedBy(sessionId);
-        vendor.setModifiedAt(LocalDate.now());
-        vendor.setSignDate(LocalDate.now());
-        
-        // 3) 마스터 테이블 추가
-        vendorMapper.insertVendorVNGL(vendor);
-
-        // 4) 대기 테이블 업데이트
-        VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
-        vendorUpdateDto.setModifiedAt(LocalDate.now());
-        vendorUpdateDto.setModifiedBy(sessionId);
-        vendorUpdateDto.setAskNum(askNum);
-        vendorUpdateDto.setDelFlag("Y");
-        vendorUpdateDto.setStatus("A");
-        vendorUpdateDto.setSignUserId(sessionId);
-
-        vendorMapper.updateVNCHByAskNum(vendorUpdateDto);
     }
     
     // 3. 구매사에서 반려

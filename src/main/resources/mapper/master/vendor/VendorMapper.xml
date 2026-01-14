@@ -5,6 +5,7 @@
     <!--협력사 조회-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> <!--자동으로 list 반환-->
         SELECT
+            NULL AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
             REG_TYPE AS businessType,
@@ -40,18 +41,83 @@
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
             </if>
         </where>
+
+        UNION ALL
+
+        SELECT
+            ASK_NUM AS askNum,
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            REG_TYPE AS businessType,
+            CEO_USER_NM AS ceoName,
+            ADDR AS address,
+            INDUSTRY_TYPE AS businessItem,
+            NULL AS useYn,
+            PROGRESS_CD AS status,
+            REG_DATE AS createdAt
+        FROM
+            VNCH
+        <where>
+            DEL_FLAG = 'N'
+            <if test="vendorCode != null and vendorCode != ''">
+                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND REG_TYPE = #{businessType}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="businessItem != null and businessItem != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            </if>
+        </where>
+
         ORDER BY
-            VENDOR_CD ASC
+            vendorCode ASC
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->
-    <select id="selectVendorByVendorCode" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+    <select id="selectVendorByAskNum" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
         SELECT
-            *
+        ASK_NUM AS askNum,
+        VENDOR_CD AS vendorCode,
+        REG_DATE AS createdAt,
+        REG_USER_ID AS createdBy,
+        MOD_DATE AS modifiedAt,
+        MOD_USER_ID AS modifiedBy,
+        DEL_FLAG AS delFlag,
+        VENDOR_NM AS vendorName,
+        VENDOR_ENG_NM AS vendorEngName,
+        REG_TYPE AS businessType,
+        IRS_NO AS businessNo,
+        CEO_USER_NM AS ceoName,
+        ZIP_CD AS zipCode,
+        ADDR AS address,
+        ADDR_DT AS addressDetail,
+        TEL_NO AS tel,
+        FAX_NO AS fax,
+        EMAIL AS email,
+        FOUNDATION_DATE AS foundationDate,
+        INDUSTRY_TYPE AS businessItem,
+        RMK AS remark,
+        PROGRESS_CD AS status,
+        SIGN_DATE AS signDate
         FROM
             VNCH
         WHERE
-            VENDOR_CD = #{vendorCode}
+            ASK_NUM = #{askNum}
+        AND
+            PROGRESS_CD IN ('N', 'P')
     </select>
 
     <!--협력사 저장-->
@@ -89,8 +155,8 @@
             #{createdBy},
             #{modifiedAt},
             #{modifiedBy},
-            "N",
-            #{useYn},
+            'N',
+            'Y',
             #{vendorName},
             #{vendorEngName},
             #{businessType},
