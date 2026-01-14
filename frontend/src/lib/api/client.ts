@@ -66,31 +66,27 @@ async function apiClient<T>(
       errorData = null;
     }
 
-    // 401: 로그인 필요 → 로그인 페이지로 이동
-    if (response.status === 401) {
-      if (
-        typeof window !== "undefined" &&
-        !window.location.pathname.includes("/login")
-      ) {
-        window.location.href = "/login";
-      }
-    }
+    const isClient = typeof window !== "undefined";
+    const isAuthExpired = response.status === 401 || response.status === 440;
+    const isDuplicateLogin = response.status === 441;
 
-    // 440: 세션 없음 → 로그인 페이지로 이동
-    if (response.status === 440) {
-      if (
-        typeof window !== "undefined" &&
-        !window.location.pathname.includes("/login")
-      ) {
-        window.location.href = "/login";
-      }
-    }
+    if (isClient && (isAuthExpired || isDuplicateLogin)) {
+      // 같은 에러로 alert 무한 반복 방지(짧은 시간 중복 호출)
+      const lockKey = "auth_redirect_lock";
+      const lockedAt = Number(sessionStorage.getItem(lockKey) || "0");
+      const now = Date.now();
 
-    // 441: 중복 로그인 → 로그인 페이지로 이동 (다른 곳에서 로그인함)
-    if (response.status === 441) {
-      if (typeof window !== "undefined") {
-        alert("다른 곳에서 로그인하여 세션이 종료되었습니다.");
-        window.location.href = "/login";
+      if (now - lockedAt > 1500) {
+        sessionStorage.setItem(lockKey, String(now));
+
+        if (isDuplicateLogin) {
+          alert("다른 곳에서 로그인하여 세션이 종료되었습니다.");
+        } else {
+          alert("로그인이 만료되었습니다. 다시 로그인해주세요.");
+        }
+
+        // 홈으로 이동 (풀 리로드)
+        window.location.href = "/";
       }
     }
 
