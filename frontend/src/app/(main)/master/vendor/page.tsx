@@ -92,6 +92,7 @@ export default function VendorPage() {
       console.log("조회된 데이터:", data);
       // 2-4. 상태 업데이트
       setVendors(data.vendors);
+      
     } catch(error){
       // 1) 오류 처리
       console.error("데이터 조회 중 오류 발생:", error);
