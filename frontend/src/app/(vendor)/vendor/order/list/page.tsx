@@ -1,53 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Check, Eye, Calendar, Search, X, FileText, ArrowRight } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
-// 임시 Mock 데이터
-const mockOrders = [
-  {
-    poNo: 'PO-2025-0001',
-    poName: '2025년 1월 사무용품 구매',
-    vendorName: '(주)협력사',
-    poDate: '2025-01-10',
-    totalAmount: 5500000,
-    status: 'S',
-    checkFlag: 'N',
-    items: [
-      { itemCode: 'ITEM001', itemName: '복사용지 A4', quantity: 100, unitPrice: 25000, amount: 2500000 },
-      { itemCode: 'ITEM002', itemName: '볼펜 세트', quantity: 50, unitPrice: 30000, amount: 1500000 },
-      { itemCode: 'ITEM003', itemName: '노트북 거치대', quantity: 10, unitPrice: 150000, amount: 1500000 },
-    ],
-  },
-  {
-    poNo: 'PO-2025-0002',
-    poName: '전산장비 유지보수',
-    vendorName: '(주)협력사',
-    poDate: '2025-01-08',
-    totalAmount: 12000000,
-    status: 'S',
-    checkFlag: 'N',
-    items: [
-      { itemCode: 'ITEM004', itemName: 'PC 유지보수', quantity: 20, unitPrice: 500000, amount: 10000000 },
-      { itemCode: 'ITEM005', itemName: '네트워크 점검', quantity: 1, unitPrice: 2000000, amount: 2000000 },
-    ],
-  },
-  {
-    poNo: 'PO-2025-0003',
-    poName: '청소용품 정기 구매',
-    vendorName: '(주)협력사',
-    poDate: '2025-01-05',
-    totalAmount: 1200000,
-    status: 'S',
-    checkFlag: 'Y',
-    items: [
-      { itemCode: 'ITEM006', itemName: '청소도구 세트', quantity: 10, unitPrice: 80000, amount: 800000 },
-      { itemCode: 'ITEM007', itemName: '세정제', quantity: 20, unitPrice: 20000, amount: 400000 },
-    ],
-  },
-];
+interface OrderItem {
+  itemCode: string;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+interface Order {
+  poNo: string;
+  poName: string;
+  vendorName: string;
+  poDate: string;
+  totalAmount: number;
+  status: string;
+  checkFlag: string;
+  items: OrderItem[];
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -63,26 +38,92 @@ const rowVariants = {
 };
 
 export default function VendorOrderListPage() {
-  const [orders, setOrders] = useState(mockOrders);
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleConfirm = (poNo: string) => {
-    setOrders(prev => 
-      prev.map(order => 
-        order.poNo === poNo 
-          ? { ...order, checkFlag: 'Y' }
-          : order
-      )
-    );
-    toast.success('수신확인이 완료되었습니다!', {
-      description: `발주번호: ${poNo}`,
-      duration: 3000,
-    });
+  // 발주서 조회 API 호출 (발주전송 상태 'S' 조회)
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      // 발주전송(S) 상태만 조회
+      const response = await fetch('/api/v1/purchase-orders?status=S');
+      
+      if (!response.ok) {
+        throw new Error('발주서 조회에 실패했습니다.');
+      }
+
+      const data = await response.json();
+      console.log('조회된 발주서:', data);
+
+      // API 응답을 화면에 맞게 변환
+      const transformed: Order[] = data.map((po: any) => ({
+        poNo: po.poNo || '',
+        poName: po.poName || '',
+        vendorName: po.vendorName || '',
+        poDate: po.poDate || '',
+        totalAmount: po.totalAmount || 0,
+        status: po.status || 'S',
+        checkFlag: po.checkFlag || 'N',
+        items: (po.items || []).map((item: any) => ({
+          itemCode: item.itemCode || '',
+          itemName: item.itemName || '',
+          quantity: item.orderQuantity || 0,
+          unitPrice: item.unitPrice || 0,
+          amount: item.amount || 0,
+        })),
+      }));
+
+      setOrders(transformed);
+    } catch (error) {
+      console.error('발주서 조회 오류:', error);
+      toast.error('발주서 조회에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleViewDetail = (order: typeof mockOrders[0]) => {
+  // 초기 로드
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // 수신확인 API 호출
+  const handleConfirm = async (poNo: string) => {
+    try {
+      const response = await fetch(`/api/v1/purchase-orders/${poNo}/vendor-confirm`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        throw new Error('수신확인에 실패했습니다.');
+      }
+
+      // 로컬 상태 업데이트
+      setOrders(prev => 
+        prev.map(order => 
+          order.poNo === poNo 
+            ? { ...order, checkFlag: 'Y' }
+            : order
+        )
+      );
+
+      toast.success('수신확인이 완료되었습니다!', {
+        description: `발주번호: ${poNo}`,
+        duration: 3000,
+      });
+
+      // 목록 재조회
+      await fetchOrders();
+    } catch (error) {
+      console.error('수신확인 오류:', error);
+      toast.error('수신확인에 실패했습니다.');
+    }
+  };
+
+  const handleViewDetail = (order: Order) => {
     setSelectedOrder(order);
     setShowDetail(true);
   };
@@ -163,6 +204,15 @@ export default function VendorOrderListPage() {
                 className="w-full pl-12 pr-4 py-3 bg-stone-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:bg-white transition-all duration-300"
               />
             </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={fetchOrders}
+              disabled={loading}
+              className="px-4 py-3 bg-teal-500 text-white rounded-xl font-medium hover:bg-teal-600 transition-colors disabled:opacity-50"
+            >
+              {loading ? '조회중...' : '조회'}
+            </motion.button>
           </div>
         </motion.div>
 
@@ -259,7 +309,14 @@ export default function VendorOrderListPage() {
             </table>
           </div>
 
-          {filteredOrders.length === 0 && (
+          {loading && (
+            <div className="py-16 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-stone-500">발주서를 조회하고 있습니다...</p>
+            </div>
+          )}
+
+          {!loading && filteredOrders.length === 0 && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -268,7 +325,7 @@ export default function VendorOrderListPage() {
               <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Package className="w-8 h-8 text-stone-300" />
               </div>
-              <p className="text-stone-500">조회된 발주서가 없습니다.</p>
+              <p className="text-stone-500">수신된 발주서가 없습니다.</p>
             </motion.div>
           )}
         </motion.div>
