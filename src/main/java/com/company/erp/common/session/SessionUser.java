@@ -17,5 +17,9 @@ public class SessionUser implements Serializable {
     private final String ipAddress;
     private final String comType;   // B: 구매사, V: 협력사
     private final String vendorCd;  // 협력사일 때만 값 있음
+
+    private final String userName;   // 사용자명
+    private final String deptCd;     // 부서코드
+    private final String deptName;   // 부서명
 }
 
