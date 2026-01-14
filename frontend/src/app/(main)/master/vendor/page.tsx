@@ -248,8 +248,9 @@ export default function VendorPage() {
 
       // 2-5. 오류 처리
       console.error("데이터 입력 중 오류 발생:", error);
+    };
   };
-};
+
   return (
     <div>
       <PageHeader 
