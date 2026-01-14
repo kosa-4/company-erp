@@ -117,14 +117,15 @@ public class GoodsReceiptService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID 가져오기
+        // 현재 사용자 ID, 부서 가져오기
         String currentUserId = getCurrentUserId();
+        String currentDeptCd = getCurrentUserDeptCd();
 
         // 초기 상태 설정 (부분입고로 시작, 이후 계산하여 업데이트)
         dto.setStatus(GoodsReceiptStatus.PARTIAL);
 
         // 헤더 등록
-        goodsReceiptMapper.insertHeader(dto, currentUserId);
+        goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
         // 품목 등록
         for (GoodsReceiptItemDTO item : dto.getItems()) {
@@ -261,5 +262,12 @@ public class GoodsReceiptService {
     private String getCurrentUserId() {
         // 실제 인증 정보에서 사용자 ID 가져오기
         return "SYSTEM"; // 임시값 - 실제 구현 시 제거
+    }
+
+    // 현재 사용자 부서 코드 가져오기
+    // TODO: 실제 인증 시스템 연동 시 구현 필요
+    private String getCurrentUserDeptCd() {
+        // 실제 인증 정보에서 사용자 부서 코드 가져오기
+        return null; // 임시값 - 실제 구현 시 제거
     }
 }

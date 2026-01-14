@@ -139,11 +139,12 @@ public class PurchaseOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID 가져오기
+        // 현재 사용자 ID, 부서 가져오기
         String currentUserId = getCurrentUserId();
+        String currentDeptCd = getCurrentUserDeptCd();
 
-        // 헤더 등록 (regUserId 별도 전달)
-        purchaseOrderMapper.insertHeader(dto, currentUserId);
+        // 헤더 등록 (regUserId, ctrlDeptCd 별도 전달)
+        purchaseOrderMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
         // 품목 등록
         for (PurchaseOrderItemDTO item : dto.getItems()) {
@@ -159,6 +160,13 @@ public class PurchaseOrderService {
     private String getCurrentUserId() {
         // 실제 인증 정보에서 사용자 ID 가져오기
         return "SYSTEM"; // 임시값 - 실제 구현 시 제거
+    }
+
+    // 현재 사용자 부서 코드 가져오기
+    // TODO: 실제 인증 시스템 연동 시 구현 필요
+    private String getCurrentUserDeptCd() {
+        // 실제 인증 정보에서 사용자 부서 코드 가져오기
+        return null; // 임시값 - 실제 구현 시 제거
     }
 
     // 수정
