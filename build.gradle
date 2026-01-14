@@ -28,8 +28,13 @@ dependencies {
 	// Spring Boot Starters
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// 암호화
 	implementation 'org.springframework.security:spring-security-crypto'
-	
+
+	// file
+	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
 	// Database
 	implementation 'com.mysql:mysql-connector-j:9.1.0'
 	runtimeOnly 'com.mysql:mysql-connector-j'

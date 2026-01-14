@@ -44,30 +44,17 @@ interface ItemDetail{
 
 
 export default function ItemPage() {
+  /* 검색 및 조회 */
+
+  // 1. 상태 정의
+  // 1-1. 품목 목록 출력용 상태 변수
   const [items, setItems] = useState<Item[]>([]);
-  // const fetchItems = async () => {
-  // try {
-  //     const response = await fetch("http://localhost:8080/items");
+  const [page, setPage] = useState("1");
+  const [totalPage, setTotalPage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  //     if (!response.ok) {
-  //       console.error("품목 조회 실패", response.statusText);
-  //       return;
-  //     }
-
-  //     const data: {[k:string]: any} = await response.json();
-
-  //     // 검색 결과가 존재할 때만 리스트 출력
-  //     if(data.items.length > 0){
-  //       setItems(data.items);
-  //     }
-
-  //   } catch (err) {
-  //     console.error("품목 조회 중 오류 발생", err);
-  //     alert("데이터 로드에 실패하였습니다.");
-  //   }
-  // };  
-
-  // URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
+  // 1-2. 검색 조건 상태 변수
+  // * URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
     itemName: '',
@@ -75,42 +62,40 @@ export default function ItemPage() {
     startDate: '',
     endDate: '',
     manufacturerName: '',
-    page: String(1),
+    page: "1",
   });
+
+  // 1-3. 모달 및 상세 페이지 관련 상태
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(String(1));
-  const [totalPage, setTotalPage] = useState("");
-
-  /* 검색 및 조회 */
-
+  
+  // 2. 품목 조회
   const fetchItems = async () => {
     setLoading(true);
     try {
-      // [수정] 백엔드 에러 방지: page가 없거나 빈 문자열("")이면 "1"을 기본값으로 사용
-      // 이렇게 하면 절대 빈 값이 넘어가지 않아 서버가 좋아합니다.
-      const safeParams = {
+      
+      // 2-1. searchParams에 입력된 page 값이 없을 시 1로 초기화
+      const initPageParam = {
           ...searchParams,
           page: searchParams.page || "1" 
       };
 
-      // 1. url로 파라미터 전달
-      // searchParams 대신 위에서 만든 safeParams를 넣습니다.
+      // 2-2. API 요청
       const response = await fetch ("/api/v1/items?" +
-        new URLSearchParams(safeParams as any) 
+        new URLSearchParams(initPageParam as any) 
       );
       
-      // console.log("보낸 파라미터 확인: ", safeParams);
-
       if (!response.ok) {
-        // 오류 발생 시 catch로 이동
+
+        // 1) 오류 발생 시 catch로 이동
         throw new Error(`조회 실패 ${response.status}`);
       }
   
-      // 2. item 리스트 입력
+      // 2-3. 데이터 파싱
       const data: {[k:string]: any} = await response.json(); // k = key
+
+      // 2-4. 상태 업데이트
       setItems(data.items);
       setTotalPage(data.totalPage);
 
@@ -119,32 +104,34 @@ export default function ItemPage() {
       alert("데이터 로드에 실패하였습니다.");
     } finally{
 
-      // 3. 성공 여부 상관없이 실행      
-      await new Promise(resolve => setTimeout(resolve, 500)); // 검색 로딩
+      // 2-5. 검색 로딩 표시      
+      await new Promise(resolve => setTimeout(resolve, 500));
       setLoading(false);
     }    
-    
 };
 
+  // 3. 페이징 처리
+  // 3-1. 이전 페이지
   const handlePrevPage = () => {
     const prevPage = (Number(page) - 1).toString()
     setPage(prevPage);  
     setSearchParams(prev => ({...prev, page: prevPage}));
   }
 
+  // 3-2. 다음 페이지
   const handleNextPage = () => {
     const nextPage = (Number(page) + 1).toString()
     setPage(nextPage);  
     setSearchParams(prev => ({...prev, page: nextPage}));
   }
-
+  // 3-3. 검색 시 1페이지로 이동
   const handleSearchList = () => {
     setPage(String(1));
     setSearchParams(prev => ({...prev, page:page}));
   }
-
+  // 3-4. 목록 초기화
   const handleReset = () => {
-    // 검색창 초기화
+    // 1) 검색 파라미터 초기화
     setSearchParams({
       itemCode: '',
       itemName: '',
@@ -154,47 +141,17 @@ export default function ItemPage() {
       manufacturerName: '',
       page: '',
     });
-    // 리스트 초기화
-    fetchItems();
   };
 
+  // 4. 검색 파라미터 변경 시 목록 재조회
   useEffect(() => {
     fetchItems();
     
   }, [searchParams]); 
 
-  
-
-  /* 품목 상세 정보 */
+  // 5. 컬럼 정의
+  const columns: ColumnDef<Item>[] = [ // response 키와 일치 필요
     
-  const handleRowClick = async (item: Item) => {
-  // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
-  // onRowClick?: (row: T) => void; 함수에 담아 실행
-    try{
-      // 1. 선택한 컬럼의 code 설정
-      const code = item.itemCode;
-      
-      // 2. back 연동
-      const response = await fetch(`/api/v1/items/${code}`)
-      
-      // 2-1 네트워크 오류 체크
-      if(!response.ok) throw new Error("서버 응답 오류");
-  
-      const data = await response.json(); // k = key
-      
-      // 3. 데이터 존재 시 처리
-      setSelectedItem(data);
-      console.log("data ",data);
-      setIsDetailModalOpen(true);     
-      // console.log("type of data ",typeof data);
-    } catch(error){
-      console.error("데이터를 가져오는 중 오류 발생:", error);
-      alert("데이터 로드에 실패했습니다.");
-    }
-  };
-  
-  const columns: ColumnDef<Item>[] = [
-    // response 키와 일치 필요
     {
       key: 'itemCode',
       header: '품목코드',
@@ -229,13 +186,6 @@ export default function ItemPage() {
       width: 60,
       align: 'center',
     },
-    // {
-    //   key: 'unitPrice',
-    //   header: '단가',
-    //   width: 120,
-    //   align: 'right',
-    //   render: (value) => `₩${formatNumber(Number(value))}`,
-    // },
     {
       key: 'manufacturerCode',
       header: '제조사코드',
@@ -250,23 +200,54 @@ export default function ItemPage() {
     },
     
   ];
+
+  /* 품목 상세 정보 */
+
+  // 1. 행 클릭 시 실행
+  const handleRowClick = async (item: Item) => {
+  // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
+  // onRowClick?: (row: T) => void; 함수에 담아 실행
+    try{
+      // 1-1. 품목 코드 추출
+      const code = item.itemCode;
+      
+      // 1-2. 품목 상세 데이터 요청
+      const response = await fetch(`/api/v1/items/${code}`)
+      
+      // 1-3. 네트워크 오류 체크
+      if(!response.ok) throw new Error("서버 응답 오류");
+  
+      const data = await response.json();
+      
+      // 1-4. 데이터 상태 저장 및 모달 오픈
+      setSelectedItem(data);
+      setIsDetailModalOpen(true);     
+    } catch(error){
+      console.error("데이터를 가져오는 중 오류 발생:", error);
+      alert("데이터 로드에 실패했습니다.");
+    }
+  };
+  
+  
   /* 저장 */
-  // form 태그 내용 저장
+
+  // 1. useRef 정의
+  // form 태그 내 input 참조
   const saveForm = useRef<HTMLFormElement>(null); 
 
-  // 품목 저장
+  // 2. 품목 저장
   const saveItem = async () => {
     
-    // form 태그가 null일 시 -> 오류 방지
+    // 2-1. form 태그 null 처리
     if(!saveForm.current){
       return;
     }
-    // 1. form 데이터 저장
+    // 2-2. form 데이터 저장
     const formData = new FormData(saveForm.current);
     const data = Object.fromEntries(formData.entries());
     
     try{
-      // form 데이터 전송
+      // 2-3. API 요청
       const response = await fetch ("/api/v1/items/new",{
         method: 'POST',
         headers:{
@@ -283,21 +264,72 @@ export default function ItemPage() {
       console.error("데이터 입력 중 오류 발생:", error);
     }
   };
+
+  /* 수정 */
+
+  // 1. 품목 수정
+  const updateItem = async () => {
+
+    // 1-1. form 태그 null 처리
+    if(!saveForm.current){
+      return
+    }
+    // 1-2. form 데이터 저장
+    const formData = new FormData(saveForm.current);    
+    const data = Object.fromEntries(formData.entries());
+    
+    try{
+      // 2-3. form 데이터 전송
+      const response = await fetch ("/api/v1/items/update",{
+        method: 'PUT',
+        headers:{
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if(!response.ok){
+        throw new Error(`수정 실패 ${response.status}`)
+      };
+
+      // 2-4. 수정 완료 알림
+      alert('수정되었습니다.');
+
+      // 2-5. 모달 닫기 및 리스트 갱신
+      setIsDetailModalOpen(false);
+      fetchItems(); 
+    } catch(error){
+      console.error("데이터 수정 중 오류 발생:", error);
+    }
+  }
   
   /* 카테고리 영역 */
-  const cateMap = useRef<{[key: string]: Category}>({});
-  // 불필요한 랜더링 방지 및 데이터 성격 상 useRef 사용
 
-  const [selectedCate, setSelectedCate] = useState<Category | undefined>(undefined);
+  // 1. 카테고리 상태 정의
+
+  // 1-1. 트리 구조를 위한 map 정의
+  // 불필요한 랜더링 방지 및 데이터 성격 상 useRef 사용
+  const cateMap = useRef<{[key: string]: Category}>({});
+
+  // 1-2. 카테고리 리스트 출력
   const [categories, setCategories] = useState<Category[] | undefined>(undefined);
+
+  // 1-3. 선택된 카테고리
+  const [selectedCate, setSelectedCate] = useState<Category | undefined>(undefined);
+
+  // 1-4. 카테고리 모달 상태
   const [isCateModalOpen, setIsCateModalOpen] = useState(false);
-  // 1. 데이터 요청
+
+  // 2. 카테고리 조회
   const fetchCategories = async () => {
     try{
+      // 2-1. 카테고리 데이터 요청
       const response = await fetch(`/api/v1/categories/all`);
 
+      // 2-2. 네트워크 오류 체크
       if(!response.ok) throw new Error("서버 응답 오류");
       
+      // 2-3. 데이터 파싱 및 트리 구조 변환
       const data = await response.json(); 
 
       const tree:Category[] = makeTree(data);
@@ -308,83 +340,63 @@ export default function ItemPage() {
       alert("데이터 로드 실패")
     }
   }
-  // 2. 트리구조로 변환  
-
+  // 3. 트리 구조 변환 함수
   const makeTree = (categories: Category[]) => {
     const top: Category[] = [];
 
-    // 2-1. 모든 카테고리 맵에 등록
+    // 3-1. 모든 카테고리 맵에 등록
     categories.forEach(c => {
       cateMap.current[c.itemCls] = {...c, children: []};
     });
 
-    // 2-2. 부모-자식 관계 연결
+    // 3-2. 부모-자식 관계 연결
     categories.forEach(c => {
       const parentCls = c.parentItemCls;
-      // 부모 클래스가 일치할 시 부모 클래스의 children 배열에 추가
       
-      if(parentCls && cateMap.current[parentCls]){        
+      // 3-3. 부모 카테고리 존재 여부 확인 
+      if(parentCls && cateMap.current[parentCls]){ 
+        // 1) map에 존재하는 경우 자식으로 추가       
         cateMap.current[parentCls].children?.push(cateMap.current[c.itemCls]);
       } else{
+        // 2) 부모가 없는 경우 최상위 카테고리 배열에 추가
         top.push(cateMap.current[c.itemCls]);
       }
     });
-    // console.log("map ", map);
+
+    // 4. 최상위 카테고리 반환
     return top;
   }
   
-  // 3. 부모 카테고리 입력
+  // 4. 카테고리 선택 처리
   const [selectedPath, setSelectedPath] = useState<Category[]>([])
   const handleSelect = (category: Category | undefined) => {
-    // 3-1. 현재 클릭한 카테고리 저장
-    // setSelectedCate(category);
 
+    // 4-1. 경로 배열 / 최근 카테고리 변수 생성 및 초기화
     const path:Category[] = [];
     let currentCate: Category | undefined = category;
     
-    // 3-2. 상위 카테고리가 없는 최상위 카테고리까지 순회
+    // 4-2. 상위 카테고리가 없는 최상위 카테고리까지 순회
     while(currentCate && currentCate.parentItemCls){
-      // 선택된 카테고리 배열에 추가
+      // 1) 선택된 카테고리 배열에 추가
       path.push(currentCate);
 
-      // 상위 카테고리로 교체
+      // 2) 상위 카테고리로 교체
       const parentId = currentCate.parentItemCls;
       currentCate = cateMap.current[parentId]
 
-      // 상위 카테고리가 없으면 중단
+      // 3) 상위 카테고리가 없으면 중단
       if(!currentCate) break;
     }
+
+    // 4-3. 최상위 카테고리에 추가
     if(currentCate) path.push(currentCate);
 
+    // 4-4. 배열 역순 정렬 및 상태 저장
     const reversePath:Category[] = path.reverse()
 
+    // 4-5. 선택된 경로 상태 저장
     setSelectedPath(reversePath);
   }
-  console.log("selectedItem ", selectedItem);
-  
-  // 체번 표시
-  // const router = useRouter();
-  
-  // const [docNum, setDocNum] = useState<string>("");
-  // const fetchDocNum = async () => {
-    
-  //   // 데이터 요청
-  //   try{
-  //     const response = await fetch("http://localhost:8080/items/docNum");
-
-  //     if(!response.ok){
-  //       console.error("문서 번호 조회 실패", response.statusText);
-  //     }
-      
-  //     const data = await response.text(); // json 형태가 아니라 text 형태일 시
-  //     // console.log("data ",data);
-  //     setDocNum(data);
-  //     router.push(`?code=${data}`);
-  //   } catch(err){
-  //     console.error("문서 번호 조회 중 오류 발생", err);
-  //     alert("문서 번호 로드에 실패하였습니다.");
-  //   }
-  // };
 
   return (
     <div>
@@ -473,47 +485,32 @@ export default function ItemPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            <Button variant="primary">수정</Button>
+            <Button variant="primary" onClick={updateItem}>수정</Button>
           </>
         }
       >
         
         {selectedItem && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="품목코드" value={selectedItem.itemCode} readOnly />
-              <Input label="품목명" value={selectedItem.itemName} readOnly/>
-              <Input label="품목명(영문)" value={selectedItem.itemNameEn || ''} readOnly/>
-              <Input label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
-              {/* <Select
-                label="품목종류"
-                value={selectedItem.itemType}
-                options={[
-                  { value: '전자기기', label: '전자기기' },
-                  { value: '사무용품', label: '사무용품' },
-                  { value: '소모품', label: '소모품' },
-                ]}
-              /> */}
-              <Input label="규격" value={selectedItem.spec || ''} readOnly/>
-              <Input label="단위" value={selectedItem.unit || ''} readOnly/>
-              {/* <Select
-                label="단위"
-                value={selectedItem.unit}
-                options={[
-                  { value: 'EA', label: 'EA (개)' },
-                  { value: 'SET', label: 'SET (세트)' },
-                  { value: 'BOX', label: 'BOX (박스)' },
-                ]}
-              /> */}
-              {/* <Input label="단가" value={formatNumber(selectedItem.unitPrice)} readOnly/> */}
-              <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/>
-              <Input label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
-              <Input label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-              <Input label="등록일자" value={selectedItem.createdAt || ""} readOnly />
-              <Input label="등록자" value={selectedItem.createdBy} readOnly />
+          <form ref={saveForm}>
+            <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">               
+                  <Input name='itemCode' label="품목코드" value={selectedItem.itemCode} readOnly />
+                  <Input name='itemName' label="품목명" defaultValue={selectedItem.itemName || ''} />
+                  <Input name='itemNameEn' label="품목명(영문)" defaultValue={selectedItem.itemNameEn || ''} />
+                  <Input name='itemType'label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
+                  
+                  <Input name='spec' label="규격" value={selectedItem.spec || ''} readOnly/>
+                  <Input name='unit' label="단위" value={selectedItem.unit || ''} readOnly/>
+                  
+                  {/* <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/> */}
+                  <Input name='manufacturerName' label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
+                  <Input name='modelNo' label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
+                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt || ""} readOnly />
+                  <Input name='createdBy' label="등록자" value={selectedItem.createdBy} readOnly />
+                </div>
+                <Textarea name='remark' label="비고" defaultValue={selectedItem.remark || ''} rows={3}/>
             </div>
-            <Textarea label="비고" value={selectedItem.remark || ''} rows={3} readOnly/>
-          </div>
+          </form>
         )}
       </Modal>
       
@@ -580,9 +577,7 @@ export default function ItemPage() {
                   { value: 'SET', label: 'SET (세트)' },
                   { value: 'BOX', label: 'BOX (박스)' },
                 ]}
-              />
-              
-              {/* <Input name='manufacturerCode' label="제조사코드" placeholder="제조사코드 입력" readOnly/> */}
+              />              
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>

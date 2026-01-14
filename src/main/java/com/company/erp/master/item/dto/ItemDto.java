@@ -41,7 +41,6 @@ public class ItemDto {
     ITEM_NM_ENG	품목 영문명	VARCHAR2(200)
     ITEM_SPEC	규격	VARCHAR2(100)
     ITEM_RMK	품목상세설명	VARCHAR2(1000)
-    MAKER_CD	제조사코드	VARCHAR2(50)
     MAKER_NM	제조사명	VARCHAR2(100)
     MODEL_NO	제조모델번호	VARCHAR2(100)
     DEPT_CD	사용부서	VARCHAR2(100)
