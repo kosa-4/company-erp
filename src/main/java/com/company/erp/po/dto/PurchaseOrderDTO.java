@@ -25,6 +25,7 @@ public class PurchaseOrderDTO {
     private String remark; // 비고 - DB: RMK
     private String checkFlag; // 협력사 확인여부 - DB: CHECK_FLAG
     private LocalDateTime checkDate; // 확인일자 - DB: CHECK_DATE
+    private String ctrlDeptCd; // 담당자 부서 - DB: CTRL_DEPT_CD
 
     // 상세 품목 리스트
     private List<PurchaseOrderItemDTO> items;

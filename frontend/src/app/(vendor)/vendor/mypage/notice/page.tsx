@@ -2,20 +2,19 @@
 
 import React, { useState } from 'react';
 import { 
-  PageHeader, 
+  Megaphone, 
+  Calendar,
+  X 
+} from 'lucide-react';
+import { 
   Card, 
   Button, 
   Input, 
-  DatePicker,
-  DataGrid,
-  SearchPanel,
-  Modal,
-  ModalFooter
+  Badge 
 } from '@/components/ui';
-import { Notice, ColumnDef } from '@/types';
 
-// Mock 데이터 (구매사와 동일)
-const mockNotices: Notice[] = [
+// Mock 데이터
+const mockNotices = [
   {
     noticeNo: 'NOTC-2024-0010',
     title: '연말 결산 관련 구매 마감 안내',
@@ -23,7 +22,6 @@ const mockNotices: Notice[] = [
     startDate: '2024-12-20',
     endDate: '2024-12-31',
     createdAt: '2024-12-20',
-    createdBy: 'admin',
     createdByName: '관리자',
   },
   {
@@ -33,7 +31,6 @@ const mockNotices: Notice[] = [
     startDate: '2024-12-26',
     endDate: '2024-12-30',
     createdAt: '2024-12-26',
-    createdBy: 'admin',
     createdByName: '관리자',
   },
   {
@@ -43,7 +40,6 @@ const mockNotices: Notice[] = [
     startDate: '2024-12-24',
     endDate: '2025-01-31',
     createdAt: '2024-12-24',
-    createdBy: 'admin',
     createdByName: '관리자',
   },
   {
@@ -53,171 +49,166 @@ const mockNotices: Notice[] = [
     startDate: '2024-12-15',
     endDate: '2024-12-31',
     createdAt: '2024-12-15',
-    createdBy: 'admin',
     createdByName: '관리자',
   },
 ];
 
 export default function VendorNoticePage() {
-  const [notices] = useState<Notice[]>(mockNotices);
+  const [notices] = useState(mockNotices);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
     endDate: '',
     title: '',
   });
-  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<typeof mockNotices[0] | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 검색
   const handleSearch = async () => {
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 500));
     setLoading(false);
   };
 
-  const handleReset = () => {
-    setSearchParams({
-      startDate: '',
-      endDate: '',
-      title: '',
-    });
-  };
-
-  // 상세보기
-  const handleRowClick = (notice: Notice) => {
+  const handleRowClick = (notice: typeof mockNotices[0]) => {
     setSelectedNotice(notice);
     setIsDetailModalOpen(true);
   };
 
-  // 컬럼 정의
-  const columns: ColumnDef<Notice>[] = [
-    {
-      key: 'noticeNo',
-      header: '공지번호',
-      width: 140,
-      align: 'center',
-    },
-    {
-      key: 'title',
-      header: '공지명',
-      align: 'left',
-      render: (value) => (
-        <span className="text-emerald-600 hover:underline cursor-pointer font-medium">
-          {String(value)}
-        </span>
-      ),
-    },
-    {
-      key: 'createdAt',
-      header: '등록일자',
-      width: 120,
-      align: 'center',
-    },
-    {
-      key: 'createdByName',
-      header: '등록자명',
-      width: 100,
-      align: 'center',
-    },
-    {
-      key: 'startDate',
-      header: '공지 시작일',
-      width: 120,
-      align: 'center',
-    },
-    {
-      key: 'endDate',
-      header: '공지 종료일',
-      width: 120,
-      align: 'center',
-    },
-  ];
-
   return (
-    <div>
-      <PageHeader 
-        title="공지사항" 
-        subtitle="시스템 공지사항을 확인할 수 있습니다."
-        icon={
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-          </svg>
-        }
-      />
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Megaphone className="w-5 h-5 text-gray-600" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">공지사항</h1>
+          <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
+        </div>
+      </div>
 
       {/* 검색 패널 */}
-      <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
-        <DatePicker
-          label="공지기간 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="공지기간 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
-        />
-        <Input
-          label="공지명"
-          placeholder="공지명을 입력하세요"
-          value={searchParams.title}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, title: e.target.value }))}
-        />
-      </SearchPanel>
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">시작일</label>
+            <Input
+              type="date"
+              value={searchParams.startDate}
+              onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">종료일</label>
+            <Input
+              type="date"
+              value={searchParams.endDate}
+              onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">공지명</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="공지명을 입력하세요"
+                value={searchParams.title}
+                onChange={(e) => setSearchParams(prev => ({ ...prev, title: e.target.value }))}
+              />
+              <Button variant="primary" onClick={handleSearch} disabled={loading}>
+                {loading ? '검색중...' : '검색'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* 데이터 그리드 - 협력사는 등록 버튼 없음 (조회만 가능) */}
-      <Card 
-        title="공지사항 목록"
-        padding={false}
-      >
-        <DataGrid
-          columns={columns}
-          data={notices}
-          keyField="noticeNo"
-          onRowClick={handleRowClick}
-          loading={loading}
-          emptyMessage="등록된 공지사항이 없습니다."
-        />
+      {/* 목록 */}
+      <Card padding={false} className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-3 font-medium text-center w-32">공지번호</th>
+                <th className="px-6 py-3 font-medium">공지명</th>
+                <th className="px-6 py-3 font-medium text-center w-32">등록일자</th>
+                <th className="px-6 py-3 font-medium text-center w-24">등록자</th>
+                <th className="px-6 py-3 font-medium text-center w-48">게시기간</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {notices.map((notice) => (
+                <tr 
+                  key={notice.noticeNo} 
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleRowClick(notice)}
+                >
+                  <td className="px-6 py-4 text-center font-medium text-gray-900">{notice.noticeNo}</td>
+                  <td className="px-6 py-4">
+                    <span className="text-gray-900 font-medium hover:text-emerald-600 transition-colors">
+                      {notice.title}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-500">{notice.createdAt}</td>
+                  <td className="px-6 py-4 text-center text-gray-600">{notice.createdByName}</td>
+                  <td className="px-6 py-4 text-center text-xs text-gray-500">
+                    {notice.startDate} ~ {notice.endDate}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       {/* 상세보기 모달 */}
-      <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="공지사항 상세"
-        size="lg"
-        footer={
-          <ModalFooter
-            onClose={() => setIsDetailModalOpen(false)}
-            cancelText="닫기"
-          />
-        }
-      >
-        {selectedNotice && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">{selectedNotice.title}</h2>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>등록자: {selectedNotice.createdByName}</span>
-                <span>등록일: {selectedNotice.createdAt}</span>
+      {isDetailModalOpen && selectedNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gray-50/50">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                   <Badge variant="outline" className="text-xs font-normal text-gray-500 border-gray-300">
+                      {selectedNotice.noticeNo}
+                   </Badge>
+                   <span className="text-xs text-gray-400">|</span>
+                   <span className="text-xs text-gray-500">{selectedNotice.createdByName}</span>
+                   <span className="text-xs text-gray-400">|</span>
+                   <span className="text-xs text-gray-500">{selectedNotice.createdAt}</span>
+                </div>
+                <h2 className="text-lg font-bold text-gray-900 leading-tight">
+                  {selectedNotice.title}
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors -mr-2 -mt-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <div className="flex items-center gap-2 mb-6 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+                <Calendar className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm text-emerald-800 font-medium">
+                  게시 기간 : {selectedNotice.startDate} ~ {selectedNotice.endDate}
+                </span>
+              </div>
+
+              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {selectedNotice.content}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                공지기간: {selectedNotice.startDate} ~ {selectedNotice.endDate}
-              </span>
-            </div>
-
-            <div className="prose max-w-none">
-              <div className="bg-gray-50 rounded-lg p-6 min-h-[200px]">
-                <p className="text-gray-700 whitespace-pre-wrap">{selectedNotice.content}</p>
-              </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>
+                닫기
+              </Button>
             </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }
