@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.inventory.constants.GoodsReceiptStatus;
 import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
@@ -22,6 +23,7 @@ import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.PoStatusCode;
 import com.company.erp.po.mapper.PurchaseOrderMapper;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -31,6 +33,7 @@ public class GoodsReceiptService {
     private final GoodsReceiptMapper goodsReceiptMapper;
     private final DocNumService docNumService;
     private final PurchaseOrderMapper purchaseOrderMapper;
+    private final HttpSession httpSession;
 
     // 입고대상조회: 입고 가능한 PO 목록 (품목 정보 포함)
     public List<PurchaseOrderDTO> getPendingPOList(
@@ -257,17 +260,21 @@ public class GoodsReceiptService {
         }
     }
 
-    // 현재 사용자 ID 가져오기 (인증 정보에서)
-    // TODO: 실제 인증 시스템 연동 시 구현 필요
-    private String getCurrentUserId() {
-        // 실제 인증 정보에서 사용자 ID 가져오기
-        return "SYSTEM"; // 임시값 - 실제 구현 시 제거
+    // 세션에서 로그인 사용자 정보 가져오기
+    private SessionUser getSessionUser() {
+        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
     }
 
-    // 현재 사용자 부서 코드 가져오기
-    // TODO: 실제 인증 시스템 연동 시 구현 필요
+    // 현재 사용자 ID 가져오기 (세션에서)
+    private String getCurrentUserId() {
+        SessionUser user = getSessionUser();
+        return user != null ? user.getUserId() : "SYSTEM";
+    }
+
+    // 현재 사용자 부서 코드 가져오기 (세션에서)
     private String getCurrentUserDeptCd() {
-        // 실제 인증 정보에서 사용자 부서 코드 가져오기
-        return null; // 임시값 - 실제 구현 시 제거
+        SessionUser user = getSessionUser();
+        return user != null ? user.getDeptCd() : null;
     }
 }
