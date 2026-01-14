@@ -18,6 +18,7 @@ import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
 import com.company.erp.inventory.mapper.GoodsReceiptMapper;
 import com.company.erp.po.dto.PurchaseOrderDTO;
+import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.PoStatusCode;
 import com.company.erp.po.mapper.PurchaseOrderMapper;
 
@@ -31,7 +32,7 @@ public class GoodsReceiptService {
     private final DocNumService docNumService;
     private final PurchaseOrderMapper purchaseOrderMapper;
 
-    // 입고대상조회: 입고 가능한 PO 목록
+    // 입고대상조회: 입고 가능한 PO 목록 (품목 정보 포함)
     public List<PurchaseOrderDTO> getPendingPOList(
             String poNo, String poName, String vendorName, String startDate, String endDate) {
         Map<String, Object> params = new HashMap<>();
@@ -41,7 +42,17 @@ public class GoodsReceiptService {
         params.put("startDate", startDate);
         params.put("endDate", endDate);
 
-        return goodsReceiptMapper.selectPendingPOList(params);
+        List<PurchaseOrderDTO> list = goodsReceiptMapper.selectPendingPOList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
+        return list;
     }
 
     // 입고현황 목록 조회
