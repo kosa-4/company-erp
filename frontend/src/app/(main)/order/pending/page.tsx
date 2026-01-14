@@ -206,9 +206,12 @@ export default function OrderPendingPage() {
       };
 
       await purchaseOrderApi.create(purchaseOrderData);
-      alert('발주가 저장되었습니다.');
       setIsOrderModalOpen(false);
       setSelectedRows([]);
+      const moveToProgress = window.confirm('성공적으로 저장되었습니다.\n\n발주진행현황으로 이동하시겠습니까?');
+      if (moveToProgress) {
+        window.location.href = '/order/progress';
+      }
     } catch (error) {
       alert('발주 저장 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
@@ -248,9 +251,12 @@ export default function OrderPendingPage() {
       if (created.poNo) {
         await purchaseOrderApi.confirm(created.poNo);
       }
-      alert('발주가 확정되었습니다.');
       setIsOrderModalOpen(false);
       setSelectedRows([]);
+      const moveToProgress = window.confirm('성공적으로 확정되었습니다.\n\n발주진행현황으로 이동하시겠습니까?');
+      if (moveToProgress) {
+        window.location.href = '/order/progress';
+      }
     } catch (error) {
       alert('발주 확정 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
@@ -340,20 +346,20 @@ export default function OrderPendingPage() {
         size="xl"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsOrderModalOpen(false)}>닫기</Button>
             <Button variant="secondary" onClick={handleSaveOrder} disabled={loading}>
               {loading ? '저장 중...' : '저장'}
             </Button>
             <Button variant="primary" onClick={handleConfirmOrder} disabled={loading}>
               {loading ? '확정 중...' : '확정'}
             </Button>
+            <Button variant="secondary" onClick={() => setIsOrderModalOpen(false)}>닫기</Button>
           </>
         }
       >
         <div className="space-y-6">
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
-            <Input label="PO번호" value="자동채번" readOnly />
+            <Input label="PO번호" value="" placeholder="저장 시 자동생성" readOnly />
             <Input 
               label="발주명" 
               placeholder="발주명 입력" 
@@ -416,7 +422,7 @@ export default function OrderPendingPage() {
                           }}
                         />
                       </td>
-                      <td className="p-3 text-right font-medium">₩{formatNumber(row.totalAmount)}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(orderForm.items[index]?.amount || row.totalAmount)}</td>
                       <td className="p-3 text-center">{row.deliveryDate}</td>
                       <td className="p-3">{row.storageLocation}</td>
                     </tr>
