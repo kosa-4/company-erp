@@ -3,83 +3,104 @@
 
 <mapper namespace="com.company.erp.common.signup.mapper.SignUpMapper">
     <!--협력사 업체 정보 저장-->
-    <insert id="insertVendor" parameterType="com.company.erp.common.signup.dto.VendorDto">
+    <insert id="insertVendor" parameterType="com.company.erp.common.signup.dto.SignUpDto">
         INSERT INTO
-        VNCH(
-        VENDOR_CD AS vendorCode,
-        REG_DATE AS vendorCode,
-        REG_USER_ID AS vendorCode,
-        MOD_DATE AS vendorCode,
-        MOD_USER_ID AS vendorCode,
-        DEL_FLAG AS vendorCode,
-        USE_FLAG AS vendorCode,
-        VENDOR_NM AS vendorCode,
-        VENDOR_ENG_NM AS vendorCode,
-        REG_TYPE AS vendorCode,
-        IRS_NO AS vendorCode,
-        CEO_USER_NM AS vendorCode,
-        ZIP_CD AS vendorCode,
-        ADDR AS vendorCode,
-        ADDR_DT AS vendorCode,
-        TEL_NO AS vendorCode,
-        FAX_NO AS vendorCode,
-        EMAIL AS vendorCode,
-        FOUNDATION_DATE AS vendorCode,
-        INDUSTRY_TYPE AS vendorCode,
-        RMK AS vendorCode,
-        PROGRESS_CD AS vendorCode,
-        SIGN_DATE AS vendorCode,
-    </insert>
-    <!--협력사 유저 정보 저장-->
-    <insert id="insertUser" parameterType="com.company.erp.common.signup.dto.UserDto">
-        INSERT INTO
-            VN_USER(
+            VNCH(
+                ASK_NUM,
                 VENDOR_CD,
-                USER_ID,
-                USER_NM,
-                USER_NM_ENG,
                 REG_DATE,
                 REG_USER_ID,
                 MOD_DATE,
                 MOD_USER_ID,
                 DEL_FLAG,
-                BLOCK_FLAG,
-                BLOCK_RMK,
-                BLOCK_DATE,
-                PASSWORD,
-                USER_TYPE,
-                PW_WRONG_CNT,
+                VENDOR_NM,
+                VENDOR_ENG_NM,
+                REG_TYPE,
+                IRS_NO,
+                CEO_USER_NM,
+                ZIP_CD,
+                ADDR,
+                ADDR_DT,
+                TEL_NO,
+                FAX_NO,
                 EMAIL,
-                TEL_NUM,
-                FAX_NUM,
-                ROLE,
-                SIGN_DATE,
+                FOUNDATION_DATE,
+                INDUSTRY_TYPE,
+                RMK,
                 PROGRESS_CD,
+                REJECT_RMK,
+                SIGN_USER_ID,
+                COM_TYPE
+        )
+        VALUES(
+            #{askNo},
+            #{vendorCode},
+            NOW(),
+            #{createdBy},
+            NULL,
+            NULL,
+            'N',
+            #{vendorName},
+            #{vendorNameEn},
+            #{businessType},
+            #{businessNo},
+            #{ceoName},
+            #{zipCode},
+            #{address},
+            #{addressDetail},
+            #{phone},
+            #{fax},
+            #{vendorEmail},
+            #{foundationDate},
+            #{industry},
+            NULL,
+            'N',
+            NULL,
+            NULL,
+            'V'
+        )
+
+
+    </insert>
+    <!--협력사 유저 정보 저장-->
+    <insert id="insertUser" parameterType="com.company.erp.common.signup.dto.SignUpDto">
+        INSERT INTO
+            VNCH_US(
+                ASK_USER_NUM,
+                VENDOR_CD,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USER_ID,
+                USER_NM,
+                PROGRESS_CD,
+                REQ_TYPE,
+                TEL_NO,
+                FAX_NO,
+                EMAIL,
+                PASSWORD,
                 COM_TYPE
             )
         VALUES(
-            #{vendorCd},
-            #{userId},
-            #{userNm},
-            #{userNmEng},
+            #{askUserNo},
+            #{vendorCode},
             NOW(),
-            "추후 추가",
-            "N",
-            "N",
+            #{createdBy},
             NULL,
             NULL,
+            'N',
+            #{userId},
+            #{userName},
+            'N',
+            'I',
+            #{phone},
+            #{fax},
+            #{userEmail},
             #{password},
-            "일반",
-            0,
-            #{email},
-            #{telNum},
-            #{telNum},
-            #{faxNum},
-            #{role},
-            NULL,
-            NULL,
-            NULL,
-            "V"
+            'V'
+        )
     </insert>
 
     <!--중복 아이디 체크-->

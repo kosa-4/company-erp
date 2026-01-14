@@ -1,10 +1,11 @@
 package com.company.erp.common.signup.mapper;
 
-import com.company.erp.common.signup.dto.UserDto;
+import com.company.erp.common.signup.dto.SignUpDto;
 
 
 public interface SignUpMapper {
-    void insertUser(UserDto userDto);
+    void insertVendor(SignUpDto signUpDto);
+    void insertUser(SignUpDto signUpDto);
     boolean existsUserId(String userId);
 
 }
