@@ -37,7 +37,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
               <span className={`text-base ${isChildActive ? 'text-gray-700' : 'text-gray-500'}`}>
                 {item.icon}
               </span>
-              <span className="text-sm font-medium">{item.name}</span>
+              <span className="text-[13px] font-medium">{item.name}</span>
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${shouldExpand ? 'rotate-180' : ''}`} />
           </button>
@@ -48,7 +48,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
                 <Link
                   key={child.href}
                   href={child.href}
-                  className={`block px-3 py-2 rounded-md text-sm transition-colors
+                  className={`block px-3 py-2 rounded-md text-[13px] transition-colors
                     ${pathname === child.href
                       ? 'bg-gray-100 text-gray-900 font-medium'
                       : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
@@ -70,7 +70,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
             }`}
         >
           <span className={`text-base ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>{item.icon}</span>
-          <span className="text-sm font-medium">{item.name}</span>
+          <span className="text-[13px] font-medium">{item.name}</span>
         </Link>
       )}
     </div>

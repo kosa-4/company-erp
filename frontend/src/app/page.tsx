@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * "Purchase ERP" 버튼 클릭 시:
  * - 세션 있으면 → comType에 따라 해당 페이지로 이동
  *   - B (구매사) → /home
- *   - V (협력사) → /vendor/home
+ *   - V (협력사) → /vendor
  * - 세션 없으면 → 로그인 모달 표시
  */
 export default function LandingPage() {
@@ -34,7 +34,7 @@ export default function LandingPage() {
       if (user.comType === 'B') {
         router.push('/home');
       } else {
-        router.push('/vendor/home');
+        router.push('/vendor');
       }
     } else {
       // 세션 없으면 → 로그인 모달 표시

@@ -78,7 +78,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
    * 로그인 처리
    * - 성공 시 AuthContext의 login 함수가 comType에 따라 자동 라우팅
    *   - B (구매사) → /home
-   *   - V (협력사) → /vendor/home
+   *   - V (협력사) → /vendor
    */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
