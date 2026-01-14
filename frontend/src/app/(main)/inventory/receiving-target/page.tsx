@@ -235,9 +235,30 @@ export default function ReceivingTargetPage() {
 
   // 입고 저장
   const handleSaveReceiving = async () => {
-    if (receivingItems.some(item => item.receivedQuantity <= 0)) {
-      alert('입고수량을 확인해주세요.');
+    // Validation
+    if (!grDate) {
+      alert('입고일자를 선택해주세요.');
       return;
+    }
+    if (!selectedRows[0]?.poNo) {
+      alert('발주 정보가 없습니다.');
+      return;
+    }
+    if (receivingItems.length === 0) {
+      alert('입고 품목이 없습니다.');
+      return;
+    }
+    // 품목별 Validation
+    for (let i = 0; i < receivingItems.length; i++) {
+      const item = receivingItems[i];
+      if (item.receivedQuantity <= 0) {
+        alert(`${i + 1}번째 품목의 입고수량을 확인해주세요.`);
+        return;
+      }
+      if (item.receivedQuantity > item.orderQuantity) {
+        alert(`${i + 1}번째 품목의 입고수량이 발주수량을 초과했습니다.`);
+        return;
+      }
     }
 
     try {

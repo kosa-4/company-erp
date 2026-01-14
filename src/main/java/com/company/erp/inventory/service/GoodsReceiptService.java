@@ -73,6 +73,24 @@ public class GoodsReceiptService {
     // 입고 등록
     @Transactional
     public GoodsReceiptDTO create(GoodsReceiptDTO dto) {
+        // ========== Validation ==========
+        // PO번호 필수
+        if (dto.getPoNo() == null || dto.getPoNo().isBlank()) {
+            throw new IllegalArgumentException("발주 정보는 필수입니다.");
+        }
+        // 품목 필수
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("입고 품목이 없습니다.");
+        }
+        // 품목별 Validation
+        for (int i = 0; i < dto.getItems().size(); i++) {
+            GoodsReceiptItemDTO item = dto.getItems().get(i);
+            if (item.getGrQuantity() == null || item.getGrQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException((i + 1) + "번째 품목의 입고수량이 유효하지 않습니다.");
+            }
+        }
+        // ========== End Validation ==========
+
         // 입고번호 생성
         String grNo = docNumService.generateDocNumStr(DocKey.GR);
         dto.setGrNo(grNo);
@@ -80,11 +98,6 @@ public class GoodsReceiptService {
         // 입고일자가 null이면 오늘 날짜로 설정
         if (dto.getGrDate() == null) {
             dto.setGrDate(LocalDate.now());
-        }
-
-        // items null 체크
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new IllegalArgumentException("입고 품목이 없습니다.");
         }
 
         // 총액 계산
