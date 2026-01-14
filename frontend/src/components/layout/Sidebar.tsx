@@ -100,13 +100,15 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 z-40 bg-white border-r border-gray-200">
-      {/* Logo Area - FABRIO */}
-      <div className="h-14 flex items-center px-4 border-b border-gray-100">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
-            <Package className="w-4 h-4 text-white" />
+      <div className="h-16 flex items-center px-6 border-b border-gray-100">
+        <Link href="/" className="flex items-center gap-2">
+          {/* 협력사 스타일 심볼 + 구매사 스타일 폰트 */}
+          <div className="w-8 h-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center shadow-sm transform -rotate-3">
+             <span className="text-white font-black text-lg italic">F</span>
           </div>
-          <h1 className="text-gray-900 font-bold text-lg">FABRIO</h1>
+          <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            FABRIO
+          </span>
         </Link>
       </div>
 
