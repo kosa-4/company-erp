@@ -16,6 +16,8 @@ import com.company.erp.po.dto.PurchaseOrderDTO;
 import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.*;
 import com.company.erp.po.mapper.PurchaseOrderMapper;
+import com.company.erp.rfq.dto.RfqSelectedDTO;
+import com.company.erp.rfq.dto.RfqSelectedItemDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +27,31 @@ public class PurchaseOrderService {
 
     private final PurchaseOrderMapper purchaseOrderMapper;
     private final DocNumService docNumService;
+
+    // ========== 발주대기 조회 (RFQ 선정완료) ==========
+    public List<RfqSelectedDTO> getRfqSelectedList(
+            String rfqNo, String rfqName, String vendorName,
+            String purchaseType, String startDate, String endDate) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("rfqNo", rfqNo);
+        params.put("rfqName", rfqName);
+        params.put("vendorName", vendorName);
+        params.put("purchaseType", purchaseType);
+        params.put("startDate", startDate);
+        params.put("endDate", endDate);
+
+        List<RfqSelectedDTO> list = purchaseOrderMapper.selectRfqSelectedList(params);
+
+        // 각 RFQ에 대해 품목 상세 조회하여 추가
+        for (RfqSelectedDTO rfq : list) {
+            if (rfq.getRfqNo() != null) {
+                List<RfqSelectedItemDTO> items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                rfq.setItems(items);
+            }
+        }
+
+        return list;
+    }
 
     // 목록 조회
     public List<PurchaseOrderDTO> getList(
@@ -41,6 +68,15 @@ public class PurchaseOrderService {
         params.put("status", status);
 
         List<PurchaseOrderDTO> list = purchaseOrderMapper.selectList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
         return list;
     }
 
@@ -60,6 +96,31 @@ public class PurchaseOrderService {
     // 등록
     @Transactional
     public PurchaseOrderDTO create(PurchaseOrderDTO dto) {
+        // ========== Validation ==========
+        // 발주명 필수
+        if (dto.getPoName() == null || dto.getPoName().isBlank()) {
+            throw new IllegalArgumentException("발주명은 필수입니다.");
+        }
+        // 협력사코드 필수
+        if (dto.getVendorCode() == null || dto.getVendorCode().isBlank()) {
+            throw new IllegalArgumentException("협력사 정보는 필수입니다.");
+        }
+        // 품목 필수
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("발주 품목이 없습니다.");
+        }
+        // 품목별 Validation
+        for (int i = 0; i < dto.getItems().size(); i++) {
+            PurchaseOrderItemDTO item = dto.getItems().get(i);
+            if (item.getOrderQuantity() == null || item.getOrderQuantity() <= 0) {
+                throw new IllegalArgumentException((i + 1) + "번째 품목의 발주수량이 유효하지 않습니다.");
+            }
+            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException((i + 1) + "번째 품목의 단가가 유효하지 않습니다.");
+            }
+        }
+        // ========== End Validation ==========
+
         // 발주번호 생성
         String poNo = docNumService.generateDocNumStr(DocKey.PO);
         dto.setPoNo(poNo);
@@ -70,10 +131,6 @@ public class PurchaseOrderService {
         // poDate가 null 이면 오늘 날짜로 설정
         if (dto.getPoDate() == null) {
             dto.setPoDate(LocalDate.now());
-        }
-        // items null 체크
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new IllegalArgumentException("발주 품목이 없습니다.");
         }
 
         // 총액 계산

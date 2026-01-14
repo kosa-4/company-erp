@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -16,124 +16,154 @@ import {
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { goodsReceiptApi, GoodsReceiptDTO, GoodsReceiptItemDTO } from '@/lib/api/goodsReceipt';
+import { getErrorMessage } from '@/lib/api/error';
 
 interface ReceivingRecord {
   grNo: string;
-  status: 'PARTIAL' | 'COMPLETE' | 'CANCELED';
+  poNo: string;
+  status: string;
   receiver: string;
-  vendorCode: string;
   vendorName: string;
   itemCode: string;
   itemName: string;
   spec: string;
   unit: string;
+  unitPrice: number;
   receivedQuantity: number;
   receivedAmount: number;
-  receivedDateTime: string;
+  grDate: string;
   storageLocation: string;
   remark: string;
 }
 
-const mockData: ReceivingRecord[] = [
-  {
-    grNo: 'GR-2024-0178',
-    status: 'COMPLETE',
-    receiver: '김입고',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    spec: '15.6" FHD, i7, 16GB, 512GB SSD',
-    unit: 'EA',
-    receivedQuantity: 5,
-    receivedAmount: 7250000,
-    receivedDateTime: '2024-12-28 14:30',
-    storageLocation: '본사 창고',
-    remark: '',
-  },
-  {
-    grNo: 'GR-2024-0177',
-    status: 'PARTIAL',
-    receiver: '홍길동',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    receivedQuantity: 30,
-    receivedAmount: 720000,
-    receivedDateTime: '2024-12-27 10:15',
-    storageLocation: '본사 창고',
-    remark: '나머지 20박스 1/5 입고 예정',
-  },
-  {
-    grNo: 'GR-2024-0176',
-    status: 'CANCELED',
-    receiver: '홍길동',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    receivedQuantity: 3,
-    receivedAmount: 1020000,
-    receivedDateTime: '2024-12-26 16:45',
-    storageLocation: '본사 창고',
-    remark: '품질 불량으로 취소',
-  },
-];
-
 export default function ReceivingListPage() {
-  const [data] = useState<ReceivingRecord[]>(mockData);
+  const [data, setData] = useState<ReceivingRecord[]>([]);
   const [selectedRows, setSelectedRows] = useState<ReceivingRecord[]>([]);
   const [searchParams, setSearchParams] = useState({
     grNo: '',
-    receiver: '',
     vendor: '',
-    item: '',
     startDate: '',
     endDate: '',
     status: '',
   });
   const [loading, setLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedGr, setSelectedGr] = useState<ReceivingRecord | null>(null);
+  const [selectedGr, setSelectedGr] = useState<GoodsReceiptDTO | null>(null);
+  
+  // 입고조정용 상태
+  const [isAdjustMode, setIsAdjustMode] = useState(false);
+  const [adjustQuantity, setAdjustQuantity] = useState(0);
+  const [adjustAmount, setAdjustAmount] = useState(0);
+  const [adjustUnitPrice, setAdjustUnitPrice] = useState(0);
+  const [adjustItemCode, setAdjustItemCode] = useState('');
+
+  // 데이터 조회
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const result = await goodsReceiptApi.getList({
+        grNo: searchParams.grNo || undefined,
+        vendorName: searchParams.vendor || undefined,
+        status: searchParams.status || undefined,
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
+      });
+
+      if (!result || !Array.isArray(result)) {
+        setData([]);
+        return;
+      }
+
+      // GoodsReceiptDTO를 ReceivingRecord 형식으로 변환
+      const transformed: ReceivingRecord[] = [];
+      result.forEach((gr: GoodsReceiptDTO) => {
+        if (gr.items && gr.items.length > 0) {
+          gr.items.forEach((item: GoodsReceiptItemDTO) => {
+            transformed.push({
+              grNo: gr.grNo || '',
+              poNo: gr.poNo || '',
+              status: gr.status || '',
+              receiver: gr.ctrlUserName || '',
+              vendorName: gr.vendorName || '',
+              itemCode: item.itemCode || '',
+              itemName: item.itemDesc || '',
+              spec: item.itemSpec || '',
+              unit: item.unitCode || '',
+              unitPrice: Number(item.unitPrice) || 0,
+              receivedQuantity: item.grQuantity || 0,
+              receivedAmount: Number(item.grAmount) || 0,
+              grDate: item.grDate || gr.grDate || '',
+              storageLocation: item.warehouseCode || '',
+              remark: item.remark || gr.remark || '',
+            });
+          });
+        } else {
+          transformed.push({
+            grNo: gr.grNo || '',
+            poNo: gr.poNo || '',
+            status: gr.status || '',
+            receiver: gr.ctrlUserName || '',
+            vendorName: gr.vendorName || '',
+            itemCode: '-',
+            itemName: '-',
+            spec: '-',
+            unit: '-',
+            unitPrice: 0,
+            receivedQuantity: 0,
+            receivedAmount: Number(gr.totalAmount) || 0,
+            grDate: gr.grDate || '',
+            storageLocation: '-',
+            remark: gr.remark || '',
+          });
+        }
+      });
+      setData(transformed);
+    } catch (error) {
+      console.error('데이터 조회 오류:', error);
+      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSearch = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    await fetchData();
   };
 
   const handleReset = () => {
     setSearchParams({
       grNo: '',
-      receiver: '',
       vendor: '',
-      item: '',
       startDate: '',
       endDate: '',
       status: '',
     });
   };
 
-
-
-  const getStatusBadge = (status: ReceivingRecord['status']) => {
-    const config = {
-      PARTIAL: { variant: 'yellow' as const, label: '부분입고' },
-      COMPLETE: { variant: 'green' as const, label: '입고완료' },
-      CANCELED: { variant: 'red' as const, label: '입고취소' },
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { variant: 'yellow' | 'green' | 'red' | 'gray'; label: string }> = {
+      'GRP': { variant: 'yellow', label: '부분입고' },
+      'GRE': { variant: 'green', label: '입고완료' },
+      'GRC': { variant: 'red', label: '입고취소' },
     };
-    const { variant, label } = config[status];
+    const { variant, label } = config[status] || { variant: 'gray', label: status };
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  const handleRowClick = (row: ReceivingRecord) => {
-    setSelectedGr(row);
-    setIsDetailModalOpen(true);
+  const handleRowClick = async (row: ReceivingRecord) => {
+    try {
+      const detail = await goodsReceiptApi.getDetail(row.grNo);
+      setSelectedGr(detail);
+      setIsAdjustMode(false);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      alert('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
   };
 
   const columns: ColumnDef<ReceivingRecord>[] = [
@@ -153,10 +183,9 @@ export default function ReceivingListPage() {
       header: '입고상태',
       width: 100,
       align: 'center',
-      render: (value) => getStatusBadge(value as ReceivingRecord['status']),
+      render: (value) => getStatusBadge(String(value)),
     },
     { key: 'receiver', header: '입고담당자', width: 100, align: 'center' },
-    { key: 'vendorCode', header: '협력사코드', width: 130, align: 'center' },
     { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
     { key: 'itemCode', header: '품목코드', width: 130, align: 'center' },
     { key: 'itemName', header: '품목명', width: 140, align: 'left' },
@@ -176,34 +205,94 @@ export default function ReceivingListPage() {
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
-    { key: 'receivedDateTime', header: '입고일시', width: 140, align: 'center' },
+    { key: 'grDate', header: '입고일자', width: 100, align: 'center' },
     { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
-    { 
-      key: 'remark', 
-      header: '비고', 
-      width: 150, 
-      align: 'left',
-      render: (value) => (
-        <span className="truncate block max-w-[150px]" title={String(value)}>
-          {String(value) || '-'}
-        </span>
-      ),
-    },
   ];
 
-  const handleAdjust = () => {
-    const partialItems = selectedRows.filter(r => r.status === 'PARTIAL');
-    if (partialItems.length === 0) {
+  // 입고조정 버튼 클릭
+  const handleAdjust = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    
+    const row = selectedRows[0];
+    if (row.status !== 'GRP') {
       alert('부분입고 상태의 항목만 조정할 수 있습니다.');
       return;
     }
-    if (partialItems.length > 1) {
-      alert('한 건씩만 조정할 수 있습니다.');
+
+    try {
+      const detail = await goodsReceiptApi.getDetail(row.grNo);
+      setSelectedGr(detail);
+      
+      // 첫 번째 품목의 정보로 조정 폼 초기화
+      const firstItem = detail.items?.[0];
+      if (firstItem) {
+        setAdjustItemCode(firstItem.itemCode || '');
+        setAdjustQuantity(firstItem.grQuantity || 0);
+        setAdjustUnitPrice(Number(firstItem.unitPrice) || 0);
+        setAdjustAmount((firstItem.grQuantity || 0) * (Number(firstItem.unitPrice) || 0));
+      }
+      
+      setIsAdjustMode(true);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      alert('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 수량 변경 시 금액 업데이트
+  const handleAdjustQuantityChange = (newQuantity: number) => {
+    setAdjustQuantity(newQuantity);
+    setAdjustAmount(newQuantity * adjustUnitPrice);
+  };
+
+  // 조정 저장
+  const handleSaveAdjust = async () => {
+    if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+
+    if (adjustQuantity <= 0) {
+      alert('입고수량을 확인해주세요.');
       return;
     }
-    // 입고조정 모달 열기 (상세 모달과 동일한 구조 사용)
-    setSelectedGr(partialItems[0]);
-    setIsDetailModalOpen(true);
+
+    try {
+      setLoading(true);
+      await goodsReceiptApi.updateItem(selectedGr.grNo, adjustItemCode, {
+        grQuantity: adjustQuantity,
+        grAmount: adjustAmount,
+      });
+      alert('수정되었습니다.');
+      setIsDetailModalOpen(false);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 입고 취소
+  const handleCancelItem = async () => {
+    if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+
+    const reason = prompt('취소 사유를 입력해주세요.');
+    if (!reason) return;
+
+    try {
+      setLoading(true);
+      await goodsReceiptApi.cancelItem(selectedGr.grNo, adjustItemCode, reason);
+      alert('입고가 취소되었습니다.');
+      setIsDetailModalOpen(false);
+      setSelectedRows([]);
+      await fetchData();
+    } catch (error) {
+      alert('취소 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -226,22 +315,10 @@ export default function ReceivingListPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, grNo: e.target.value }))}
         />
         <Input
-          label="입고담당자"
-          placeholder="담당자명 입력"
-          value={searchParams.receiver}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, receiver: e.target.value }))}
-        />
-        <Input
           label="협력업체"
           placeholder="협력업체명 입력"
           value={searchParams.vendor}
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
-        />
-        <Input
-          label="품목명/품목코드"
-          placeholder="품목 검색"
-          value={searchParams.item}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, item: e.target.value }))}
         />
         <DatePicker
           label="입고일자 시작"
@@ -259,9 +336,9 @@ export default function ReceivingListPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
           options={[
             { value: '', label: '전체' },
-            { value: 'PARTIAL', label: '부분입고' },
-            { value: 'COMPLETE', label: '입고완료' },
-            { value: 'CANCELED', label: '입고취소' },
+            { value: 'GRP', label: '부분입고' },
+            { value: 'GRE', label: '입고완료' },
+            { value: 'GRC', label: '입고취소' },
           ]}
         />
       </SearchPanel>
@@ -280,33 +357,26 @@ export default function ReceivingListPage() {
           loading={loading}
           selectable
           selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
+          onSelectionChange={(rows) => setSelectedRows(rows.length > 0 ? [rows[rows.length - 1]] : [])}
           onRowClick={handleRowClick}
           emptyMessage="입고 내역이 없습니다."
         />
       </Card>
 
-      {/* 상세 모달 */}
+      {/* 상세/조정 모달 */}
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title={selectedGr?.status === 'PARTIAL' ? '입고 조정' : '입고 상세'}
+        title={isAdjustMode ? '입고 조정' : '입고 상세'}
         size="lg"
         footer={
-          selectedGr?.status === 'PARTIAL' ? (
+          isAdjustMode ? (
             <>
+              <Button variant="primary" onClick={handleSaveAdjust} disabled={loading}>
+                {loading ? '저장 중...' : '수정'}
+              </Button>
+              <Button variant="danger" onClick={handleCancelItem} disabled={loading}>취소</Button>
               <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-              <Button variant="danger" onClick={() => {
-                const reason = prompt('취소 사유를 입력해주세요.');
-                if (reason) {
-                  alert('입고가 취소되었습니다.');
-                  setIsDetailModalOpen(false);
-                }
-              }}>취소</Button>
-              <Button variant="primary" onClick={() => {
-                alert('수정되었습니다.');
-                setIsDetailModalOpen(false);
-              }}>수정</Button>
             </>
           ) : (
             <ModalFooter
@@ -320,25 +390,25 @@ export default function ReceivingListPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b">
               <h3 className="text-lg font-semibold">입고번호: {selectedGr.grNo}</h3>
-              {getStatusBadge(selectedGr.status)}
+              {getStatusBadge(selectedGr.status || '')}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-500">입고담당자</label>
-                <p className="font-medium">{selectedGr.receiver}</p>
+                <p className="font-medium">{selectedGr.ctrlUserName || '-'}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">입고일시</label>
-                <p className="font-medium">{selectedGr.receivedDateTime}</p>
+                <label className="text-sm text-gray-500">입고일자</label>
+                <p className="font-medium">{selectedGr.grDate || '-'}</p>
               </div>
               <div>
                 <label className="text-sm text-gray-500">협력업체</label>
-                <p className="font-medium">{selectedGr.vendorName}</p>
+                <p className="font-medium">{selectedGr.vendorName || '-'}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">저장위치</label>
-                <p className="font-medium">{selectedGr.storageLocation}</p>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedGr.poNo || '-'}</p>
               </div>
             </div>
 
@@ -354,13 +424,32 @@ export default function ReceivingListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-t">
-                    <td className="p-3 text-sm">{selectedGr.itemCode}</td>
-                    <td className="p-3 text-sm">{selectedGr.itemName}</td>
-                    <td className="p-3 text-sm">{selectedGr.spec}</td>
-                    <td className="p-3 text-sm text-right">{formatNumber(selectedGr.receivedQuantity)} {selectedGr.unit}</td>
-                    <td className="p-3 text-sm text-right font-medium">₩{formatNumber(selectedGr.receivedAmount)}</td>
-                  </tr>
+                  {selectedGr.items?.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3 text-sm">{item.itemCode}</td>
+                      <td className="p-3 text-sm">{item.itemDesc}</td>
+                      <td className="p-3 text-sm">{item.itemSpec}</td>
+                      <td className="p-3 text-sm text-right">
+                        {isAdjustMode && item.itemCode === adjustItemCode ? (
+                          <input 
+                            type="number"
+                            value={adjustQuantity}
+                            min={0}
+                            className="w-20 px-2 py-1 border rounded text-right"
+                            onChange={(e) => handleAdjustQuantityChange(parseInt(e.target.value) || 0)}
+                          />
+                        ) : (
+                          <>{formatNumber(item.grQuantity || 0)} {item.unitCode}</>
+                        )}
+                      </td>
+                      <td className="p-3 text-sm text-right font-medium">
+                        {isAdjustMode && item.itemCode === adjustItemCode 
+                          ? `₩${formatNumber(adjustAmount)}`
+                          : `₩${formatNumber(Number(item.grAmount) || 0)}`
+                        }
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -376,7 +465,7 @@ export default function ReceivingListPage() {
               <div className="text-right">
                 <span className="text-gray-500 mr-4">총 입고금액:</span>
                 <span className="text-xl font-bold text-blue-600">
-                  ₩{formatNumber(selectedGr.receivedAmount)}
+                  ₩{formatNumber(isAdjustMode ? adjustAmount : Number(selectedGr.totalAmount || 0))}
                 </span>
               </div>
             </div>
@@ -386,4 +475,3 @@ export default function ReceivingListPage() {
     </div>
   );
 }
-
