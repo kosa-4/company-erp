@@ -40,7 +40,7 @@ interface VendorFormData {
   industry: string;
   userName: string;
   userId: string;
-  email: string;
+  userEmail: string;
   password: string;
   passwordConfirm: string;
 }
@@ -69,7 +69,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     industry: '',
     userName: '',
     userId: '',
-    email: '',
+    userEmail: '',
     password: '',
     passwordConfirm: '',
   });
@@ -96,6 +96,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }
   };
 
+  const handleSignup = async () => {
+    try{
+      const response = await fetch('/api/v1/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      console.log('Signup response:', formData);
+      if (!response.ok) {
+        const errorMsg = await response.text();
+        throw new Error(errorMsg);
+      }
+
+      alert('회원가입이 완료되었습니다.');
+      onSwitchMode('login');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+    }
+  };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -374,9 +395,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     <div className="md:col-span-2">
                       <label className={labelClassName}>이메일 *</label>
                       <input 
-                        type="email"
-                        name="email"
-                        value={formData.email}
+                        type="userEmail"
+                        name="userEmail"
+                        value={formData.userEmail}
                         onChange={handleInputChange}
                         className={inputClassName}
                         placeholder="example@company.com"
@@ -449,7 +470,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
             <motion.button 
               type={mode === 'login' ? 'submit' : 'button'}
-              onClick={mode === 'login' ? handleLogin : undefined}
+              onClick={mode === 'login' ? handleLogin : handleSignup}
               disabled={isLoading}
               whileHover={{ scale: isLoading ? 1 : 1.02 }}
               whileTap={{ scale: isLoading ? 1 : 0.98 }}

@@ -14,7 +14,9 @@ public class VendorListDto {
     private String businessItem; // 업종
     private String useYn;
     private String status;
+    private String createdBy;
     private LocalDate createdAt;
+
 }
 
 /*
