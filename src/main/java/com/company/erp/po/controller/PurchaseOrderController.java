@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.company.erp.po.dto.PurchaseOrderDTO;
 import com.company.erp.po.service.PurchaseOrderService;
+import com.company.erp.rfq.dto.RfqSelectedDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +40,20 @@ public class PurchaseOrderController {
     ) {
         List<PurchaseOrderDTO> list = purchaseOrderService.getList(
                 poNo, poName, purchaseManager, vendorName, startDate, endDate, status);
+        return ResponseEntity.ok(list);
+    }
+
+    // ========== 발주대기 조회 (RFQ 선정완료) ==========
+    @GetMapping("/pending")
+    public ResponseEntity<List<RfqSelectedDTO>> getRfqSelectedList(
+            @RequestParam(required = false) String rfqNo,
+            @RequestParam(required = false) String rfqName,
+            @RequestParam(required = false) String vendorName,
+            @RequestParam(required = false) String purchaseType,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        List<RfqSelectedDTO> list = purchaseOrderService.getRfqSelectedList(
+                rfqNo, rfqName, vendorName, purchaseType, startDate, endDate);
         return ResponseEntity.ok(list);
     }
 

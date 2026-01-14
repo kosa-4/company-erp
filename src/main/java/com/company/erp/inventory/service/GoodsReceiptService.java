@@ -18,6 +18,7 @@ import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
 import com.company.erp.inventory.mapper.GoodsReceiptMapper;
 import com.company.erp.po.dto.PurchaseOrderDTO;
+import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.PoStatusCode;
 import com.company.erp.po.mapper.PurchaseOrderMapper;
 
@@ -31,7 +32,7 @@ public class GoodsReceiptService {
     private final DocNumService docNumService;
     private final PurchaseOrderMapper purchaseOrderMapper;
 
-    // 입고대상조회: 입고 가능한 PO 목록
+    // 입고대상조회: 입고 가능한 PO 목록 (품목 정보 포함)
     public List<PurchaseOrderDTO> getPendingPOList(
             String poNo, String poName, String vendorName, String startDate, String endDate) {
         Map<String, Object> params = new HashMap<>();
@@ -41,7 +42,17 @@ public class GoodsReceiptService {
         params.put("startDate", startDate);
         params.put("endDate", endDate);
 
-        return goodsReceiptMapper.selectPendingPOList(params);
+        List<PurchaseOrderDTO> list = goodsReceiptMapper.selectPendingPOList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
+        return list;
     }
 
     // 입고현황 목록 조회
@@ -73,6 +84,24 @@ public class GoodsReceiptService {
     // 입고 등록
     @Transactional
     public GoodsReceiptDTO create(GoodsReceiptDTO dto) {
+        // ========== Validation ==========
+        // PO번호 필수
+        if (dto.getPoNo() == null || dto.getPoNo().isBlank()) {
+            throw new IllegalArgumentException("발주 정보는 필수입니다.");
+        }
+        // 품목 필수
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("입고 품목이 없습니다.");
+        }
+        // 품목별 Validation
+        for (int i = 0; i < dto.getItems().size(); i++) {
+            GoodsReceiptItemDTO item = dto.getItems().get(i);
+            if (item.getGrQuantity() == null || item.getGrQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException((i + 1) + "번째 품목의 입고수량이 유효하지 않습니다.");
+            }
+        }
+        // ========== End Validation ==========
+
         // 입고번호 생성
         String grNo = docNumService.generateDocNumStr(DocKey.GR);
         dto.setGrNo(grNo);
@@ -80,11 +109,6 @@ public class GoodsReceiptService {
         // 입고일자가 null이면 오늘 날짜로 설정
         if (dto.getGrDate() == null) {
             dto.setGrDate(LocalDate.now());
-        }
-
-        // items null 체크
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new IllegalArgumentException("입고 품목이 없습니다.");
         }
 
         // 총액 계산

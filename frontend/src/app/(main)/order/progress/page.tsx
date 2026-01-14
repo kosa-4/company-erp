@@ -300,6 +300,10 @@ export default function OrderProgressPage() {
   ];
 
   const handleApprove = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const approvedItems = selectedRows.filter(
       (r) => r.progressStatus === 'CONFIRMED'
     );
@@ -320,6 +324,10 @@ export default function OrderProgressPage() {
   };
 
   const handleReject = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const rejectItems = selectedRows.filter(
       (r) => r.progressStatus === 'CONFIRMED'
     );
@@ -342,6 +350,10 @@ export default function OrderProgressPage() {
   };
 
   const handleClose = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const deliveredItems = selectedRows.filter((r) => r.progressStatus === 'DELIVERED');
     if (deliveredItems.length === 0) {
       alert('납품완료 상태의 항목만 종결할 수 있습니다.');
@@ -359,6 +371,10 @@ export default function OrderProgressPage() {
   };
 
   const handleConfirm = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const savedItems = selectedRows.filter(
       (r) => r.progressStatus === 'SAVED'
     );
@@ -381,6 +397,10 @@ export default function OrderProgressPage() {
 
   // 발주전송
   const handleSend = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const approvedItems = selectedRows.filter(
       (r) => r.progressStatus === 'APPROVED'
     );
@@ -401,6 +421,10 @@ export default function OrderProgressPage() {
 
   // 수정 모달 열기
   const handleEdit = async () => {
+    if (selectedRows.length === 0) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
     const savedItems = selectedRows.filter((r) => r.progressStatus === 'SAVED');
     if (savedItems.length === 0) {
       alert('저장 상태의 항목만 수정할 수 있습니다.');
@@ -588,7 +612,7 @@ export default function OrderProgressPage() {
             <Button variant="success" onClick={handleApprove}>
               승인
             </Button>
-            <Button variant="info" onClick={handleSend}>
+            <Button variant="secondary" onClick={handleSend}>
               발주전송
             </Button>
             <Button variant="danger" onClick={handleReject}>
@@ -607,7 +631,7 @@ export default function OrderProgressPage() {
           loading={loading}
           selectable
           selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
+          onSelectionChange={(rows) => setSelectedRows(rows.length > 0 ? [rows[rows.length - 1]] : [])}
           onRowClick={handleRowClick}
           emptyMessage="발주 내역이 없습니다."
         />
