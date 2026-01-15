@@ -6,7 +6,6 @@ import lombok.Getter;
 
 /**
  * API 공통 응답 객체
- * <p>
  * 사용 예시:
  * - 메시지만 반환: ApiResponse.ok("성공")
  * - 데이터 반환: ApiResponse.ok(userData)
