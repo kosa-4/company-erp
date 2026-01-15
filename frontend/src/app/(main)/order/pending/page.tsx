@@ -21,6 +21,7 @@ import { getErrorMessage } from '@/lib/api/error';
 
 // 목록 표시용 인터페이스 (RFQ + 품목 정보 통합)
 interface PendingOrderRow {
+  uniqueKey: string;  // 고유 key (rfqNo + itemCode 조합)
   rfqNo: string;
   rfqName: string;
   purchaseType: string;
@@ -92,6 +93,7 @@ export default function OrderPendingPage() {
         if (rfq.items && rfq.items.length > 0) {
           rfq.items.forEach((item: RfqSelectedItemDTO) => {
             transformed.push({
+              uniqueKey: `${rfq.rfqNo}-${item.itemCode}`,  // 고유 key 생성
               rfqNo: rfq.rfqNo || '',
               rfqName: rfq.rfqName || '',
               purchaseType: rfq.purchaseType === 'G' ? '일반' : rfq.purchaseType === 'C' ? '단가계약' : rfq.purchaseType === 'E' ? '긴급' : rfq.purchaseType || '',
@@ -111,6 +113,7 @@ export default function OrderPendingPage() {
         } else {
           // 품목이 없으면 헤더 정보만
           transformed.push({
+            uniqueKey: `${rfq.rfqNo}-no-item`,  // 품목 없을 때 고유 key
             rfqNo: rfq.rfqNo || '',
             rfqName: rfq.rfqName || '',
             purchaseType: rfq.purchaseType || '',
@@ -430,7 +433,7 @@ export default function OrderPendingPage() {
         <DataGrid
           columns={columns}
           data={data}
-          keyField="rfqNo"
+          keyField="uniqueKey"
           loading={loading}
           selectable
           selectedRows={selectedRows}
