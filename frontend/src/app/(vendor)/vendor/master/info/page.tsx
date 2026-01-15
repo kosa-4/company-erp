@@ -39,21 +39,26 @@ export default function VendorInfoChangePage() {
 
     // 2. 변경 사유 추가
     const updatedData = { ...formData, remark:changeReason };
-
+    
     // 3.API 요청
-    const response = await fetch('/api/v1/vendors/users/change', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedData),
-    });
-
-    // 4. 응답 처리
-    if(!response.ok) {
-      alert('변경 신청에 실패했습니다.');
-      return;
+    try{
+      const response = await fetch('/api/v1/vendors/users/change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+  
+      // 4. 응답 처리
+      if(!response.ok) {
+        alert('변경 신청에 실패했습니다.');
+        return;
+      }
+  
+      alert('협력업체 변경 신청이 접수되었습니다.\n관리자 승인 후 반영됩니다.');
+    } catch (error) {
+      console.error('변경 신청 오류:', error);
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
     }
-
-    alert('협력업체 변경 신청이 접수되었습니다.\n관리자 승인 후 반영됩니다.');
   };
 
   return (

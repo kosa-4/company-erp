@@ -21,8 +21,6 @@ public class SignUpService {
     @Autowired
     private VendorMapper vendorMapper;
     @Autowired
-    private DuplicateLoginService duplicateLoginService;
-    @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private DocNumService docNumService;
