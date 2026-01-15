@@ -449,9 +449,10 @@ export default function VendorPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly />
-              <Input label="협력사명" value={selectedVendor.vendorName} />
-              <Input label="협력사명(영문)" value={selectedVendor.vendorNameEn || ''} />
+              <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
+              <Input label="협력사명(영문)" value={selectedVendor.vendorNameEn || ''} readOnly />
               <Select
+                disabled
                 label="사업형태"
                 value={selectedVendor.businessType}
                 options={[
@@ -459,22 +460,22 @@ export default function VendorPage() {
                   { value: 'INDIVIDUAL', label: '개인' },
                 ]}
               />
-              <Input label="사업자등록번호" value={selectedVendor.businessNo} />
-              <Input label="대표자명" value={selectedVendor.ceoName} />
-              <Input label="우편번호" value={selectedVendor.zipCode} />
+              <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
+              <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
+              <Input label="우편번호" value={selectedVendor.zipCode} readOnly />
               <div className="col-span-2">
-                <Input label="주소" value={selectedVendor.address} />
+                <Input label="주소" value={selectedVendor.address} readOnly />
               </div>
-              <Input label="상세주소" value={selectedVendor.addressDetail || ''} />
-              <Input label="전화번호" value={selectedVendor.phone || ''} />
-              <Input label="팩스번호" value={selectedVendor.fax || ''} />
-              <Input label="이메일" value={selectedVendor.email} />
-              <Input label="설립일자" value={selectedVendor.establishDate || ''} />
-              <Input label="업태" value={selectedVendor.businessCategory || ''} />
-              <Input label="업종" value={selectedVendor.businessItem || ''} />
+              <Input label="상세주소" value={selectedVendor.addressDetail || ''} readOnly />
+              <Input label="전화번호" value={selectedVendor.phone || ''} readOnly />
+              <Input label="팩스번호" value={selectedVendor.fax || ''} readOnly />
+              <Input label="이메일" value={selectedVendor.email} readOnly />
+              <Input label="설립일자" value={selectedVendor.establishDate || ''} readOnly />
+              <Input label="업태" value={selectedVendor.businessCategory || ''} readOnly />
+              <Input label="업종" value={selectedVendor.businessItem || ''} readOnly />
             </div>
 
-            <Textarea label="비고" value={selectedVendor.remark || ''} rows={3} />
+            <Textarea label="비고" value={selectedVendor.remark || ''} rows={3} readOnly />
           </div>
         )}
       </Modal>
