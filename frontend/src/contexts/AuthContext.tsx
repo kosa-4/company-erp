@@ -37,9 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * 로그인 함수
-   * - 성공 시 comType에 따라 자동 라우팅
-   *   - B (구매사) → /home
-   *   - V (협력사) → /vendor
+   * - 성공 시 role에 따라 자동 라우팅
+   *   - VENDOR 외 (구매사) → /home
+   *   - VENDOR (협력사) → /vendor
    */
   const login = useCallback(async (userId: string, password: string) => {
     const res = await fetch('/api/login', {

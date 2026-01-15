@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 /**
  * 협력사(V) 전용 레이아웃
  * 
- * - comType이 'V'인 사용자만 접근 가능
+ * - role이 'VENDOR'인 사용자만 접근 가능
  * - 로그인 안 됨 → 랜딩 페이지로 리다이렉트
  * - 구매사(B)가 접근 시 → /home으로 리다이렉트
  */
