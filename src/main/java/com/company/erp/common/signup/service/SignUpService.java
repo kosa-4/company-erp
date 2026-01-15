@@ -65,7 +65,7 @@ public class SignUpService {
         signUpDto.setPassword(encryptedPassword);
     
         // 2-6. vendorDto로 전환
-        VendorRegisterDto vendorRegisterDto = converToVendorRegisterDto(signUpDto);
+        VendorRegisterDto vendorRegisterDto = convertToVendorRegisterDto(signUpDto);
 
         // 최종 db 저장
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
@@ -74,7 +74,7 @@ public class SignUpService {
     }
 
     // 협력 업체 정보 매핑
-    private VendorRegisterDto converToVendorRegisterDto(SignUpDto signUpDto) {
+    private VendorRegisterDto convertToVendorRegisterDto(SignUpDto signUpDto) {
         VendorRegisterDto vendorRegisterDto = new VendorRegisterDto();
 
         vendorRegisterDto.setAskNum(signUpDto.getAskNo());
