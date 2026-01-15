@@ -30,7 +30,6 @@ public class VendorUserService {
     public void approveVendorUser(List<VendorUserRegisterDto> vendorUserRegisterDtoList, String sessionId) {
         // 1) 단일 dto 반환
         for(VendorUserRegisterDto dto : vendorUserRegisterDtoList){
-            System.out.println("dto " + dto);
             // 2) 사용자 존재 여부 확인
             String askUserNum = dto.getAskUserNum();
             VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
@@ -40,7 +39,7 @@ public class VendorUserService {
             }
 
             // 3) 상태값 확인
-            String status = dto.getStatus();
+            String status = vendorUser.getStatus();
             if(!"C".equals(status) && !"N".equals(status)){
                 throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
             }

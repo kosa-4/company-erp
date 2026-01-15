@@ -170,7 +170,7 @@
             'I',
             #{phone},
             #{fax},
-            #{userEmail},
+            #{email},
             #{password},
             'V'
         )
@@ -195,6 +195,8 @@
         </set>
         WHERE
             ASK_USER_NUM = #{askUserNum}
+        AND
+            PROGRESS_CD IN ('C', 'N')
     </update>
 
     <!--아이디 중복 체크-->
@@ -219,7 +221,7 @@
         USER_NM AS userName,
         TEL_NO AS phone,
         FAX_NO AS fax,
-        EMAIL AS userEmail,
+        EMAIL AS email,
         PROGRESS_CD AS status
         FROM
             VNCH_US

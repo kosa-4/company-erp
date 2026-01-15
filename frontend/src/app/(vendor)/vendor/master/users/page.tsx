@@ -32,7 +32,10 @@ export default function VendorUsersPage() {
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
-      }
+      } else {
++      console.error('사용자 목록 로드 실패:', response.status);
++      alert('사용자 목록을 불러오는데 실패했습니다.');
+     }
     } catch (error) {
       console.error('사용자 목록 로드 실패:', error);
     } finally {
@@ -76,20 +79,20 @@ export default function VendorUsersPage() {
   // 3. 실제 백엔드 저장 로직 (fetch)
   const handleSave = async () => {
     // 필수값 검증
-    if (!formData.userId || !formData.userName || (!editingUser && !formData.password)) {
+     if (!formData.userId || !formData.userName || !formData.userEmail || !formData.phone || (!editingUser && !formData.password)) {
       alert('필수 정보를 모두 입력해주세요.');
       return;
     }
 
     try {
-      // const url = editingUser 
-      //   ? `/api/v1/vendor-portal/users/${editingUser.userId}` 
-      //   : `/api/v1/vendor-portal/users`;
+      const url = editingUser 
+        ? `/api/v1/vendor-portal/users/${editingUser.userId}` 
+        : `/api/v1/vendor-portal/users`;
       
       const method = editingUser ? 'PUT' : 'POST';
 
       const response = await fetch("/api/v1/vendor-portal/users/add", {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
