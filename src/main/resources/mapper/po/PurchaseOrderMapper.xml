@@ -69,26 +69,24 @@
     <!-- 참고: modUserId는 DTO에 포함되지 않으므로 별도 파라미터로 전달 -->
     <update id="updateHeader"> UPDATE POHD SET PO_SUBJECT = #{dto.poName}, PO_DATE = #{dto.poDate},
         PO_AMT = #{dto.totalAmount}, VENDOR_CD = #{dto.vendorCode}, PC_TYPE = #{dto.purchaseType},
-        RMK = #{dto.remark}, MOD_DATE = NOW(), MOD_USER_ID = #{modUserId} WHERE PO_NUM = #{dto.poNo} </update>
+        RMK = #{dto.remark}, MOD_USER_ID = #{modUserId} WHERE PO_NUM = #{dto.poNo} </update>
 
     <!-- 상태 변경 -->
-    <update id="updateStatus"> UPDATE POHD SET PROGRESS_CD = #{status}, MOD_DATE = NOW(),
-        MOD_USER_ID = #{userId} WHERE PO_NUM = #{poNo} </update>
+    <update id="updateStatus"> UPDATE POHD SET PROGRESS_CD = #{status}, MOD_USER_ID = #{userId}
+        WHERE PO_NUM = #{poNo} </update>
 
     <!-- 상태 변경 + 반려 사유 저장 -->
     <update id="updateStatusWithReason"> UPDATE POHD SET PROGRESS_CD = #{status}, RMK =
-        #{rejectReason}, MOD_DATE = NOW(), MOD_USER_ID = #{userId} WHERE PO_NUM = #{poNo} </update>
+        #{rejectReason}, MOD_USER_ID = #{userId} WHERE PO_NUM = #{poNo} </update>
 
     <!-- 협력사 수신확인 -->
-    <update id="updateVendorConfirm"> UPDATE POHD SET CHECK_FLAG = 'Y', CHECK_DATE = NOW(), MOD_DATE
-        = NOW(), MOD_USER_ID = #{userId} WHERE PO_NUM = #{poNo} </update>
+    <update id="updateVendorConfirm"> UPDATE POHD SET CHECK_FLAG = 'Y', CHECK_DATE = NOW(),
+        MOD_USER_ID = #{userId} WHERE PO_NUM = #{poNo} </update>
 
     <!-- 삭제 (논리 삭제) -->
-    <update id="deleteHeader"> UPDATE POHD SET DEL_FLAG = 'Y', MOD_DATE = NOW() WHERE PO_NUM =
-        #{poNo} </update>
+    <update id="deleteHeader"> UPDATE POHD SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
 
-    <update id="deleteItems"> UPDATE PODT SET DEL_FLAG = 'Y', MOD_DATE = NOW() WHERE PO_NUM =
-        #{poNo} </update>
+    <update id="deleteItems"> UPDATE PODT SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
 
     <!-- RFQ 선정완료(J) 목록 조회 -->
     <select id="selectRfqSelectedList" parameterType="map"
@@ -97,8 +95,9 @@
         purchaseType, vn.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName, h.CTRL_USER_ID AS
         ctrlUserId, u.USER_NM AS ctrlUserName, h.PR_NUM AS prNo, h.RMK AS remark FROM RFQHD h LEFT
         JOIN RFQVN vn ON h.RFQ_NUM = vn.RFQ_NUM AND vn.SELECT_YN = 'Y' LEFT JOIN VNGL v ON
-        vn.VENDOR_CD = v.VENDOR_CD LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID WHERE
-        h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' <if
+        vn.VENDOR_CD = v.VENDOR_CD LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID LEFT JOIN POHD
+        po ON h.RFQ_NUM = po.RFQ_NUM WHERE h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' AND po.PO_NUM IS
+        NULL <if
             test="rfqNo != null and rfqNo != ''"> AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
         <if
             test="rfqName != null and rfqName != ''"> AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqName},

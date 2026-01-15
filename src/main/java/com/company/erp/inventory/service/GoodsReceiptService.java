@@ -276,7 +276,7 @@ public class GoodsReceiptService {
 
         // 입고완료(GRE) 상태가 되면 PO 상태를 'C'(완료)로 자동 변경
         if (GoodsReceiptStatus.COMPLETED.equals(newStatus)) {
-            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.DELIVERED.getCode(), userId);
+            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.COMPLETED.getCode(), userId);
         }
     }
 
