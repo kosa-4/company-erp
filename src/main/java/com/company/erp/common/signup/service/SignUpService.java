@@ -5,17 +5,21 @@ import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.signup.dto.SignUpDto;
 import com.company.erp.common.signup.mapper.SignUpMapper;
+import com.company.erp.master.vendor.dto.VendorRegisterDto;
+import com.company.erp.master.vendor.mapper.VendorMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Service
 public class SignUpService {
     @Autowired
     private SignUpMapper signUpMapper;
     @Autowired
-    private DuplicateLoginService duplicateLoginService;
+    private VendorMapper vendorMapper;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -23,36 +27,75 @@ public class SignUpService {
 
     @Transactional
     public void registerVendorWithManager(SignUpDto signUpDto) {
-        boolean existsUserId = signUpMapper.existsUserId(signUpDto.getUserId());
 
-        // 1. 아이디 중복 체크
+        // 1. 중복 체크
+        // 1-1. 아이디 중복 체크
+        boolean existsUserId = signUpMapper.existsUserId(signUpDto.getUserId());
         if (existsUserId) {
             // global exception
             throw new IllegalArgumentException("이미 존재하는 아이디입니다.");
         }
 
+        // 1-2. 사업자 번호 중복 체크
+        boolean existsBusinessNo = vendorMapper.existsByBusinessNo(signUpDto.getBusinessNo());
+        if (existsBusinessNo) {
+            throw new IllegalStateException("이미 존재하는 사업자 번호 입니다.");
+        }
+
         // 2. 변수 설정
 
-        // 2-1. 비밀번호 암호화
-        String encryptedPassword = passwordEncoder.encode(signUpDto.getPassword());
-        signUpDto.setPassword(encryptedPassword);
-
-        // 2-2. 요청 코드 생성
+        // 2-1. 요청 코드 생성
         String askNum = docNumService.generateDocNumStr(DocKey.RQ);
         signUpDto.setAskNo(askNum);
         signUpDto.setAskUserNo(askNum);
 
-        // 2-3. 회사 코드 생성
+        // 2-2. 회사 코드 생성
         String vendorCode = docNumService.generateDocNumStr(DocKey.VN);
         signUpDto.setVendorCode(vendorCode);
+
+        // 2-3. 상태 설정
+        signUpDto.setStatus("N");
 
         // 2-4. 등록자 id 입력
         String userId = signUpDto.getUserId();
         signUpDto.setCreatedBy(userId);
 
+        // 2-5. 비밀번호 암호화
+        String encryptedPassword = passwordEncoder.encode(signUpDto.getPassword());
+        signUpDto.setPassword(encryptedPassword);
+    
+        // 2-6. vendorDto로 전환
+        VendorRegisterDto vendorRegisterDto = convertToVendorRegisterDto(signUpDto);
+
         // 최종 db 저장
-        signUpMapper.insertVendor(signUpDto); // 회사가 먼저 생성되는게 논리적으로 올바름
+        vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
         signUpMapper.insertUser(signUpDto);
 
+    }
+
+    // 협력 업체 정보 매핑
+    private VendorRegisterDto convertToVendorRegisterDto(SignUpDto signUpDto) {
+        VendorRegisterDto vendorRegisterDto = new VendorRegisterDto();
+
+        vendorRegisterDto.setAskNum(signUpDto.getAskNo());
+        vendorRegisterDto.setVendorCode(signUpDto.getVendorCode());
+        vendorRegisterDto.setVendorName(signUpDto.getVendorName());
+        vendorRegisterDto.setVendorEngName(signUpDto.getVendorNameEn());
+        vendorRegisterDto.setBusinessType(signUpDto.getBusinessType());
+        vendorRegisterDto.setBusinessNo(signUpDto.getBusinessNo());
+        vendorRegisterDto.setCeoName(signUpDto.getCeoName());
+        vendorRegisterDto.setZipCode(signUpDto.getZipCode());
+        vendorRegisterDto.setAddress(signUpDto.getAddress());
+        vendorRegisterDto.setAddressDetail(signUpDto.getAddressDetail());
+        vendorRegisterDto.setTel(signUpDto.getPhone());
+        vendorRegisterDto.setFax(signUpDto.getFax());
+        vendorRegisterDto.setEmail(signUpDto.getVendorEmail());
+        vendorRegisterDto.setIndustry(signUpDto.getIndustry());
+        vendorRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
+        vendorRegisterDto.setStatus(signUpDto.getStatus());
+        vendorRegisterDto.setCreatedAt(LocalDate.now());
+        vendorRegisterDto.setFoundationDate(signUpDto.getFoundationDate());
+
+        return vendorRegisterDto;
     }
 }
