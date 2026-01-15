@@ -89,3 +89,51 @@ export function isForbiddenError(error: unknown): boolean {
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
 }
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+function isFieldErrorMap(v: unknown): v is Record<string, string> {
+  if (!isPlainObject(v)) return false;
+  // 이제 v는 Record<string, unknown>이라 Object.values(v) OK
+  return Object.values(v).every((x) => typeof x === "string");
+}
+
+type ApiResponseLike = {
+  success?: unknown;
+  message?: unknown;
+  data?: unknown;
+};
+
+/**
+ * 서버 validation 에러(field -> message) 추출
+ * - ApiError.data가 "필드맵"인 경우
+ * - ApiError.data가 "ApiResponse 전체"인 경우 둘 다 지원
+ */
+export function extractValidationErrors(
+    error: unknown
+): { fieldErrors: Record<string, string> | null; message: string | null } {
+  if (!(error instanceof ApiError)) {
+    return { fieldErrors: null, message: null };
+  }
+
+  const raw = error.data;
+
+  // 1) data 자체가 field map일 때
+  if (isFieldErrorMap(raw)) {
+    return { fieldErrors: raw, message: null };
+  }
+
+  // 2) ApiResponse 전체일 때: { success:false, message, data:{field->msg} }
+  if (isPlainObject(raw)) {
+    const res = raw as ApiResponseLike;
+
+    if (isFieldErrorMap(res.data)) {
+      const msg = typeof res.message === "string" ? res.message : null;
+      return { fieldErrors: res.data, message: msg };
+    }
+  }
+
+  return { fieldErrors: null, message: getErrorMessage(error) };
+}

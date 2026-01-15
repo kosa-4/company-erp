@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import com.company.erp.common.file.exception.FileException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -66,5 +67,23 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(e.getMessage());
     }
 
+    // validation 예외 처리
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ApiResponse<Map<String, String>> handleValidation(
+            MethodArgumentNotValidException ex
+    ) {
+        Map<String, String> fieldErrors = new HashMap<>();
 
+        ex.getBindingResult()
+                .getFieldErrors()
+                .forEach(err -> {
+                    // 같은 필드 에러 여러 개면 첫 번째만 사용
+                    fieldErrors.putIfAbsent(
+                            err.getField(),
+                            err.getDefaultMessage()
+                    );
+                });
+
+        return ApiResponse.fail("입력값이 올바르지 않습니다.", fieldErrors);
+    }
 }
