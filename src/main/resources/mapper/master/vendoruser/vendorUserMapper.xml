@@ -201,12 +201,14 @@
 
     <!--아이디 중복 체크-->
     <select id="existsUserId" parameterType="String" resultType="boolean">
-        SELECT
-            COUNT(*)
-        FROM
-            VN_USER
-        WHERE
-            USER_ID=#{userId}
+
+        SELECT(
+            SELECT COUNT(*) FROM VN_USER WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
+            <!--마스터 테이블 존재 여부 확인-->
+        ) + (
+            SELECT COUNT(*) FROM VNCH_US WHERE USER_ID = #{userId} AND PROGRESS_CD != 'R'
+        <!--대기 테이블 존재 여부 확인 (반려 제외) -->
+        ) > 0
     </select>
 
     <!--협력사 유저 단일 조회-->

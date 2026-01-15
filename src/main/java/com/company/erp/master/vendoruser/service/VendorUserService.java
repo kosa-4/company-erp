@@ -71,12 +71,27 @@ public class VendorUserService {
     public void rejectVendorUser(List<VendorUserUpdateDto> vendorUserUpdateDtoList, String sessionId) {
         // 1) 단일 dto 반환
         for(VendorUserUpdateDto dto : vendorUserUpdateDtoList){
-            // 2) 입력값 설정
+            // 1) 사용자 존재 여부 확인
+            String askUserNum = dto.getAskUserNum();
+            VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
+
+            if(vendorUser == null){
+               throw new IllegalStateException("해당 사용자가 존재하지 않습니다.");
+            }
+
+            // 2) 상태값 확인
+            String status = vendorUser.getStatus();
+
+            if(!"C".equals(status) && !"N".equals(status)){
+                throw new IllegalStateException("반려 가능한 상태가 아닙니다.");
+            }
+
+            // 3) 입력값 설정
             dto.setModifiedAt(LocalDate.now());
             dto.setModifiedBy(sessionId);
             dto.setStatus("R");
             
-            // 3) 대기 테이블 업데이트
+            // 4) 대기 테이블 업데이트
             vendorUserMapper.updateVNCH_USByAskUserNum(dto);
         }
     }
