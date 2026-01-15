@@ -16,6 +16,7 @@ public class SignUpDto {
     private String vendorCode;
     private String createdBy;
     private String comType;
+    private String status;
 
     // 파라미터에 @Valid 붙여줘야 함
     // vendor 정보

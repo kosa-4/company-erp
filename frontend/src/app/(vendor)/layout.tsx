@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 /**
  * 협력사(V) 전용 레이아웃
  * 
- * - comType이 'V'인 사용자만 접근 가능
+ * - role이 'VENDOR'인 사용자만 접근 가능
  * - 로그인 안 됨 → 랜딩 페이지로 리다이렉트
  * - 구매사(B)가 접근 시 → /home으로 리다이렉트
  */
@@ -30,9 +30,8 @@ export default function VendorAppLayout({
       router.replace('/');
       return;
     }
-
-    // 구매사가 접근 시 → 구매사 페이지로
-    if (user.comType === 'B') {
+    // 구매사가 접근 시 → 구매사 페이지로 ( role 기반 )
+    if (user.role !== 'VENDOR') {
       router.replace('/home');
       return;
     }
@@ -52,8 +51,8 @@ export default function VendorAppLayout({
     return null;
   }
 
-  // 구매사가 접근 → 빈 화면 (리다이렉트 중)
-  if (user.comType !== 'V') {
+  // 구매사가 접근 (role 기반) → 빈 화면 (리다이렉트 중)
+  if (user.role !== 'VENDOR') {
     return null;
   }
 
