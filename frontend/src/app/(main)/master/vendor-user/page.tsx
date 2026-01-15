@@ -27,60 +27,10 @@ interface VendorUser {
   isBlocked: boolean;
 }
 
-// Mock 데이터
-const mockVendorUsers: VendorUser[] = [
-  {
-    id: '1',
-    status: 'APPROVED',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    userId: 'tech_kim',
-    userName: '김영업',
-    phone: '010-1234-5678',
-    email: 'kim@techsolution.co.kr',
-    createdAt: '2024-01-10',
-    isBlocked: false,
-  },
-  {
-    id: '2',
-    status: 'APPROVED',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    userId: 'tech_lee',
-    userName: '이담당',
-    phone: '010-2345-6789',
-    email: 'lee@techsolution.co.kr',
-    createdAt: '2024-01-15',
-    isBlocked: false,
-  },
-  {
-    id: '3',
-    status: 'PENDING',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    userId: 'office_park',
-    userName: '박신규',
-    phone: '010-3456-7890',
-    email: 'park@officepro.kr',
-    createdAt: '2024-12-25',
-    isBlocked: false,
-  },
-  {
-    id: '4',
-    status: 'BLOCKED',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    userId: 'office_choi',
-    userName: '최차단',
-    phone: '010-4567-8901',
-    email: 'choi@officepro.kr',
-    createdAt: '2024-06-01',
-    isBlocked: true,
-  },
-];
+
 
 export default function VendorUserPage() {
-  const [vendorUsers] = useState<VendorUser[]>(mockVendorUsers);
+  const [vendorUsers] = useState<VendorUser[]>([]);
   const [selectedRows, setSelectedRows] = useState<VendorUser[]>([]);
   const [searchParams, setSearchParams] = useState({
     vendorCode: '',
