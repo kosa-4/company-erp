@@ -4,8 +4,8 @@ import com.company.erp.common.signup.dto.SignUpDto;
 
 
 public interface SignUpMapper {
-    void insertVendor(SignUpDto signUpDto);
     void insertUser(SignUpDto signUpDto);
     boolean existsUserId(String userId);
+    boolean existsBusinessNo(String businessNo);
 
 }

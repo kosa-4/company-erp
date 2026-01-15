@@ -26,10 +26,33 @@ export default function VendorInfoChangePage() {
   };
 
   const handleSubmit = () => {
+    handleRequestChange();
+  };
+
+  // 수정 요청
+  const handleRequestChange =  async () => {
+    // 1. 변경 사유 작성 필수
     if (!changeReason.trim()) {
       alert('변경 사유를 입력해주세요.');
       return;
     }
+
+    // 2. 변경 사유 추가
+    const updatedData = { ...formData, remark:changeReason };
+
+    // 3.API 요청
+    const response = await fetch('/api/v1/vendors/users/change', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedData),
+    });
+
+    // 4. 응답 처리
+    if(!response.ok) {
+      alert('변경 신청에 실패했습니다.');
+      return;
+    }
+
     alert('협력업체 변경 신청이 접수되었습니다.\n관리자 승인 후 반영됩니다.');
   };
 

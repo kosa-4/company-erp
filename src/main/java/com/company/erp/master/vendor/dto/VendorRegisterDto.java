@@ -19,7 +19,7 @@ public class VendorRegisterDto {
     private String tel;
     private String fax;
     private String email;
-    private String businessItem; // 업종
+    private String industry; // 업종
     private String useYn;
     private String remark;
     private String createdBy;
