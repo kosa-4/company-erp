@@ -49,38 +49,6 @@
             ITEM_CLS = #{itemCls}
     </select>
 
-    <!--품목 분류 저장-->
-    <insert id="insertCategory" parameterType="java.util.List">
-        INSERT INTO
-            MTCA(
-                ITEM_CLS,
-                PARENT_ITEM_CLS,
-                ITEM_LVL,
-                ITEM_CLS_NM,
-                REG_DATE,
-                REG_USER_ID,
-                MOD_DATE,
-                MOD_USER_ID,
-                DEL_FLAG,
-                USE_FLAG
-            )
-        VALUES
-        <foreach collection="list" item="item" separator=",">
-            (
-            #{item.itemCls},
-            #{item.parentItemCls},
-            #{item.itemLvl},
-            #{item.itemClsNm},
-            NOW(),
-            "추후 수정",
-            NULL,
-            NULL,
-            "N",
-            "Y"
-            )
-        </foreach>
-    </insert>
-    
     <!--자식 카테고리의 마지막 번호 체크-->
     <select id="selectMaxChild" parameterType="String" resultType="String">
         SELECT
@@ -109,6 +77,57 @@
         </foreach>
 
     </select>
+
+    <!--자식 카테고리 존재 여부 확인-->
+    <select id="existsChildCate" parameterType="String" resultType="boolean">
+        SELECT
+            COUNT(*)
+        FROM
+            MTCA
+        WHERE
+            PARENT_ITEM_CLS = #{itemCls}
+
+    </select>
+
+    <!--품목 분류 저장-->
+    <insert id="insertCategory" parameterType="java.util.List">
+        INSERT INTO
+        MTCA(
+        ITEM_CLS,
+        PARENT_ITEM_CLS,
+        ITEM_LVL,
+        ITEM_CLS_NM,
+        REG_DATE,
+        REG_USER_ID,
+        MOD_DATE,
+        MOD_USER_ID,
+        DEL_FLAG,
+        USE_FLAG
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.itemCls},
+            #{item.parentItemCls},
+            #{item.itemLvl},
+            #{item.itemClsNm},
+            NOW(),
+            '추후 수정',
+            NULL,
+            NULL,
+            'N',
+            'Y'
+            )
+        </foreach>
+    </insert>
+
+    <!--카테고리 삭제-->
+    <delete id="deleteCategory" parameterType="String">
+        DELETE FROM
+            MTCA
+        WHERE
+            ITEM_CLS = #{itemCls}
+    </delete>
 
     <!--부모 코드 존재 여부 체크-->
 <!--    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">-->
