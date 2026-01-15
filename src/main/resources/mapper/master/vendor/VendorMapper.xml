@@ -120,7 +120,7 @@
             PROGRESS_CD IN ('N', 'CNG')
     </select>
 
-    <!--협력사 저장-->
+    <!--협력사 마스터 테이블 저장-->
     <insert id="insertVendorVNGL" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
         INSERT INTO
         VNGL(
@@ -176,6 +176,64 @@
             #{signDate}
         )
     </insert>
+    <!--협력사 대기 테이블 저장-->
+    <insert id="insertVendorVNCH" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        INSERT INTO
+        VNCH(
+            ASK_NUM,
+            VENDOR_CD,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            VENDOR_NM,
+            VENDOR_ENG_NM,
+            REG_TYPE,
+            IRS_NO,
+            CEO_USER_NM,
+            ZIP_CD,
+            ADDR,
+            ADDR_DT,
+            TEL_NO,
+            FAX_NO,
+            EMAIL,
+            FOUNDATION_DATE,
+            INDUSTRY_TYPE,
+            RMK,
+            PROGRESS_CD,
+            REJECT_RMK,
+            SIGN_USER_ID,
+            COM_TYPE
+        )
+        VALUES(
+            #{askNum},
+            #{vendorCode},
+            #{createdAt},
+            #{createdBy},
+            NULL,
+            NULL,
+            'N',
+            #{vendorName},
+            #{vendorEngName},
+            #{businessType},
+            #{businessNo},
+            #{ceoName},
+            #{zipCode},
+            #{address},
+            #{addressDetail},
+            #{tel},
+            #{fax},
+            #{email},
+            #{foundationDate},
+            #{industry},
+            #{remark},
+            #{status},
+            NULL,
+            NULL,
+            'V'
+        )
+    </insert>
 
     <!--대기 테이블 상태 업데이트-->
     <update id="updateVNCHByAskNum" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
@@ -194,11 +252,16 @@
     
     <!--사업자 번호 중복 체크-->
     <select id="existsByBusinessNo" parameterType="String" resultType="boolean">
-        SELECT
-            COUNT(*)
-        FROM
-            VNGL
-        WHERE
-            IRS_NO = #{businessNo}
+        <!--둘 중 하나라도 0보다 크면 TRUE 반환-->
+        SELECT(
+            SELECT COUNT(*) FROM VNGL WHERE IRS_NO = #{businessNo} AND DEL_FLAG = 'N'
+        <!--마스터 테이블 존재 여부 확인-->
+        ) + (
+            SELECT COUNT(*) FROM VNCH WHERE IRS_NO = #{businessNo} AND PROGRESS_CD != 'R'
+        <!--대기 테이블 존재 여부 확인 (반려 제외) -->
+        ) > 0
     </select>
+
+    <!--=== 협력사 ===-->
+
 </mapper>

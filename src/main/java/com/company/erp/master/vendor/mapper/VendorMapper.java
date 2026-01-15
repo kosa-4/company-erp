@@ -15,11 +15,18 @@ public interface VendorMapper {
     // 2.단일 조회
     VendorRegisterDto selectVendorByAskNum(String askNum);
 
-    /* 저장 */
-    void insertVendorVNGL(VendorRegisterDto vendorRegisterDto);
+    // 3. 사업자 번호 중복 조회
     boolean existsByBusinessNo(String businessNo);
+
+    /* 저장 */
+    // 1. 마스터 테이블 저장
+    void insertVendorVNGL(VendorRegisterDto vendorRegisterDto);
+    
+    // 2. 대기 테이블 저장
+    void insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
 
     /* 수정 */
     // 1. 대기 테이블 업데이트
     void updateVNCHByAskNum(VendorUpdateDto vendorUpdateDto);
+
 }
