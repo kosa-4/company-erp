@@ -15,7 +15,7 @@
             U.status,
             U.createdAt,
             U.blockFlag,
-            U.password,
+<!--            U.password,-->
             U.delFlag
         FROM (
             <!--테이블 결합-->
@@ -29,7 +29,7 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 'N' AS blockFlag,
-                PASSWORD AS password,
+<!--                PASSWORD AS password,-->
                 DEL_FLAG AS delFlag
             FROM
                 VNCH_US
@@ -48,7 +48,7 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 BLOCK_FLAG AS blockFlag,
-                PASSWORD AS password,
+<!--                PASSWORD AS password,-->
                 DEL_FLAG AS delFlag
             FROM
                 VN_USER
