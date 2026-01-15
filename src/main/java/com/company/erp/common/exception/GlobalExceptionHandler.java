@@ -63,27 +63,23 @@ public class GlobalExceptionHandler {
 
     // 파일 오류 예외 처리
     @ExceptionHandler(FileException.class)
-    public ApiResponse handleFile(FileException e) {
-        return ApiResponse.fail(e.getMessage());
+    public ResponseEntity<ApiResponse<Void>> handleFile(FileException e) {
+        log.error("FileException: {}", e.getMessage(), e);
+        return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.fail(e.getMessage()));
     }
 
     // validation 예외 처리
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ApiResponse<Map<String, String>> handleValidation(
-            MethodArgumentNotValidException ex
-    ) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException ex) {
+        log.error("MethodArgumentNotValidException: {}", ex.getMessage(), ex);
+
         Map<String, String> fieldErrors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(err -> fieldErrors.putIfAbsent(err.getField(), err.getDefaultMessage()));
 
-        ex.getBindingResult()
-                .getFieldErrors()
-                .forEach(err -> {
-                    // 같은 필드 에러 여러 개면 첫 번째만 사용
-                    fieldErrors.putIfAbsent(
-                            err.getField(),
-                            err.getDefaultMessage()
-                    );
-                });
-
-        return ApiResponse.fail("입력값이 올바르지 않습니다.", fieldErrors);
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.fail("입력값이 올바르지 않습니다.", fieldErrors));
     }
 }
