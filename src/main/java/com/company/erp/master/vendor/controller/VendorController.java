@@ -60,7 +60,7 @@ public class VendorController {
     
     // 3. 협력업체 반려
     @PostMapping("/reject")
-    public ApiResponse rejectVendor(@RequestBody VendorUpdateDto vendorUpdateDto) { //HttpSession currentSession
+    public ApiResponse rejectVendor(@RequestBody List<VendorUpdateDto> vendorUpdateDtoList) { //HttpSession currentSession
         // 1) 세션 정보 조회
         //String sessionId = (String) currentSession.getAttribute("sessionId");
         String sessionId = "Admin";
@@ -71,7 +71,7 @@ public class VendorController {
         }
 
         // 3) 반려 함수 실행
-        vendorService.rejectVendor(vendorUpdateDto, sessionId);
+        vendorService.rejectVendor(vendorUpdateDtoList, sessionId);
         return ApiResponse.ok("반려 처리 되었습니다.");
     }
     

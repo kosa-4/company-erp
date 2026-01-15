@@ -117,7 +117,7 @@
         WHERE
             ASK_NUM = #{askNum}
         AND
-            PROGRESS_CD IN ('N', 'P')
+            PROGRESS_CD IN ('N', 'CNG')
     </select>
 
     <!--협력사 저장-->

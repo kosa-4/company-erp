@@ -64,23 +64,22 @@ public class VendorService {
         // 1) 단일 dto 반환 (일괄 처리 건수가 많지 않으므로 서비스 레이어에서 for문으로 처리)
         for(VendorRegisterDto dto : vendorRegisterDtoList) {
             String askNum = dto.getAskNum();
-            // 1) 선택된 협력사 정보 조회
+            // 2) 선택된 협력사 정보 조회
             VendorRegisterDto vendor = vendorMapper.selectVendorByAskNum(askNum);
 
             if(vendor == null) {
                 throw new IllegalStateException("해당 협력사가 존재하지 않습니다");
             }
-//            System.out.println("vendor 데이터 확인: " + vendor);
-            // 2) 입력값 설정
+            // 3) 입력값 설정
             vendor.setModifiedBy(sessionId);
             vendor.setModifiedAt(LocalDate.now());
             vendor.setSignDate(LocalDate.now());
 //            vendor.setUseYn("Y");
 
-            // 3) 마스터 테이블 추가
+            // 4) 마스터 테이블 추가
             vendorMapper.insertVendorVNGL(vendor);
 
-            // 4) 대기 테이블 업데이트
+            // 5) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
             vendorUpdateDto.setModifiedAt(LocalDate.now());
             vendorUpdateDto.setModifiedBy(sessionId);
@@ -95,14 +94,19 @@ public class VendorService {
     
     // 3. 구매사에서 반려
     @Transactional
-    public void rejectVendor(VendorUpdateDto vendorUpdateDto, String sessionId) {
-        // 1) 입력값 설정
-        vendorUpdateDto.setModifiedAt(LocalDate.now());
-        vendorUpdateDto.setModifiedBy(sessionId);
-        vendorUpdateDto.setSignUserId(sessionId);
-        vendorUpdateDto.setStatus("R");
+    public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String sessionId) {
+        // 1) 단일 dto 반환
+        for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
-        // 2) 대기 테이블 업데이트
-        vendorMapper.updateVNCHByAskNum(vendorUpdateDto);
+            // 1) 입력값 설정
+            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedBy(sessionId);
+            dto.setSignUserId(sessionId);
+            dto.setStatus("R");
+
+            // 2) 대기 테이블 업데이트
+            vendorMapper.updateVNCHByAskNum(dto);
+        }
+
     }
 }
