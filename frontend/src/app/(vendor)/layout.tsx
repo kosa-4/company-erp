@@ -30,9 +30,8 @@ export default function VendorAppLayout({
       router.replace('/');
       return;
     }
-
-    // 구매사가 접근 시 → 구매사 페이지로
-    if (user.comType === 'B') {
+    // 구매사가 접근 시 → 구매사 페이지로 ( role 기반 )
+    if (user.role !== 'VENDOR') {
       router.replace('/home');
       return;
     }
@@ -52,8 +51,8 @@ export default function VendorAppLayout({
     return null;
   }
 
-  // 구매사가 접근 → 빈 화면 (리다이렉트 중)
-  if (user.comType !== 'V') {
+  // 구매사가 접근 (role 기반) → 빈 화면 (리다이렉트 중)
+  if (user.role !== 'VENDOR') {
     return null;
   }
 

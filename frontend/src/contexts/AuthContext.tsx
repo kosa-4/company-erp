@@ -12,6 +12,7 @@ interface User {
   userId: string;
   comType: 'B' | 'V';
   vendorCd?: string;
+  role: 'ADMIN' | 'BUYER' | 'USER' | 'VENDOR';
 }
 
 interface AuthContextType {
@@ -70,15 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userId: data.data.userId,
       comType: data.data.comType,
       vendorCd: data.data.vendorCd,
+      role: data.data.role,
     };
 
     setUser(userData);
 
-    // comType에 따라 라우팅
-    if (userData.comType === 'B') {
-      router.push('/home');         // 구매사 → (main) 페이지
+    // comType에 따라 라우팅 -> role 기반으로 변경
+    if (userData.role === 'VENDOR') {
+      router.push('/vendor/home');
     } else {
-      router.push('/vendor');  // 협력사 → (vendor) 페이지
+      router.push('/home');
     }
   }, [router]);
 
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userId: data.data.userId,
             comType: data.data.comType,
             vendorCd: data.data.vendorCd,
+            role: data.data.role,
           });
         } else {
           setUser(null);

@@ -28,7 +28,11 @@ public class LoginService {
         String userId = req.getUserId().trim();
 
         // userId로 조회 후 user 정보 비교
-        Map<String, Object> user = loginMapper.findLoginUser(userId);
+        Map<String, Object> user = loginMapper.findByUserLoginUser(userId);
+        if (user == null || user.isEmpty()) {
+            // 구매사 사용자가 없으면 협력사 사용자 찾기
+            user = loginMapper.findVnUserLoginUser(userId);
+        }
         if (user == null || user.isEmpty()) {
             throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
@@ -44,11 +48,12 @@ public class LoginService {
         String userName  = (String) user.get("userName");
         String deptCd    = (String) user.get("deptCd");
         String deptName  = (String) user.get("deptName");
+        String role      = (String) user.get("role");
 
         if (comType == null || comType.isBlank()) {
             throw new IllegalStateException("로그인 처리 중 오류가 발생했습니다.");
         }
 
-        return new SessionUser(userId, ipAddress, comType, vendorCd, userName, deptCd, deptName);
+        return new SessionUser(userId, ipAddress, comType, vendorCd, userName, deptCd, deptName, role);
     }
 }
