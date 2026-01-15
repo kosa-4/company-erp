@@ -1,13 +1,17 @@
 package com.company.erp.master.vendoruser.service;
 
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
+import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
+import com.company.erp.master.vendoruser.dto.VendorUserUpdateDto;
 import com.company.erp.master.vendoruser.mapper.VendorUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,4 +23,46 @@ public class VendorUserService {
     public List<VendorUserListDto> getVendorUserList(VendorUserSearchDto vendorUserSearchDto) {
         return vendorUserMapper.selectVendorUserList(vendorUserSearchDto);
     }
+    
+    /* 저장 */
+    // 1. 구매사에서 승인
+    @Transactional
+    public void approveVendorUser(List<VendorUserRegisterDto> vendorUserRegisterDtoList, String sessionId) {
+        // 1) 단일 dto 반환
+        for(VendorUserRegisterDto dto : vendorUserRegisterDtoList){
+            System.out.println("dto " + dto);
+            // 2) 사용자 존재 여부 확인
+            String askUserNum = dto.getAskUserNum();
+            VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
+
+            if(vendorUser == null){
+                throw new IllegalStateException("해당 사용자가 존재하지 않습니다.");
+            }
+
+            // 3) 상태값 확인
+            String status = dto.getStatus();
+            if(!"C".equals(status) && !"N".equals(status)){
+                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+            }
+
+            // 4) 입력값 설정
+            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedBy(sessionId);
+            dto.setSignDate(LocalDate.now());
+
+            // 5) 마스터 테이블 추가
+            vendorUserMapper.insertUserVN_USER(dto);
+            
+            // 6) 대기 테이블 업데이트
+            VendorUserUpdateDto vendorUserUpdateDto = new VendorUserUpdateDto();
+            vendorUserUpdateDto.setModifiedAt(LocalDate.now());
+            vendorUserUpdateDto.setModifiedBy(sessionId);
+            vendorUserUpdateDto.setAskUserNum(askUserNum);
+            vendorUserUpdateDto.setDelFlag("N");
+            vendorUserUpdateDto.setStatus("A");
+
+            vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+        }
+    }
+    
 }

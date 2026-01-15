@@ -46,7 +46,7 @@ public class VendorController {
     @PostMapping("/approve")
     public ApiResponse approveVendor(@RequestBody List<VendorRegisterDto> vendorRegisterDtoList) {
         // 1) 세션 정보 조회
-//        String sessionId = (String) currentSession.getAttribute("sessionId");
+        //String sessionId = (String) currentSession.getAttribute("sessionId");
         String sessionId = "Admin";
         // 2) 세션이 존재하지 않을 시
         if(sessionId == null) {

@@ -70,21 +70,26 @@ public class VendorService {
             if(vendor == null) {
                 throw new IllegalStateException("해당 협력사가 존재하지 않습니다");
             }
-            // 3) 입력값 설정
+            // 3) 상태값 확인
+            String status = dto.getStatus();
+            if(!"C".equals(status) && !"N".equals(status)){
+                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+            }
+            // 4) 입력값 설정
             vendor.setModifiedBy(sessionId);
             vendor.setModifiedAt(LocalDate.now());
             vendor.setSignDate(LocalDate.now());
 //            vendor.setUseYn("Y");
 
-            // 4) 마스터 테이블 추가
+            // 5) 마스터 테이블 추가
             vendorMapper.insertVendorVNGL(vendor);
 
-            // 5) 대기 테이블 업데이트
+            // 6) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
             vendorUpdateDto.setModifiedAt(LocalDate.now());
             vendorUpdateDto.setModifiedBy(sessionId);
-            vendorUpdateDto.setAskNum(askNum);
-            vendorUpdateDto.setDelFlag("Y");
+            vendorUpdateDto.setAskNum(askNum); // where 용
+            vendorUpdateDto.setDelFlag("N");
             vendorUpdateDto.setStatus("A");
             vendorUpdateDto.setSignUserId(sessionId);
 

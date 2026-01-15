@@ -76,8 +76,58 @@
         ORDER BY
             U.createdAt DESC
     </select>
+    <!--마스터 테이블 협력사 유저 정보 저장-->
+    <insert id="insertUserVN_USER" parameterType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+        INSERT INTO
+        VN_USER(
+            VENDOR_CD,
+            USER_ID,
+            USER_NM,
+            USER_NM_ENG,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            BLOCK_FLAG,
+            BLOCK_RMK,
+            BLOCK_DATE,
+            PASSWORD,
+            PW_WRONG_CNT,
+            EMAIL,
+            TEL_NUM,
+            FAX_NUM,
+            ROLE,
+            SIGN_DATE,
+            PROGRESS_CD,
+            COM_TYPE
+        )
+        VALUES(
+            #{vendorCode},
+            #{userId},
+            #{userName},
+            #{userNameEng},
+            #{createdAt},
+            #{createdBy},
+            #{modifiedAt},
+            #{modifiedBy},
+            'N',
+            'N',
+            NULL,
+            NULL,
+            #{password},
+            0,
+            #{userEmail},
+            #{phone},
+            #{fax},
+            NULL,
+            #{signDate},
+            'A',
+            'V'
+        )
+    </insert>
 
-    <!--협력사 유저 정보 저장-->
+    <!--대기 테이블 협력사 유저 정보 저장-->
     <insert id="insertUserVNCH_US" parameterType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
         INSERT INTO
         VNCH_US(
@@ -118,6 +168,27 @@
         )
     </insert>
 
+    <!--대기 테이블 협력사 유저 정보 업데이트-->
+    <update id="updateVNCH_USByAskUserNum" parameterType="com.company.erp.master.vendoruser.dto.VendorUserUpdateDto">
+        UPDATE
+            VNCH_US
+        <set>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            <if test="delFlag != null and delFlag != ''">
+                DEL_FLAG = #{delFlag},
+            </if>
+            <if test="status != null and status != ''">
+                PROGRESS_CD = #{status},
+            </if>
+            <if test="rejectRemark != null and rejectRemark != ''">
+                REJECT_RMK = #{rejectRemark},
+            </if>
+        </set>
+        WHERE
+            ASK_USER_NUM = #{askUserNum}
+    </update>
+
     <!--아이디 중복 체크-->
     <select id="existsUserId" parameterType="String" resultType="boolean">
         SELECT
@@ -126,6 +197,30 @@
             VN_USER
         WHERE
             USER_ID=#{userId}
+    </select>
+
+    <!--협력사 유저 단일 조회-->
+    <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+        SELECT
+        ASK_USER_NUM AS askUserNum,
+        VENDOR_CD AS vendorCode,
+        REG_DATE AS createdAt,
+        REG_USER_ID AS createdBy,
+        MOD_DATE AS modifiedAt,
+        MOD_USER_ID AS modifiedBy,
+        USER_NM AS userName,
+        TEL_NO AS phone,
+        FAX_NO AS fax,
+        EMAIL AS userEmail,
+        PROGRESS_CD AS status
+        FROM
+            VNCH_US
+        WHERE
+            ASK_USER_NUM = #{askUserNum}
+        AND
+            PROGRESS_CD IN ('N', 'C')
+        AND
+            DEL_FLAG = 'N'
     </select>
 
 </mapper>
