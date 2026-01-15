@@ -582,7 +582,7 @@ export default function ItemPage() {
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
             </div>
-            <div className="flex gap-6">
+            {/* <div className="flex gap-6">
               <label className="text-sm font-medium text-gray-700">사용여부</label>
                 <div className="flex gap-4">
                     <label className="flex items-center gap-2">
@@ -593,8 +593,8 @@ export default function ItemPage() {
                       <input type="radio" name="useYn" value="N" className="text-blue-600" disabled/>
                       <span className="text-sm">미사용</span>
                     </label>
-                  </div>
-                </div>              
+                </div>
+            </div>*/}
               
             <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} />
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
