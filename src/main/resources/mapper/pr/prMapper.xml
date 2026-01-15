@@ -4,18 +4,22 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.company.erp.pr.mapper.PrMapper">
 
+    <select id="selectUserName" resultType="String">
+        SELECT USER_NM FROM BY_USER
+        WHERE USER_ID = #{userId}
+    </select>
+
     <insert id="insertPrHd" parameterType="com.company.erp.pr.dto.PrHdDTO">
         INSERT INTO PRHD
         (PR_NUM, REG_DATE,REG_USER_ID,DEL_FLAG,PR_SUBJECT,
-         DEPT_CD, PR_AMT, REQ_USER_ID,
-         RMK,PROGRESS_CD,PC_TYPE)
+         DEPT_CD, PR_AMT, RMK,PROGRESS_CD,PC_TYPE)
         values
         (#{prNum},now(),#{regUserId},'N', #{prSubject}, #{deptCd},
-        #{prAmt},#{reqUserId},#{rmk},
+        #{prAmt},#{rmk},
 
         (SELECT CODE FROM CODD
          WHERE CODE_GROUP='PROGRESS_CD'
-         AND CODE_NAME= #{progressCd}
+         AND CODE_NAME= '임시저장'
          AND USE_YN = 'Y'),
 
         (SELECT CODE FROM CODD
@@ -83,13 +87,21 @@
 
 
     <select id="selectPrList" resultType="com.company.erp.pr.dto.PrListResponse">
-        SELECT ST.CODE_NAME AS progressCd, PT.CODE_NAME AS pcType,
-        HD.PR_NUM AS prNum, HD.REQ_USER_ID AS reqUserId, HD.DEPT_CD AS deptNm,
-        DT.UNIT_CD AS unitCd, DT.REG_DATE AS regDate,
-        DT.ITEM_CD AS itemCd, DT.ITEM_DESC AS itemDesc,
-        DT.PR_QT AS prQt, DT.UNIT_PRC AS unitPrc,
-        DT.PR_AMT AS prAmt, DT.DELY_DATE AS delyDate
-        from PRDT DT JOIN PRHD HD
+        SELECT
+        ST.CODE_NAME AS progressCd,
+        PT.CODE_NAME AS pcType,
+        HD.PR_NUM   AS prNum,
+        U.USER_NM   AS requester,
+        D.DEPT_NM   AS deptName,
+        DT.REG_DATE  AS regDate,
+        DT.ITEM_CD   AS itemCd,
+        DT.ITEM_DESC AS itemDesc,
+        DT.PR_QT     AS prQt,
+        DT.UNIT_PRC  AS unitPrc,
+        DT.PR_AMT    AS prAmt,
+        DT.DELY_DATE AS delyDate
+        FROM PRDT DT
+        JOIN PRHD HD
         ON DT.PR_NUM = HD.PR_NUM
 
         LEFT JOIN CODD ST
@@ -103,17 +115,51 @@
         AND PT.USE_YN = 'Y'
 
         LEFT JOIN BY_USER U
-        ON HD.REQ_USER_ID = U.USER_ID
+        ON U.USER_ID = HD.REG_USER_ID
+        AND U.DEL_FLAG = 'N'
 
-        <!--부서처리 다시 할 예정-->
-<!--        LEFT JOIN DEPT DPT-->
-<!--        ON HD.DEPT_CD = DPT.DEPT_CD-->
+        LEFT JOIN vw_dept_active D
+        ON D.DEPT_CD = HD.DEPT_CD
 
         WHERE HD.DEL_FLAG = 'N'
         AND DT.DEL_FLAG = 'N'
 
-        ORDER BY HD.PR_NUM DESC
+        <!-- PR번호 검색 -->
+        <if test="prNum != null and prNum != ''">
+            AND HD.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
+        </if>
 
+        <!-- 구매요청명 검색 -->
+        <if test="prSubject != null and prSubject != ''">
+            AND HD.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
+        </if>
+
+        <!-- 요청자 검색 -->
+        <if test="requester != null and requester != ''">
+            AND U.USER_NM LIKE CONCAT('%', #{requester}, '%')
+        </if>
+
+        <!-- 부서 검색 -->
+        <if test="deptName != null and deptName != ''">
+            AND D.DEPT_NM LIKE CONCAT('%', #{deptName}, '%')
+        </if>
+
+        <!-- 상태 검색 -->
+        <if test="progressCd != null and progressCd != ''">
+            AND ST.CODE_NAME = #{progressCd}
+        </if>
+
+        <!-- 요청일자 검색 -->
+        <if test="startDate != null and startDate != ''">
+            AND DATE(DT.REG_DATE) &gt;= #{startDate}
+        </if>
+
+        <if test="endDate != null and endDate != ''">
+            AND DATE(DT.REG_DATE) &lt;= #{endDate}
+        </if>
+
+        ORDER BY HD.PR_NUM DESC
     </select>
+
 
 </mapper>
