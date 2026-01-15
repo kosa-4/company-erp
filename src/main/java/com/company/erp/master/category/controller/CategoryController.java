@@ -1,5 +1,6 @@
 package com.company.erp.master.category.controller;
 
+import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.master.category.dto.CategoryDto;
 import com.company.erp.master.category.dto.CategoryListDto;
@@ -57,7 +58,6 @@ public class CategoryController {
     @PostMapping("/new")
     public ResponseEntity<String> registerCategory(@RequestBody List<CategoryListDto> categoryListDto){
         try{
-//            System.out.println("response: " + categoryDto.getI);
             categoryService.registerCategory(categoryListDto);
             return ResponseEntity.ok().body("카테고리 등록이 완료되었습니다.");
         } catch(RuntimeException e){
@@ -69,4 +69,10 @@ public class CategoryController {
     }
 
     // delete
+    @DeleteMapping("/{itemCls}")
+    public ApiResponse deleteCategory(@PathVariable("itemCls") String itemCls) {
+        categoryService.deleteCategory(itemCls);
+        return ApiResponse.ok("카테고리가 삭제되었습니다.");
+    }
+
 }
