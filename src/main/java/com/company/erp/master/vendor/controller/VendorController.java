@@ -60,9 +60,10 @@ public class VendorController {
     
     // 3. 협력업체 반려
     @PostMapping("/reject")
-    public ApiResponse rejectVendor(@RequestBody VendorUpdateDto vendorUpdateDto, HttpSession currentSession) {
+    public ApiResponse rejectVendor(@RequestBody VendorUpdateDto vendorUpdateDto) { //HttpSession currentSession
         // 1) 세션 정보 조회
-        String sessionId = (String) currentSession.getAttribute("sessionId");
+        //String sessionId = (String) currentSession.getAttribute("sessionId");
+        String sessionId = "Admin";
 
         // 2) 세션이 존재하지 않을 시
         if(sessionId == null) {
