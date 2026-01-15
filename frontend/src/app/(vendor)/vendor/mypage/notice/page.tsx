@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { 
   Megaphone, 
   Calendar,
-  X 
+  X,
+  Search
 } from 'lucide-react';
 import { 
   Card, 
@@ -77,8 +78,8 @@ export default function VendorNoticePage() {
                 value={searchParams.title}
                 onChange={(e) => setSearchParams(prev => ({ ...prev, title: e.target.value }))}
               />
-              <Button variant="primary" onClick={handleSearch} disabled={loading}>
-                {loading ? '검색중...' : '검색'}
+              <Button variant="primary" onClick={handleSearch} disabled={loading} className="px-3">
+                <Search className="w-4 h-4" />
               </Button>
             </div>
           </div>

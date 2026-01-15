@@ -172,9 +172,9 @@ export default function VendorOrderListPage() {
                 <th className="px-6 py-3 font-medium">발주번호</th>
                 <th className="px-6 py-3 font-medium">발주명</th>
                 <th className="px-6 py-3 font-medium">발주일자</th>
+                <th className="px-6 py-3 font-medium text-right">총수량</th>
                 <th className="px-6 py-3 font-medium text-right">발주금액</th>
                 <th className="px-6 py-3 font-medium text-center">수신상태</th>
-                <th className="px-6 py-3 font-medium text-center">액션</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -189,7 +189,11 @@ export default function VendorOrderListPage() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.poNo} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={order.poNo} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => handleViewDetail(order)}
+                  >
                     <td className="px-6 py-4 font-medium text-gray-900">{order.poNo}</td>
                     <td className="px-6 py-4 text-gray-600">{order.poName}</td>
                     <td className="px-6 py-4 text-gray-500">
@@ -198,6 +202,9 @@ export default function VendorOrderListPage() {
                         {order.poDate}
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-right text-gray-900 font-medium">
+                      {order.items.reduce((sum, item) => sum + item.quantity, 0).toLocaleString()}
+                    </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
                       {formatCurrency(order.totalAmount)}
                     </td>
@@ -205,30 +212,6 @@ export default function VendorOrderListPage() {
                       <Badge variant={order.checkFlag === 'Y' ? 'green' : 'orange'}>
                         {order.checkFlag === 'Y' ? '확인완료' : '미확인'}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetail(order)}
-                          className="w-8 h-8 p-0"
-                          title="상세보기"
-                        >
-                          <Eye className="w-4 h-4 text-gray-500" />
-                        </Button>
-                        {order.checkFlag === 'N' && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleConfirm(order.poNo)}
-                            className="h-8 text-xs gap-1"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            수신확인
-                          </Button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))

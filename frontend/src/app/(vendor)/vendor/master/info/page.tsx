@@ -182,9 +182,8 @@ export default function VendorInfoChangePage() {
                                 readOnly
                                 className="w-32 bg-gray-50"
                             />
-                            <Button variant="outline" className="gap-2">
+                            <Button variant="outline" className="px-3">
                                 <Search className="w-3.5 h-3.5" />
-                                검색
                             </Button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">

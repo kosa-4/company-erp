@@ -294,7 +294,17 @@ export default function OrderProgressPage() {
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
-    { key: 'deliveryDate', header: '납기가능일', width: 100, align: 'center' },
+    { 
+      key: 'deliveryDate', 
+      header: '납기가능일', 
+      width: 100, 
+      align: 'center',
+      render: (value): string => {
+        if (!value || value === '-') return String(value);
+        // ISO 8601 형식(2026-01-15T00:00:00)에서 날짜 부분만 추출
+        return String(value).split('T')[0];
+      }
+    },
     { key: 'paymentTerms', header: '결제조건', width: 80, align: 'center' },
     { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
   ];
