@@ -89,35 +89,37 @@
     <!--대기 테이블 협력사 단일 조회-->
     <select id="selectVendorByAskNum" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
         SELECT
-        ASK_NUM AS askNum,
-        VENDOR_CD AS vendorCode,
-        REG_DATE AS createdAt,
-        REG_USER_ID AS createdBy,
-        MOD_DATE AS modifiedAt,
-        MOD_USER_ID AS modifiedBy,
-        DEL_FLAG AS delFlag,
-        VENDOR_NM AS vendorName,
-        VENDOR_ENG_NM AS vendorEngName,
-        REG_TYPE AS businessType,
-        IRS_NO AS businessNo,
-        CEO_USER_NM AS ceoName,
-        ZIP_CD AS zipCode,
-        ADDR AS address,
-        ADDR_DT AS addressDetail,
-        TEL_NO AS tel,
-        FAX_NO AS fax,
-        EMAIL AS email,
-        FOUNDATION_DATE AS foundationDate,
-        INDUSTRY_TYPE AS businessItem,
-        RMK AS remark,
-        PROGRESS_CD AS status,
-        SIGN_DATE AS signDate
+            ASK_NUM AS askNum,
+            VENDOR_CD AS vendorCode,
+            REG_DATE AS createdAt,
+            REG_USER_ID AS createdBy,
+            MOD_DATE AS modifiedAt,
+            MOD_USER_ID AS modifiedBy,
+            DEL_FLAG AS delFlag,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorEngName,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            EMAIL AS email,
+            FOUNDATION_DATE AS foundationDate,
+            INDUSTRY_TYPE AS businessItem,
+            RMK AS remark,
+            PROGRESS_CD AS status,
+            SIGN_DATE AS signDate
         FROM
             VNCH
         WHERE
             ASK_NUM = #{askNum}
         AND
-            PROGRESS_CD IN ('N', 'CNG')
+            PROGRESS_CD IN ('N', 'C')
+        AND
+            DEL_FLAG = 'N'
     </select>
 
     <!--협력사 마스터 테이블 저장-->
@@ -239,13 +241,22 @@
     <update id="updateVNCHByAskNum" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
         UPDATE
             VNCH
-        SET
-            MOD_DATE=#{modifiedAt},
-            MOD_USER_ID=#{modifiedBy},
-            <if test="delFlag != null"> DEL_FLAG=#{delFlag}, </if>
-            PROGRESS_CD=#{status},
-            SIGN_USER_ID=#{signUserId},
-            REJECT_RMK=#{rejectRemark}
+        <set>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            <if test="signUserId != null and signUserId != ''">
+                SIGN_USER_ID = #{signUserId},
+            </if>
+            <if test="delFlag != null and delFlag != ''">
+                DEL_FLAG = #{delFlag},
+            </if>
+            <if test="status != null and status != ''">
+                PROGRESS_CD = #{status},
+            </if>
+            <if test="rejectRemark != null and rejectRemark != ''">
+                REJECT_RMK = #{rejectRemark},
+            </if>
+        </set>
         WHERE
             ASK_NUM=#{askNum}
     </update>

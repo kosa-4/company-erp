@@ -42,7 +42,7 @@ export default function VendorInfoChangePage() {
     
     // 3.API 요청
     try{
-      const response = await fetch('/api/v1/vendors/users/change', {
+      const response = await fetch('/api/v1/vendor-portal/info/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData),
