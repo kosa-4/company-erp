@@ -16,52 +16,10 @@ import {
 } from '@/components/ui';
 import { Notice, ColumnDef } from '@/types';
 
-// Mock 데이터
-const mockNotices: Notice[] = [
-  {
-    noticeNo: 'NOTC-2024-0010',
-    title: '연말 결산 관련 구매 마감 안내',
-    content: '2024년 연말 결산을 위해 12월 27일까지 모든 구매요청을 완료해 주시기 바랍니다.',
-    startDate: '2024-12-20',
-    endDate: '2024-12-31',
-    createdAt: '2024-12-20',
-    createdBy: 'admin',
-    createdByName: '관리자',
-  },
-  {
-    noticeNo: 'NOTC-2024-0009',
-    title: '시스템 정기점검 안내 (12/30)',
-    content: '12월 30일 00:00 ~ 06:00 시스템 정기점검이 예정되어 있습니다.',
-    startDate: '2024-12-26',
-    endDate: '2024-12-30',
-    createdAt: '2024-12-26',
-    createdBy: 'admin',
-    createdByName: '관리자',
-  },
-  {
-    noticeNo: 'NOTC-2024-0008',
-    title: '신규 협력업체 등록 절차 변경',
-    content: '2025년 1월 1일부터 협력업체 등록 절차가 변경됩니다. 상세 내용을 확인해 주세요.',
-    startDate: '2024-12-24',
-    endDate: '2025-01-31',
-    createdAt: '2024-12-24',
-    createdBy: 'admin',
-    createdByName: '관리자',
-  },
-  {
-    noticeNo: 'NOTC-2024-0007',
-    title: '구매 시스템 신규 기능 안내',
-    content: '견적비교 기능이 추가되었습니다. 자세한 사용법은 매뉴얼을 참고해 주세요.',
-    startDate: '2024-12-15',
-    endDate: '2024-12-31',
-    createdAt: '2024-12-15',
-    createdBy: 'admin',
-    createdByName: '관리자',
-  },
-];
+
 
 export default function NoticePage() {
-  const [notices] = useState<Notice[]>(mockNotices);
+  const [notices] = useState<Notice[]>([]);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
     endDate: '',
