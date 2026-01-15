@@ -34,49 +34,10 @@ interface RfqResult {
   poCreated: boolean;
 }
 
-const mockData: RfqResult[] = [
-  {
-    rfqNo: 'RFQ-2024-0088',
-    rfqName: '사무용품 견적',
-    vendorCode: 'VND-2024-0002',
-    vendorName: '(주)오피스프로',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    spec: 'A4, 80g, 500매/박스',
-    unit: 'BOX',
-    unitPrice: 24000,
-    quantity: 50,
-    totalAmount: 1200000,
-    deliveryDate: '2025-01-08',
-    paymentTerms: '익월말',
-    submittedDate: '2024-12-27',
-    selectedDate: '2024-12-28',
-    buyer: '홍길동',
-    poCreated: true,
-  },
-  {
-    rfqNo: 'RFQ-2024-0085',
-    rfqName: '모니터 구매 견적',
-    vendorCode: 'VND-2024-0001',
-    vendorName: '(주)테크솔루션',
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    spec: '27" QHD, IPS, 75Hz',
-    unit: 'EA',
-    unitPrice: 340000,
-    quantity: 10,
-    totalAmount: 3400000,
-    deliveryDate: '2025-01-10',
-    paymentTerms: '당월말',
-    submittedDate: '2024-12-25',
-    selectedDate: '2024-12-26',
-    buyer: '홍길동',
-    poCreated: false,
-  },
-];
+
 
 export default function RfqResultPage() {
-  const [data] = useState<RfqResult[]>(mockData);
+  const [data] = useState<RfqResult[]>([]);
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
     rfqName: '',

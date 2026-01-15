@@ -33,59 +33,10 @@ interface RfqSelection {
   submittedDate: string;
 }
 
-const mockData: RfqSelection[] = [
-  {
-    rfqNo: 'RFQ-2024-0089',
-    rfqName: '개발팀 노트북 견적',
-    rfqType: '지명경쟁',
-    buyer: '홍길동',
-    createdAt: '2024-12-27',
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    estimatedAmount: 7500000,
-    quotedAmount: null,
-    vendorName: '(주)테크솔루션',
-    vendorCode: 'VND-2024-0001',
-    status: 'CLOSED',
-    sentDate: '2024-12-27',
-    submittedDate: '2024-12-28',
-  },
-  {
-    rfqNo: 'RFQ-2024-0089',
-    rfqName: '개발팀 노트북 견적',
-    rfqType: '지명경쟁',
-    buyer: '홍길동',
-    createdAt: '2024-12-27',
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    estimatedAmount: 7500000,
-    quotedAmount: null,
-    vendorName: '(주)오피스프로',
-    vendorCode: 'VND-2024-0002',
-    status: 'CLOSED',
-    sentDate: '2024-12-27',
-    submittedDate: '2024-12-28',
-  },
-  {
-    rfqNo: 'RFQ-2024-0088',
-    rfqName: '사무용품 견적',
-    rfqType: '수의계약',
-    buyer: '홍길동',
-    createdAt: '2024-12-26',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    estimatedAmount: 1250000,
-    quotedAmount: 1200000,
-    vendorName: '(주)오피스프로',
-    vendorCode: 'VND-2024-0002',
-    status: 'OPENED',
-    sentDate: '2024-12-26',
-    submittedDate: '2024-12-27',
-  },
-];
+
 
 export default function RfqSelectionPage() {
-  const [data] = useState<RfqSelection[]>(mockData);
+  const [data] = useState<RfqSelection[]>([]);
   const [selectedRows, setSelectedRows] = useState<RfqSelection[]>([]);
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',

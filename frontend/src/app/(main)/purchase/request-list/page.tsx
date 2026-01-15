@@ -34,75 +34,10 @@ interface PurchaseRequest {
   remark: string;
 }
 
-const mockData: PurchaseRequest[] = [
-  {
-    prNo: 'PR-2024-0156',
-    prName: '개발팀 노트북 구매',
-    status: 'PENDING',
-    purchaseType: '일반',
-    requester: '홍길동',
-    department: '개발팀',
-    requestDate: '2024-12-27',
-    itemCode: 'ITM-2024-0001',
-    itemName: '노트북 (15인치)',
-    quantity: 5,
-    unitPrice: 1500000,
-    amount: 7500000,
-    requestDeliveryDate: '2025-01-15',
-    remark: '신규 입사자용',
-  },
-  {
-    prNo: 'PR-2024-0155',
-    prName: '사무용품 구매',
-    status: 'APPROVED',
-    purchaseType: '일반',
-    requester: '김철수',
-    department: '총무팀',
-    requestDate: '2024-12-26',
-    itemCode: 'ITM-2024-0004',
-    itemName: 'A4 복사용지',
-    quantity: 50,
-    unitPrice: 25000,
-    amount: 1250000,
-    requestDeliveryDate: '2025-01-10',
-    remark: '',
-  },
-  {
-    prNo: 'PR-2024-0154',
-    prName: '긴급 모니터 교체',
-    status: 'TEMP',
-    purchaseType: '긴급',
-    requester: '박영희',
-    department: '영업팀',
-    requestDate: '2024-12-25',
-    itemCode: 'ITM-2024-0002',
-    itemName: '27인치 모니터',
-    quantity: 3,
-    unitPrice: 350000,
-    amount: 1050000,
-    requestDeliveryDate: '2025-01-05',
-    remark: '고장 교체',
-  },
-  {
-    prNo: 'PR-2024-0153',
-    prName: '키보드 마우스 세트',
-    status: 'REJECTED',
-    purchaseType: '일반',
-    requester: '이민수',
-    department: '기획팀',
-    requestDate: '2024-12-24',
-    itemCode: 'ITM-2024-0003',
-    itemName: '무선 키보드 마우스 세트',
-    quantity: 10,
-    unitPrice: 45000,
-    amount: 450000,
-    requestDeliveryDate: '2025-01-10',
-    remark: '',
-  },
-];
+
 
 export default function PurchaseRequestListPage() {
-  const [data] = useState<PurchaseRequest[]>(mockData);
+  const [data] = useState<PurchaseRequest[]>([]);
   const [selectedRows, setSelectedRows] = useState<PurchaseRequest[]>([]);
   const [searchParams, setSearchParams] = useState({
     prNo: '',
