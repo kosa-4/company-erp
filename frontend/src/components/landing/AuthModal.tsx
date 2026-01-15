@@ -78,7 +78,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
    * 로그인 처리
    * - 성공 시 AuthContext의 login 함수가 comType에 따라 자동 라우팅
    *   - B (구매사) → /home
-   *   - V (협력사) → /vendor/home
+   *   - V (협력사) → /vendor
    */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +146,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }).open();
   };
 
-  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none";
+  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent block p-2.5 transition-all outline-none";
   const labelClassName = "block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
 
   return (
@@ -169,7 +169,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         className={`relative w-full ${mode === 'signup' ? 'max-w-2xl' : 'max-w-md'} bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col`}
       >
         {/* Decorative Gradient */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400"></div>
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
         
         <button 
           onClick={onClose}
@@ -182,8 +182,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           <div className="text-center mb-6">
             {mode === 'signup' && (
               <div className="flex items-center justify-center mb-3">
-                <div className="p-3 bg-indigo-100 rounded-full">
-                  <Building2 className="w-6 h-6 text-indigo-600" />
+                <div className="p-3 bg-emerald-50 rounded-full">
+                  <Building2 className="w-6 h-6 text-emerald-600" />
                 </div>
               </div>
             )}
@@ -199,7 +199,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             {mode === 'signup' ? (
               <>
                 {/* 협력사 정보 섹션 */}
-                <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 space-y-4 border border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
                     협력사 정보
                   </h3>
@@ -311,7 +311,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                           <button 
                             type="button"
                             onClick={handleAddressSearch}
-                            className="px-4 py-2.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
+                            className="px-4 py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
                           >
                             <Search className="w-4 h-4" />
                             검색
@@ -476,8 +476,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
               whileTap={{ scale: isLoading ? 1 : 0.98 }}
               className={`w-full text-white font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg flex items-center justify-center gap-2 ${
                 isLoading 
-                  ? 'bg-indigo-400 cursor-not-allowed' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
+                  ? 'bg-emerald-400 cursor-not-allowed' 
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'
               }`}
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -489,14 +489,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             {mode === 'login' ? (
               <>
                 계정이 없으신가요?{' '}
-                <button onClick={() => onSwitchMode('signup')} className="text-indigo-600 hover:text-indigo-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('signup')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
                   회원가입
                 </button>
               </>
             ) : (
               <>
                 이미 계정이 있으신가요?{' '}
-                <button onClick={() => onSwitchMode('login')} className="text-indigo-600 hover:text-indigo-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('login')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
                   로그인
                 </button>
               </>
@@ -509,4 +509,3 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 };
 
 export default AuthModal;
-
