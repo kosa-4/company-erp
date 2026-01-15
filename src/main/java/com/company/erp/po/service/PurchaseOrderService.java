@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.po.dto.PurchaseOrderDTO;
 import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.*;
@@ -19,6 +20,7 @@ import com.company.erp.po.mapper.PurchaseOrderMapper;
 import com.company.erp.rfq.dto.RfqSelectedDTO;
 import com.company.erp.rfq.dto.RfqSelectedItemDTO;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -27,6 +29,7 @@ public class PurchaseOrderService {
 
     private final PurchaseOrderMapper purchaseOrderMapper;
     private final DocNumService docNumService;
+    private final HttpSession httpSession;
 
     // ========== 발주대기 조회 (RFQ 선정완료) ==========
     public List<RfqSelectedDTO> getRfqSelectedList(
@@ -139,11 +142,12 @@ public class PurchaseOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID 가져오기
+        // 현재 사용자 ID, 부서 가져오기
         String currentUserId = getCurrentUserId();
+        String currentDeptCd = getCurrentUserDeptCd();
 
-        // 헤더 등록 (regUserId 별도 전달)
-        purchaseOrderMapper.insertHeader(dto, currentUserId);
+        // 헤더 등록 (regUserId, ctrlDeptCd 별도 전달)
+        purchaseOrderMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
         // 품목 등록
         for (PurchaseOrderItemDTO item : dto.getItems()) {
@@ -153,12 +157,22 @@ public class PurchaseOrderService {
         return getDetail(poNo);
     }
 
-    // 현재 사용자 ID 가져오기 (인증 정보에서)
-    // TODO: 실제 인증 시스템 연동 시 구현 필요
-    // - 세션: HttpSession에서 사용자 정보 가져오기
+    // 세션에서 로그인 사용자 정보 가져오기
+    private SessionUser getSessionUser() {
+        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
+    }
+
+    // 현재 사용자 ID 가져오기 (세션에서)
     private String getCurrentUserId() {
-        // 실제 인증 정보에서 사용자 ID 가져오기
-        return "SYSTEM"; // 임시값 - 실제 구현 시 제거
+        SessionUser user = getSessionUser();
+        return user != null ? user.getUserId() : "SYSTEM";
+    }
+
+    // 현재 사용자 부서 코드 가져오기 (세션에서)
+    private String getCurrentUserDeptCd() {
+        SessionUser user = getSessionUser();
+        return user != null ? user.getDeptCd() : null;
     }
 
     // 수정

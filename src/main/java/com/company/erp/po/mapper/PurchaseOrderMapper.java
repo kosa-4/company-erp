@@ -20,9 +20,10 @@ public interface PurchaseOrderMapper {
 
         List<PurchaseOrderItemDTO> selectItems(String poNo);
 
-        // 등록 시 regUserId 별도 전달 (DTO에 포함되지 않음)
+        // 등록 시 regUserId, ctrlDeptCd 별도 전달 (DTO에 포함되지 않음)
         int insertHeader(@Param("dto") PurchaseOrderDTO dto,
-                        @Param("regUserId") String regUserId);
+                        @Param("regUserId") String regUserId,
+                        @Param("ctrlDeptCd") String ctrlDeptCd);
 
         // 등록 시 regUserId 별도 전달
         int insertItem(@Param("item") PurchaseOrderItemDTO item,

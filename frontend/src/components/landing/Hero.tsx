@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Terminal } from 'lucide-react';
 import DashboardUI from './DashboardUI';
 
 interface HeroProps {
@@ -11,8 +11,8 @@ interface HeroProps {
 
 /**
  * 랜딩 페이지 히어로 섹션
- * - "Purchase ERP" 버튼만 표시
- * - 클릭 시 세션 확인 후 라우팅 또는 로그인 모달 표시
+ * - 미니멀 디자인 적용
+ * - Emerald/Teal 컬러 포인트
  */
 const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,8 +21,8 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const mouseXSpring = useSpring(x);
-  const mouseYSpring = useSpring(y);
+  const mouseXSpring = useSpring(x, { stiffness: 50, damping: 20 });
+  const mouseYSpring = useSpring(y, { stiffness: 50, damping: 20 });
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const { clientX, clientY } = e;
@@ -30,8 +30,8 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
     const xPct = clientX / innerWidth - 0.5;
     const yPct = clientY / innerHeight - 0.5;
     
-    x.set(xPct * 20);
-    y.set(yPct * 20);
+    x.set(xPct * 10); // 움직임 최소화
+    y.set(yPct * 10);
   };
 
   const handleMouseLeave = () => {
@@ -39,81 +39,94 @@ const Hero: React.FC<HeroProps> = ({ onGetStarted }) => {
     y.set(0);
   };
 
-  const rotateX = useTransform(mouseYSpring, [-10, 10], ["5deg", "-5deg"]);
-  const rotateY = useTransform(mouseXSpring, [-10, 10], ["-5deg", "5deg"]);
+  const rotateX = useTransform(mouseYSpring, [-10, 10], ["2deg", "-2deg"]);
+  const rotateY = useTransform(mouseXSpring, [-10, 10], ["-2deg", "2deg"]);
 
   return (
     <section 
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="w-full flex flex-col items-center perspective-1000"
-      style={{ perspective: "1200px" }}
+      className="w-full flex flex-col items-center perspective-2000"
+      style={{ perspective: "2000px" }}
     >
-      <div className="text-center max-w-4xl mb-16 space-y-8">
+      <div className="text-center max-w-4xl mb-20 space-y-6">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-xs font-mono text-indigo-600"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-medium text-gray-600 mb-2"
         >
-          <Sparkles className="w-3 h-3" />
+          <Terminal className="w-3 h-3" />
           <span>2025 Recruitment Season</span>
         </motion.div>
 
         <motion.h1 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 leading-[1.5] pb-2 drop-shadow-md"
+          className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 leading-[1.2]"
         >
           KOSA SW기업 채용 연계형<br />
-          <span className="text-indigo-600">JAVA 개발자 양성과정</span>
+          <span className="text-gray-900">JAVA 개발자 양성과정</span>
         </motion.h1>
 
         <motion.p 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium"
+          className="text-lg text-gray-500 max-w-xl mx-auto font-medium"
         >
-          Team 4 / Final Project
+          Enterprise Resource Planning System<br/>
+          Team 4 Final Project
         </motion.p>
 
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex items-center justify-center"
+          className="flex items-center justify-center pt-2"
         >
-          {/* Purchase ERP 버튼만 표시 */}
           <motion.button 
             onClick={onGetStarted}
-            whileHover={{ scale: 1.05, y: -2 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="group flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white px-8 py-3.5 rounded-full font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40"
+            className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-3.5 rounded-lg font-bold text-lg transition-all shadow-sm hover:shadow-md"
           >
-            Purchase ERP <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <span className="font-black tracking-tight text-xl italic">FABRIO</span>
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </motion.button>
         </motion.div>
       </div>
 
-      {/* Dashboard Mockup */}
+      {/* Dashboard Mockup - Minimal Perspective */}
       <motion.div
         style={{
           rotateX,
           rotateY,
           transformStyle: "preserve-3d",
         }}
-        initial={{ opacity: 0, scale: 0.9, y: 50 }}
+        initial={{ opacity: 0, scale: 0.95, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut", delay: 0.6 }}
-        className="relative z-20 w-full max-w-5xl"
+        transition={{ duration: 1, ease: "easeOut", delay: 0.6 }}
+        className="relative z-20 w-full max-w-5xl px-4"
       >
-        {/* Glow effect behind dashboard */}
-        <div className="absolute inset-0 bg-indigo-500/20 blur-[80px] -z-10 rounded-full"></div>
+        <div className="relative rounded-xl bg-white shadow-2xl border border-gray-200/60 overflow-hidden">
+            {/* Window Controls */}
+            <div className="h-8 bg-gray-50 border-b border-gray-100 flex items-center px-4 gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+            </div>
+            
+            {/* Dashboard Content */}
+            <div className="bg-gray-50/50 p-1">
+                <DashboardUI />
+            </div>
+        </div>
         
-        <DashboardUI />
+        {/* Subtle Shadow Reflection */}
+        <div className="absolute -inset-4 bg-gray-200/30 blur-2xl -z-10 rounded-[2rem] transform scale-95 translate-y-4"></div>
       </motion.div>
     </section>
   );
