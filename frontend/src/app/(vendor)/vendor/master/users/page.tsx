@@ -4,44 +4,12 @@ import React, { useState } from 'react';
 import { Users, Plus, Edit2, Trash2, Search, Mail, Phone, X, Save } from 'lucide-react';
 import { Card, Button, Input, Badge } from '@/components/ui';
 
-// 임시 Mock 데이터
-const mockUsers = [
-  {
-    id: '1',
-    userName: '홍길동',
-    userId: 'vendor01',
-    email: 'hong@partner.com',
-    phone: '010-1234-5678',
-    department: '영업팀',
-    role: '담당자',
-    isMain: true,
-  },
-  {
-    id: '2',
-    userName: '김철수',
-    userId: 'vendor02',
-    email: 'kim@partner.com',
-    phone: '010-2345-6789',
-    department: '관리팀',
-    role: '담당자',
-    isMain: false,
-  },
-  {
-    id: '3',
-    userName: '이영희',
-    userId: 'vendor03',
-    email: 'lee@partner.com',
-    phone: '010-3456-7890',
-    department: '영업팀',
-    role: '담당자',
-    isMain: false,
-  },
-];
+
 
 export default function VendorUsersPage() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<typeof mockUsers[0] | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
   const [searchText, setSearchText] = useState('');
   
   const [formData, setFormData] = useState({
@@ -52,7 +20,7 @@ export default function VendorUsersPage() {
     department: '',
   });
 
-  const handleOpenModal = (user?: typeof mockUsers[0]) => {
+  const handleOpenModal = (user?: any) => {
     if (user) {
       setEditingUser(user);
       setFormData({
