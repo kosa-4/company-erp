@@ -21,5 +21,7 @@ public class SessionUser implements Serializable {
     private final String userName;   // 사용자명
     private final String deptCd;     // 부서코드
     private final String deptName;   // 부서명
+
+    private final String role;       // ADMIN / BUYER / USER / VENDOR
 }
 
