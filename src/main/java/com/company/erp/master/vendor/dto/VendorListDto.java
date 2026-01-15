@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Data
 public class VendorListDto {
+    private String askNum;
     private String vendorCode;
     private String vendorName;
     private String businessType;
