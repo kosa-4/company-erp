@@ -41,15 +41,15 @@ export interface PrListResponse {
     progressCd: string;    // 상태코드
     prNum: string;         // PR번호
     pcType: string;       // 구매유형
-    reqUserId: string;    // 요청자ID
-    deptNm: string;       // 부서명
-    regDate: string;      // 요청일 (YYYY-MM-DD)
+    requester: string;    // 요청자ID
+    deptName: string;       // 부서명
+    regDate: string | Date;      // 요청일 (YYYY-MM-DD 또는 Date 객체)
     itemCd: string;       // 품목코드
     itemDesc: string;     // 품목명
     prQt: number;         // 수량
     unitPrc: number;      // 단가
     prAmt: number;        // 금액
-    delyDate: string;     // 희망납기일 (YYYY-MM-DD)
+    delyDate: string | Date;     // 희망납기일 (YYYY-MM-DD 또는 Date 객체)
 }
 
 /**
@@ -62,14 +62,16 @@ export interface PrInitData {
 }
 
 /**
- * 구매요청 목록 조회 파라미터
+ * 구매요청현황 목록 검색 조회 파라미터
  */
 export interface PrListParams {
     prNum?: string;       // PR번호
     prSubject?: string;   // 구매요청명
     requester?: string;   // 요청자
     deptName?: string;    // 부서명
-    progressCd?: string;  // 진행상태코드
+    progressCd?: string;  // 진행상태코드 (한국어: '임시저장', '승인대기', '승인', '반려' 등)
+    startDate?: string;   // 요청일자 시작 (YYYY-MM-DD)
+    endDate?: string;     // 요청일자 종료 (YYYY-MM-DD)
 }
 
 export const prApi = {
@@ -110,8 +112,13 @@ export const prApi = {
         if (params?.requester) mappedParams.requester = params.requester;
         if (params?.deptName) mappedParams.deptName = params.deptName;
         if (params?.progressCd) mappedParams.progressCd = params.progressCd;
+        if (params?.startDate) mappedParams.startDate = params.startDate;
+        if (params?.endDate) mappedParams.endDate = params.endDate;
+
         return api.get<PrListResponse[]>('/pr/list', mappedParams);
     },
+
+
 
     /**
      * 구매요청 삭제

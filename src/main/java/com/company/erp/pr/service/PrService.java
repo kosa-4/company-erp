@@ -19,11 +19,13 @@ public class PrService {
     private final DocNumService docNumService;
 
     //초기 구매요청 화면 조회
-    public Map<String,Object> initPurchaseData(){
+    public Map<String,Object> initPurchaseData(String userId, String deptName){
         Map<String,Object> initData = new HashMap<>();
 
-        initData.put("reqUserNm","홍길동");//세션 userid 이용해 사용자 테이블에서 갖고 올 예정
-        initData.put("deptNm","영업팀");//세션 userid 이용해 사용자 테이블에서 부서코드 -> 부서명 갖고 올 예정
+        String reqUserName = prMapper.selectUserName(userId);
+
+        initData.put("reqUserNm",reqUserName);//세션 userid 이용해 사용자 테이블에서 갖고 올 예정
+        initData.put("deptNm",deptName);//세션 userid 이용해 사용자 테이블에서 부서코드 -> 부서명 갖고 올 예정
         initData.put("prAmt", BigDecimal.ZERO);
 
         return initData;
@@ -32,7 +34,7 @@ public class PrService {
 
     //구매요청 등록
     @Transactional()
-    public void insertPr(PrRequest prRequest){
+    public void insertPr(String userId, String deptCd, PrRequest prRequest){
         String prNum = docNumService.generateDocNumStr(DocKey.PR);//채번
 
         PrRequest.PrHd prHd = prRequest.getPrHd();
@@ -45,7 +47,7 @@ public class PrService {
         }
 
 
-        List<PrItemDTO> prItemDTOS = prMapper.selectPrItemInfo(prItemCdList);
+        List<PrItemDTO> prItemDTOS = prMapper.selectPrItemInfo(prItemCdList);//폼목 정보 가져오기
 
 
         Map<String, PrItemDTO> itemMap = new HashMap<>();
@@ -56,7 +58,6 @@ public class PrService {
         BigDecimal totalAmt = BigDecimal.ZERO;
         List<PrDtDTO> prDtDTOList = new ArrayList<>();
 
-        String loginUserId = "master";
 
         //DT 생성 및 구매요청 총금액 계산
         for (PrRequest.PrDt reqDt : prDtList) {
@@ -74,11 +75,13 @@ public class PrService {
                     .prNum(prNum)
                     .itemCd(reqDt.getItemCode())
                     .itemDesc(item.getItemNm())
+                    .itemSpec(item.getItemSpec())
+                    .unitCd(item.getUnitCd())
                     .prQt(qt)
                     .unitPrc(unitPrc)
                     .prAmt(dtAmt)
                     .delyDate(reqDt.getDelyDate())
-                    .regUserId(loginUserId)
+                    .regUserId(userId)
                     .build();
 
             prDtDTOList.add(prDtDTO);
@@ -87,12 +90,10 @@ public class PrService {
         //prHd에 들어갈 데이터 값 매핑
         PrHdDTO prHdDTO = PrHdDTO.builder()
                 .prNum(prNum)
-                .regUserId(loginUserId)
+                .regUserId(userId)
                 .prSubject(prHd.getPrSubject())
-                .deptCd("영업팀")
+                .deptCd(deptCd)
                 .prAmt(totalAmt)
-                .reqUserId(loginUserId)
-                .progressCd("임시저장")
                 .rmk(prHd.getRmk())
                 .pcType(prHd.getPcType())
                 .build();
@@ -121,15 +122,22 @@ public class PrService {
     }
 
 
+
+    //구매요청현황 목록 조회(필터 처리 필요)
+    public List<PrListResponse> selectPrList(String prNum, String prSubject,String requester,
+                                             String deptNm, String progressCd, String startDate, String endDate){
+        //페이징 처리 필요
+        return prMapper.selectPrList(prNum,prSubject,requester,deptNm,progressCd,startDate,endDate);
+    }
+
     //구매요청 삭제
     @Transactional
-    public void deletePrRequest(String prNum){
+    public void deletePrRequest(String prNum, String itemCd){
         PrHdDTO prHd = prMapper.selectPrNum(prNum);
 
         if(prHd == null){
             throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
         }
-
         if("Y".equals(prHd.getDelFlag())){
             throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
         }
@@ -140,14 +148,6 @@ public class PrService {
     }
 
     //구매요청 수정
-
-
-    //구매요청현황 목록 조회(필터 처리 필요)
-    public List<PrListResponse> selectPrList(String prNum, String prSubject,String requester,
-                                             String deptNm, String progressCd){
-        //페이징 처리 필요
-        return prMapper.selectPrList(prNum,prSubject,requester,deptNm,progressCd);
-    }
 
 
 

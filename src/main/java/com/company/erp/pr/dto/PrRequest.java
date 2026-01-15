@@ -17,7 +17,7 @@ public class PrRequest {
     public static class PrHd{
         private String prSubject;//구매요청명
         private String pcType;//구매유형(codd에서 가져오기)
-        private String reqUser;//요청자
+        private String regUser;//등록자
         private String deptName;//부서명
         private String rmk;//비고
     }
