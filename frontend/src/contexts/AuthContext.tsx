@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // comType에 따라 라우팅 -> role 기반으로 변경
     if (userData.role === 'VENDOR') {
-      router.push('/vendor/home');
+      router.push('/vendor');
     } else {
       router.push('/home');
     }
