@@ -40,7 +40,7 @@ interface VendorFormData {
   industry: string;
   userName: string;
   userId: string;
-  email: string;
+  userEmail: string;
   password: string;
   passwordConfirm: string;
 }
@@ -69,16 +69,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     industry: '',
     userName: '',
     userId: '',
-    email: '',
+    userEmail: '',
     password: '',
     passwordConfirm: '',
   });
 
   /**
    * 로그인 처리
-   * - 성공 시 AuthContext의 login 함수가 comType에 따라 자동 라우팅
-   *   - B (구매사) → /home
-   *   - V (협력사) → /vendor/home
+   * - 성공 시 AuthContext의 login 함수가 role에 따라 자동 라우팅
+   *   - VENDOR 외 (구매사) → /home
+   *   - VENDOR (협력사) → /vendor/home
    */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +96,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }
   };
 
+  const handleSignup = async () => {
+    try{
+      const response = await fetch('/api/v1/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      console.log('Signup response:', formData);
+      if (!response.ok) {
+        const errorMsg = await response.text();
+        throw new Error(errorMsg);
+      }
+
+      alert('회원가입이 완료되었습니다.');
+      onSwitchMode('login');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+    }
+  };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -125,7 +146,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }).open();
   };
 
-  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent block p-2.5 transition-all outline-none";
+  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent block p-2.5 transition-all outline-none";
   const labelClassName = "block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
 
   return (
@@ -148,7 +169,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         className={`relative w-full ${mode === 'signup' ? 'max-w-2xl' : 'max-w-md'} bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col`}
       >
         {/* Decorative Gradient */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-orange-400"></div>
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
         
         <button 
           onClick={onClose}
@@ -161,8 +182,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           <div className="text-center mb-6">
             {mode === 'signup' && (
               <div className="flex items-center justify-center mb-3">
-                <div className="p-3 bg-indigo-100 rounded-full">
-                  <Building2 className="w-6 h-6 text-indigo-600" />
+                <div className="p-3 bg-emerald-50 rounded-full">
+                  <Building2 className="w-6 h-6 text-emerald-600" />
                 </div>
               </div>
             )}
@@ -178,7 +199,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             {mode === 'signup' ? (
               <>
                 {/* 협력사 정보 섹션 */}
-                <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 space-y-4 border border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
                     협력사 정보
                   </h3>
@@ -290,7 +311,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                           <button 
                             type="button"
                             onClick={handleAddressSearch}
-                            className="px-4 py-2.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
+                            className="px-4 py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
                           >
                             <Search className="w-4 h-4" />
                             검색
@@ -374,9 +395,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     <div className="md:col-span-2">
                       <label className={labelClassName}>이메일 *</label>
                       <input 
-                        type="email"
-                        name="email"
-                        value={formData.email}
+                        type="userEmail"
+                        name="userEmail"
+                        value={formData.userEmail}
                         onChange={handleInputChange}
                         className={inputClassName}
                         placeholder="example@company.com"
@@ -449,14 +470,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
             <motion.button 
               type={mode === 'login' ? 'submit' : 'button'}
-              onClick={mode === 'login' ? handleLogin : undefined}
+              onClick={mode === 'login' ? handleLogin : handleSignup}
               disabled={isLoading}
               whileHover={{ scale: isLoading ? 1 : 1.02 }}
               whileTap={{ scale: isLoading ? 1 : 0.98 }}
               className={`w-full text-white font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg flex items-center justify-center gap-2 ${
                 isLoading 
-                  ? 'bg-indigo-400 cursor-not-allowed' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
+                  ? 'bg-emerald-400 cursor-not-allowed' 
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'
               }`}
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -468,14 +489,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             {mode === 'login' ? (
               <>
                 계정이 없으신가요?{' '}
-                <button onClick={() => onSwitchMode('signup')} className="text-indigo-600 hover:text-indigo-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('signup')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
                   회원가입
                 </button>
               </>
             ) : (
               <>
                 이미 계정이 있으신가요?{' '}
-                <button onClick={() => onSwitchMode('login')} className="text-indigo-600 hover:text-indigo-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('login')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
                   로그인
                 </button>
               </>
@@ -488,4 +509,3 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 };
 
 export default AuthModal;
-

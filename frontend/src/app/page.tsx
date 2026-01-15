@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * "Purchase ERP" 버튼 클릭 시:
  * - 세션 있으면 → comType에 따라 해당 페이지로 이동
  *   - B (구매사) → /home
- *   - V (협력사) → /vendor/home
+ *   - V (협력사) → /vendor
  * - 세션 없으면 → 로그인 모달 표시
  */
 export default function LandingPage() {
@@ -34,7 +34,7 @@ export default function LandingPage() {
       if (user.comType === 'B') {
         router.push('/home');
       } else {
-        router.push('/vendor/home');
+        router.push('/vendor');
       }
     } else {
       // 세션 없으면 → 로그인 모달 표시
@@ -57,13 +57,12 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full bg-[#fdfbf7] text-slate-900 selection:bg-indigo-500/30 font-sans">
-      {/* Background Ambience (Light Theme) */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-orange-200/40 rounded-full blur-[100px] animate-blob"></div>
-        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-indigo-200/40 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-rose-100/60 rounded-full blur-[100px] animate-blob animation-delay-4000"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 brightness-100 contrast-150 mix-blend-multiply"></div>
+    <div className="relative min-h-screen w-full bg-white text-slate-900 selection:bg-emerald-500/30 font-sans">
+      {/* Minimalist Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-white">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-50"></div>
+        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-50"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-gray-50/50 via-white to-white"></div>
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">

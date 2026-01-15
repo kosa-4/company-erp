@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Data
 public class VendorRegisterDto {
+    private String askNum;
     private String vendorCode;
     private String vendorName;
     private String vendorEngName;
@@ -18,20 +19,24 @@ public class VendorRegisterDto {
     private String tel;
     private String fax;
     private String email;
-//    private String businessCategory; // 업태
-    private String businessItem; // 업종
+    private String industry; // 업종
     private String useYn;
     private String remark;
     private String createdBy;
+    private String modifiedBy;
     private String status;
 
     private int attFileNum;
 
-    private LocalDate foundationAt;
+    private LocalDate createdAt;
+    private LocalDate modifiedAt;
+    private LocalDate foundationDate;
+    private LocalDate signDate;
 }
 
+// VNGL
 /*
-'   VENDOR_CD	협력사코드	VARCHAR2(50)	PRIMARY KEY
+    VENDOR_CD	협력사코드	VARCHAR2(50)	PRIMARY KEY
     REG_DATE	등록일자	DATE	NOT NULL
     REG_USER_ID	등록자ID	VARCHAR2(50)	NOT NULL
     MOD_DATE	수정일자	DATE
@@ -50,10 +55,10 @@ public class VendorRegisterDto {
     FAX_NO	팩스번호	VARCHAR2(20)
     EMAIL	이메일	VARCHAR2(100)
     FOUNDATION_DATE	설립일자	DATE
-    x BUSINESS_TYPE	업태	VARCHAR2(100)
     INDUSTRY_TYPE	업종	VARCHAR2(100)
     ATT_FILE_NUM	첨부파일	NUMBER
     RMK	비고	VARCHAR2(1000)
     PROGRESS_CD	상태	VARCHAR(2)		A, R
     SIGN_DATE	승인/반려일자	DATE
  */
+

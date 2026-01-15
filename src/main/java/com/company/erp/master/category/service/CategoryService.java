@@ -73,4 +73,19 @@ public class CategoryService {
         categoryMapper.insertCategory(filteredList);
     }
 
+    /* 삭제 */
+    @Transactional
+    public void deleteCategory(String itemCls){
+        // 1) 하위 카테고리 존재 여부 확인
+        Boolean existsChild = categoryMapper.existsChildCate(itemCls);
+        
+        // 2) 하위 카테고리 존재 시 삭제 불가
+        if(existsChild){
+            throw new IllegalStateException("하위 카테고리가 존재하여 삭제가 불가능합니다.");
+        }
+        
+        // 3) 카테고리 삭제
+        categoryMapper.deleteCategory(itemCls);
+    }
+
 }

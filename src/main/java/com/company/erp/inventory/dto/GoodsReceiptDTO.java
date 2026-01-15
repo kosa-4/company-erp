@@ -20,6 +20,7 @@ public class GoodsReceiptDTO {
     // === 조회용 JOIN 필드 (입고현황 목록 등) ===
     private String vendorName; // 협력사명
     private String ctrlUserName; // 대표 담당자명 (첫 DT 기준 또는 등록자)
+    private String ctrlDeptCd; // 담당자 부서 - DB: CTRL_DEPT_CD
 
     // === 상세 ===
     private List<GoodsReceiptItemDTO> items;

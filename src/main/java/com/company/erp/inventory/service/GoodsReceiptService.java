@@ -13,14 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.inventory.constants.GoodsReceiptStatus;
 import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
 import com.company.erp.inventory.mapper.GoodsReceiptMapper;
 import com.company.erp.po.dto.PurchaseOrderDTO;
+import com.company.erp.po.dto.PurchaseOrderItemDTO;
 import com.company.erp.po.enums.PoStatusCode;
 import com.company.erp.po.mapper.PurchaseOrderMapper;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -30,8 +33,9 @@ public class GoodsReceiptService {
     private final GoodsReceiptMapper goodsReceiptMapper;
     private final DocNumService docNumService;
     private final PurchaseOrderMapper purchaseOrderMapper;
+    private final HttpSession httpSession;
 
-    // 입고대상조회: 입고 가능한 PO 목록
+    // 입고대상조회: 입고 가능한 PO 목록 (품목 정보 포함)
     public List<PurchaseOrderDTO> getPendingPOList(
             String poNo, String poName, String vendorName, String startDate, String endDate) {
         Map<String, Object> params = new HashMap<>();
@@ -41,7 +45,17 @@ public class GoodsReceiptService {
         params.put("startDate", startDate);
         params.put("endDate", endDate);
 
-        return goodsReceiptMapper.selectPendingPOList(params);
+        List<PurchaseOrderDTO> list = goodsReceiptMapper.selectPendingPOList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
+        return list;
     }
 
     // 입고현황 목록 조회
@@ -73,6 +87,24 @@ public class GoodsReceiptService {
     // 입고 등록
     @Transactional
     public GoodsReceiptDTO create(GoodsReceiptDTO dto) {
+        // ========== Validation ==========
+        // PO번호 필수
+        if (dto.getPoNo() == null || dto.getPoNo().isBlank()) {
+            throw new IllegalArgumentException("발주 정보는 필수입니다.");
+        }
+        // 품목 필수
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("입고 품목이 없습니다.");
+        }
+        // 품목별 Validation
+        for (int i = 0; i < dto.getItems().size(); i++) {
+            GoodsReceiptItemDTO item = dto.getItems().get(i);
+            if (item.getGrQuantity() == null || item.getGrQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException((i + 1) + "번째 품목의 입고수량이 유효하지 않습니다.");
+            }
+        }
+        // ========== End Validation ==========
+
         // 입고번호 생성
         String grNo = docNumService.generateDocNumStr(DocKey.GR);
         dto.setGrNo(grNo);
@@ -82,25 +114,21 @@ public class GoodsReceiptService {
             dto.setGrDate(LocalDate.now());
         }
 
-        // items null 체크
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new IllegalArgumentException("입고 품목이 없습니다.");
-        }
-
         // 총액 계산
         BigDecimal totalAmount = dto.getItems().stream()
                 .map(GoodsReceiptItemDTO::getGrAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID 가져오기
+        // 현재 사용자 ID, 부서 가져오기
         String currentUserId = getCurrentUserId();
+        String currentDeptCd = getCurrentUserDeptCd();
 
         // 초기 상태 설정 (부분입고로 시작, 이후 계산하여 업데이트)
         dto.setStatus(GoodsReceiptStatus.PARTIAL);
 
         // 헤더 등록
-        goodsReceiptMapper.insertHeader(dto, currentUserId);
+        goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
         // 품목 등록
         for (GoodsReceiptItemDTO item : dto.getItems()) {
@@ -232,10 +260,21 @@ public class GoodsReceiptService {
         }
     }
 
-    // 현재 사용자 ID 가져오기 (인증 정보에서)
-    // TODO: 실제 인증 시스템 연동 시 구현 필요
+    // 세션에서 로그인 사용자 정보 가져오기
+    private SessionUser getSessionUser() {
+        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
+    }
+
+    // 현재 사용자 ID 가져오기 (세션에서)
     private String getCurrentUserId() {
-        // 실제 인증 정보에서 사용자 ID 가져오기
-        return "SYSTEM"; // 임시값 - 실제 구현 시 제거
+        SessionUser user = getSessionUser();
+        return user != null ? user.getUserId() : "SYSTEM";
+    }
+
+    // 현재 사용자 부서 코드 가져오기 (세션에서)
+    private String getCurrentUserDeptCd() {
+        SessionUser user = getSessionUser();
+        return user != null ? user.getDeptCd() : null;
     }
 }
