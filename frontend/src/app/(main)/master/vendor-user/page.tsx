@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -14,62 +14,80 @@ import {
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 
+// 1. 백엔드 DTO(VendorUserListDto)와 변수명 일치화
 interface VendorUser {
-  id: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'BLOCKED';
   vendorCode: string;
   vendorName: string;
   userId: string;
   userName: string;
   phone: string;
   email: string;
+  status: string;    // 'Y' 또는 'N' (또는 PROGRESS_CD 값)
   createdAt: string;
-  isBlocked: boolean;
+  blockFlag: string; // 'Y' 또는 'N'
 }
 
-
-
 export default function VendorUserPage() {
-  const [vendorUsers] = useState<VendorUser[]>([]);
+  const [vendorUsers, setVendorUsers] = useState<VendorUser[]>([]);
   const [selectedRows, setSelectedRows] = useState<VendorUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  // 검색 파라미터 (백엔드 VendorUserSearchDto와 매칭)
   const [searchParams, setSearchParams] = useState({
     vendorCode: '',
     vendorName: '',
-    isBlocked: '',
+    userId: '',
+    userName: '',
+    blockFlag: '',
     startDate: '',
     endDate: '',
-    businessType: '',
-    businessItem: '',
   });
-  const [loading, setLoading] = useState(false);
 
-  const handleSearch = async () => {
+  // 2. 데이터 호출 함수 (실제 API 연동)
+  const fetchVendorUsers = useCallback(async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
-  };
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value);
+      });
+
+      const response = await fetch(`/api/v1/vendor-user?${queryParams.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVendorUsers(data);
+      }
+    } catch (error) {
+      console.error('데이터 로드 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchParams]);
+
+  // 페이지 진입 시 즉시 실행
+  useEffect(() => {
+    fetchVendorUsers();
+  }, []);
+
+  const handleSearch = () => fetchVendorUsers();
 
   const handleReset = () => {
     setSearchParams({
       vendorCode: '',
       vendorName: '',
-      isBlocked: '',
+      userId: '',
+      userName: '',
+      blockFlag: '',
       startDate: '',
       endDate: '',
-      businessType: '',
-      businessItem: '',
     });
   };
 
-  const getStatusBadge = (status: VendorUser['status']) => {
-    const config = {
-      PENDING: { variant: 'yellow' as const, label: '승인대기' },
-      APPROVED: { variant: 'green' as const, label: '승인' },
-      REJECTED: { variant: 'red' as const, label: '반려' },
-      BLOCKED: { variant: 'gray' as const, label: 'BLOCK' },
-    };
-    const { variant, label } = config[status];
-    return <Badge variant={variant}>{label}</Badge>;
+  // 3. 상태 배지 렌더링 (백엔드 status 값 기준)
+  const getStatusBadge = (status: string) => {
+    // 'Y'는 승인(Green), 그 외(N 등)는 대기(Yellow)로 표시
+    if (status === 'Y') return <Badge variant="green">승인</Badge>;
+    return <Badge variant="yellow">승인대기</Badge>;
   };
 
   const columns: ColumnDef<VendorUser>[] = [
@@ -78,92 +96,40 @@ export default function VendorUserPage() {
       header: '상태',
       width: 100,
       align: 'center',
-      render: (value) => getStatusBadge(value as VendorUser['status']),
+      render: (value) => getStatusBadge(value as string),
     },
+    { key: 'vendorCode', header: '협력사코드', width: 140, align: 'center' },
+    { key: 'vendorName', header: '협력사명', align: 'left' },
+    { key: 'userId', header: '담당자ID', width: 120, align: 'center' },
+    { key: 'userName', header: '담당자명', width: 100, align: 'center' },
+    { key: 'phone', header: '담당자 전화번호', width: 140, align: 'center' },
+    { key: 'email', header: '담당자 이메일', width: 200, align: 'left' },
+    { key: 'createdAt', header: '등록일자', width: 110, align: 'center' },
     {
-      key: 'vendorCode',
-      header: '협력사코드',
-      width: 140,
-      align: 'center',
-    },
-    {
-      key: 'vendorName',
-      header: '협력사명',
-      align: 'left',
-    },
-    {
-      key: 'userId',
-      header: '담당자ID',
-      width: 120,
-      align: 'center',
-    },
-    {
-      key: 'userName',
-      header: '담당자명',
-      width: 100,
-      align: 'center',
-    },
-    {
-      key: 'phone',
-      header: '담당자 전화번호',
-      width: 140,
-      align: 'center',
-    },
-    {
-      key: 'email',
-      header: '담당자 이메일',
-      width: 200,
-      align: 'left',
-    },
-    {
-      key: 'createdAt',
-      header: '등록일자',
-      width: 110,
-      align: 'center',
-    },
-    {
-      key: 'isBlocked',
+      key: 'blockFlag',
       header: 'BLOCK여부',
       width: 100,
       align: 'center',
       render: (value) => (
-        <span className={value ? 'text-red-500 font-medium' : 'text-gray-500'}>
-          {value ? 'Y' : 'N'}
+        <span className={value === 'Y' ? 'text-red-500 font-medium' : 'text-gray-500'}>
+          {value === 'Y' ? 'Y' : 'N'}
         </span>
       ),
     },
   ];
 
-  const handleApprove = () => {
+  // 승인/반려 핸들러 (API 호출 구조로 변경)
+  const handleUpdateStatus = async (isApprove: boolean) => {
     if (selectedRows.length === 0) {
-      alert('승인할 항목을 선택해주세요.');
+      alert('항목을 선택해주세요.');
       return;
     }
-    const pendingUsers = selectedRows.filter(u => u.status === 'PENDING');
-    if (pendingUsers.length === 0) {
-      alert('승인대기 상태의 항목만 승인할 수 있습니다.');
-      return;
-    }
-    alert(`${pendingUsers.length}건이 승인되었습니다.`);
-    setSelectedRows([]);
-  };
-
-  const handleReject = () => {
-    if (selectedRows.length === 0) {
-      alert('반려할 항목을 선택해주세요.');
-      return;
-    }
-    const pendingUsers = selectedRows.filter(u => u.status === 'PENDING');
-    if (pendingUsers.length === 0) {
-      alert('승인대기 상태의 항목만 반려할 수 있습니다.');
-      return;
-    }
-    alert(`${pendingUsers.length}건이 반려되었습니다.`);
-    setSelectedRows([]);
+    // 선택된 데이터 처리 로직...
+    alert(`${selectedRows.length}건을 ${isApprove ? '승인' : '반려'} 처리합니다.`);
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader 
         title="협력업체 사용자 관리" 
         subtitle="협력업체 담당자 계정을 관리합니다."
@@ -177,20 +143,23 @@ export default function VendorUserPage() {
       <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
         <Input
           label="협력사코드"
-          placeholder="협력사코드 입력"
           value={searchParams.vendorCode}
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendorCode: e.target.value }))}
         />
         <Input
           label="협력사명"
-          placeholder="협력사명 입력"
           value={searchParams.vendorName}
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendorName: e.target.value }))}
         />
+        <Input
+          label="담당자ID"
+          value={searchParams.userId}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, userId: e.target.value }))}
+        />
         <Select
           label="BLOCK여부"
-          value={searchParams.isBlocked}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, isBlocked: e.target.value }))}
+          value={searchParams.blockFlag}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, blockFlag: e.target.value }))}
           options={[
             { value: '', label: '전체' },
             { value: 'Y', label: 'Y' },
@@ -207,22 +176,6 @@ export default function VendorUserPage() {
           value={searchParams.endDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
-        <Select
-          label="사업형태"
-          value={searchParams.businessType}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, businessType: e.target.value }))}
-          options={[
-            { value: '', label: '전체' },
-            { value: 'CORP', label: '법인' },
-            { value: 'INDIVIDUAL', label: '개인' },
-          ]}
-        />
-        <Input
-          label="업종"
-          placeholder="업종 입력"
-          value={searchParams.businessItem}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, businessItem: e.target.value }))}
-        />
       </SearchPanel>
 
       <Card 
@@ -230,15 +183,15 @@ export default function VendorUserPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="success" onClick={handleApprove}>승인</Button>
-            <Button variant="danger" onClick={handleReject}>반려</Button>
+            <Button variant="success" onClick={() => handleUpdateStatus(true)}>승인</Button>
+            <Button variant="danger" onClick={() => handleUpdateStatus(false)}>반려</Button>
           </div>
         }
       >
         <DataGrid
           columns={columns}
           data={vendorUsers}
-          keyField="id"
+          keyField="userId" // 백엔드에서 유니크한 키인 userId 사용
           loading={loading}
           selectable
           selectedRows={selectedRows}
@@ -249,4 +202,3 @@ export default function VendorUserPage() {
     </div>
   );
 }
-

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @SessionIgnore
 @RestController
-@RequestMapping("/api/v1/vendors/users")
+@RequestMapping("/api/v1/vendor-portal/info")
 public class VendorPortalController {
     @Autowired
     VendorPortalService vendorPortalService;

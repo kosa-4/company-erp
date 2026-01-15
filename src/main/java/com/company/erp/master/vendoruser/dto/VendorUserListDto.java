@@ -5,23 +5,17 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class VendorUserRegisterDto {
-    private String askUserNum;
+public class VendorUserListDto {
     private String vendorCode;
-    private LocalDate createdAt;
-    private String createdBy;
-    private LocalDate modifiedAt;
-    private String modifiedBy;
+    private String vendorName;
     private String userId;
     private String userName;
-    private String status;
     private String phone;
-    private String fax;
-    private String userEmail;
-    private String password;
-    private String comType;
+    private String email;
+    private String status;
+    private LocalDate createdAt;
+    private String blockFlag;
 }
-
 /*
     ASK_USER_NUM	요청번호	VARCHAR2(50)	PRIMARY KEY
     VENDOR_CD	협력업체코드	VARCHAR2(50)	NOT NULL
@@ -33,14 +27,14 @@ public class VendorUserRegisterDto {
     USER_ID	사용자ID	VARCHAR2(50)	NOT NULL
     USER_NM	사용자명	VARCHAR2(100)	NOT NULL
     PROGRESS_CD	상태	VARCHAR2(2)	NOT NULL
-    N(신규),
-    C(요청),
-    A(승인),
-    R(반려)
+        N(신규),
+        C(요청),
+        A(승인),
+        R(반려)
     REQ_TYPE	요청유형	VARCHAR2(2)	NOT NULL
-    I (추가),
-    U (수정),
-    D (삭제)
+        I (추가),
+        U (수정),
+        D (삭제)
     TEL_NO	전화번호	VARCHAR2(20)
     FAX_NO	팩스번호	VARCHAR2(20)
     EMAIL	이메일	VARCHAR2(100)

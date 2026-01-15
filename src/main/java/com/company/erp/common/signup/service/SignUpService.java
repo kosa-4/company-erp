@@ -7,6 +7,8 @@ import com.company.erp.common.signup.dto.SignUpDto;
 import com.company.erp.common.signup.mapper.SignUpMapper;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
 import com.company.erp.master.vendor.mapper.VendorMapper;
+import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
+import com.company.erp.master.vendoruser.mapper.VendorUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class SignUpService {
     @Autowired
     private VendorMapper vendorMapper;
     @Autowired
+    private VendorUserMapper vendorUserMapper;
+    @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private DocNumService docNumService;
@@ -30,7 +34,7 @@ public class SignUpService {
 
         // 1. 중복 체크
         // 1-1. 아이디 중복 체크
-        boolean existsUserId = signUpMapper.existsUserId(signUpDto.getUserId());
+        boolean existsUserId = vendorUserMapper.existsUserId(signUpDto.getUserId());
         if (existsUserId) {
             // global exception
             throw new IllegalArgumentException("이미 존재하는 아이디입니다.");
@@ -64,12 +68,13 @@ public class SignUpService {
         String encryptedPassword = passwordEncoder.encode(signUpDto.getPassword());
         signUpDto.setPassword(encryptedPassword);
     
-        // 2-6. vendorDto로 전환
+        // 2-6. dto 전환
         VendorRegisterDto vendorRegisterDto = convertToVendorRegisterDto(signUpDto);
+        VendorUserRegisterDto vendorUserRegisterDto = convertToVendorUserRegisterDto(signUpDto);
 
         // 최종 db 저장
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
-        signUpMapper.insertUser(signUpDto);
+        vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
 
     }
 
@@ -97,5 +102,24 @@ public class SignUpService {
         vendorRegisterDto.setFoundationDate(signUpDto.getFoundationDate());
 
         return vendorRegisterDto;
+    }
+
+    private VendorUserRegisterDto convertToVendorUserRegisterDto(SignUpDto signUpDto) {
+        VendorUserRegisterDto vendorUserRegisterDto = new VendorUserRegisterDto();
+
+        vendorUserRegisterDto.setAskUserNum(signUpDto.getAskUserNo());
+        vendorUserRegisterDto.setVendorCode(signUpDto.getVendorCode());
+        vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+        vendorUserRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
+        vendorUserRegisterDto.setUserId(signUpDto.getUserId());
+        vendorUserRegisterDto.setUserName(signUpDto.getUserName());
+        vendorUserRegisterDto.setStatus(signUpDto.getStatus());
+        vendorUserRegisterDto.setPhone(signUpDto.getPhone());
+        vendorUserRegisterDto.setFax(signUpDto.getFax());
+        vendorUserRegisterDto.setUserEmail(signUpDto.getUserEmail());
+        vendorUserRegisterDto.setPassword(signUpDto.getPassword());
+        vendorUserRegisterDto.setComType(signUpDto.getComType());
+
+        return vendorUserRegisterDto;
     }
 }

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.vendoruser.mapper.VendorUserMapper">
+    <!--협력사 유저 정보 전체 조회-->
+    <select id="selectVendorUserList" parameterType="com.company.erp.master.vendoruser.dto.VendorUserSearchDto" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
+        SELECT
+            U.vendorCode,
+            V.VENDOR_NM AS vendorName,
+            U.userId,
+            U.userName,
+            U.phone,
+            U.email,
+            U.status,
+            U.createdAt,
+            U.blockFlag,
+            U.delFlag
+        FROM (
+            <!--테이블 결합-->
+            SELECT
+                VENDOR_CD AS vendorCode,
+                USER_ID AS userId,
+                USER_NM AS userName,
+                TEL_NO AS phone,
+                EMAIL AS email,
+                PROGRESS_CD AS status,
+                REG_DATE AS createdAt,
+                NULL AS blockFlag,
+                DEL_FLAG AS delFlag
+            FROM
+                VNCH_US
+
+            UNION ALL
+
+            SELECT
+                VENDOR_CD AS vendorCode,
+                USER_ID AS userId,
+                USER_NM AS userName,
+                TEL_NUM AS phone,
+                EMAIL AS email,
+                PROGRESS_CD AS status,
+                REG_DATE AS createdAt,
+                BLOCK_FLAG AS blockFlag,
+                DEL_FLAG AS delFlag
+            FROM
+                VN_USER
+        ) U
+        LEFT JOIN
+            VNCH V
+        ON
+            U.vendorCode = V.VENDOR_CD
+        <where>
+            U.delFlag = 'N'
+            <if test="vendorName != null and vendorName != ''">
+                AND V.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="userId != null and userId != ''">
+                AND U.userId LIKE CONCAT('%', #{userId}, '%')
+            </if>
+            <if test="userName != null and userName != ''">
+                AND U.userName LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="blockFlag != null and blockFlag != ''">
+                AND U.blockFlag = #{blockFlag}
+            </if>
+            <if test="startDate != null">
+                AND U.createdAt <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND U.createdAt <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="phone != null and phone != ''">
+                AND U.phone LIKE CONCAT('%', #{phone}, '%')
+            </if>
+        </where>
+        ORDER BY
+            U.createdAt DESC
+    </select>
+
+    <!--협력사 유저 정보 저장-->
+    <insert id="insertUserVNCH_US" parameterType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+        INSERT INTO
+        VNCH_US(
+            ASK_USER_NUM,
+            VENDOR_CD,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            USER_ID,
+            USER_NM,
+            PROGRESS_CD,
+            REQ_TYPE,
+            TEL_NO,
+            FAX_NO,
+            EMAIL,
+            PASSWORD,
+            COM_TYPE
+        )
+        VALUES(
+            #{askUserNum},
+            #{vendorCode},
+            #{createdAt},
+            #{createdBy},
+            #{modifiedAt},
+            #{modifiedBy},
+            'N',
+            #{userId},
+            #{userName},
+            #{status},
+            'I',
+            #{phone},
+            #{fax},
+            #{userEmail},
+            #{password},
+            'V'
+        )
+    </insert>
+
+    <!--아이디 중복 체크-->
+    <select id="existsUserId" parameterType="String" resultType="boolean">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            USER_ID=#{userId}
+    </select>
+
+</mapper>
