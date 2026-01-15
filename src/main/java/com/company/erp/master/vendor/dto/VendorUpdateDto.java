@@ -5,44 +5,29 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class VendorRegisterDto {
+public class VendorUpdateDto {
     private String askNum;
-    private String vendorCode;
-    private String vendorName;
-    private String vendorEngName;
-    private String businessType; // 사업 형태
-    private String businessNo;
-    private String ceoName;
-    private String zipCode;
-    private String address;
-    private String addressDetail;
-    private String tel;
-    private String fax;
-    private String email;
-    private String businessItem; // 업종
-    private String useYn;
-    private String remark;
-    private String createdBy;
-    private String modifiedBy;
+
+    private String delFlag;
     private String status;
+    private String signUserId;
 
-    private int attFileNum;
-
-    private LocalDate createdAt;
     private LocalDate modifiedAt;
-    private LocalDate foundationDate;
-    private LocalDate signDate;
+    private String modifiedBy;
+
+    // 반려 시
+    private String rejectRemark;
 }
 
-// VNGL
+// VNCH
 /*
-    VENDOR_CD	협력사코드	VARCHAR2(50)	PRIMARY KEY
+    ASK_NUM	요청번호	VARCHAR2(50)	PK
+    VENDOR_CD	협력사코드	VARCHAR2(50)
     REG_DATE	등록일자	DATE	NOT NULL
     REG_USER_ID	등록자ID	VARCHAR2(50)	NOT NULL
     MOD_DATE	수정일자	DATE
     MOD_USER_ID	수정자ID	VARCHAR2(50)
     DEL_FLAG	삭제여부	VARCHAR2(2)	NOT NULL
-    USE_FLAG	사용여부	VARCHAR2(2)	NOT NULL
     VENDOR_NM	업체명	VARCHAR2(255)	NOT NULL
     VENDOR_ENG_NM	업체 영문명	VARCHAR2(255)
     REG_TYPE	사업형태	VARCHAR2(20)		A : 개인, B : 법인
@@ -56,9 +41,13 @@ public class VendorRegisterDto {
     EMAIL	이메일	VARCHAR2(100)
     FOUNDATION_DATE	설립일자	DATE
     INDUSTRY_TYPE	업종	VARCHAR2(100)
-    ATT_FILE_NUM	첨부파일	NUMBER
     RMK	비고	VARCHAR2(1000)
-    PROGRESS_CD	상태	VARCHAR(2)		A, R
-    SIGN_DATE	승인/반려일자	DATE
+    PROGRESS_CD	상태	VARCHAR(2)
+        N(신규),
+        P(요청),
+        A(승인),
+        R(반려)
+    REJECT_RMK	반려사유	VARCHAR2(1000)
+    SIGN_USER_ID	승인/반려자	VARCHAR2(1000)
+    COM_TYPE	회사 구분	VARCHAR2(2)	NOT NULL DEFAULT ‘V’	협력사는 ‘V’ 고정
  */
-

@@ -18,6 +18,7 @@ import {
 import { ColumnDef } from '@/types';
 
 interface Vendor {
+  askNum:string;
   vendorCode: string;
   vendorName: string;
   vendorNameEn?: string;
@@ -65,6 +66,7 @@ export default function VendorPage() {
   });
   // 1-3. 모달 및 선택된 협력업체 상세 정보 상태 변수
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [selectedVendors, setSelectedVendors] = useState<Vendor[]>([]);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -127,7 +129,7 @@ export default function VendorPage() {
     setSelectedVendor(vendor);
     setIsDetailModalOpen(true);
   };
-
+  console.log("selectedVendor: ", selectedVendors);
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
@@ -248,8 +250,56 @@ export default function VendorPage() {
 
       // 2-5. 오류 처리
       console.error("데이터 입력 중 오류 발생:", error);
+    };
   };
-};
+
+  
+  /* 승인 */
+  const approveVendor = async () => {
+    try{
+      // 1. API 요청
+      const response = await fetch(`/api/v1/vendors/approve`, {
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(selectedVendors),
+      });
+      if(!response.ok){
+        throw new Error('협력업체 승인에 실패했습니다.');
+      } 
+
+      // 2. 승인 성공 알림
+      alert('선택한 협력업체가 승인되었습니다.');
+    } catch(error){
+      // 3. 오류 처리
+      console.error("협력업체 승인 중 오류 발생:", error);
+    }; 
+  };
+
+  /* 반려 */
+  const rejectVendor = async () => {
+    try{
+      // 1. API 요청
+      const response = await fetch(`/api/v1/vendors/reject`, {
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(selectedVendors),
+      });
+      if(!response.ok){
+        throw new Error('협력업체 반려에 실패했습니다.');
+      } 
+
+      // 2. 승인 성공 알림
+      alert('선택한 협력업체가 반려되었습니다.');
+    } catch(error){
+      // 3. 오류 처리
+      console.error("협력업체 반려 중 오류 발생:", error);
+    }; 
+  }
+
   return (
     <div>
       <PageHeader 
@@ -318,8 +368,8 @@ export default function VendorPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="success">승인</Button>
-            <Button variant="danger">반려</Button>
+            <Button variant="success" onClick={approveVendor}>승인</Button>
+            <Button variant="danger" onClick={rejectVendor}>반려</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -337,6 +387,35 @@ export default function VendorPage() {
           loading={loading}
           selectable
           emptyMessage="등록된 협력업체가 없습니다."
+          selectedRows={selectedVendors}
+          onSelectionChange={(selectedRows) => {
+            // 만약 selectedRows가 방금 클릭한 한 개의 객체만 담긴 배열이라면
+          const clickedRow = selectedRows[selectedRows.length - 1]; // 가장 최근에 클릭된 행
+          if (!clickedRow) {
+              // 만약 아무것도 없는 배열이 들어오면 전부 해제된 것이니 초기화
+              setSelectedVendors([]);
+              return;
+          }
+
+          const targetKey = clickedRow.vendorCode; // 비교할 고유 키값
+
+          setSelectedVendors((prev) => {
+            // 2. '객체'가 아니라 '고유 키(vendorCode)'로 찾습니다. (이게 핵심!)
+            const isExist = prev.some((v) => v.vendorCode === targetKey);
+
+            if (isExist) {
+              // 이미 있다면 -> 무조건 제거 (토글 OFF)
+              return prev.filter((v) => v.vendorCode !== targetKey);
+            } else {
+              // 없다면 -> 상태 체크 후 추가 (토글 ON)
+              if (clickedRow.status === "A" || !clickedRow.askNum) {
+                alert("승인 가능한 상태가 아닙니다.");
+                return prev;
+              }
+              return [...prev, clickedRow];
+            }
+          });
+          }}
         />
       </Card>
 
