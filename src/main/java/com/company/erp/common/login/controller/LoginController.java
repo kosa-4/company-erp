@@ -44,6 +44,7 @@ public class LoginController {
         userData.put("userId", sessionUser.getUserId());
         userData.put("comType", sessionUser.getComType()); // B: 구매사, V: 협력사
         userData.put("vendorCd", sessionUser.getVendorCd());
+        userData.put("role", sessionUser.getRole());
 
         return ApiResponse.ok(userData);
     }
@@ -56,6 +57,9 @@ public class LoginController {
     @SessionIgnore
     @GetMapping("/session")
     public ApiResponse<?> getSession(HttpSession session) {
+        if (session == null) {
+            return ApiResponse.fail("세션이 존재하지 않습니다.");
+        }
         SessionUser user = (SessionUser) session.getAttribute(SessionUser.class.getName());
 
         if (user == null) {
@@ -66,6 +70,7 @@ public class LoginController {
         userData.put("userId", user.getUserId());
         userData.put("comType", user.getComType());
         userData.put("vendorCd", user.getVendorCd());
+        userData.put("role", user.getRole());
 
         return ApiResponse.ok(userData);
     }

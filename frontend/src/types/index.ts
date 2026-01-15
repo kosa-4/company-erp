@@ -40,12 +40,8 @@ export interface ApiResponse<T> {
 // 상태 타입
 export type StatusType = 
   | 'TEMP'      // 임시저장
-  | 'PENDING'   // 대기
   | 'APPROVED'  // 승인
   | 'REJECTED'  // 반려
-  | 'COMPLETE'  // 완료
-  | 'CANCELED'  // 취소
-  | 'IN_PROGRESS'; // 진행중
 
 // 네비게이션 아이템
 export interface NavItem {

@@ -40,7 +40,7 @@ export default function PurchaseRequestPage() {
   const [selectedItemCodes, setSelectedItemCodes] = useState<string[]>([]); // 품목 선택 모달에서 선택된 품목코드
 
   const [formData, setFormData] = useState({
-    prNo: '자동채번',
+    prNo: '',
     prName: '',
     requester: '',
     department: '',
@@ -198,12 +198,12 @@ export default function PurchaseRequestPage() {
   // 구매유형 영문 값을 한글 값으로 변환 (백엔드 CODD 테이블과 매칭)
   const convertPurchaseTypeToKorean = (purchaseType: string): string => {
     const typeMap: Record<string, string> = {
-      'GENERAL': '일반',
+      'GENERAL': '일반구매',
       'CONTRACT': '단가계약',
-      'URGENT': '긴급',
+      'URGENT': '긴급구매',
     };
     // 매핑되지 않은 값이거나 빈 값일 경우 기본값 '일반' 반환
-    return typeMap[purchaseType] || '일반';
+    return typeMap[purchaseType] || '일반구매';
   };
 
   const handleSave = async () => {
@@ -238,7 +238,7 @@ export default function PurchaseRequestPage() {
         prHd: {
           prSubject: formData.prName,
           pcType: pcTypeKorean, // 한글 값으로 변환하여 전송
-          reqUser: formData.requester,
+          regUser: formData.requester,
           deptName: formData.department,
           rmk: formData.remark || '',
         },
@@ -249,13 +249,12 @@ export default function PurchaseRequestPage() {
           delyDate: item.requestDeliveryDate || null,
         })),
       };
-
-      const result = await prApi.save(requestData);
-      console.log('구매요청 등록 성공:', result);
-
-      // 저장 후 페이지 리로드
-      window.location.reload();
-    } catch (error) {
+        const result = await prApi.save(requestData);
+        alert("구매요청 등록이 완료되었습니다.");
+        console.log('구매요청 등록 성공:', result);
+        // 저장 후 페이지 리로드
+        window.location.reload();
+      } catch (error) {
       console.error('구매요청 등록 실패:', error);
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
@@ -341,7 +340,6 @@ export default function PurchaseRequestPage() {
             }
         >
           <div className="flex gap-2">
-            <Button variant="secondary">삭제</Button>
             <Button variant="primary" loading={isSaving} onClick={handleSave}>
               저장
             </Button>

@@ -37,4 +37,48 @@
             LIMIT 1
     </select>
 
+    <select id="findByUserLoginUser" resultType="map">
+        SELECT
+            u.USER_PW          AS password,
+            u.COM_TYPE         AS comType,
+            NULL               AS vendorCd,
+            u.USER_NM          AS userName,
+            u.DEPT_CD          AS deptCd,
+            d.DEPT_NM        AS deptName,
+            CASE
+                WHEN u.USER_ID = 'master' THEN 'ADMIN'
+                WHEN EXISTS (
+                        SELECT 1
+                        FROM dept_role m
+                        WHERE m.COM_TYPE = 'B'
+                          AND m.DEPT_CD = u.DEPT_CD
+                          AND m.ROLE = 'BUYER'
+                          AND m.USE_FLAG = 'Y'
+                    ) THEN 'BUYER'
+                ELSE 'USER'
+                END                AS role
+        FROM by_user u
+                 LEFT JOIN dept d
+                           ON d.DEPT_CD  = u.DEPT_CD
+                           AND d.DEL_FLAG = 'N'
+        WHERE u.USER_ID = #{userId}
+          AND u.DEL_FLAG = 'N'
+          AND u.PROGRESS_CD = 'A';
+    </select>
+
+    <select id="findVnUserLoginUser" resultType="map">
+        SELECT
+            v.PASSWORD    AS password,
+            v.COM_TYPE    AS comType,
+            v.VENDOR_CD   AS vendorCd,
+            v.USER_NM     AS userName,
+            NULL          AS deptCd,
+            NULL          AS deptName,
+            'VENDOR'      AS role
+        FROM vn_user v
+        WHERE v.USER_ID = #{userId}
+          AND v.DEL_FLAG = 'N'
+          AND v.PROGRESS_CD = 'A';
+    </select>
+
 </mapper>

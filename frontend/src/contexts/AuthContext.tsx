@@ -12,6 +12,7 @@ interface User {
   userId: string;
   comType: 'B' | 'V';
   vendorCd?: string;
+  role: 'ADMIN' | 'BUYER' | 'USER' | 'VENDOR';
 }
 
 interface AuthContextType {
@@ -36,9 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * 로그인 함수
-   * - 성공 시 comType에 따라 자동 라우팅
-   *   - B (구매사) → /home
-   *   - V (협력사) → /vendor
+   * - 성공 시 role에 따라 자동 라우팅
+   *   - VENDOR 외 (구매사) → /home
+   *   - VENDOR (협력사) → /vendor
    */
   const login = useCallback(async (userId: string, password: string) => {
     const res = await fetch('/api/login', {
@@ -70,15 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userId: data.data.userId,
       comType: data.data.comType,
       vendorCd: data.data.vendorCd,
+      role: data.data.role,
     };
 
     setUser(userData);
 
-    // comType에 따라 라우팅
-    if (userData.comType === 'B') {
-      router.push('/home');         // 구매사 → (main) 페이지
+    // comType에 따라 라우팅 -> role 기반으로 변경
+    if (userData.role === 'VENDOR') {
+      router.push('/vendor');
     } else {
-      router.push('/vendor');  // 협력사 → (vendor) 페이지
+      router.push('/home');
     }
   }, [router]);
 
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userId: data.data.userId,
             comType: data.data.comType,
             vendorCd: data.data.vendorCd,
+            role: data.data.role,
           });
         } else {
           setUser(null);
