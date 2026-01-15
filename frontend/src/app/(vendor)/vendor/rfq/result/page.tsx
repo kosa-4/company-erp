@@ -4,36 +4,10 @@ import React, { useState } from 'react';
 import { Trophy, Calendar } from 'lucide-react';
 import { Card, Badge, Button, Input } from '@/components/ui';
 
-// 임시 Mock 데이터
-const mockResults = [
-  {
-    rfqNo: 'RFQ-2024-0050',
-    rfqName: '2024년 12월 사무용품',
-    buyerName: '(주)구매회사',
-    resultDate: '2024-12-20',
-    result: 'WIN',
-    totalAmount: 5500000,
-  },
-  {
-    rfqNo: 'RFQ-2024-0048',
-    rfqName: 'IT 장비 연간 유지보수',
-    buyerName: '(주)구매회사',
-    resultDate: '2024-12-15',
-    result: 'LOSE',
-    totalAmount: 0,
-  },
-  {
-    rfqNo: 'RFQ-2024-0045',
-    rfqName: '청소용품 정기 구매',
-    buyerName: '(주)구매회사',
-    resultDate: '2024-12-10',
-    result: 'WIN',
-    totalAmount: 1200000,
-  },
-];
+
 
 export default function VendorRfqResultPage() {
-  const [results] = useState(mockResults);
+  const [results] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
   const [filterResult, setFilterResult] = useState<'ALL' | 'WIN' | 'LOSE'>('ALL');
 

@@ -5,48 +5,11 @@ import { FileText, Upload, Calendar, Building2, Search, Send, X, CheckCircle, Cl
 import { toast, Toaster } from 'sonner';
 import { Card, Button, Input, Badge } from '@/components/ui';
 
-// 임시 Mock 데이터
-const mockRfqList = [
-  {
-    rfqNo: 'RFQ-2025-0001',
-    rfqName: '2025년 상반기 사무용품 견적',
-    buyerName: '(주)구매회사',
-    requestDate: '2025-01-08',
-    dueDate: '2025-01-15',
-    status: 'WAITING',
-    items: [
-      { itemCode: 'ITEM001', itemName: '복사용지 A4', quantity: 100, spec: 'A4, 80g' },
-      { itemCode: 'ITEM002', itemName: '볼펜 세트', quantity: 50, spec: '0.7mm, 흑색' },
-    ],
-  },
-  {
-    rfqNo: 'RFQ-2025-0002',
-    rfqName: 'IT 장비 유지보수 견적',
-    buyerName: '(주)구매회사',
-    requestDate: '2025-01-06',
-    dueDate: '2025-01-13',
-    status: 'SUBMITTED',
-    items: [
-      { itemCode: 'ITEM003', itemName: 'PC 유지보수', quantity: 20, spec: '월간 정기점검' },
-    ],
-  },
-  {
-    rfqNo: 'RFQ-2025-0003',
-    rfqName: '청소용품 정기 견적',
-    buyerName: '(주)구매회사',
-    requestDate: '2025-01-05',
-    dueDate: '2025-01-12',
-    status: 'WAITING',
-    items: [
-      { itemCode: 'ITEM004', itemName: '청소도구 세트', quantity: 10, spec: '표준형' },
-      { itemCode: 'ITEM005', itemName: '세정제', quantity: 20, spec: '다목적' },
-    ],
-  },
-];
+
 
 export default function VendorRfqSubmitPage() {
-  const [rfqList, setRfqList] = useState(mockRfqList);
-  const [selectedRfq, setSelectedRfq] = useState<typeof mockRfqList[0] | null>(null);
+  const [rfqList, setRfqList] = useState<any[]>([]);
+  const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [searchText, setSearchText] = useState('');

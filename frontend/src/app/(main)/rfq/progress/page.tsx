@@ -27,59 +27,10 @@ interface RfqProgress {
   submittedDate: string;
 }
 
-const mockData: RfqProgress[] = [
-  {
-    rfqNo: 'RFQ-2024-0089',
-    rfqName: '개발팀 노트북 견적',
-    rfqType: '지명경쟁',
-    buyer: '홍길동',
-    createdAt: '2024-12-27',
-    vendorName: '(주)테크솔루션',
-    vendorCode: 'VND-2024-0001',
-    status: 'SUBMITTED',
-    sentDate: '2024-12-27',
-    submittedDate: '2024-12-28',
-  },
-  {
-    rfqNo: 'RFQ-2024-0089',
-    rfqName: '개발팀 노트북 견적',
-    rfqType: '지명경쟁',
-    buyer: '홍길동',
-    createdAt: '2024-12-27',
-    vendorName: '(주)오피스프로',
-    vendorCode: 'VND-2024-0002',
-    status: 'SENT',
-    sentDate: '2024-12-27',
-    submittedDate: '',
-  },
-  {
-    rfqNo: 'RFQ-2024-0088',
-    rfqName: '사무용품 견적',
-    rfqType: '수의계약',
-    buyer: '홍길동',
-    createdAt: '2024-12-26',
-    vendorName: '(주)오피스프로',
-    vendorCode: 'VND-2024-0002',
-    status: 'SUBMITTED',
-    sentDate: '2024-12-26',
-    submittedDate: '2024-12-27',
-  },
-  {
-    rfqNo: 'RFQ-2024-0087',
-    rfqName: '테스트 견적',
-    rfqType: '수의계약',
-    buyer: '홍길동',
-    createdAt: '2024-12-25',
-    vendorName: '글로벌IT',
-    vendorCode: 'VND-2024-0003',
-    status: 'TEMP',
-    sentDate: '',
-    submittedDate: '',
-  },
-];
+
 
 export default function RfqProgressPage() {
-  const [data] = useState<RfqProgress[]>(mockData);
+  const [data] = useState<RfqProgress[]>([]);
   const [selectedRows, setSelectedRows] = useState<RfqProgress[]>([]);
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
