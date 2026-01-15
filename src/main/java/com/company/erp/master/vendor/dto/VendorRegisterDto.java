@@ -1,24 +1,32 @@
 package com.company.erp.master.vendor.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
 public class VendorRegisterDto {
+
     private String askNum;
     private String vendorCode;
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String vendorName;
     private String vendorEngName;
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String businessType; // 사업 형태
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String businessNo;
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String ceoName;
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String zipCode;
     private String address;
     private String addressDetail;
     private String tel;
     private String fax;
     private String email;
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String industry; // 업종
     private String useYn;
     private String remark;

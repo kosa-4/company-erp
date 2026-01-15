@@ -13,6 +13,8 @@ public class VendorUserUpdateDto {
     private LocalDate modifiedAt;
     private String modifiedBy;
 
+    private String rejectRemark;
+
 }
 
 // VNCH_US //

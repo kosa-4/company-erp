@@ -46,6 +46,8 @@ public class VendorUserService {
             }
 
             // 4) 입력값 설정
+            dto.setCreatedAt(LocalDate.now());
+            dto.setCreatedBy(sessionId);
             dto.setModifiedAt(LocalDate.now());
             dto.setModifiedBy(sessionId);
             dto.setSignDate(LocalDate.now());
@@ -62,6 +64,21 @@ public class VendorUserService {
             vendorUserUpdateDto.setStatus("A");
 
             vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+        }
+    }
+
+    // 2. 구매사에서 반려
+    @Transactional
+    public void rejectVendorUser(List<VendorUserUpdateDto> vendorUserUpdateDtoList, String sessionId) {
+        // 1) 단일 dto 반환
+        for(VendorUserUpdateDto dto : vendorUserUpdateDtoList){
+            // 2) 입력값 설정
+            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedBy(sessionId);
+            dto.setStatus("R");
+            
+            // 3) 대기 테이블 업데이트
+            vendorUserMapper.updateVNCH_USByAskUserNum(dto);
         }
     }
     

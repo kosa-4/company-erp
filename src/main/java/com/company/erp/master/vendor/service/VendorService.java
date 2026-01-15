@@ -103,13 +103,13 @@ public class VendorService {
         // 1) 단일 dto 반환
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
-            // 1) 입력값 설정
+            // 2) 입력값 설정
             dto.setModifiedAt(LocalDate.now());
             dto.setModifiedBy(sessionId);
             dto.setSignUserId(sessionId);
             dto.setStatus("R");
 
-            // 2) 대기 테이블 업데이트
+            // 3) 대기 테이블 업데이트
             vendorMapper.updateVNCHByAskNum(dto);
         }
 

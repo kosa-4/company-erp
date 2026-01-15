@@ -116,7 +116,7 @@ public class SignUpService {
         vendorUserRegisterDto.setStatus(signUpDto.getStatus());
         vendorUserRegisterDto.setPhone(signUpDto.getPhone());
         vendorUserRegisterDto.setFax(signUpDto.getFax());
-        vendorUserRegisterDto.setUserEmail(signUpDto.getUserEmail());
+        vendorUserRegisterDto.setEmail(signUpDto.getUserEmail());
         vendorUserRegisterDto.setPassword(signUpDto.getPassword());
         vendorUserRegisterDto.setComType(signUpDto.getComType());
 

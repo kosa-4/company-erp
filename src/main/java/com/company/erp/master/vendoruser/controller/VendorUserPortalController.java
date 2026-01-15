@@ -4,6 +4,7 @@ import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.service.VendorUserPortalService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,9 +19,9 @@ public class VendorUserPortalController {
     VendorUserPortalService vendorUserPortalService;
 
     @PostMapping("/add")
-    public ApiResponse addVendorUser(@RequestBody VendorUserRegisterDto vendorUserRegisterDto){
+    public ApiResponse addVendorUser(@Valid @RequestBody VendorUserRegisterDto vendorUserRegisterDto){
         vendorUserPortalService.addVendorUser(vendorUserRegisterDto);
-        return ApiResponse.ok("승인 요청이 완료 되었습니다.");
+        return ApiResponse.ok("사용자 승인 요청이 완료 되었습니다.");
     }
 
 }

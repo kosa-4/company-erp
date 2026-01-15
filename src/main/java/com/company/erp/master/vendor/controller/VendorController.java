@@ -6,6 +6,7 @@ import com.company.erp.master.vendor.dto.*;
 import com.company.erp.master.vendor.mapper.VendorMapper;
 import com.company.erp.master.vendor.service.VendorService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class VendorController {
     /* 저장 */
     // 1. 구매사에서 직접 협력업체 저장
     @PostMapping("/new")
-    public ApiResponse registerVendorInternal(@RequestBody VendorRegisterDto vendorRegisterDto, HttpSession currentSession) {
+    public ApiResponse registerVendorInternal(@Valid @RequestBody VendorRegisterDto vendorRegisterDto, HttpSession currentSession) {
         // 1) 세션 정보 조회
         String sessionId = (String) currentSession.getAttribute("sessionId");
 

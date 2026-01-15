@@ -5,6 +5,7 @@ import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
+import com.company.erp.master.vendoruser.dto.VendorUserUpdateDto;
 import com.company.erp.master.vendoruser.service.VendorUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import java.util.List;
 
 @SessionIgnore
 @RestController
-@RequestMapping("api/v1/vendor-user")
+@RequestMapping("api/v1/vendor-users")
 public class VendorUserController {
     @Autowired
     VendorUserService vendorUserService;
@@ -23,7 +24,7 @@ public class VendorUserController {
     @GetMapping
     public ResponseEntity<?> getVendorUserList(@ModelAttribute VendorUserSearchDto vendorUserSearchDto) {
         List<VendorUserListDto> vendorUsers = vendorUserService.getVendorUserList(vendorUserSearchDto);
-
+        System.out.println("vendorUsers "+ vendorUsers);
         if(vendorUsers == null || vendorUsers.isEmpty()) {
             return ResponseEntity.ok("검색 결과가 없습니다");
         }
@@ -36,7 +37,7 @@ public class VendorUserController {
     public ApiResponse approveVendorUser(@RequestBody List<VendorUserRegisterDto> vendorUserRegisterDtoList) {
         // 1) 세션 정보 조회
         //String sessionId = (String) currentSession.getAttribute("sessionId");
-        String sessionId = "User";
+        String sessionId = "Admin";
 
         // 2) 세션 존재하지 않을 시
         if(sessionId == null) {
@@ -46,5 +47,22 @@ public class VendorUserController {
         // 3) 승인 함수 실행
         vendorUserService.approveVendorUser(vendorUserRegisterDtoList, sessionId);
         return ApiResponse.ok("사용자 승인이 완료되었습니다.");
+    }
+
+    // 2. 구매사에서 반려
+    @PostMapping("/reject")
+    public ApiResponse rejectVendorUser(@RequestBody List<VendorUserUpdateDto> vendorUserUpdateDtoList) {
+        // 1) 세션 정보 조회
+        String sessionId = "Admin";
+
+        // 2) 세션이 존재하지 않을 시
+        if(sessionId == null) {
+            return ApiResponse.fail("세션이 만료되었습니다.");
+        }
+
+        // 3) 반려 함수 실행
+        vendorUserService.rejectVendorUser(vendorUserUpdateDtoList, sessionId);
+        return ApiResponse.ok("반려 처리 되었습니다.");
+        
     }
 }

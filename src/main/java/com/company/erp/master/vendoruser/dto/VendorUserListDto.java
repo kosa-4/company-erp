@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Data
 public class VendorUserListDto {
+    private String askUserNum;
     private String vendorCode;
     private String vendorName;
     private String userId;
@@ -15,6 +16,7 @@ public class VendorUserListDto {
     private String status;
     private LocalDate createdAt;
     private String blockFlag;
+    private String password;
 }
 /*
     ASK_USER_NUM	요청번호	VARCHAR2(50)	PRIMARY KEY
