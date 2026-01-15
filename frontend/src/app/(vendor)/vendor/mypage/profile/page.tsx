@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PageHeader, Card, Input, Button, Select } from '@/components/ui';
+import { UserCircle, Save, Key } from 'lucide-react';
+import { Card, Input, Button, Badge } from '@/components/ui';
 
 interface VendorProfileForm {
   // 협력사 정보
@@ -51,7 +52,6 @@ export default function VendorProfilePage() {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
     
-    // 에러 초기화
     if (errors[name as keyof VendorProfileForm]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -78,206 +78,217 @@ export default function VendorProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-
     setIsSaving(true);
-    
-    // API 호출 시뮬레이션
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     setIsSaving(false);
     alert('저장되었습니다.');
   };
 
-  const businessTypeOptions = [
-    { value: '법인', label: '법인' },
-    { value: '개인', label: '개인' },
-    { value: '일반과세자', label: '일반과세자' },
-    { value: '간이과세자', label: '간이과세자' },
-  ];
-
   return (
-    <div className="max-w-4xl">
-      <PageHeader 
-        title="내 정보 수정" 
-        subtitle="협력사 및 계정 정보를 확인하고 수정할 수 있습니다."
-        icon={
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        }
-      />
+    <div className="max-w-5xl space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+          <UserCircle className="w-5 h-5 text-gray-600" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">내 정보 수정</h1>
+          <p className="text-sm text-gray-500">협력사 및 계정 정보를 확인하고 수정할 수 있습니다.</p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        {/* 협력사 정보 */}
-        <Card className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-            협력사 정보
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="협력사명"
-              name="vendorName"
-              value={form.vendorName}
-              readOnly
-              required
-            />
-            <Input
-              label="협력사명 (영문)"
-              name="vendorNameEn"
-              value={form.vendorNameEn}
-              onChange={handleChange}
-            />
-            <Select
-              label="사업형태"
-              name="businessType"
-              value={form.businessType}
-              onChange={handleChange}
-              options={businessTypeOptions}
-              required
-            />
-            <Input
-              label="사업자등록번호"
-              name="businessNo"
-              value={form.businessNo}
-              readOnly
-              helperText="사업자등록번호는 변경할 수 없습니다."
-            />
-            <Input
-              label="대표자명"
-              name="ceoName"
-              value={form.ceoName}
-              onChange={handleChange}
-              required
-            />
-            <Input
-              label="업종"
-              name="industry"
-              value={form.industry}
-              onChange={handleChange}
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Vendor Info */}
+            <div className="lg:col-span-2 space-y-6">
+                <Card>
+                    <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                        <h2 className="font-semibold text-gray-900">협력사 정보</h2>
+                    </div>
+                    <div className="p-6 space-y-6">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">협력사명</label>
+                                <Input
+                                    name="vendorName"
+                                    value={form.vendorName}
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">협력사명 (영문)</label>
+                                <Input
+                                    name="vendorNameEn"
+                                    value={form.vendorNameEn}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">사업자등록번호</label>
+                                <Input
+                                    name="businessNo"
+                                    value={form.businessNo}
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">대표자명</label>
+                                <Input
+                                    name="ceoName"
+                                    value={form.ceoName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                             <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">사업형태</label>
+                                <select
+                                    name="businessType"
+                                    value={form.businessType}
+                                    onChange={handleChange}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="법인">법인</option>
+                                    <option value="개인">개인</option>
+                                    <option value="일반과세자">일반과세자</option>
+                                    <option value="간이과세자">간이과세자</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">업종</label>
+                                <Input
+                                    name="industry"
+                                    value={form.industry}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                         </div>
+                         
+                         <div className="h-px bg-gray-100" />
+                         
+                         <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-500">주소</label>
+                                <div className="flex gap-2 max-w-xs">
+                                    <Input
+                                        name="zipCode"
+                                        value={form.zipCode}
+                                        readOnly
+                                        className="bg-gray-50"
+                                    />
+                                    <Button type="button" variant="outline" className="whitespace-nowrap">
+                                        우편번호 검색
+                                    </Button>
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <Input
+                                    name="address"
+                                    value={form.address}
+                                    readOnly
+                                    className="bg-gray-50"
+                                />
+                                <Input
+                                    name="addressDetail"
+                                    value={form.addressDetail}
+                                    onChange={handleChange}
+                                    placeholder="상세주소 입력"
+                                />
+                            </div>
+                         </div>
 
-          {/* 주소 */}
-          <div className="mt-6 space-y-4">
-            <div className="flex gap-3">
-              <div className="w-32">
-                <Input
-                  label="우편번호"
-                  name="zipCode"
-                  value={form.zipCode}
-                  readOnly
-                  required
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="button" variant="secondary">
-                  검색
-                </Button>
-              </div>
+                         <div className="space-y-1.5">
+                             <label className="text-xs font-medium text-gray-500">대표 전화번호</label>
+                             <Input
+                                name="phone"
+                                type="tel"
+                                value={form.phone}
+                                onChange={handleChange}
+                                className="max-w-md"
+                             />
+                         </div>
+                    </div>
+                </Card>
             </div>
-            <Input
-              label="기본주소"
-              name="address"
-              value={form.address}
-              readOnly
-              required
-            />
-            <Input
-              label="상세주소"
-              name="addressDetail"
-              value={form.addressDetail}
-              onChange={handleChange}
-            />
-          </div>
 
-          {/* 전화번호 */}
-          <div className="mt-6">
-            <Input
-              label="전화번호"
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="02-0000-0000"
-              required
-            />
-          </div>
-        </Card>
+            {/* Right Column: Account Info & Password */}
+            <div className="space-y-6">
+                <Card>
+                   <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                        <h2 className="font-semibold text-gray-900">계정 정보</h2>
+                    </div>
+                    <div className="p-6 space-y-4">
+                         <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-500">아이디</label>
+                            <Input
+                                name="userId"
+                                value={form.userId}
+                                readOnly
+                                className="bg-gray-50 text-gray-500"
+                            />
+                        </div>
+                         <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-500">사용자명</label>
+                            <Input
+                                name="userName"
+                                value={form.userName}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-500">이메일</label>
+                            <Input
+                                name="email"
+                                type="email"
+                                value={form.email}
+                                onChange={handleChange}
+                            />
+                            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                        </div>
+                    </div>
+                </Card>
 
-        {/* 계정 정보 */}
-        <Card className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-            계정 정보
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="사용자명"
-              name="userName"
-              value={form.userName}
-              onChange={handleChange}
-              required
-            />
-            <Input
-              label="아이디"
-              name="userId"
-              value={form.userId}
-              readOnly
-              helperText="아이디는 변경할 수 없습니다."
-            />
-            <div className="md:col-span-2">
-              <Input
-                label="이메일"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                error={errors.email}
-                required
-              />
+                <Card>
+                    <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+                        <Key className="w-4 h-4 text-gray-400" />
+                        <h2 className="font-semibold text-gray-900">비밀번호 변경</h2>
+                    </div>
+                    <div className="p-6 space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-500">새 비밀번호</label>
+                            <Input
+                                name="password"
+                                type="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="8자 이상 입력"
+                            />
+                            {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-500">비밀번호 확인</label>
+                            <Input
+                                name="passwordConfirm"
+                                type="password"
+                                value={form.passwordConfirm}
+                                onChange={handleChange}
+                                placeholder="비밀번호 재입력"
+                            />
+                             {errors.passwordConfirm && <p className="text-xs text-red-500 mt-1">{errors.passwordConfirm}</p>}
+                        </div>
+                    </div>
+                </Card>
             </div>
-          </div>
-        </Card>
+         </div>
 
-        {/* 비밀번호 변경 */}
-        <Card className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-            비밀번호 변경
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="새 비밀번호"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="8자 이상 입력"
-              error={errors.password}
-              helperText="영문, 숫자, 특수문자 조합 권장"
-            />
-            <Input
-              label="비밀번호 확인"
-              name="passwordConfirm"
-              type="password"
-              value={form.passwordConfirm}
-              onChange={handleChange}
-              placeholder="비밀번호를 다시 입력"
-              error={errors.passwordConfirm}
-            />
-          </div>
-        </Card>
-
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary">
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button type="button" variant="secondary" onClick={() => window.history.back()}>
             취소
           </Button>
-          <Button type="submit" variant="primary" loading={isSaving}>
-            저장
+          <Button type="submit" variant="primary" icon={<Save className="w-4 h-4" />}>
+            저장하기
           </Button>
         </div>
       </form>

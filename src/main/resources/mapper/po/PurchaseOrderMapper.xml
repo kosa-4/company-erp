@@ -51,10 +51,10 @@
          - regUserId는 DTO에 포함되지 않으므로 별도 파라미터로 전달
     -->
     <insert id="insertHeader"> INSERT INTO POHD ( PO_NUM, PO_SUBJECT, PO_DATE, PO_AMT, PROGRESS_CD,
-        CTRL_USER_ID, VENDOR_CD, PR_NUM, RFQ_NUM, PC_TYPE, REG_DATE, REG_USER_ID, DEL_FLAG, RMK )
-        VALUES ( #{dto.poNo}, #{dto.poName}, #{dto.poDate}, #{dto.totalAmount}, #{dto.status},
-        #{dto.purchaseManager}, #{dto.vendorCode}, #{dto.prNo}, #{dto.rfqNo}, #{dto.purchaseType},
-        NOW(), #{regUserId}, 'N', #{dto.remark} ) </insert>
+        CTRL_USER_ID, CTRL_DEPT_CD, VENDOR_CD, PR_NUM, RFQ_NUM, PC_TYPE, REG_DATE, REG_USER_ID,
+        DEL_FLAG, RMK ) VALUES ( #{dto.poNo}, #{dto.poName}, #{dto.poDate}, #{dto.totalAmount},
+        #{dto.status}, #{dto.purchaseManager}, #{ctrlDeptCd}, #{dto.vendorCode}, #{dto.prNo},
+        #{dto.rfqNo}, #{dto.purchaseType}, NOW(), #{regUserId}, 'N', #{dto.remark} ) </insert>
 
     <!-- 품목 등록 -->
     <!-- 참고: regUserId는 DTO에 포함되지 않으므로 별도 파라미터로 전달 -->
@@ -96,16 +96,17 @@
         resultType="com.company.erp.rfq.dto.RfqSelectedDTO"> SELECT h.RFQ_NUM AS rfqNo,
         h.RFQ_SUBJECT AS rfqName, h.RFQ_DATE AS rfqDate, h.RFQ_AMT AS rfqAmount, h.PC_TYPE AS
         purchaseType, h.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName, h.CTRL_USER_ID AS
-        ctrlUserId, h.CTRL_USER_NM AS ctrlUserName, h.PR_NUM AS prNo, h.RMK AS remark FROM RFQHD h
-        LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' <if
-            test="rfqNo != null and rfqNo != ''"> AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
+        ctrlUserId, u.USER_NM AS ctrlUserName, h.PR_NUM AS prNo, h.RMK AS remark FROM RFQHD h LEFT
+        JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID
+        WHERE h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' <if test="rfqNo != null and rfqNo != ''"> AND
+        h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
+        <if test="rfqName != null and rfqName != ''">
+        AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqName}, '%') </if>
         <if
-            test="rfqName != null and rfqName != ''"> AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqName},
-        '%') </if>
-        <if test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE
-        CONCAT('%', #{vendorName}, '%') </if>
-        <if test="purchaseType != null and purchaseType != ''">
-        AND h.PC_TYPE = #{purchaseType} </if>
+            test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%',
+        #{vendorName}, '%') </if>
+        <if test="purchaseType != null and purchaseType != ''"> AND
+        h.PC_TYPE = #{purchaseType} </if>
         <if test="startDate != null and startDate != ''"> AND
         h.RFQ_DATE &gt;= #{startDate} </if>
         <if test="endDate != null and endDate != ''"> AND

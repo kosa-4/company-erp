@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * 
  * - comType이 'B'인 사용자만 접근 가능
  * - 로그인 안 됨 → 랜딩 페이지로 리다이렉트
- * - 협력사(V)가 접근 시 → /vendor/home으로 리다이렉트
+ * - 협력사(V)가 접근 시 → /vendor로 리다이렉트
  */
 export default function MainAppLayout({
   children,
@@ -33,7 +33,7 @@ export default function MainAppLayout({
 
     // 협력사가 접근 시 → 협력사 페이지로
     if (user.comType === 'V') {
-      router.replace('/vendor/home');
+      router.replace('/vendor');
       return;
     }
   }, [user, isLoading, router, pathname]);
