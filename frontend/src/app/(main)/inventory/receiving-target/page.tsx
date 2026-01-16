@@ -277,7 +277,7 @@ export default function ReceivingTargetPage() {
           grQuantity: item.receivedQuantity,
           grAmount: item.receivedAmount,
           warehouseCode: item.storageLocation,
-          grDate: grDate,
+          grDate: `${grDate}T00:00:00`,
           statusCode: 'N',
         })),
       };
