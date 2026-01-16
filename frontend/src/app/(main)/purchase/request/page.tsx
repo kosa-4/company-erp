@@ -177,13 +177,12 @@ export default function PurchaseRequestPage() {
       header: '비고',
       width: 150,
       align: 'left',
-      render: (value, row) => (
+      render: (value) => (
           <input
               type="text"
               value={value || ''}
-              onChange={(e) => handleItemChange(row.lineNo, 'remark', e.target.value)}
-              className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="비고 입력"
+              readOnly
+              className="w-full border border-gray-300 rounded px-2 py-1 bg-gray-50 text-gray-700 cursor-not-allowed"
           />
       ),
     },
@@ -247,6 +246,7 @@ export default function PurchaseRequestPage() {
           prQt: item.quantity,
           unitPrc: item.unitPrice,
           delyDate: item.requestDeliveryDate || null,
+          rmk: item.remark || '',
         })),
       };
         const result = await prApi.save(requestData);
@@ -307,7 +307,7 @@ export default function PurchaseRequestPage() {
         unitPrice: 0, // 사용자가 입력해야 함
         amount: 0,
         requestDeliveryDate: '',
-        remark: '',
+        remark: item.rmk || '',
       }));
 
       setPrItems([...prItems, ...newItems]);
@@ -411,10 +411,11 @@ export default function PurchaseRequestPage() {
                 label="비고"
                 value={formData.remark}
                 onChange={(e) => setFormData(prev => ({ ...prev, remark: e.target.value }))}
-                placeholder="비고 입력"
+                placeholder="구매요청 비고 입력"
                 rows={2}
             />
           </div>
+
         </Card>
 
         {/* 품목 정보 */}
