@@ -165,16 +165,15 @@ public class PrService {
             throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
         }
         if("Y".equals(prHd.getDelFlag())){
-            throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
+            throw new IllegalArgumentException("존재하지 않는 구매요청입니다.");
         }
 
         // 반려 처리
         prMapper.rejectPr(prNum, userId, deptCd);
-        
-        // 업데이트 확인을 위해 다시 조회
+
         PrHdDTO updatedPrHd = prMapper.selectPrNum(prNum);
         if(updatedPrHd == null || updatedPrHd.getProgressCd() == null){
-            throw new IllegalStateException("구매요청 반려에 실패했습니다. 반려 코드가 존재하지 않거나 이미 삭제된 구매요청일 수 있습니다.");
+            throw new IllegalStateException("구매요청 반려에 실패했습니다.");
         }
     }
 
@@ -201,10 +200,7 @@ public class PrService {
 
     }
     
-    /**
-     * 승인 상태인지 확인하는 헬퍼 메서드
-     * CODD 테이블의 PROGRESS_CD 그룹에서 CODE_NAME이 '승인'인지 확인
-     */
+    //승인 상태 확인 메서드
     private boolean isApprovedStatus(String progressCd) {
         if (progressCd == null || progressCd.isEmpty()) {
             return false;
@@ -214,8 +210,7 @@ public class PrService {
             String codeName = prMapper.selectProgressCdName(progressCd);
             return "승인".equals(codeName);
         } catch (Exception e) {
-            // 조회 실패 시 안전하게 false 반환
-            return false;
+            throw new IllegalArgumentException("진행 상태 조회에 실패하였습니다.");
         }
     }
 
