@@ -81,7 +81,7 @@ export default function VendorInfoChangePage() {
   
       if (response.ok) {
         alert('협력업체 변경 신청이 접수되었습니다.');
-        window.location.reload(); 
+        window.location.reload();
       } else {
         alert('신청 처리 중 오류가 발생했습니다.');
       }
