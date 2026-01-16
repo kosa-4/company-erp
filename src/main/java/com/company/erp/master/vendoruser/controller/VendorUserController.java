@@ -60,21 +60,19 @@ public class VendorUserController {
 
     // 2. 구매사에서 반려
     @PostMapping("/reject")
-    public ApiResponse rejectVendorUser(
-            @RequestBody List<VendorUserUpdateDto> vendorUserUpdateDtoList, HttpSession currentSession ) {
-        // 1) 객체 통째로 반환
-        Object sessionAttr = currentSession.getAttribute(SessionUser.class.getName());
-        
-        // 2) 객체의 타입이 SessionUser인지 확인 (안정성을 위한 세션 만료 여부 체크)
-        if(!(sessionAttr instanceof SessionUser)){
-            return ApiResponse.fail("세션이 만료되었습니다.");
-        }
-        
-        // 3) 타입 전환
-        SessionUser userObj = (SessionUser) sessionAttr;
+    public ApiResponse rejectVendorUser(@RequestBody List<VendorUserUpdateDto> vendorUserUpdateDtoList, HttpSession currentSession ) {
+        // 1) 현재 로그인 정보 반환
+        Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
+        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
 
-        // 4) id 반환
-        String loginId = userObj.getUserId();
+        // 2) 로그인 정보 확인
+        if (loginUser == null) {
+            // userObj가 null인 경우 예외를 던지거나 401 에러 반환
+            return ApiResponse.fail("로그인 정보가 없습니다.");
+        }
+
+        // 3) id 반환
+        String loginId = loginUser.getUserId();
 
         vendorUserService.rejectVendorUser(vendorUserUpdateDtoList, loginId);
 

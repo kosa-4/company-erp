@@ -36,7 +36,6 @@ public class VendorPortalController {
 
         // 3) id 반환
         String loginId = loginUser.getUserId();
-        System.out.println("loginId" + loginId);
         VendorListDto vendor =  vendorPortalService.getVendorInfo(loginId);
         return ResponseEntity.ok().body(vendor);
     }

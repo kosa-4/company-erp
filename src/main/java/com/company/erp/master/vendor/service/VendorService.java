@@ -90,9 +90,6 @@ public class VendorService {
                 default:
                     throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
             }
-            if(!"C".equals(status) && !"N".equals(status)){
-                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
-            }
 
             // 6) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가

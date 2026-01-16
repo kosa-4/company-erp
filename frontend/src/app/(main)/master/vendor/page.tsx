@@ -250,6 +250,7 @@ export default function VendorPage() {
 
       // 2-5. 오류 처리
       console.error("데이터 입력 중 오류 발생:", error);
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
     };
   };
 
@@ -297,6 +298,7 @@ export default function VendorPage() {
     } catch(error){
       // 3. 오류 처리
       console.error("협력업체 반려 중 오류 발생:", error);
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
     }; 
   }
 
@@ -431,7 +433,7 @@ export default function VendorPage() {
             {selectedVendor?.status === 'A' && (
               <Button variant="primary">수정</Button>
             )}
-            {selectedVendor?.status === 'P' && (
+            {selectedVendor?.status === 'C' && (
               <>
                 <Button variant="danger">반려</Button>
                 <Button variant="success">승인</Button>
@@ -472,7 +474,7 @@ export default function VendorPage() {
               <Input label="이메일" value={selectedVendor.email} readOnly />
               <Input label="설립일자" value={selectedVendor.establishDate || ''} readOnly />
               <Input label="업태" value={selectedVendor.businessCategory || ''} readOnly />
-              <Input label="업종" value={selectedVendor.businessItem || ''} readOnly />
+              <Input label="업종" value={selectedVendor.industry || ''} readOnly />
             </div>
 
             <Textarea label="비고" value={selectedVendor.remark || ''} rows={3} readOnly />
