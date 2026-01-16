@@ -24,7 +24,7 @@ public class VendorPortalController {
     /* 조회 */
     @GetMapping
     public ResponseEntity<?> getVendorInfo(HttpSession currentSession){
-        // 1) 객체 통째로 반환
+        // 1) 현재 로그인 정보 반환
         Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
         SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
 
