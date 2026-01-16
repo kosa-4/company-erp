@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit2, Trash2, Search, Mail, Phone, X, Save, Lock } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Search, Mail, Phone, X, Save, Lock, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '@/components/ui';
 
 export default function VendorUsersPage() {
@@ -10,34 +10,33 @@ export default function VendorUsersPage() {
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
-  
-  // 1. DTO 구조와 필드명 일치 (userId, userName, userEmail, phone, deptNm, password)
+
+  // 1. DTO 필드명 일치화 (userName, userId, email, phone)
   const [formData, setFormData] = useState({
     userName: '',
     userId: '',
     email: '',
     phone: '',
-    password: '', // 신규 등록용 비밀번호 추가
+    password: '',
   });
 
-  // 2. 페이지 로드 시 사용자 목록 조회
   useEffect(() => {
     fetchUserList();
   }, []);
 
+  // 2. 함수명 및 API 경로 확인 (보내주신 로직 유지)
   const fetchUserList = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/v1/vendor-portal/users');
       if (response.ok) {
         const data = await response.json();
-        setUsers(data);
+        setUsers(Array.isArray(data) ? data : []);
       } else {
-+      console.error('사용자 목록 로드 실패:', response.status);
-+      alert('사용자 목록을 불러오는데 실패했습니다.');
-     }
+        console.error('사용자 목록 로드 실패:', response.status);
+      }
     } catch (error) {
-      console.error('사용자 목록 로드 실패:', error);
+      console.error('네트워크 오류:', error);
     } finally {
       setLoading(false);
     }
@@ -47,21 +46,15 @@ export default function VendorUsersPage() {
     if (user) {
       setEditingUser(user);
       setFormData({
-        userName: user.userName,
-        userId: user.userId,
-        email: user.email,
-        phone: user.phone,
-        password: '', // 수정 시 비밀번호는 별도로 처리하거나 비워둠
+        userName: user.userName || '',
+        userId: user.userId || '',
+        email: user.email || '', // userEmail이 아닌 email로 통일
+        phone: user.phone || '',
+        password: '',
       });
     } else {
       setEditingUser(null);
-      setFormData({
-        userName: '',
-        userId: '',
-        email: '',
-        phone: '',
-        password: '',
-      });
+      setFormData({ userName: '', userId: '', email: '', phone: '', password: '' });
     }
     setShowModal(true);
   };
@@ -76,22 +69,18 @@ export default function VendorUsersPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 3. 실제 백엔드 저장 로직 (fetch)
   const handleSave = async () => {
-    // 필수값 검증
-     if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (!editingUser && !formData.password)) {
+    if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (!editingUser && !formData.password)) {
       alert('필수 정보를 모두 입력해주세요.');
       return;
     }
 
     try {
-      const url = editingUser 
-        ? `/api/v1/vendor-portal/users/${editingUser.userId}` 
-        : `/api/v1/vendor-portal/users`;
-      
       const method = editingUser ? 'PUT' : 'POST';
+      // 보내주신 API 경로인 /add를 유지하되 수정/등록 분기
+      const url = editingUser ? `/api/v1/vendor-portal/users/${editingUser.userId}` : "/api/v1/vendor-portal/users/add";
 
-      const response = await fetch("/api/v1/vendor-portal/users/add", {
+      const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -100,7 +89,7 @@ export default function VendorUsersPage() {
       if (response.ok) {
         alert(editingUser ? '수정 요청이 완료되었습니다.' : '신규 등록 요청이 완료되었습니다.');
         handleCloseModal();
-        fetchUserList(); // 목록 새로고침
+        fetchUserList();
       } else {
         const err = await response.json();
         alert(err.message || '요청 처리 중 오류가 발생했습니다.');
@@ -113,9 +102,7 @@ export default function VendorUsersPage() {
   const handleDelete = async (userId: string) => {
     if (confirm('해당 사용자를 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`/api/v1/vendor-portal/users/${userId}`, {
-          method: 'DELETE'
-        });
+        const response = await fetch(`/api/v1/vendor-portal/users/${userId}`, { method: 'DELETE' });
         if (response.ok) {
           alert('삭제되었습니다.');
           fetchUserList();
@@ -126,14 +113,24 @@ export default function VendorUsersPage() {
     }
   };
 
+  // 3. 상태 배지 렌더링 함수
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'N': return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px]">대기</Badge>;
+      case 'R': return <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px]">반려됨</Badge>;
+      case 'A': return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">승인완료</Badge>;
+      default: return null;
+    }
+  };
+
   const filteredUsers = users.filter(user =>
-    user.userName?.includes(searchText) ||
-    user.userId?.includes(searchText) ||
-    user.email?.includes(searchText)
+    (user.userName || '').includes(searchText) ||
+    (user.userId || '').includes(searchText) ||
+    (user.email || '').includes(searchText)
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -170,16 +167,23 @@ export default function VendorUsersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredUsers.map((user) => (
-            <Card key={user.userId} className="p-5 hover:border-gray-400 transition-all shadow-sm">
+            <Card 
+              key={user.userId} 
+              className={`p-5 hover:border-gray-400 transition-all shadow-sm ${user.status === 'R' ? 'bg-red-50/30 border-red-100' : ''}`}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100">
-                    <span className="text-indigo-600 font-semibold text-lg">{user.userName?.charAt(0)}</span>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${
+                    user.status === 'R' ? 'bg-red-100 border-red-200' : 'bg-indigo-50 border-indigo-100'
+                  }`}>
+                    <span className={`font-semibold text-lg ${user.status === 'R' ? 'text-red-600' : 'text-indigo-600'}`}>
+                      {user.userName?.charAt(0)}
+                    </span>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{user.userName}</h3>
-                      {user.status === 'N' && <Badge variant="secondary" className="text-[10px]">대기</Badge>}
+                      <h3 className={`font-semibold ${user.status === 'R' ? 'text-red-900' : 'text-gray-900'}`}>{user.userName}</h3>
+                      {renderStatusBadge(user.status)}
                     </div>
                     <p className="text-xs text-gray-400">{user.userId}</p>
                   </div>
@@ -194,10 +198,17 @@ export default function VendorUsersPage() {
                 </div>
               </div>
 
+              {user.status === 'R' && (
+                <div className="mb-3 px-2 py-1.5 bg-red-100/50 rounded text-[11px] text-red-700 flex items-center gap-1.5">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>정보를 수정하여 다시 등록 신청해주세요.</span>
+                </div>
+              )}
+
               <div className="space-y-2 pt-3 border-t border-gray-50">
                 <div className="flex items-center gap-2.5 text-sm text-gray-600">
                   <Mail className="w-3.5 h-3.5 text-gray-400" />
-                  <span>{user.userEmail}</span>
+                  <span>{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-sm text-gray-600">
                   <Phone className="w-3.5 h-3.5 text-gray-400" />
@@ -212,9 +223,9 @@ export default function VendorUsersPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col text-gray-900">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h2 className="text-lg font-semibold text-gray-900">{editingUser ? '담당자 수정' : '신규 담당자 등록'}</h2>
+              <h2 className="text-lg font-semibold">{editingUser ? '담당자 수정' : '신규 담당자 등록'}</h2>
               <button onClick={handleCloseModal} className="p-2 text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             
@@ -247,7 +258,7 @@ export default function VendorUsersPage() {
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
-              <Button variant="secondary" onClick={handleCloseModal}>취소</Button>
+              <Button variant="outline" onClick={handleCloseModal}>취소</Button>
               <Button variant="primary" onClick={handleSave} icon={<Save className="w-4 h-4" />}>
                 {editingUser ? '수정 요청' : '등록 신청'}
               </Button>
