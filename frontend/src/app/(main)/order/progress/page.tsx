@@ -34,6 +34,7 @@ interface PoGroup {
   totalAmount: number;
   remark: string;
   items: PurchaseOrderItemDTO[];
+  receivedQuantity: number;
 }
 
 export default function OrderProgressPage() {
@@ -145,6 +146,7 @@ export default function OrderProgressPage() {
           totalAmount: Number(po.totalAmount) || 0,
           remark: po.remark || '',
           items: po.items || [],
+          receivedQuantity: Number(po.receivedQuantity) || 0,
         };
       });
 
@@ -522,17 +524,18 @@ export default function OrderProgressPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-200">
-                  <th className="w-12 px-4 py-3.5"></th>
-                  <th className="w-12 px-4 py-3.5"></th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">PO번호</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">발주명</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">구매유형</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">발주담당자</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">발주일자</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">진행상태</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">협력사명</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">품목수</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right">총금액</th>
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주담당자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주일자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">진행상태</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고상태</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">협력사명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목수</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">총금액</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -550,7 +553,7 @@ export default function OrderProgressPage() {
                   </tr>
                 ) : poGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-16 text-center">
+                    <td colSpan={12} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <svg className="w-14 h-14 text-stone-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -570,7 +573,7 @@ export default function OrderProgressPage() {
                         `}
                       >
                         {/* 펼치기 아이콘 */}
-                        <td className="px-4 py-3.5 text-center" onClick={() => toggleExpand(group.poNo)}>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
                           <svg 
                             className={`w-5 h-5 text-stone-400 transition-transform duration-200 ${expandedPos.has(group.poNo) ? 'rotate-90' : ''}`}
                             fill="none" 
@@ -581,7 +584,7 @@ export default function OrderProgressPage() {
                           </svg>
                         </td>
                         {/* 선택 체크박스 */}
-                        <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedPoNo === group.poNo}
@@ -589,25 +592,40 @@ export default function OrderProgressPage() {
                             className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => handleViewDetail(group.poNo)}>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => handleViewDetail(group.poNo)}>
                           <span className="text-blue-600 font-medium hover:underline">{group.poNo}</span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.poNo)}>{group.poName}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.poNo)}>{group.purchaseTypeDisplay}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.poNo)}>{group.buyer}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.poNo)}>{group.poDate}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.poNo)}>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.poName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.purchaseTypeDisplay}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.buyer}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.poDate}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${group.statusBadgeColor}`}>
                             {group.statusDisplay}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.poNo)}>{group.vendorName}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.poNo)}>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          {group.status === 'C' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              입고완료
+                            </span>
+                          ) : group.receivedQuantity > 0 ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              입고진행중
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              미입고
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.vendorName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {group.itemCount}개
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-right font-medium" onClick={() => toggleExpand(group.poNo)}>
+                        <td className="px-4 py-3.5 text-sm text-right font-medium whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
                           ₩{formatNumber(group.totalAmount)}
                         </td>
                       </tr>
@@ -615,7 +633,7 @@ export default function OrderProgressPage() {
                       {/* 펼쳐진 품목 상세 */}
                       {expandedPos.has(group.poNo) && (
                         <tr>
-                          <td colSpan={11} className="bg-stone-50/50 px-4 py-3">
+                          <td colSpan={12} className="bg-stone-50/50 px-4 py-3">
                             <div className="ml-12">
                               <table className="w-full border border-stone-200 rounded-lg overflow-hidden">
                                 <thead className="bg-stone-100">
