@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   PageHeader, 
   Card, 
@@ -15,73 +15,45 @@ import {
   ModalFooter,
   Badge
 } from '@/components/ui';
-import { Vendor, ColumnDef } from '@/types';
+import { ColumnDef } from '@/types';
 
-// Mock 데이터
-// const mockVendors: Vendor[] = [
-//   {
-//     vendorCode: 'VND-2024-0001',
-//     vendorName: '(주)테크솔루션',
-//     vendorNameEn: 'Tech Solution Co., Ltd.',
-//     status: 'APPROVED',
-//     businessType: 'CORP',
-//     businessNo: '123-45-67890',
-//     ceoName: '김대표',
-//     zipCode: '06123',
-//     address: '서울시 강남구 테헤란로 123',
-//     addressDetail: '테크빌딩 5층',
-//     phone: '02-1234-5678',
-//     fax: '02-1234-5679',
-//     email: 'contact@techsolution.co.kr',
-//     businessCategory: '도매업',
-//     businessItem: '전자제품, 컴퓨터',
-//     establishDate: '2010-03-15',
-//     useYn: 'Y',
-//     createdAt: '2024-01-10',
-//     createdBy: 'admin',
-//   },
-//   {
-//     vendorCode: 'VND-2024-0002',
-//     vendorName: '(주)오피스프로',
-//     vendorNameEn: 'Office Pro Inc.',
-//     status: 'APPROVED',
-//     businessType: 'CORP',
-//     businessNo: '234-56-78901',
-//     ceoName: '이사무',
-//     zipCode: '04532',
-//     address: '서울시 중구 을지로 50',
-//     addressDetail: '오피스빌딩 3층',
-//     phone: '02-2345-6789',
-//     fax: '02-2345-6790',
-//     email: 'sales@officepro.kr',
-//     businessCategory: '소매업',
-//     businessItem: '사무용품, 문구류',
-//     establishDate: '2015-07-20',
-//     useYn: 'Y',
-//     createdAt: '2024-02-05',
-//     createdBy: 'admin',
-//   },
-//   {
-//     vendorCode: 'VND-2024-0003',
-//     vendorName: '글로벌IT',
-//     status: 'PENDING',
-//     businessType: 'INDIVIDUAL',
-//     businessNo: '345-67-89012',
-//     ceoName: '박아이티',
-//     zipCode: '13496',
-//     address: '경기도 성남시 분당구 판교로 123',
-//     phone: '031-3456-7890',
-//     email: 'globalit@email.com',
-//     businessCategory: '서비스업',
-//     businessItem: 'IT 컨설팅',
-//     useYn: 'Y',
-//     createdAt: '2024-12-20',
-//     createdBy: 'vendor_admin',
-//   },
-// ];
+interface Vendor {
+  askNum:string;
+  vendorCode: string;
+  vendorName: string;
+  vendorNameEn?: string;
+  status: 'N' | 'P' | 'A' | 'R';
+  businessType: 'CORP' | 'INDIVIDUAL';
+  businessNo: string;
+  ceoName: string;
+  zipCode: string;
+  address: string;
+  addressDetail?: string;
+  phone?: string;
+  fax?: string;
+  email: string;
+  businessCategory?: string;
+  businessItem?: string;
+  establishDate?: string;
+  useYn: 'Y' | 'N';
+  stopReason?: string;
+  remark?: string;
+  createdAt: string;
+  createdBy: string;
+}
 
 export default function VendorPage() {
-  const [vendors] = useState<Vendor[]>([]);
+
+  /* 검색 및 조회 */
+
+  // 1. 상태 변수 정의
+  // 1-1. 협력업체 목록 출력용 상태 변수
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [page, setPage] = useState("1");
+  const [totalPage, setTotalPage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // 1-2. 검색 조건 상태 변수
   const [searchParams, setSearchParams] = useState({
     vendorCode: '',
     vendorName: '',
@@ -90,11 +62,49 @@ export default function VendorPage() {
     endDate: '',
     businessType: '',
     businessItem: '',
+    page: "1",
   });
+  // 1-3. 모달 및 선택된 협력업체 상세 정보 상태 변수
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [selectedVendors, setSelectedVendors] = useState<Vendor[]>([]);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // 2. 협력사 조회
+  const fetchVendors = async () => {
+    setLoading(true);
+    try{
+      // 2-1. searchParams에 입력된 page 값이 없을 시 1로 초기화
+      const initPageParam = {
+        ...searchParams,
+        page: searchParams.page || "1",
+      };
+
+      // 2-2. API 요청
+      const response = await fetch ("/api/v1/vendors?" +
+        new URLSearchParams(initPageParam as any) 
+      );
+
+      if(!response.ok){
+        // 1) 오류 처리
+        throw new Error('협력업체 조회에 실패했습니다.');
+      }
+      // 2-3. 데이터 파싱
+      const data = await response.json();
+      console.log("조회된 데이터:", data);
+      // 2-4. 상태 업데이트
+      setVendors(data.vendors);
+      
+    } catch(error){
+      // 1) 오류 처리
+      console.error("데이터 조회 중 오류 발생:", error);
+      alert("데이터 로드에 실패하였습니다.")
+    } finally{
+      // 2-5. 검색 로딩 표시
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setLoading(false);
+    }    
+  };
 
   const handleSearch = async () => {
     setLoading(true);
@@ -111,6 +121,7 @@ export default function VendorPage() {
       endDate: '',
       businessType: '',
       businessItem: '',
+      page: "1",
     });
   };
 
@@ -118,13 +129,13 @@ export default function VendorPage() {
     setSelectedVendor(vendor);
     setIsDetailModalOpen(true);
   };
-
+  console.log("selectedVendor: ", selectedVendors);
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
-      NEW: { variant: 'gray' as const, label: '신규' },
-      PENDING: { variant: 'yellow' as const, label: '승인대기' },
-      APPROVED: { variant: 'green' as const, label: '승인' },
-      REJECTED: { variant: 'red' as const, label: '반려' },
+      N: { variant: 'gray' as const, label: '신규' },
+      P: { variant: 'yellow' as const, label: '승인대기' },
+      A: { variant: 'green' as const, label: '승인' },
+      R: { variant: 'red' as const, label: '반려' },
     };
     const { variant, label } = config[status];
     return <Badge variant={variant}>{label}</Badge>;
@@ -202,6 +213,93 @@ export default function VendorPage() {
     },
   ];
 
+  useEffect(() => {
+    fetchVendors();
+  }, [searchParams]);
+
+  /* 저장 */
+  // 1. form input 데이터 가져오기 (input name 작성 필수!)
+  const saveForm = useRef<HTMLFormElement>(null);
+  
+  // 2. 협력사 저장
+  const saveVendor = async () => {
+    // 2-1. form 태그 null 처리
+    if (!saveForm.current) return;
+
+    // 2-2. FormData 저장
+    const formData = new FormData(saveForm.current);
+    const data = Object.fromEntries(formData.entries());
+
+    try{
+      // 2-3. API 요청
+      const response = await fetch ("/api/v1/vendors/new",{
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(data),
+      });
+
+      if(!response.ok){
+        throw new Error('협력업체 저장에 실패했습니다.');
+      };
+
+      // 2-4. 저장 성공 알림
+      alert('저장되었습니다.');
+    } catch(error){
+
+      // 2-5. 오류 처리
+      console.error("데이터 입력 중 오류 발생:", error);
+    };
+  };
+
+  
+  /* 승인 */
+  const approveVendor = async () => {
+    try{
+      // 1. API 요청
+      const response = await fetch(`/api/v1/vendors/approve`, {
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(selectedVendors),
+      });
+      if(!response.ok){
+        throw new Error('협력업체 승인에 실패했습니다.');
+      } 
+
+      // 2. 승인 성공 알림
+      alert('선택한 협력업체가 승인되었습니다.');
+    } catch(error){
+      // 3. 오류 처리
+      console.error("협력업체 승인 중 오류 발생:", error);
+    }; 
+  };
+
+  /* 반려 */
+  const rejectVendor = async () => {
+    try{
+      // 1. API 요청
+      const response = await fetch(`/api/v1/vendors/reject`, {
+        method: 'POST',
+        headers:{
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify(selectedVendors),
+      });
+      if(!response.ok){
+        throw new Error('협력업체 반려에 실패했습니다.');
+      } 
+
+      // 2. 승인 성공 알림
+      alert('선택한 협력업체가 반려되었습니다.');
+    } catch(error){
+      // 3. 오류 처리
+      console.error("협력업체 반려 중 오류 발생:", error);
+    }; 
+  }
+
   return (
     <div>
       <PageHeader 
@@ -270,8 +368,8 @@ export default function VendorPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="success">승인</Button>
-            <Button variant="danger">반려</Button>
+            <Button variant="success" onClick={approveVendor}>승인</Button>
+            <Button variant="danger" onClick={rejectVendor}>반려</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -289,6 +387,35 @@ export default function VendorPage() {
           loading={loading}
           selectable
           emptyMessage="등록된 협력업체가 없습니다."
+          selectedRows={selectedVendors}
+          onSelectionChange={(selectedRows) => {
+            // 만약 selectedRows가 방금 클릭한 한 개의 객체만 담긴 배열이라면
+          const clickedRow = selectedRows[selectedRows.length - 1]; // 가장 최근에 클릭된 행
+          if (!clickedRow) {
+              // 만약 아무것도 없는 배열이 들어오면 전부 해제된 것이니 초기화
+              setSelectedVendors([]);
+              return;
+          }
+
+          const targetKey = clickedRow.vendorCode; // 비교할 고유 키값
+
+          setSelectedVendors((prev) => {
+            // 2. '객체'가 아니라 '고유 키(vendorCode)'로 찾습니다. (이게 핵심!)
+            const isExist = prev.some((v) => v.vendorCode === targetKey);
+
+            if (isExist) {
+              // 이미 있다면 -> 무조건 제거 (토글 OFF)
+              return prev.filter((v) => v.vendorCode !== targetKey);
+            } else {
+              // 없다면 -> 상태 체크 후 추가 (토글 ON)
+              if (clickedRow.status === "A" || !clickedRow.askNum) {
+                alert("승인 가능한 상태가 아닙니다.");
+                return prev;
+              }
+              return [...prev, clickedRow];
+            }
+          });
+          }}
         />
       </Card>
 
@@ -301,10 +428,10 @@ export default function VendorPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            {selectedVendor?.status === 'APPROVED' && (
+            {selectedVendor?.status === 'A' && (
               <Button variant="primary">수정</Button>
             )}
-            {selectedVendor?.status === 'PENDING' && (
+            {selectedVendor?.status === 'P' && (
               <>
                 <Button variant="danger">반려</Button>
                 <Button variant="success">승인</Button>
@@ -362,63 +489,66 @@ export default function VendorPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              alert('저장되었습니다.');
+              saveVendor();
               setIsCreateModalOpen(false);
             }}
             confirmText="저장"
           />
         }
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Input label="협력사코드" value="자동채번" readOnly />
-            <Input label="협력사명" placeholder="협력사명 입력" required />
-            <Input label="협력사명(영문)" placeholder="영문 협력사명 입력" />
-            <Select
-              label="사업형태"
-              placeholder="선택"
-              required
-              options={[
-                { value: 'CORP', label: '법인' },
-                { value: 'INDIVIDUAL', label: '개인' },
-              ]}
-            />
-            <Input label="사업자등록번호" placeholder="000-00-00000" required />
-            <Input label="대표자명" placeholder="대표자명 입력" required />
-            <div className="flex gap-2">
-              <Input label="우편번호" placeholder="우편번호" required />
-              <div className="flex items-end">
-                <Button variant="secondary" className="h-[42px]">검색</Button>
+        <form ref={saveForm}>
+          <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <Input name="vendorCode" label="협력사코드" value="자동채번" readOnly />
+              <Input name="vendorName" label="협력사명" placeholder="협력사명 입력" required />
+              <Input name="vendorEngName" label="협력사명(영문)" placeholder="영문 협력사명 입력" />
+              <Select
+                name="businessType"
+                label="사업형태"
+                placeholder="선택"
+                required
+                options={[
+                  { value: 'CORP', label: '법인' },
+                  { value: 'INDIVIDUAL', label: '개인' },
+                ]}
+              />
+              <Input name="businessNo" label="사업자등록번호" placeholder="000-00-00000" required />
+              <Input name="ceoName" label="대표자명" placeholder="대표자명 입력" required />
+              <div className="flex gap-2">
+                <Input label="우편번호" placeholder="우편번호" required />
+                <div className="flex items-end">
+                  <Button variant="secondary" className="h-[42px]">검색</Button>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Input name='address' label="주소" placeholder="주소" required readOnly />
+              </div>
+              <Input name="addressDetail" label="상세주소" placeholder="상세주소 입력" />
+              <Input name="tel" label="전화번호" placeholder="02-0000-0000" />
+              <Input name="fax" label="팩스번호" placeholder="02-0000-0000" />
+              <Input name="email" label="이메일" type="email" placeholder="email@example.com" required />
+              <DatePicker name='foundationAt' label="설립일자" />
+              <Input name="businessCategory" label="업태" placeholder="업태 입력" />
+              <Input name="businessItem" label="업종" placeholder="업종 입력" />
+            </div>
+            
+            <div className="flex gap-6">
+              <label className="text-sm font-medium text-gray-700">사용여부</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
+                  <span className="text-sm">사용</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="useYn" value="N" className="text-blue-600" />
+                  <span className="text-sm">미사용</span>
+                </label>
               </div>
             </div>
-            <div className="col-span-2">
-              <Input label="주소" placeholder="주소" required readOnly />
-            </div>
-            <Input label="상세주소" placeholder="상세주소 입력" />
-            <Input label="전화번호" placeholder="02-0000-0000" />
-            <Input label="팩스번호" placeholder="02-0000-0000" />
-            <Input label="이메일" type="email" placeholder="email@example.com" required />
-            <DatePicker label="설립일자" />
-            <Input label="업태" placeholder="업태 입력" />
-            <Input label="업종" placeholder="업종 입력" />
-          </div>
-          
-          <div className="flex gap-6">
-            <label className="text-sm font-medium text-gray-700">사용여부</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600" />
-                <span className="text-sm">사용</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" name="useYn" value="N" className="text-blue-600" />
-                <span className="text-sm">미사용</span>
-              </label>
-            </div>
-          </div>
 
-          <Textarea label="비고" placeholder="비고 입력" rows={3} />
-        </div>
+            <Textarea label="비고" placeholder="비고 입력" rows={3} />
+          </div>
+        </form>
       </Modal>
     </div>
   );

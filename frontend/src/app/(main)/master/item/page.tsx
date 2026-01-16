@@ -47,13 +47,13 @@ export default function ItemPage() {
   /* 검색 및 조회 */
 
   // 1. 상태 정의
-  // 1-1. 품목 리스트 출력
+  // 1-1. 품목 목록 출력용 상태 변수
   const [items, setItems] = useState<Item[]>([]);
-  const [page, setPage] = useState(String(1));
+  const [page, setPage] = useState("1");
   const [totalPage, setTotalPage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 1-2. 검색 파라미터
+  // 1-2. 검색 조건 상태 변수
   // * URL 파라미터를 ItemSearchDto의 필드명과 동일하게 전달
   const [searchParams, setSearchParams] = useState({
     itemCode: '',
@@ -62,7 +62,7 @@ export default function ItemPage() {
     startDate: '',
     endDate: '',
     manufacturerName: '',
-    page: String(1),
+    page: "1",
   });
 
   // 1-3. 모달 및 상세 페이지 관련 상태
@@ -81,7 +81,7 @@ export default function ItemPage() {
           page: searchParams.page || "1" 
       };
 
-      // 2-2. 파라미터 전달
+      // 2-2. API 요청
       const response = await fetch ("/api/v1/items?" +
         new URLSearchParams(initPageParam as any) 
       );
@@ -94,6 +94,8 @@ export default function ItemPage() {
   
       // 2-3. 데이터 파싱
       const data: {[k:string]: any} = await response.json(); // k = key
+
+      // 2-4. 상태 업데이트
       setItems(data.items);
       setTotalPage(data.totalPage);
 
@@ -102,7 +104,7 @@ export default function ItemPage() {
       alert("데이터 로드에 실패하였습니다.");
     } finally{
 
-      // 1) 검색 로딩 표시      
+      // 2-5. 검색 로딩 표시      
       await new Promise(resolve => setTimeout(resolve, 500));
       setLoading(false);
     }    
@@ -245,7 +247,7 @@ export default function ItemPage() {
     const data = Object.fromEntries(formData.entries());
     
     try{
-      // 2-3. form 데이터 전송
+      // 2-3. API 요청
       const response = await fetch ("/api/v1/items/new",{
         method: 'POST',
         headers:{
@@ -580,7 +582,7 @@ export default function ItemPage() {
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
             </div>
-            <div className="flex gap-6">
+            {/* <div className="flex gap-6">
               <label className="text-sm font-medium text-gray-700">사용여부</label>
                 <div className="flex gap-4">
                     <label className="flex items-center gap-2">
@@ -591,8 +593,8 @@ export default function ItemPage() {
                       <input type="radio" name="useYn" value="N" className="text-blue-600" disabled/>
                       <span className="text-sm">미사용</span>
                     </label>
-                  </div>
-                </div>              
+                </div>
+            </div>*/}
               
             <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} />
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />

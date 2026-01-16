@@ -11,6 +11,7 @@ public enum DocKey {
     PR(ResetUnit.DAILY, "PR", "yyMMdd", "", 4, "PR2601050001"),
     PO(ResetUnit.DAILY, "PO", "yyMMdd", "", 4, "PO2601050001"),
     GR(ResetUnit.DAILY, "GR", "yyMMdd", "", 4, "GR2601050001"),
+    RQ(ResetUnit.DAILY, "RQ", "yyMMdd", "", 4, "RQ2601050001"), // 요청 번호
 
     //파일
     FL(ResetUnit.DAILY, "FL", "yyMMdd", "", 4, "FL2601050001"),

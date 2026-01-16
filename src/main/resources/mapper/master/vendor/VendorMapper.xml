@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
+    <!--협력사 조회-->
+    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> <!--자동으로 list 반환-->
+        SELECT
+            NULL AS askNum,
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            REG_TYPE AS businessType,
+            CEO_USER_NM AS ceoName,
+            ADDR AS address,
+            INDUSTRY_TYPE AS businessItem,
+            USE_FLAG AS useYn,
+            PROGRESS_CD AS status,
+            REG_DATE AS createdAt
+        FROM
+            VNGL
+        <where>
+            DEL_FLAG = 'N'
+            <if test="vendorCode != null and vendorCode != ''">
+                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND REG_TYPE = #{businessType}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="businessItem != null and businessItem != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            </if>
+        </where>
+
+        UNION ALL
+
+        SELECT
+            ASK_NUM AS askNum,
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            REG_TYPE AS businessType,
+            CEO_USER_NM AS ceoName,
+            ADDR AS address,
+            INDUSTRY_TYPE AS businessItem,
+            NULL AS useYn,
+            PROGRESS_CD AS status,
+            REG_DATE AS createdAt
+        FROM
+            VNCH
+        <where>
+            DEL_FLAG = 'N'
+            <if test="vendorCode != null and vendorCode != ''">
+                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND REG_TYPE = #{businessType}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND USE_FLAG = #{useYn}
+            </if>
+            <if test="startDate != null">
+                AND REG_DATE <![CDATA[>=]]> #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            </if>
+            <if test="businessItem != null and businessItem != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            </if>
+        </where>
+
+        ORDER BY
+            vendorCode ASC
+    </select>
+
+    <!--대기 테이블 협력사 단일 조회-->
+    <select id="selectVendorByAskNum" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        SELECT
+            ASK_NUM AS askNum,
+            VENDOR_CD AS vendorCode,
+            REG_DATE AS createdAt,
+            REG_USER_ID AS createdBy,
+            MOD_DATE AS modifiedAt,
+            MOD_USER_ID AS modifiedBy,
+            DEL_FLAG AS delFlag,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorEngName,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            EMAIL AS email,
+            FOUNDATION_DATE AS foundationDate,
+            INDUSTRY_TYPE AS businessItem,
+            RMK AS remark,
+            PROGRESS_CD AS status,
+            SIGN_DATE AS signDate
+        FROM
+            VNCH
+        WHERE
+            ASK_NUM = #{askNum}
+        AND
+            PROGRESS_CD IN ('N', 'C')
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--협력사 마스터 테이블 저장-->
+    <insert id="insertVendorVNGL" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        INSERT INTO
+        VNGL(
+            VENDOR_CD,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            USE_FLAG,
+            VENDOR_NM,
+            VENDOR_ENG_NM,
+            REG_TYPE,
+            IRS_NO,
+            CEO_USER_NM,
+            ZIP_CD,
+            ADDR,
+            ADDR_DT,
+            TEL_NO,
+            FAX_NO,
+            EMAIL,
+            FOUNDATION_DATE,
+            INDUSTRY_TYPE,
+            ATT_FILE_NUM,
+            RMK,
+            PROGRESS_CD,
+            SIGN_DATE
+        )
+        VALUES(
+            #{vendorCode},
+            #{createdAt},
+            #{createdBy},
+            #{modifiedAt},
+            #{modifiedBy},
+            'N',
+            'Y',
+            #{vendorName},
+            #{vendorEngName},
+            #{businessType},
+            #{businessNo},
+            #{ceoName},
+            #{zipCode},
+            #{address},
+            #{addressDetail},
+            #{tel},
+            #{fax},
+            #{email},
+            #{foundationDate},
+            #{businessItem},
+            #{attFileNum},
+            #{remark},
+            "A",
+            #{signDate}
+        )
+    </insert>
+    <!--협력사 대기 테이블 저장-->
+    <insert id="insertVendorVNCH" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        INSERT INTO
+        VNCH(
+            ASK_NUM,
+            VENDOR_CD,
+            REG_DATE,
+            REG_USER_ID,
+            MOD_DATE,
+            MOD_USER_ID,
+            DEL_FLAG,
+            VENDOR_NM,
+            VENDOR_ENG_NM,
+            REG_TYPE,
+            IRS_NO,
+            CEO_USER_NM,
+            ZIP_CD,
+            ADDR,
+            ADDR_DT,
+            TEL_NO,
+            FAX_NO,
+            EMAIL,
+            FOUNDATION_DATE,
+            INDUSTRY_TYPE,
+            RMK,
+            PROGRESS_CD,
+            REJECT_RMK,
+            SIGN_USER_ID,
+            COM_TYPE
+        )
+        VALUES(
+            #{askNum},
+            #{vendorCode},
+            #{createdAt},
+            #{createdBy},
+            NULL,
+            NULL,
+            'N',
+            #{vendorName},
+            #{vendorEngName},
+            #{businessType},
+            #{businessNo},
+            #{ceoName},
+            #{zipCode},
+            #{address},
+            #{addressDetail},
+            #{tel},
+            #{fax},
+            #{email},
+            #{foundationDate},
+            #{industry},
+            #{remark},
+            #{status},
+            NULL,
+            NULL,
+            'V'
+        )
+    </insert>
+
+    <!--대기 테이블 상태 업데이트-->
+    <update id="updateVNCHByAskNum" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
+        UPDATE
+            VNCH
+        <set>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            <if test="signUserId != null and signUserId != ''">
+                SIGN_USER_ID = #{signUserId},
+            </if>
+            <if test="delFlag != null and delFlag != ''">
+                DEL_FLAG = #{delFlag},
+            </if>
+            <if test="status != null and status != ''">
+                PROGRESS_CD = #{status},
+            </if>
+            <if test="rejectRemark != null and rejectRemark != ''">
+                REJECT_RMK = #{rejectRemark},
+            </if>
+        </set>
+        WHERE
+            ASK_NUM=#{askNum}
+    </update>
+    
+    <!--사업자 번호 중복 체크-->
+    <select id="existsByBusinessNo" parameterType="String" resultType="boolean">
+        <!--둘 중 하나라도 0보다 크면 TRUE 반환-->
+        SELECT(
+            SELECT COUNT(*) FROM VNGL WHERE IRS_NO = #{businessNo} AND DEL_FLAG = 'N'
+        <!--마스터 테이블 존재 여부 확인-->
+        ) + (
+            SELECT COUNT(*) FROM VNCH WHERE IRS_NO = #{businessNo} AND PROGRESS_CD != 'R'
+        <!--대기 테이블 존재 여부 확인 (반려 제외) -->
+        ) > 0
+    </select>
+
+    <!--=== 협력사 ===-->
+
+</mapper>

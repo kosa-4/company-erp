@@ -11,7 +11,50 @@ export interface PurchaseOrderListParams {
   status?: string;
 }
 
+// RFQ 선정완료 조회용 타입 (발주대기목록에서 사용)
+export interface RfqSelectedDTO {
+  rfqNo?: string;
+  rfqName?: string;
+  rfqDate?: string;
+  rfqAmount?: number;
+  purchaseType?: string;
+  vendorCode?: string;
+  vendorName?: string;
+  ctrlUserId?: string;
+  ctrlUserName?: string;
+  prNo?: string;
+  remark?: string;
+  items?: RfqSelectedItemDTO[];
+}
+
+export interface RfqSelectedItemDTO {
+  rfqNo?: string;
+  itemCode?: string;
+  itemName?: string;
+  specification?: string;
+  unit?: string;
+  quantity?: number;
+  unitPrice?: number;
+  amount?: number;
+  deliveryDate?: string;
+  storageLocation?: string;
+  remark?: string;
+}
+
+export interface RfqSelectedListParams {
+  rfqNo?: string;
+  rfqName?: string;
+  vendorName?: string;
+  purchaseType?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export const purchaseOrderApi = {
+  // ========== RFQ 선정완료 조회 (발주대기목록) ==========
+  getRfqSelectedList: (params?: RfqSelectedListParams) =>
+    api.get<RfqSelectedDTO[]>('/purchase-orders/pending', { ...params }),
+
   // 목록 조회
   getList: (params?: PurchaseOrderListParams) =>
     api.get<PurchaseOrderDTO[]>('/purchase-orders', { ...params }),
