@@ -1,5 +1,6 @@
 package com.company.erp.master.vendoruser.service;
 
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
@@ -27,7 +28,7 @@ public class VendorUserService {
     /* 저장 */
     // 1. 구매사에서 승인
     @Transactional
-    public void approveVendorUser(List<VendorUserRegisterDto> vendorUserRegisterDtoList, String sessionId) {
+    public void approveVendorUser(List<VendorUserRegisterDto> vendorUserRegisterDtoList, String loginId) {
         // 1) 단일 dto 반환
         for(VendorUserRegisterDto dto : vendorUserRegisterDtoList){
             // 2) 사용자 존재 여부 확인
@@ -46,10 +47,11 @@ public class VendorUserService {
 
             // 4) 입력값 설정
             dto.setCreatedAt(LocalDate.now());
-            dto.setCreatedBy(sessionId);
+            dto.setCreatedBy(loginId);
             dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(sessionId);
+            dto.setModifiedBy(loginId);
             dto.setSignDate(LocalDate.now());
+            dto.setPassword(vendorUser.getPassword());
 
             // 5) 마스터 테이블 추가
             vendorUserMapper.insertUserVN_USER(dto);
@@ -57,7 +59,7 @@ public class VendorUserService {
             // 6) 대기 테이블 업데이트
             VendorUserUpdateDto vendorUserUpdateDto = new VendorUserUpdateDto();
             vendorUserUpdateDto.setModifiedAt(LocalDate.now());
-            vendorUserUpdateDto.setModifiedBy(sessionId);
+            vendorUserUpdateDto.setModifiedBy(loginId);
             vendorUserUpdateDto.setAskUserNum(askUserNum);
             vendorUserUpdateDto.setDelFlag("N");
             vendorUserUpdateDto.setStatus("A");
@@ -68,7 +70,7 @@ public class VendorUserService {
 
     // 2. 구매사에서 반려
     @Transactional
-    public void rejectVendorUser(List<VendorUserUpdateDto> vendorUserUpdateDtoList, String sessionId) {
+    public void rejectVendorUser(List<VendorUserUpdateDto> vendorUserUpdateDtoList, String loginId) {
         // 1) 단일 dto 반환
         for(VendorUserUpdateDto dto : vendorUserUpdateDtoList){
             // 1) 사용자 존재 여부 확인
@@ -88,7 +90,7 @@ public class VendorUserService {
 
             // 3) 입력값 설정
             dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(sessionId);
+            dto.setModifiedBy(String.valueOf(loginId));
             dto.setStatus("R");
             
             // 4) 대기 테이블 업데이트

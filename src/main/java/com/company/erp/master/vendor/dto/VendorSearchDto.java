@@ -11,7 +11,7 @@ public class VendorSearchDto {
     private String vendorCode;
     private String vendorName;
     private String businessType;
-    private String businessItem; // 업종
+    private String industry; // 업종
     private String useYn;
     private LocalDate startDate;
     private LocalDate endDate;
