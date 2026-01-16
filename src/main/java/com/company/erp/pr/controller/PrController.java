@@ -2,9 +2,7 @@ package com.company.erp.pr.controller;
 
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
-import com.company.erp.pr.dto.PrItemDTO;
-import com.company.erp.pr.dto.PrListResponse;
-import com.company.erp.pr.dto.PrRequest;
+import com.company.erp.pr.dto.*;
 import com.company.erp.pr.service.PrService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,14 @@ public class PrController {
     //구매요청화면 초기 데이터 조회
     @GetMapping("/init")
     public ResponseEntity<Map<String,Object>> initPurchase(HttpSession httpSession){
-        SessionUser user = (SessionUser) httpSession.getAttribute(SessionConst.LOGIN_USER);
+        SessionUser user = getSessionUser(httpSession);
+        
+        if (user == null) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "로그인 정보가 없습니다.");
+            return ResponseEntity.status(401).body(errorResponse);
+        }
+        
         String userId = user.getUserId();
         String deptName = user.getDeptName();
 
@@ -54,7 +59,14 @@ public class PrController {
     public ResponseEntity<Map<String,String>> savePurchaseRequest(HttpSession httpSession,
                                                                   @RequestBody PrRequest prRequest){
 
-        SessionUser user = (SessionUser) httpSession.getAttribute(SessionConst.LOGIN_USER);
+        SessionUser user = getSessionUser(httpSession);
+        
+        if (user == null) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "로그인 정보가 없습니다.");
+            return ResponseEntity.status(401).body(errorResponse);
+        }
+        
         String userId = user.getUserId();
         String deptCd = user.getDeptCd();
 
@@ -74,29 +86,91 @@ public class PrController {
     }
 
 
-    //구매요청현황 조회
+    //구매요청현황 목록 조회 (헤더만)
     @GetMapping("/list")
     public ResponseEntity<List<PrListResponse>> getPurchaseList(@RequestParam(required = false) String prNum,
-                                                                @RequestParam(required = false) String prSubject,
-                                                                @RequestParam(required = false) String requester,
-                                                                @RequestParam(required = false) String deptName,
-                                                                @RequestParam(required = false) String progressCd,
-                                                                @RequestParam(required = false) String startDate,
-                                                                @RequestParam(required = false) String endDate){
+                                                                 @RequestParam(required = false) String prSubject,
+                                                                 @RequestParam(required = false) String requester,
+                                                                 @RequestParam(required = false) String deptName,
+                                                                 @RequestParam(required = false) String progressCd,
+                                                                 @RequestParam(required = false) String startDate,
+                                                                 @RequestParam(required = false) String endDate){
 
-        List<PrListResponse> prList = prService.selectPrList(prNum,prSubject,requester,deptName,progressCd,startDate,endDate);
+        List<PrListResponse> prList = prService.selectPrList(prNum, prSubject, requester, deptName, progressCd, startDate, endDate);
 
         return ResponseEntity.ok(prList);
     }
+    
+    //구매요청 상세 품목 목록 조회
+    @GetMapping("/{prNum}/detail")
+    public ResponseEntity<List<PrDtDTO>> getPurchaseDetail(@PathVariable String prNum){
+        List<PrDtDTO> detailItems = prService.selectPrDetail(prNum);
+        
+        return ResponseEntity.ok(detailItems);
+    }
 
     //구매요청 삭제
-    @PutMapping("/delete")
-    public ResponseEntity<Map<String,String>> deletePurchaseRequest(@RequestParam(required = true) String prNum,
-                                                                    @RequestParam(required = true) String itemCd){
-        prService.deletePrRequest(prNum,itemCd);
+    @PutMapping("/{prNum}/delete")
+    public ResponseEntity<Map<String,String>> deletePurchaseRequest(@PathVariable String prNum){
+        prService.deletePrRequest(prNum);
 
         Map<String, String> response = new HashMap<>();
-        response.put("message", "구매요청 삭제완료");
+        response.put("message", "구매요청이 삭제되었습니다.");
         return ResponseEntity.ok().body(response);
+    }
+    
+    //구매요청 승인
+    @PostMapping("/{prNum}/approve")
+    public ResponseEntity<Map<String,String>> approvePurchaseRequest(@PathVariable String prNum,
+                                                                     HttpSession httpSession){
+        SessionUser user = getSessionUser(httpSession);
+        
+        if (user == null) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "로그인 정보가 없습니다.");
+            return ResponseEntity.status(401).body(errorResponse);
+        }
+        
+        String userId = user.getUserId();
+        String deptCd = user.getDeptCd();
+        
+        prService.approvePrRequest(prNum, userId, deptCd);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "구매요청이 승인되었습니다.");
+        return ResponseEntity.ok().body(response);
+    }
+    
+    //구매요청 반려
+    @PostMapping("/{prNum}/reject")
+    public ResponseEntity<Map<String,String>> rejectPurchaseRequest(@PathVariable String prNum,
+                                                                    HttpSession httpSession){
+        SessionUser user = getSessionUser(httpSession);
+        
+        if (user == null) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "로그인 정보가 없습니다.");
+            return ResponseEntity.status(401).body(errorResponse);
+        }
+        
+        String userId = user.getUserId();
+        String deptCd = user.getDeptCd();
+        
+        prService.rejectPr(prNum, userId, deptCd);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "구매요청이 반려되었습니다.");
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 세션에서 로그인한 사용자 정보를 가져오는 헬퍼 메서드
+     */
+    private SessionUser getSessionUser(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object obj = session.getAttribute(SessionConst.LOGIN_USER);
+        return (obj instanceof SessionUser) ? (SessionUser) obj : null;
     }
 }
