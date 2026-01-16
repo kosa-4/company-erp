@@ -70,19 +70,29 @@ public class VendorService {
             if(vendor == null) {
                 throw new IllegalStateException("해당 협력사가 존재하지 않습니다");
             }
-            // 3) 상태값 확인
-            String status = dto.getStatus();
-            if(!"C".equals(status) && !"N".equals(status)){
-                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
-            }
-            // 4) 입력값 설정
+            // 3) 공통값 입력
             vendor.setModifiedBy(loginId);
             vendor.setModifiedAt(LocalDate.now());
             vendor.setSignDate(LocalDate.now());
-//            vendor.setUseYn("Y");
+            
+            // 4) 상태값 확인
+            String status = dto.getStatus();
+            switch (status) {
 
-            // 5) 마스터 테이블 추가
-            vendorMapper.insertVendorVNGL(vendor);
+                case "N": // 신규 등록 시
+                    vendorMapper.insertVendorVNGL(vendor);
+                    break;
+
+                case "C": // 변경 요청 시
+                    vendorMapper.updateVNGLByVendorCode(vendor);
+                    break;
+
+                default:
+                    throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+            }
+            if(!"C".equals(status) && !"N".equals(status)){
+                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+            }
 
             // 6) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가

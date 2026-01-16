@@ -245,6 +245,52 @@
         )
     </insert>
 
+    <!--마스터 테이블 상태 업데이트-->
+    <update id="updateVNGLByVendorCode" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        UPDATE
+            VNGL
+        <set>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            PROGRESS_CD = 'A',
+            SIGN_DATE = NOW(),
+            <if test="vendorName != null and vendorName != ''">
+                VENDOR_NM = #{vendorName},
+            </if>
+            <if test="vendorEngName != null and vendorEngName != ''">
+                VENDOR_ENG_NM = #{vendorEngName},
+            </if>
+            <if test="businessType != null and businessType != ''">
+                REG_TYPE = #{businessType},
+            </if>
+            <if test="ceoName != null and ceoName != ''">
+                CEO_USER_NM = #{ceoName},
+            </if>
+            <if test="zipCode != null and zipCode != ''">
+                ZIP_CD = #{zipCode},
+            </if>
+            <if test="address != null and address != ''">
+                ADDR = #{address},
+            </if>
+            <if test="addressDetail != null and addressDetail != ''">
+                ADDR_DT = #{addressDetail},
+            </if>
+            <if test="tel != null and tel != ''">
+                TEL_NO = #{tel},
+            </if>
+            <if test="industry != null and industry != ''">
+                INDUSTRY_TYPE = #{industry},
+            </if>
+            <if test="remark != null and remark != ''">
+                RMK = #{remark},
+            </if>
+        </set>
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </update>
+
     <!--대기 테이블 상태 업데이트-->
     <update id="updateVNCHByAskNum" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
         UPDATE

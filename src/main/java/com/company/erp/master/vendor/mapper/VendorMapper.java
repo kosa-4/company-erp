@@ -32,7 +32,9 @@ public interface VendorMapper {
     void insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
 
     /* 수정 */
-    // 1. 대기 테이블 업데이트
+    // 1. 마스터 테이블 업데이트
+    void updateVNGLByVendorCode(VendorRegisterDto vendorRegisterDto);
+    // 2. 대기 테이블 업데이트
     void updateVNCHByAskNum(VendorUpdateDto vendorUpdateDto);
 
 }
