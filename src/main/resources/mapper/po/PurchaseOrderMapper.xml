@@ -27,6 +27,21 @@
         <if test="status != null and status != ''"> AND
         h.PROGRESS_CD = #{status} </if> ORDER BY h.REG_DATE DESC </select>
 
+    <!-- 협력사 전용: 본인 발주 목록 조회 -->
+    <select id="selectVendorOrderList" parameterType="map"
+        resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
+        AS poName, h.PO_DATE AS poDate, h.PO_AMT AS totalAmount, h.PROGRESS_CD AS status,
+        h.CTRL_USER_ID AS purchaseManager, h.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName,
+        h.PR_NUM AS prNo, h.RFQ_NUM AS rfqNo, h.PC_TYPE AS purchaseType, h.CHECK_FLAG AS checkFlag,
+        h.CHECK_DATE AS checkDate, h.RMK AS remark FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD =
+        v.VENDOR_CD WHERE h.DEL_FLAG = 'N' AND h.VENDOR_CD = #{vendorCd} <if
+            test="poNo != null and poNo != ''"> AND h.PO_NUM LIKE CONCAT('%', #{poNo}, '%') </if>
+        <if
+            test="poName != null and poName != ''"> AND h.PO_SUBJECT LIKE CONCAT('%', #{poName},
+        '%') </if>
+        <if test="status != null and status != ''"> AND h.PROGRESS_CD = #{status} </if>
+        ORDER BY h.REG_DATE DESC </select>
+
     <!-- 상세 조회 (헤더) -->
     <select id="selectHeader" parameterType="String"
         resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
