@@ -49,7 +49,7 @@ public class SessionInterceptor implements HandlerInterceptor {
         }
 
         // 3) 로그인 사용자 확인
-        Object sessionAttr = session.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = session.getAttribute(SessionConst.LOGIN_USER);
         SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
         if (loginUser == null) {
             // 세션은 있는데 loginUser가 없으면 registry 찌꺼기 정리(만료/비정상 세션 방어)

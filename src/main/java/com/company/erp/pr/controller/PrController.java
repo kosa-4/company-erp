@@ -1,5 +1,6 @@
 package com.company.erp.pr.controller;
 
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.pr.dto.PrItemDTO;
 import com.company.erp.pr.dto.PrListResponse;
@@ -24,7 +25,7 @@ public class PrController {
     //구매요청화면 초기 데이터 조회
     @GetMapping("/init")
     public ResponseEntity<Map<String,Object>> initPurchase(HttpSession httpSession){
-        SessionUser user = (SessionUser) httpSession.getAttribute(SessionUser.class.getName());
+        SessionUser user = (SessionUser) httpSession.getAttribute(SessionConst.LOGIN_USER);
         String userId = user.getUserId();
         String deptName = user.getDeptName();
 
@@ -53,7 +54,7 @@ public class PrController {
     public ResponseEntity<Map<String,String>> savePurchaseRequest(HttpSession httpSession,
                                                                   @RequestBody PrRequest prRequest){
 
-        SessionUser user = (SessionUser) httpSession.getAttribute(SessionUser.class.getName());
+        SessionUser user = (SessionUser) httpSession.getAttribute(SessionConst.LOGIN_USER);
         String userId = user.getUserId();
         String deptCd = user.getDeptCd();
 

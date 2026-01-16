@@ -4,6 +4,7 @@ import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.login.dto.LoginRequest;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.login.service.LoginService;
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpServletRequest;
@@ -60,7 +61,7 @@ public class LoginController {
         if (session == null) {
             return ApiResponse.fail("세션이 존재하지 않습니다.");
         }
-        SessionUser user = (SessionUser) session.getAttribute(SessionUser.class.getName());
+        SessionUser user = (SessionUser) session.getAttribute(SessionConst.LOGIN_USER);
 
         if (user == null) {
             return ApiResponse.fail("세션이 존재하지 않습니다.");

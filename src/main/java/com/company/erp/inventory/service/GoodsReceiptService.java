@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.session.SessionConst;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -282,7 +283,7 @@ public class GoodsReceiptService {
 
     // 세션에서 로그인 사용자 정보 가져오기
     private SessionUser getSessionUser() {
-        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = httpSession.getAttribute(SessionConst.LOGIN_USER);
         return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
     }
 
