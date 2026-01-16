@@ -3,6 +3,7 @@ package com.company.erp.common.file.controller;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.file.dto.FileListItemResponse;
 import com.company.erp.common.file.service.FileService;
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -67,7 +68,7 @@ public class FileController {
 
     private SessionUser getSessionUser(HttpSession session) {
         if (session == null) return null;
-        Object obj = session.getAttribute(SessionUser.class.getName());
+        Object obj = session.getAttribute(SessionConst.LOGIN_USER);
         return (obj instanceof SessionUser) ? (SessionUser) obj : null;
     }
 }

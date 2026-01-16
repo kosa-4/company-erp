@@ -1,6 +1,7 @@
 package com.company.erp.common.login.controller;
 
 import com.company.erp.common.exception.ApiResponse;
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionRegistry;
 import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +26,7 @@ public class LogoutController {
 
         String sessionId = session.getId();
 
-        Object sessionAttr = session.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = session.getAttribute(SessionConst.LOGIN_USER);
         SessionUser sessionUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
 
         if (sessionUser != null) {
