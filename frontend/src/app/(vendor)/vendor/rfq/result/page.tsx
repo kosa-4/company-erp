@@ -60,52 +60,55 @@ export default function VendorRfqResultPage() {
         </div>
       </div>
       
-      {/* Total Amount Panel */}
-      <div className="bg-gray-900 text-white rounded-xl p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-400 text-sm">총 낙찰금액</p>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(totalWinAmount)}</p>
-          </div>
-          <div className="p-3 bg-gray-800 rounded-lg">
-            <Trophy className="w-6 h-6 text-gray-300" />
+      {/* Total Amount Panel + Search & Filter - 1행 2열 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 총 낙찰금액 */}
+        <div className="bg-gray-900 text-white rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">총 낙찰금액</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(totalWinAmount)}</p>
+            </div>
+            <div className="p-3 bg-gray-800 rounded-lg">
+              <Trophy className="w-6 h-6 text-gray-300" />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Search & Filter */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex flex-wrap items-center gap-4">
-            <div className="w-full max-w-sm">
-                <Input 
-                    placeholder="견적번호 또는 견적명으로 검색"
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                />
+        {/* Search & Filter */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <Input 
+                placeholder="견적번호 또는 견적명으로 검색"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
             </div>
             <div className="flex items-center gap-2">
-                <Button 
-                    variant={filterResult === 'ALL' ? 'primary' : 'outline'} 
-                    onClick={() => setFilterResult('ALL')}
-                    size="sm"
-                >
-                    전체
-                </Button>
-                <Button 
-                    variant={filterResult === 'WIN' ? 'primary' : 'outline'} 
-                    onClick={() => setFilterResult('WIN')}
-                    size="sm"
-                >
-                    낙찰
-                </Button>
-                <Button 
-                    variant={filterResult === 'LOSE' ? 'primary' : 'outline'} 
-                    onClick={() => setFilterResult('LOSE')}
-                    size="sm"
-                >
-                    탈락
-                </Button>
+              <Button 
+                variant={filterResult === 'ALL' ? 'primary' : 'outline'} 
+                onClick={() => setFilterResult('ALL')}
+                size="sm"
+              >
+                전체
+              </Button>
+              <Button 
+                variant={filterResult === 'WIN' ? 'primary' : 'outline'} 
+                onClick={() => setFilterResult('WIN')}
+                size="sm"
+              >
+                낙찰
+              </Button>
+              <Button 
+                variant={filterResult === 'LOSE' ? 'primary' : 'outline'} 
+                onClick={() => setFilterResult('LOSE')}
+                size="sm"
+              >
+                탈락
+              </Button>
             </div>
+          </div>
         </div>
       </div>
 

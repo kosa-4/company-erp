@@ -1,5 +1,6 @@
 package com.company.erp.common.login.service;
 
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionRegistry;
 import com.company.erp.common.session.SessionUser;
 import jakarta.servlet.http.HttpSession;
@@ -28,6 +29,6 @@ public class DuplicateLoginService {
         sessionRegistry.registerLogin(userId, currentSessionId);
 
         // 4) 현재 세션에 로그인 사용자 저장
-        currentSession.setAttribute(SessionUser.class.getName(), loginUser);
+        currentSession.setAttribute(SessionConst.LOGIN_USER, loginUser);
     }
 }

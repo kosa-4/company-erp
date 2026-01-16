@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.session.SessionConst;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -159,7 +160,7 @@ public class PurchaseOrderService {
 
     // 세션에서 로그인 사용자 정보 가져오기
     private SessionUser getSessionUser() {
-        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = httpSession.getAttribute(SessionConst.LOGIN_USER);
         return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
     }
 
@@ -183,10 +184,10 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다 : " + poNo);
         }
-        // 저장(T) 상태에서만 수정 가능
+        // 수정 가능: T(임시저장)만
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                    "저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
+                    "임시저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
         dto.setPoNo(poNo);
 
@@ -215,10 +216,10 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-        // 저장(T) 상태에서만 삭제 가능
+        // 삭제 가능: T(임시저장)만
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                    "저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus());
+                    "임시저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
 
         purchaseOrderMapper.deleteHeader(poNo);
@@ -229,6 +230,15 @@ public class PurchaseOrderService {
     // 확정
     @Transactional
     public Boolean confirm(String poNo) {
+        PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
+        if (existing == null) {
+            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+        // 확정 가능: T(임시저장)만
+        if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                    "임시저장 상태에서만 확정할 수 있습니다. 현재 상태: " + existing.getStatus());
+        }
         String currentUserId = getCurrentUserId();
         return updateStatus(poNo, PoStatusCode.CONFIRMED.getCode(), currentUserId);
     }
@@ -240,7 +250,7 @@ public class PurchaseOrderService {
         return updateStatus(poNo, PoStatusCode.APPROVED.getCode(), currentUserId);
     }
 
-    // 반려
+    // 반려 (확정 → 임시저장으로 복귀)
     @Transactional
     public Boolean reject(String poNo, String rejectReason) {
         // 반려 사유 필수 검증
@@ -251,12 +261,16 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-        // 상태 전이 검증 (확정 → 반려)
-        validateStatusTransition(existing.getStatus(), PoStatusCode.REJECTED.getCode());
+        // 확정(D) 상태에서만 반려 가능
+        if (!PoStatusCode.CONFIRMED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                    "확정 상태에서만 반려할 수 있습니다. 현재 상태: " + existing.getStatus());
+        }
         String currentUserId = getCurrentUserId();
+        // 반려 시 임시저장(T) 상태로 복귀
         purchaseOrderMapper.updateStatusWithReason(
                 poNo,
-                PoStatusCode.REJECTED.getCode(),
+                PoStatusCode.SAVED.getCode(),
                 rejectReason,
                 currentUserId);
         return true;

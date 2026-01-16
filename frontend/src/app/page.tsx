@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { Hero, AuthModal } from '@/components/landing';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Hero, AuthModal } from "@/components/landing";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * 랜딩 페이지
- * 
+ *
  * "Purchase ERP" 버튼 클릭 시:
  * - 세션 있으면 → comType에 따라 해당 페이지로 이동
  *   - B (구매사) → /home
@@ -19,10 +19,10 @@ export default function LandingPage() {
   const router = useRouter();
   const { user, isLoading, checkSession } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
   /**
-   * "Purchase ERP" 버튼 클릭 핸들러
+   * "Fabrio" 버튼 클릭 핸들러
    * - 세션 확인 후 라우팅 또는 로그인 모달 표시
    */
   const handleGetStarted = async () => {
@@ -31,14 +31,14 @@ export default function LandingPage() {
 
     if (user) {
       // 세션 있으면 → comType에 따라 페이지 이동
-      if (user.comType === 'B') {
-        router.push('/home');
+      if (user.comType === "B") {
+        router.push("/home");
       } else {
-        router.push('/vendor');
+        router.push("/vendor");
       }
     } else {
       // 세션 없으면 → 로그인 모달 표시
-      setAuthMode('login');
+      setAuthMode("login");
       setIsAuthModalOpen(true);
     }
   };
@@ -77,10 +77,10 @@ export default function LandingPage() {
 
       <AnimatePresence>
         {isAuthModalOpen && (
-          <AuthModal 
-            mode={authMode} 
-            onClose={closeModal} 
-            onSwitchMode={(mode) => setAuthMode(mode)} 
+          <AuthModal
+            mode={authMode}
+            onClose={closeModal}
+            onSwitchMode={(mode) => setAuthMode(mode)}
           />
         )}
       </AnimatePresence>

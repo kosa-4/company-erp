@@ -7,39 +7,35 @@ import {
   Button, 
   Input, 
   Select,
-  DataGrid,
   SearchPanel,
   Modal,
   DatePicker,
   Textarea
 } from '@/components/ui';
-import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi, RfqSelectedDTO, RfqSelectedItemDTO } from '@/lib/api/purchaseOrder';
 import { PurchaseOrderDTO, PurchaseOrderItemDTO as POItemDTO } from '@/types/purchaseOrder';
 import { getErrorMessage } from '@/lib/api/error';
 
-// 목록 표시용 인터페이스 (RFQ + 품목 정보 통합)
-interface PendingOrderRow {
+// RFQ 그룹 인터페이스
+interface RfqGroup {
   rfqNo: string;
   rfqName: string;
   purchaseType: string;
+  purchaseTypeDisplay: string;
   buyer: string;
   rfqDate: string;
   vendorCode: string;
   vendorName: string;
-  itemCode: string;
-  itemName: string;
-  quantity: number;
-  unitPrice: number;
+  itemCount: number;
   totalAmount: number;
-  deliveryDate: string;
-  storageLocation: string;
+  items: RfqSelectedItemDTO[];
 }
 
 export default function OrderPendingPage() {
-  const [data, setData] = useState<PendingOrderRow[]>([]);
-  const [selectedRows, setSelectedRows] = useState<PendingOrderRow[]>([]);
+  const [rfqGroups, setRfqGroups] = useState<RfqGroup[]>([]);
+  const [expandedRfqs, setExpandedRfqs] = useState<Set<string>>(new Set());
+  const [selectedRfqNo, setSelectedRfqNo] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
     rfqName: '',
@@ -82,53 +78,36 @@ export default function OrderPendingPage() {
       });
 
       if (!result || !Array.isArray(result)) {
-        setData([]);
+        setRfqGroups([]);
         return;
       }
 
-      // RFQ 데이터를 표시용 행으로 변환
-      const transformed: PendingOrderRow[] = [];
-      result.forEach((rfq: RfqSelectedDTO) => {
-        if (rfq.items && rfq.items.length > 0) {
-          rfq.items.forEach((item: RfqSelectedItemDTO) => {
-            transformed.push({
-              rfqNo: rfq.rfqNo || '',
-              rfqName: rfq.rfqName || '',
-              purchaseType: rfq.purchaseType === 'G' ? '일반' : rfq.purchaseType === 'C' ? '단가계약' : rfq.purchaseType === 'E' ? '긴급' : rfq.purchaseType || '',
-              buyer: rfq.ctrlUserName || '',
-              rfqDate: rfq.rfqDate || '',
-              vendorCode: rfq.vendorCode || '',
-              vendorName: rfq.vendorName || '',
-              itemCode: item.itemCode || '',
-              itemName: item.itemName || '',
-              quantity: Number(item.quantity) || 0,
-              unitPrice: Number(item.unitPrice) || 0,
-              totalAmount: Number(item.amount) || 0,
-              deliveryDate: item.deliveryDate || '',
-              storageLocation: item.storageLocation || '본사 창고',
-            });
-          });
-        } else {
-          // 품목이 없으면 헤더 정보만
-          transformed.push({
-            rfqNo: rfq.rfqNo || '',
-            rfqName: rfq.rfqName || '',
-            purchaseType: rfq.purchaseType || '',
-            buyer: rfq.ctrlUserName || '',
-            rfqDate: rfq.rfqDate || '',
-            vendorCode: rfq.vendorCode || '',
-            vendorName: rfq.vendorName || '',
-            itemCode: '-',
-            itemName: '-',
-            quantity: 0,
-            unitPrice: 0,
-            totalAmount: Number(rfq.rfqAmount) || 0,
-            deliveryDate: '-',
-            storageLocation: '-',
-          });
-        }
+      // RFQ별로 그룹화
+      const groups: RfqGroup[] = result.map((rfq: RfqSelectedDTO) => {
+        const purchaseTypeDisplay = 
+          rfq.purchaseType === 'G' ? '일반' : 
+          rfq.purchaseType === 'C' ? '단가계약' : 
+          rfq.purchaseType === 'E' ? '긴급' : 
+          rfq.purchaseType || '';
+
+        const totalAmount = rfq.items?.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) || 0;
+
+        return {
+          rfqNo: rfq.rfqNo || '',
+          rfqName: rfq.rfqName || '',
+          purchaseType: rfq.purchaseType || '',
+          purchaseTypeDisplay,
+          buyer: rfq.ctrlUserName || '',
+          rfqDate: rfq.rfqDate || '',
+          vendorCode: rfq.vendorCode || '',
+          vendorName: rfq.vendorName || '',
+          itemCount: rfq.items?.length || 0,
+          totalAmount,
+          items: rfq.items || [],
+        };
       });
-      setData(transformed);
+
+      setRfqGroups(groups);
     } catch (error) {
       console.error('데이터 조회 오류:', error);
       alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
@@ -157,68 +136,45 @@ export default function OrderPendingPage() {
     });
   };
 
-  const columns: ColumnDef<PendingOrderRow>[] = [
-    {
-      key: 'rfqNo',
-      header: 'RFQ번호',
-      width: 130,
-      align: 'center',
-      render: (value) => (
-        <span className="text-blue-600 font-medium">{String(value)}</span>
-      ),
-    },
-    { key: 'rfqName', header: '견적명', width: 150, align: 'left' },
-    { key: 'purchaseType', header: '구매유형', width: 90, align: 'center' },
-    { key: 'buyer', header: '담당자', width: 80, align: 'center' },
-    { key: 'rfqDate', header: '견적요청일', width: 100, align: 'center' },
-    { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
-    { key: 'itemCode', header: '품목코드', width: 120, align: 'center' },
-    { key: 'itemName', header: '품목명', width: 150, align: 'left' },
-    { 
-      key: 'quantity', 
-      header: '수량', 
-      width: 80, 
-      align: 'right',
-      render: (value) => formatNumber(Number(value)),
-    },
-    { 
-      key: 'unitPrice', 
-      header: '단가', 
-      width: 100, 
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    { 
-      key: 'totalAmount', 
-      header: '금액', 
-      width: 120, 
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    { key: 'deliveryDate', header: '납기희망일', width: 100, align: 'center' },
-    { key: 'storageLocation', header: '저장위치', width: 90, align: 'center' },
-  ];
+  // RFQ 행 펼치기/접기
+  const toggleExpand = (rfqNo: string) => {
+    const newExpanded = new Set(expandedRfqs);
+    if (newExpanded.has(rfqNo)) {
+      newExpanded.delete(rfqNo);
+    } else {
+      newExpanded.add(rfqNo);
+    }
+    setExpandedRfqs(newExpanded);
+  };
+
+  // RFQ 선택
+  const handleSelectRfq = (rfqNo: string) => {
+    setSelectedRfqNo(selectedRfqNo === rfqNo ? null : rfqNo);
+  };
 
   const handleCreateOrder = () => {
-    if (selectedRows.length === 0) {
-      alert('발주할 항목을 선택해주세요.');
+    if (!selectedRfqNo) {
+      alert('발주할 견적을 선택해주세요.');
       return;
     }
+
+    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+    if (!selectedGroup) return;
     
     // 폼 초기화
     setOrderForm({
-      poName: selectedRows[0].rfqName || '발주서',
+      poName: selectedGroup.rfqName || '발주서',
       poDate: new Date().toISOString().split('T')[0],
       remark: '',
-      items: selectedRows.map(row => ({
-        itemCode: row.itemCode,
-        itemName: row.itemName,
-        unit: 'EA',
-        orderQuantity: row.quantity,
-        unitPrice: row.unitPrice,
-        amount: row.totalAmount,
-        deliveryDate: row.deliveryDate,
-        storageLocation: row.storageLocation,
+      items: selectedGroup.items.map(item => ({
+        itemCode: item.itemCode || '',
+        itemName: item.itemName || '',
+        unit: item.unit || 'EA',
+        orderQuantity: Number(item.quantity) || 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        amount: Number(item.amount) || 0,
+        deliveryDate: item.deliveryDate || '',
+        storageLocation: item.storageLocation || '본사 창고',
       })),
     });
     
@@ -235,7 +191,9 @@ export default function OrderPendingPage() {
       alert('발주일자를 선택해주세요.');
       return;
     }
-    if (!selectedRows[0]?.vendorCode) {
+    
+    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+    if (!selectedGroup?.vendorCode) {
       alert('협력업체 정보가 없습니다.');
       return;
     }
@@ -261,8 +219,9 @@ export default function OrderPendingPage() {
       const purchaseOrderData: PurchaseOrderDTO = {
         poName: orderForm.poName,
         poDate: orderForm.poDate,
-        vendorCode: selectedRows[0]?.vendorCode || '',
-        purchaseType: selectedRows[0]?.purchaseType === '일반' ? 'G' : selectedRows[0]?.purchaseType === '단가계약' ? 'C' : 'G',
+        vendorCode: selectedGroup.vendorCode,
+        purchaseType: selectedGroup.purchaseType,
+        rfqNo: selectedGroup.rfqNo, // RFQ 번호 추가
         remark: orderForm.remark,
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
@@ -278,8 +237,8 @@ export default function OrderPendingPage() {
 
       await purchaseOrderApi.create(purchaseOrderData);
       setIsOrderModalOpen(false);
-      setSelectedRows([]);
-      const moveToProgress = window.confirm('성공적으로 저장되었습니다.\n\n발주진행현황으로 이동하시겠습니까?');
+      setSelectedRfqNo(null);
+      const moveToProgress = window.confirm('성공적으로 저장되었습니다.\\n\\n발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
       } else {
@@ -302,7 +261,9 @@ export default function OrderPendingPage() {
       alert('발주일자를 선택해주세요.');
       return;
     }
-    if (!selectedRows[0]?.vendorCode) {
+    
+    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+    if (!selectedGroup?.vendorCode) {
       alert('협력업체 정보가 없습니다.');
       return;
     }
@@ -327,8 +288,9 @@ export default function OrderPendingPage() {
       const purchaseOrderData: PurchaseOrderDTO = {
         poName: orderForm.poName,
         poDate: orderForm.poDate,
-        vendorCode: selectedRows[0]?.vendorCode || '',
-        purchaseType: selectedRows[0]?.purchaseType === '일반' ? 'G' : selectedRows[0]?.purchaseType === '단가계약' ? 'C' : 'G',
+        vendorCode: selectedGroup.vendorCode,
+        purchaseType: selectedGroup.purchaseType,
+        rfqNo: selectedGroup.rfqNo, // RFQ 번호 추가
         status: '확정',
         remark: orderForm.remark,
         items: orderForm.items.map(item => ({
@@ -349,8 +311,8 @@ export default function OrderPendingPage() {
         await purchaseOrderApi.confirm(created.poNo);
       }
       setIsOrderModalOpen(false);
-      setSelectedRows([]);
-      const moveToProgress = window.confirm('성공적으로 확정되었습니다.\n\n발주진행현황으로 이동하시겠습니까?');
+      setSelectedRfqNo(null);
+      const moveToProgress = window.confirm('성공적으로 확정되었습니다.\\n\\n발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
       } else {
@@ -427,16 +389,143 @@ export default function OrderPendingPage() {
           <Button variant="primary" onClick={handleCreateOrder}>발주서 작성</Button>
         }
       >
-        <DataGrid
-          columns={columns}
-          data={data}
-          keyField="rfqNo"
-          loading={loading}
-          selectable
-          selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
-          emptyMessage="발주 대기 항목이 없습니다."
-        />
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-200">
+                  <th className="w-12 px-4 py-3.5"></th>
+                  <th className="w-12 px-4 py-3.5">
+                    {/* 선택 체크박스 헤더 */}
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">RFQ번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">견적명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">구매유형</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">담당자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">견적요청일</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">협력사명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">품목수</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right">총금액</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="animate-spin w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span className="text-stone-500">데이터를 불러오는 중...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : rfqGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="w-14 h-14 text-stone-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <span className="text-stone-500">발주 대기 항목이 없습니다.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  rfqGroups.map((group) => (
+                    <React.Fragment key={group.rfqNo}>
+                      {/* RFQ 메인 행 */}
+                      <tr 
+                        className={`
+                          transition-colors duration-150 cursor-pointer
+                          ${selectedRfqNo === group.rfqNo ? 'bg-teal-50' : 'hover:bg-stone-50'}
+                        `}
+                      >
+                        {/* 펼치기 아이콘 */}
+                        <td className="px-4 py-3.5 text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                          <svg 
+                            className={`w-5 h-5 text-stone-400 transition-transform duration-200 ${expandedRfqs.has(group.rfqNo) ? 'rotate-90' : ''}`}
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </td>
+                        {/* 선택 체크박스 */}
+                        <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedRfqNo === group.rfqNo}
+                            onChange={() => handleSelectRfq(group.rfqNo)}
+                            className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                          />
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                          <span className="text-blue-600 font-medium">{group.rfqNo}</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.purchaseTypeDisplay}</td>
+                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.buyer}</td>
+                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqDate}</td>
+                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.rfqNo)}>{group.vendorName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {group.itemCount}개
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-right font-medium" onClick={() => toggleExpand(group.rfqNo)}>
+                          ₩{formatNumber(group.totalAmount)}
+                        </td>
+                      </tr>
+                      
+                      {/* 펼쳐진 품목 상세 */}
+                      {expandedRfqs.has(group.rfqNo) && (
+                        <tr>
+                          <td colSpan={10} className="bg-stone-50/50 px-4 py-3">
+                            <div className="ml-12">
+                              <table className="w-full border border-stone-200 rounded-lg overflow-hidden">
+                                <thead className="bg-stone-100">
+                                  <tr>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">품목코드</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">품목명</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">규격</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">단위</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">수량</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">단가</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">금액</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">납기희망일</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">저장위치</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-stone-100">
+                                  {group.items.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-stone-50">
+                                      <td className="px-3 py-2 text-xs text-center">{item.itemCode}</td>
+                                      <td className="px-3 py-2 text-xs text-left">{item.itemName}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.specification || '-'}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.unit}</td>
+                                      <td className="px-3 py-2 text-xs text-right">{formatNumber(Number(item.quantity))}</td>
+                                      <td className="px-3 py-2 text-xs text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                                      <td className="px-3 py-2 text-xs text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.deliveryDate || '-'}</td>
+                                      <td className="px-3 py-2 text-xs text-left">{item.storageLocation || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Card>
 
       {/* 발주서 작성 모달 */}
@@ -479,7 +568,7 @@ export default function OrderPendingPage() {
           <div className="grid grid-cols-2 gap-4">
             <Input 
               label="협력사" 
-              value={selectedRows[0]?.vendorName || ''} 
+              value={rfqGroups.find(g => g.rfqNo === selectedRfqNo)?.vendorName || ''} 
               readOnly 
             />
             <Input 
