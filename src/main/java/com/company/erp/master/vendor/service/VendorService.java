@@ -59,7 +59,7 @@ public class VendorService {
 
     // 2. 구매사에서 승인
     @Transactional
-    public void approveVendor(List<VendorRegisterDto> vendorRegisterDtoList, String sessionId) {
+    public void approveVendor(List<VendorRegisterDto> vendorRegisterDtoList, String loginId) {
 
         // 1) 단일 dto 반환 (일괄 처리 건수가 많지 않으므로 서비스 레이어에서 for문으로 처리)
         for(VendorRegisterDto dto : vendorRegisterDtoList) {
@@ -76,7 +76,7 @@ public class VendorService {
                 throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
             }
             // 4) 입력값 설정
-            vendor.setModifiedBy(sessionId);
+            vendor.setModifiedBy(loginId);
             vendor.setModifiedAt(LocalDate.now());
             vendor.setSignDate(LocalDate.now());
 //            vendor.setUseYn("Y");
@@ -87,11 +87,11 @@ public class VendorService {
             // 6) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
             vendorUpdateDto.setModifiedAt(LocalDate.now());
-            vendorUpdateDto.setModifiedBy(sessionId);
+            vendorUpdateDto.setModifiedBy(loginId);
             vendorUpdateDto.setAskNum(askNum); // where 용
             vendorUpdateDto.setDelFlag("N");
             vendorUpdateDto.setStatus("A");
-            vendorUpdateDto.setSignUserId(sessionId);
+            vendorUpdateDto.setSignUserId(loginId);
 
             vendorMapper.updateVNCHByAskNum(vendorUpdateDto);
         }
@@ -99,14 +99,14 @@ public class VendorService {
     
     // 3. 구매사에서 반려
     @Transactional
-    public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String sessionId) {
+    public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String loginId) {
         // 1) 단일 dto 반환
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
             // 2) 입력값 설정
             dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(sessionId);
-            dto.setSignUserId(sessionId);
+            dto.setModifiedBy(loginId);
+            dto.setSignUserId(loginId);
             dto.setStatus("R");
 
             // 3) 대기 테이블 업데이트

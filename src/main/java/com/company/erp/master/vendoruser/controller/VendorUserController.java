@@ -37,34 +37,46 @@ public class VendorUserController {
     /* 저장 */
     // 1. 협력 업체 사용자 승인
     @PostMapping("/approve")
-    public ApiResponse approveVendorUser(@RequestBody List<VendorUserRegisterDto> vendorUserRegisterDtoList, HttpSession session) {
-        // 1) 세션 정보 조회
-        String sessionId = session.getId();
+    public ApiResponse approveVendorUser(@RequestBody List<VendorUserRegisterDto> vendorUserRegisterDtoList, HttpSession currentSession) {
 
-        // 2) 승인 함수 실행
-        vendorUserService.approveVendorUser(vendorUserRegisterDtoList, sessionId);
+        // 1) 객체 통째로 반환
+        Object sessionAttr = currentSession.getAttribute(SessionUser.class.getName());
+
+        // 2) 객체의 타입이 SessionUser인지 확인 (안정성을 위한 세션 만료 여부 체크)
+        if(!(sessionAttr instanceof SessionUser)){
+            return ApiResponse.fail("세션이 만료되었습니다.");
+        }
+
+        // 3) 타입 전환
+        SessionUser userObj = (SessionUser) sessionAttr;
+
+        // 4) id 반환
+        String loginId = userObj.getUserId();
+
+        // 5) 승인 함수 실행
+        vendorUserService.approveVendorUser(vendorUserRegisterDtoList, loginId);
         return ApiResponse.ok("사용자 승인이 완료되었습니다.");
     }
 
     // 2. 구매사에서 반려
     @PostMapping("/reject")
     public ApiResponse rejectVendorUser(
-            @RequestBody List<VendorUserUpdateDto> vendorUserUpdateDtoList,
-            HttpSession session
-    ) {
-        // 1) 객체 통쨰로 반환
-        Object sessionAttr = session.getAttribute(SessionUser.class.getName());
+            @RequestBody List<VendorUserUpdateDto> vendorUserUpdateDtoList, HttpSession currentSession ) {
+        // 1) 객체 통째로 반환
+        Object sessionAttr = currentSession.getAttribute(SessionUser.class.getName());
+        
+        // 2) 객체의 타입이 SessionUser인지 확인 (안정성을 위한 세션 만료 여부 체크)
         if(!(sessionAttr instanceof SessionUser)){
             return ApiResponse.fail("세션이 만료되었습니다.");
         }
+        
+        // 3) 타입 전환
         SessionUser userObj = (SessionUser) sessionAttr;
 
-        // 여기서 .getUserId() 같은 메서드를 써야 진짜 아이디가 나옵니다!
-        String userId = userObj.getUserId();
-//        System.out.println("진짜 사용자 아이디: " + userId);
+        // 4) id 반환
+        String loginId = userObj.getUserId();
 
-        // 이제 이 realId를 서비스에 넘기세요.
-        vendorUserService.rejectVendorUser(vendorUserUpdateDtoList, userId);
+        vendorUserService.rejectVendorUser(vendorUserUpdateDtoList, loginId);
 
         return ApiResponse.ok("반려 처리 되었습니다.");
         

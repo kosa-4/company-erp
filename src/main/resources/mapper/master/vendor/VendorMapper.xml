@@ -260,6 +260,66 @@
         WHERE
             ASK_NUM=#{askNum}
     </update>
+
+    <!--로그인한 id로 대기 테이블 조회-->
+    <select id="selectVendorVNCHByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
+
+        SELECT
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            INDUSTRY_TYPE AS industry,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            PROGRESS_CD AS status,
+            RMK AS remark
+            FROM
+            VNCH V
+        INNER JOIN
+            VN_USER U <!--이미 로그인 했다는건 승인 상태라는 의미-->
+        ON
+            V.VENDOR_CD = U.VENDOR_CD
+        WHERE
+            U.USER_ID = #{loginId}
+        AND
+            V.PROGRESS_CD IN ('C', 'N')
+
+    </select>
+
+    <!--로그인한 id로 마스터 테이블 조회-->
+    <select id="selectVendorVNGLByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
+
+        SELECT
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            INDUSTRY_TYPE AS industry,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            PROGRESS_CD AS status,
+            RMK AS remark
+        FROM
+            VNGL V
+        INNER JOIN
+            VN_USER U
+        ON
+            V.VENDOR_CD = U.VENDOR_CD
+        WHERE
+            U.USER_ID = #{loginId}
+        AND
+            V.PROGRESS_CD = 'A'
+
+    </select>
     
     <!--사업자 번호 중복 체크-->
     <select id="existsByBusinessNo" parameterType="String" resultType="boolean">
@@ -273,6 +333,5 @@
         ) > 0
     </select>
 
-    <!--=== 협력사 ===-->
 
 </mapper>
