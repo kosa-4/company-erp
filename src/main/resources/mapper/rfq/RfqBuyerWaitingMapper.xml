@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.rfq.buyer.waiting.mapper.RfqBuyerWaitingMapper">
+
+    <!-- PR 헤더 목록 조회 (집계) -->
+    <select id="selectPrHeaders" 
+            parameterType="com.company.erp.rfq.buyer.waiting.dto.request.RfqWaitingSearchRequest"
+            resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrHeaderRow">
+        SELECT 
+            ph.PR_NUM as prNum,
+            ph.PR_SUBJECT as prSubject,
+            DATE(ph.REG_DATE) as prDate,
+            u.USER_NM as requester,
+            d.DEPT_NM as reqDeptNm,
+            ph.PROGRESS_CD as progressCd,
+            c1.CODE_NAME as progressNm,
+            ph.PC_TYPE as pcType,
+            c2.CODE_NAME as pcTypeNm,
+            COUNT(pd.ITEM_CD) as itemCount,
+            ph.PR_AMT as totalAmount
+        FROM PRHD ph
+        LEFT JOIN PRDT pd ON pd.PR_NUM = ph.PR_NUM AND pd.DEL_FLAG = 'N'
+        LEFT JOIN BY_USER u ON u.USER_ID = ph.REG_USER_ID
+        LEFT JOIN DEPT d ON d.DEPT_CD = ph.DEPT_CD
+        LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'PROGRESS_CD' AND c1.CODE = ph.PROGRESS_CD
+        LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'PC_TYPE' AND c2.CODE = ph.PC_TYPE
+        WHERE ph.DEL_FLAG = 'N'
+          AND ph.PROGRESS_CD = 'A'
+          AND ph.PC_TYPE NOT IN ('C', 'E')
+          AND NOT EXISTS (
+              SELECT 1 FROM RFQHD r 
+              WHERE r.PR_NUM = ph.PR_NUM 
+                AND r.DEL_FLAG = 'N'
+          )
+        <if test="prNum != null and prNum != ''">
+            AND ph.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
+        </if>
+        <if test="prSubject != null and prSubject != ''">
+            AND ph.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
+        </if>
+        <if test="fromDate != null">
+            AND DATE(ph.REG_DATE) >= #{fromDate}
+        </if>
+        <if test="toDate != null">
+            AND DATE(ph.REG_DATE) &lt;= #{toDate}
+        </if>
+        <if test="reqDeptCd != null and reqDeptCd != ''">
+            AND ph.DEPT_CD = #{reqDeptCd}
+        </if>
+        <if test="reqUserNm != null and reqUserNm != ''">
+            AND u.USER_NM LIKE CONCAT('%', #{reqUserNm}, '%')
+        </if>
+        GROUP BY ph.PR_NUM, ph.PR_SUBJECT, DATE(ph.REG_DATE), u.USER_NM, d.DEPT_NM,
+                 ph.PROGRESS_CD, c1.CODE_NAME, ph.PC_TYPE, c2.CODE_NAME
+        ORDER BY MAX(ph.REG_DATE) DESC
+    </select>
+
+    <!-- PR 품목 목록 조회 -->
+    <select id="selectPrItems" resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrItemRow">
+        SELECT 
+            pd.PR_NUM as prNum,
+            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD) as lineNo,
+            pd.ITEM_CD as itemCd,
+            pd.ITEM_DESC as itemDesc,
+            pd.ITEM_SPEC as itemSpec,
+            pd.UNIT_CD as unitCd,
+            pd.PR_QT as prQt,
+            pd.UNIT_PRC as unitPrc,
+            pd.PR_AMT as prAmt,
+            pd.DELY_DATE as delyDate,
+            pd.RMK as rmk
+        FROM PRDT pd
+        WHERE pd.PR_NUM IN
+        <foreach collection="prNums" item="prNum" open="(" separator="," close=")">
+            #{prNum}
+        </foreach>
+          AND pd.DEL_FLAG = 'N'
+        ORDER BY pd.PR_NUM, pd.ITEM_CD
+    </select>
+
+    <!-- PRHD FOR UPDATE -->
+    <select id="selectPrForUpdate" 
+            resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrLockRow">
+        SELECT
+            PR_NUM as prNum,
+            PROGRESS_CD as progressCd,
+            PC_TYPE as pcType,
+            DEPT_CD as reqDeptCd,
+            CTRL_USER_ID as ctrlUserId
+        FROM PRHD
+        WHERE PR_NUM = #{prNum}
+          AND DEL_FLAG = 'N'
+        FOR UPDATE
+    </select>
+
+    <!-- RFQHD 존재 여부 체크 -->
+    <select id="countRfqByPrNum" resultType="int">
+        SELECT COUNT(*)
+        FROM RFQHD
+        WHERE PR_NUM = #{prNum}
+          AND DEL_FLAG = 'N'
+    </select>
+
+    <!-- RFQHD INSERT -->
+    <insert id="insertRfqHdFromPr">
+        INSERT INTO RFQHD (
+            RFQ_NUM,
+            RFQ_SUBJECT,
+            RFQ_DATE,
+            PR_NUM,
+            PROGRESS_CD,
+            CTRL_USER_ID,
+            REG_DATE,
+            REG_USER_ID,
+            DEL_FLAG
+        )
+        SELECT
+            #{rfqNum},
+            CONCAT('RFQ for ', h.PR_SUBJECT),
+            NOW(),
+            h.PR_NUM,
+            'T',
+            #{userId},
+            NOW(),
+            #{userId},
+            'N'
+        FROM PRHD h
+        WHERE h.PR_NUM = #{prNum}
+          AND h.DEL_FLAG = 'N'
+    </insert>
+
+    <!-- RFQDT INSERT (PRDT 복사) -->
+    <insert id="insertRfqDtFromPr">
+        INSERT INTO RFQDT (
+            RFQ_NUM,
+            LINE_NO,
+            ITEM_CD,
+            ITEM_DESC,
+            ITEM_SPEC,
+            UNIT_CD,
+            RFQ_QT,
+            EST_UNIT_PRC,
+            EST_AMT,
+            DELY_DATE,
+            WH_NM,
+            RMK,
+            REG_DATE,
+            REG_USER_ID,
+            DEL_FLAG
+        )
+        SELECT
+            #{rfqNum},
+            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD),
+            pd.ITEM_CD,
+            pd.ITEM_DESC,
+            pd.ITEM_SPEC,
+            pd.UNIT_CD,
+            pd.PR_QT,
+            pd.UNIT_PRC,
+            pd.PR_AMT,
+            pd.DELY_DATE,
+            NULL,
+            pd.RMK,
+            NOW(),
+            #{userId},
+            'N'
+        FROM PRDT pd
+        WHERE pd.PR_NUM = #{prNum}
+          AND pd.DEL_FLAG = 'N'
+    </insert>
+
+</mapper>
