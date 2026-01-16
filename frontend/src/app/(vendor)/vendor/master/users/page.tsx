@@ -15,7 +15,7 @@ export default function VendorUsersPage() {
   const [formData, setFormData] = useState({
     userName: '',
     userId: '',
-    userEmail: '',
+    email: '',
     phone: '',
     password: '', // 신규 등록용 비밀번호 추가
   });
@@ -49,7 +49,7 @@ export default function VendorUsersPage() {
       setFormData({
         userName: user.userName,
         userId: user.userId,
-        userEmail: user.userEmail,
+        email: user.email,
         phone: user.phone,
         password: '', // 수정 시 비밀번호는 별도로 처리하거나 비워둠
       });
@@ -58,7 +58,7 @@ export default function VendorUsersPage() {
       setFormData({
         userName: '',
         userId: '',
-        userEmail: '',
+        email: '',
         phone: '',
         password: '',
       });
@@ -79,7 +79,7 @@ export default function VendorUsersPage() {
   // 3. 실제 백엔드 저장 로직 (fetch)
   const handleSave = async () => {
     // 필수값 검증
-     if (!formData.userId || !formData.userName || !formData.userEmail || !formData.phone || (!editingUser && !formData.password)) {
+     if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (!editingUser && !formData.password)) {
       alert('필수 정보를 모두 입력해주세요.');
       return;
     }
@@ -129,7 +129,7 @@ export default function VendorUsersPage() {
   const filteredUsers = users.filter(user =>
     user.userName?.includes(searchText) ||
     user.userId?.includes(searchText) ||
-    user.userEmail?.includes(searchText)
+    user.email?.includes(searchText)
   );
 
   return (
@@ -238,7 +238,7 @@ export default function VendorUsersPage() {
               )}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-gray-500">이메일 *</label>
-                <Input type="email" name="userEmail" value={formData.userEmail} onChange={handleChange} placeholder="example@email.com" />
+                <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="example@email.com" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-gray-500">연락처 *</label>
