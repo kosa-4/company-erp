@@ -1,5 +1,6 @@
 package com.company.erp.master.vendoruser.mapper;
 
+import com.company.erp.master.vendor.dto.VendorListDto;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
@@ -28,6 +29,10 @@ public interface VendorUserMapper {
     /* 조회 */
     // 1. 아이디 중복 검사
     boolean existsUserId(String userId);
+    // 2. 회사 코드로 조회
+    List<VendorUserListDto> selectVendorUserListByVendorCode(VendorUserSearchDto VendorUserSearchDto);
+    // 3. 로그인 id로 회사 코드 조회
+    String selectVendorCodeByLoginId(String loginId);
 
     /* 저장 */
     // 1. 대기 테이블 저장
