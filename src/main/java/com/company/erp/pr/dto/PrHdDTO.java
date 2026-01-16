@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.Date;
 
 //저장용 hd DTO
 @Data
@@ -22,5 +21,6 @@ public class PrHdDTO {
     private BigDecimal prAmt;//구매요청 총 금액
     private String rmk;//비고
     private String pcType;//구매유형
+    private String progressCd;//진행상태 코드
 
 }

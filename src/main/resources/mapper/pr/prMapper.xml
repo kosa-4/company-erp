@@ -62,104 +62,157 @@
     </select>
 
     <select id="selectPrNum" parameterType="String" resultType="com.company.erp.pr.dto.PrHdDTO">
-        SELECT PR_NUM, DEL_FLAG
+        SELECT PR_NUM, DEL_FLAG, PROGRESS_CD
         FROM PRHD
         WHERE PR_NUM = #{prNum}
     </select>
 
+    <!-- 구매요청 헤더 삭제 -->
     <update id="deletePrHd">
         UPDATE PRHD
-        SET
-        DEL_FLAG = 'Y'
+        SET DEL_FLAG = 'Y'
         WHERE PR_NUM = #{prNum}
-        AND
-        DEL_FLAG='N'
+        AND DEL_FLAG = 'N'
     </update>
 
     <update id="deletePrDt">
         UPDATE PRDT
-        SET
-        DEL_FLAG = 'Y'
+        SET DEL_FLAG = 'Y'
         WHERE PR_NUM = #{prNum}
-        AND
-        DEL_FLAG='N'
+        AND DEL_FLAG = 'N'
     </update>
 
 
+    <!-- 구매요청 현황 목록 조회 -->
     <select id="selectPrList" resultType="com.company.erp.pr.dto.PrListResponse">
         SELECT
-        ST.CODE_NAME AS progressCd,
-        PT.CODE_NAME AS pcType,
-        HD.PR_NUM   AS prNum,
-        U.USER_NM   AS requester,
-        D.DEPT_NM   AS deptName,
-        DT.REG_DATE  AS regDate,
-        DT.ITEM_CD   AS itemCd,
-        DT.ITEM_DESC AS itemDesc,
-        DT.PR_QT     AS prQt,
-        DT.UNIT_PRC  AS unitPrc,
-        DT.PR_AMT    AS prAmt,
-        DT.DELY_DATE AS delyDate
-        FROM PRDT DT
-        JOIN PRHD HD
-        ON DT.PR_NUM = HD.PR_NUM
-
+            HD.PR_NUM      AS prNum,
+            HD.PR_SUBJECT  AS prSubject,
+            ST.CODE_NAME   AS progressCd,
+            PT.CODE_NAME   AS pcType,
+            U.USER_NM      AS requester,
+            D.DEPT_NM      AS deptName,
+            HD.REG_DATE    AS regDate,
+            HD.PR_AMT      AS prAmt,
+            HD.RMK         AS rmk
+        FROM PRHD HD
+        
         LEFT JOIN CODD ST
-        ON ST.CODE_GROUP = 'PROGRESS_CD'
-        AND ST.CODE = HD.PROGRESS_CD
-        AND ST.USE_YN = 'Y'
-
+            ON ST.CODE_GROUP = 'PROGRESS_CD'
+            AND ST.CODE = HD.PROGRESS_CD
+            AND ST.USE_YN = 'Y'
+        
         LEFT JOIN CODD PT
-        ON PT.CODE_GROUP = 'PC_TYPE'
-        AND PT.CODE = HD.PC_TYPE
-        AND PT.USE_YN = 'Y'
-
+            ON PT.CODE_GROUP = 'PC_TYPE'
+            AND PT.CODE = HD.PC_TYPE
+            AND PT.USE_YN = 'Y'
+        
         LEFT JOIN BY_USER U
-        ON U.USER_ID = HD.REG_USER_ID
-        AND U.DEL_FLAG = 'N'
-
+            ON U.USER_ID = HD.REG_USER_ID
+            AND U.DEL_FLAG = 'N'
+        
         LEFT JOIN vw_dept_active D
-        ON D.DEPT_CD = HD.DEPT_CD
-
+            ON D.DEPT_CD = HD.DEPT_CD
+        
         WHERE HD.DEL_FLAG = 'N'
-        AND DT.DEL_FLAG = 'N'
-
+        
         <!-- PR번호 검색 -->
         <if test="prNum != null and prNum != ''">
             AND HD.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
         </if>
-
+        
         <!-- 구매요청명 검색 -->
         <if test="prSubject != null and prSubject != ''">
             AND HD.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
         </if>
-
+        
         <!-- 요청자 검색 -->
         <if test="requester != null and requester != ''">
             AND U.USER_NM LIKE CONCAT('%', #{requester}, '%')
         </if>
-
+        
         <!-- 부서 검색 -->
         <if test="deptName != null and deptName != ''">
             AND D.DEPT_NM LIKE CONCAT('%', #{deptName}, '%')
         </if>
-
+        
         <!-- 상태 검색 -->
         <if test="progressCd != null and progressCd != ''">
             AND ST.CODE_NAME = #{progressCd}
         </if>
-
+        
         <!-- 요청일자 검색 -->
         <if test="startDate != null and startDate != ''">
-            AND DATE(DT.REG_DATE) &gt;= #{startDate}
+            AND DATE(HD.REG_DATE) &gt;= #{startDate}
         </if>
-
+        
         <if test="endDate != null and endDate != ''">
-            AND DATE(DT.REG_DATE) &lt;= #{endDate}
+            AND DATE(HD.REG_DATE) &lt;= #{endDate}
         </if>
-
+        
         ORDER BY HD.PR_NUM DESC
     </select>
 
+    <!-- 구매요청 상세 품목 목록 조회 -->
+    <select id="selectPrDetail" resultType="com.company.erp.pr.dto.PrDtDTO">
+        SELECT
+            DT.PR_NUM      AS prNum,
+            DT.REG_USER_ID AS regUserId,
+            DT.DEL_FLAG    AS delFlag,
+            DT.ITEM_CD     AS itemCd,
+            DT.ITEM_DESC   AS itemDesc,
+            DT.ITEM_SPEC   AS itemSpec,
+            DT.UNIT_CD     AS unitCd,
+            DT.PR_QT       AS prQt,
+            DT.UNIT_PRC    AS unitPrc,
+            DT.PR_AMT      AS prAmt,
+            DT.DELY_DATE   AS delyDate,
+            DT.RMK         AS rmk
+        FROM PRDT DT
+        WHERE DT.PR_NUM = #{prNum}
+        AND DT.DEL_FLAG = 'N'
+        ORDER BY DT.REG_DATE
+    </select>
+
+    <!-- CODE_NAME 조회  -->
+    <select id="selectProgressCdName" resultType="String">
+        SELECT CODE_NAME
+        FROM CODD
+        WHERE CODE_GROUP = 'PROGRESS_CD'
+        AND CODE = #{progressCd}
+        AND USE_YN = 'Y'
+    </select>
+
+    <!-- 구매요청 승인 -->
+    <update id="approvePr">
+        UPDATE PRHD
+        SET PROGRESS_CD = (
+            SELECT CODE FROM CODD
+            WHERE CODE_GROUP = 'PROGRESS_CD'
+            AND CODE_NAME = '승인'
+            AND USE_YN = 'Y'
+            LIMIT 1
+        ),
+        CTRL_USER_ID = #{userId},
+        CTRL_DEPT_CD = #{deptCd}
+        WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 구매요청 반려 -->
+    <update id="rejectPr">
+        UPDATE PRHD
+        SET PROGRESS_CD = (
+            SELECT CODE FROM CODD
+            WHERE CODE_GROUP = 'PROGRESS_CD'
+            AND CODE_NAME = '반려'
+            AND USE_YN = 'Y'
+            LIMIT 1
+        ),
+        CTRL_USER_ID = #{userId},
+        CTRL_DEPT_CD = #{deptCd}
+        WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
 
 </mapper>

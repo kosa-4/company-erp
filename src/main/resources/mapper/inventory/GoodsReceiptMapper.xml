@@ -6,10 +6,10 @@
     <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
     <select id="selectPendingPOList" parameterType="map"
         resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
-        AS poName, h.PO_DATE AS poDate, h.CTRL_USER_ID AS ctrlUserName, v.VENDOR_NM AS vendorName
-        FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE h.PROGRESS_CD = 'S' AND
-        h.CHECK_FLAG = 'Y' AND h.DEL_FLAG = 'N' AND NOT EXISTS ( SELECT 1 FROM GRHD g WHERE g.PO_NUM
-        = h.PO_NUM AND g.PROGRESS_CD = 'GRE' AND g.DEL_FLAG = 'N' ) <if
+        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.CTRL_USER_ID AS ctrlUserName,
+        v.VENDOR_NM AS vendorName FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE
+        h.PROGRESS_CD = 'S' AND h.CHECK_FLAG = 'Y' AND h.DEL_FLAG = 'N' AND NOT EXISTS ( SELECT 1
+        FROM GRHD g WHERE g.PO_NUM = h.PO_NUM AND g.PROGRESS_CD = 'GRE' AND g.DEL_FLAG = 'N' ) <if
             test="poNo != null and poNo != ''"> AND h.PO_NUM LIKE CONCAT('%', #{poNo}, '%') </if>
         <if
             test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%',
@@ -90,6 +90,11 @@
     <update id="updateHeaderStatus"> UPDATE GRHD SET PROGRESS_CD = #{status}, MOD_DATE = NOW(),
         MOD_USER_ID = #{modUserId} WHERE GR_NUM = #{grNo} </update>
 
+    <!-- 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트 (취소 제외) -->
+    <update id="updateAllHeadersStatusByPO"> UPDATE GRHD SET PROGRESS_CD = #{status}, MOD_DATE =
+        NOW(), MOD_USER_ID = #{modUserId} WHERE PO_NUM = #{poNo} AND PROGRESS_CD != 'GRX' AND
+        DEL_FLAG = 'N' </update>
+
     <!-- ========== 상태 계산용 ========== -->
     <!-- 특정 PO의 누적 입고수량 조회 (정상 상태만) -->
     <select id="selectAccumulatedQty" parameterType="String" resultType="java.math.BigDecimal">
@@ -108,5 +113,11 @@
     <!-- GR 번호로 PO 번호 조회 -->
     <select id="selectPoNoByGrNo" parameterType="String" resultType="String"> SELECT PO_NUM FROM
         GRHD WHERE GR_NUM = #{grNo} AND DEL_FLAG = 'N' </select>
+
+    <!-- 특정 PO의 품목별 입고된 총 수량 조회 (부분입고 지원) -->
+    <select id="getReceivedQuantity" resultType="java.lang.Integer"> SELECT COALESCE(SUM(d.GR_QT),
+        0) FROM GRDT d INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM WHERE h.PO_NUM = #{poNo} AND
+        d.ITEM_CD = #{itemCode} AND d.STATUS_CD = 'N' AND d.DEL_FLAG = 'N' AND h.DEL_FLAG = 'N' AND
+        h.PROGRESS_CD != 'GRX' </select>
 
 </mapper>

@@ -7,22 +7,22 @@ import {
   Button, 
   Input, 
   DatePicker,
-  DataGrid,
   SearchPanel,
   Modal,
   Textarea
 } from '@/components/ui';
-import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { goodsReceiptApi, PendingPODTO, GoodsReceiptDTO } from '@/lib/api/goodsReceipt';
 import { getErrorMessage } from '@/lib/api/error';
 
-interface ReceivingTarget {
+// 평탄화된 입고 대상 아이템 인터페이스
+interface ReceivingTargetItem {
+  id: string; // 고유 ID (poNo + itemCode)
+  rfqNo: string;
   poNo: string;
   poName: string;
   buyer: string;
   poDate: string;
-  vendorCode: string;
   vendorName: string;
   itemCode: string;
   itemName: string;
@@ -30,8 +30,9 @@ interface ReceivingTarget {
   unit: string;
   unitPrice: number;
   orderQuantity: number;
-  storageLocation: string;
+  remainingQuantity: number; // 잔여수량
   amount: number;
+  storageLocation: string;
 }
 
 interface ReceivingFormItem {
@@ -41,14 +42,17 @@ interface ReceivingFormItem {
   unit: string;
   unitPrice: number;
   orderQuantity: number;
+  remainingQuantity: number;
   receivedQuantity: number;
   receivedAmount: number;
   storageLocation: string;
 }
 
 export default function ReceivingTargetPage() {
-  const [data, setData] = useState<ReceivingTarget[]>([]);
-  const [selectedRows, setSelectedRows] = useState<ReceivingTarget[]>([]);
+  const [targetItems, setTargetItems] = useState<ReceivingTargetItem[]>([]);
+  // 선택된 아이템 ID 집합
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  
   const [searchParams, setSearchParams] = useState({
     poNo: '',
     poName: '',
@@ -63,6 +67,8 @@ export default function ReceivingTargetPage() {
   const [grDate, setGrDate] = useState(new Date().toISOString().split('T')[0]);
   const [remark, setRemark] = useState('');
   const [receivingItems, setReceivingItems] = useState<ReceivingFormItem[]>([]);
+  // 현재 작업 중인 PO 번호 (입고 처리는 한 번에 하나의 PO만 가능)
+  const [currentPoNo, setCurrentPoNo] = useState<string | null>(null);
 
   // 데이터 조회
   const fetchData = async () => {
@@ -77,53 +83,44 @@ export default function ReceivingTargetPage() {
       });
 
       if (!result || !Array.isArray(result)) {
-        setData([]);
+        setTargetItems([]);
         return;
       }
 
-      // PO 데이터를 ReceivingTarget 형식으로 변환
-      const transformed: ReceivingTarget[] = [];
+      // PO 데이터를 품목 단위로 평탄화 (Flatten)
+      const flatItems: ReceivingTargetItem[] = [];
+      
       result.forEach((po: PendingPODTO) => {
-        if (po.items && po.items.length > 0) {
-          po.items.forEach((item) => {
-            transformed.push({
-              poNo: po.poNo || '',
-              poName: po.poName || '',
-              buyer: po.ctrlUserName || '',
-              poDate: po.poDate || '',
-              vendorCode: po.vendorCode || '',
-              vendorName: po.vendorName || '',
-              itemCode: item.itemCode || '',
-              itemName: item.itemName || '',
-              spec: item.specification || '',
-              unit: item.unit || '',
-              unitPrice: Number(item.unitPrice) || 0,
-              orderQuantity: item.orderQuantity || 0,
-              storageLocation: item.storageLocation || '본사 창고',
-              amount: Number(item.amount) || 0,
-            });
-          });
-        } else {
-          // items가 없으면 헤더 정보만
-          transformed.push({
+        if (!po.items || po.items.length === 0) return;
+        
+        po.items.forEach((item) => {
+          // 잔여 수량이 0 이하면 목록에 표시하지 않음 (이미 완료된 경우)
+          const remainingQty = item.remainingQuantity !== undefined ? item.remainingQuantity : (item.orderQuantity || 0);
+          if (remainingQty <= 0) return;
+
+          flatItems.push({
+            id: `${po.poNo}_${item.itemCode}`,
+            rfqNo: po.rfqNo || '',
             poNo: po.poNo || '',
             poName: po.poName || '',
-            buyer: po.ctrlUserName || '',
             poDate: po.poDate || '',
-            vendorCode: po.vendorCode || '',
+            buyer: po.ctrlUserName || '',
             vendorName: po.vendorName || '',
-            itemCode: '-',
-            itemName: '-',
-            spec: '-',
-            unit: '-',
-            unitPrice: 0,
-            orderQuantity: 0,
-            storageLocation: '-',
-            amount: 0,
+            itemCode: item.itemCode || '',
+            itemName: item.itemName || '',
+            spec: item.specification || '',
+            unit: item.unit || '',
+            unitPrice: Number(item.unitPrice) || 0,
+            orderQuantity: item.orderQuantity || 0,
+            remainingQuantity: remainingQty,
+            amount: Number(item.amount) || 0,
+            storageLocation: item.storageLocation || '본사 창고',
           });
-        }
+        });
       });
-      setData(transformed);
+
+      setTargetItems(flatItems);
+      setSelectedItemIds(new Set()); // 조회 시 선택 초기화
     } catch (error) {
       console.error('데이터 조회 오류:', error);
       alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
@@ -151,67 +148,63 @@ export default function ReceivingTargetPage() {
     });
   };
 
-  const columns: ColumnDef<ReceivingTarget>[] = [
-    {
-      key: 'poNo',
-      header: 'PO번호',
-      width: 130,
-      align: 'center',
-      render: (value) => (
-        <span className="text-blue-600 font-medium">{String(value)}</span>
-      ),
-    },
-    { key: 'poName', header: '발주명', width: 150, align: 'left' },
-    { key: 'buyer', header: '발주담당자', width: 100, align: 'center' },
-    { key: 'poDate', header: '발주일자', width: 100, align: 'center' },
-    { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
-    { key: 'itemCode', header: '품목코드', width: 130, align: 'center' },
-    { key: 'itemName', header: '품목명', width: 140, align: 'left' },
-    { key: 'spec', header: '규격', width: 150, align: 'left' },
-    { key: 'unit', header: '단위', width: 60, align: 'center' },
-    { 
-      key: 'unitPrice', 
-      header: '단가', 
-      width: 100, 
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    { 
-      key: 'orderQuantity', 
-      header: '발주수량', 
-      width: 90, 
-      align: 'right',
-      render: (value) => formatNumber(Number(value)),
-    },
-    { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
-    { 
-      key: 'amount', 
-      header: '금액', 
-      width: 120, 
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-  ];
+  // 아이템 선택/해제
+  const toggleSelectItem = (id: string, poNo: string) => {
+    const newSelected = new Set(selectedItemIds);
+    
+    // 이미 선택된 아이템이 있고, 다른 PO의 아이템을 선택하려는 경우 경고
+    if (newSelected.size > 0 && !newSelected.has(id)) {
+      const firstSelectedId = Array.from(newSelected)[0];
+      const firstSelectedItem = targetItems.find(item => item.id === firstSelectedId);
+      
+      if (firstSelectedItem && firstSelectedItem.poNo !== poNo) {
+        alert('동일한 발주번호의 품목만 함께 선택할 수 있습니다.');
+        return;
+      }
+    }
+
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItemIds(newSelected);
+  };
 
   const handleReceiving = () => {
-    if (selectedRows.length === 0) {
-      alert('입고 처리할 항목을 선택해주세요.');
+    if (selectedItemIds.size === 0) {
+      alert('입고 처리할 품목을 선택해주세요.');
       return;
     }
+
+    const selectedItemsList = targetItems.filter(item => selectedItemIds.has(item.id));
+    if (selectedItemsList.length === 0) return;
+
+    // PO 번호 검증 (모두 같아야 함)
+    const firstPoNo = selectedItemsList[0].poNo;
+    const isAllSamePo = selectedItemsList.every(item => item.poNo === firstPoNo);
+
+    if (!isAllSamePo) {
+      alert('동일한 발주번호의 품목만 함께 입고 처리할 수 있습니다.');
+      return;
+    }
+
+    setCurrentPoNo(firstPoNo);
     
     // 입고 폼 초기화
     setGrDate(new Date().toISOString().split('T')[0]);
     setRemark('');
-    setReceivingItems(selectedRows.map(row => ({
-      itemCode: row.itemCode,
-      itemName: row.itemName,
-      spec: row.spec,
-      unit: row.unit,
-      unitPrice: row.unitPrice,
-      orderQuantity: row.orderQuantity,
-      receivedQuantity: row.orderQuantity, // 기본값: 발주수량
-      receivedAmount: row.amount,
-      storageLocation: row.storageLocation,
+    setReceivingItems(selectedItemsList.map(item => ({
+      itemCode: item.itemCode,
+      itemName: item.itemName,
+      spec: item.spec,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      orderQuantity: item.orderQuantity,
+      remainingQuantity: item.remainingQuantity,
+      receivedQuantity: item.remainingQuantity, // 기본값: 잔여수량
+      receivedAmount: item.unitPrice * item.remainingQuantity,
+      storageLocation: item.storageLocation,
     })));
     
     setIsReceivingModalOpen(true);
@@ -240,7 +233,7 @@ export default function ReceivingTargetPage() {
       alert('입고일자를 선택해주세요.');
       return;
     }
-    if (!selectedRows[0]?.poNo) {
+    if (!currentPoNo) {
       alert('발주 정보가 없습니다.');
       return;
     }
@@ -255,8 +248,8 @@ export default function ReceivingTargetPage() {
         alert(`${i + 1}번째 품목의 입고수량을 확인해주세요.`);
         return;
       }
-      if (item.receivedQuantity > item.orderQuantity) {
-        alert(`${i + 1}번째 품목의 입고수량이 발주수량을 초과했습니다.`);
+      if (item.receivedQuantity > item.remainingQuantity) {
+        alert(`${i + 1}번째 품목의 입고수량이 잔여수량(${item.remainingQuantity})을 초과했습니다.`);
         return;
       }
     }
@@ -264,7 +257,7 @@ export default function ReceivingTargetPage() {
     try {
       setLoading(true);
       const grData: GoodsReceiptDTO = {
-        poNo: selectedRows[0]?.poNo,
+        poNo: currentPoNo,
         grDate: grDate,
         totalAmount: receivingItems.reduce((sum, item) => sum + item.receivedAmount, 0),
         status: 'GRP', // 입고처리 상태
@@ -284,9 +277,10 @@ export default function ReceivingTargetPage() {
 
       await goodsReceiptApi.create(grData);
       setIsReceivingModalOpen(false);
-      setSelectedRows([]);
+      setSelectedItemIds(new Set());
+      setCurrentPoNo(null);
       
-      const moveToList = window.confirm('성공적으로 입고 처리되었습니다.\n\n입고현황으로 이동하시겠습니까?');
+      const moveToList = window.confirm('성공적으로 입고 처리되었습니다. 입고현황으로 이동하시겠습니까?');
       if (moveToList) {
         window.location.href = '/inventory/receiving-list';
       } else {
@@ -306,7 +300,7 @@ export default function ReceivingTargetPage() {
     <div>
       <PageHeader 
         title="입고대상조회" 
-        subtitle="입고 처리 대상 발주를 조회합니다."
+        subtitle="입고 처리 대상 품목을 조회합니다."
         icon={
           <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -346,22 +340,93 @@ export default function ReceivingTargetPage() {
       </SearchPanel>
 
       <Card 
-        title="입고대상 목록"
+        title="입고대상 품목 목록"
         padding={false}
         actions={
           <Button variant="primary" onClick={handleReceiving}>입고처리</Button>
         }
       >
-        <DataGrid
-          columns={columns}
-          data={data}
-          keyField="poNo"
-          loading={loading}
-          selectable
-          selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
-          emptyMessage="입고 대상이 없습니다."
-        />
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-200">
+                  <th className="w-12 px-4 py-3.5 text-center whitespace-nowrap">
+                    <span className="sr-only">선택</span>
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">품목명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">규격</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">단위</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">잔여수량</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">단가</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">금액</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">저장위치</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-16 text-center whitespace-nowrap">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="animate-spin w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span className="text-stone-500">데이터를 불러오는 중...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : targetItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-16 text-center whitespace-nowrap">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="w-14 h-14 text-stone-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <span className="text-stone-500">입고 대상이 없습니다.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  targetItems.map((item) => (
+                    <tr 
+                      key={item.id} 
+                      className={`
+                        transition-colors duration-150 hover:bg-stone-50 cursor-pointer
+                        ${selectedItemIds.has(item.id) ? 'bg-teal-50/70' : ''}
+                      `}
+                      onClick={() => toggleSelectItem(item.id, item.poNo)}
+                    >
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedItemIds.has(item.id)}
+                          onChange={() => toggleSelectItem(item.id, item.poNo)}
+                          className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.rfqNo}</td>
+                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.poNo}</td>
+                      <td className="px-4 py-3.5 text-sm text-center text-blue-600 whitespace-nowrap">{item.itemCode}</td>
+                      <td className="px-4 py-3.5 text-sm text-left text-stone-600 truncate max-w-[200px] whitespace-nowrap" title={item.poName}>{item.poName}</td>
+                      <td className="px-4 py-3.5 text-sm text-left font-medium text-gray-900 whitespace-nowrap">{item.itemName}</td>
+                      <td className="px-4 py-3.5 text-sm text-center text-stone-500 whitespace-nowrap">{item.spec || '-'}</td>
+                      <td className="px-4 py-3.5 text-sm text-center text-stone-500 whitespace-nowrap">{item.unit}</td>
+                      <td className="px-4 py-3.5 text-sm text-right font-semibold text-blue-600 whitespace-nowrap">{formatNumber(item.remainingQuantity)}</td>
+                      <td className="px-4 py-3.5 text-sm text-right text-stone-600 whitespace-nowrap">₩{formatNumber(item.unitPrice)}</td>
+                      <td className="px-4 py-3.5 text-sm text-right font-medium text-stone-900 whitespace-nowrap">₩{formatNumber(item.amount)}</td>
+                      <td className="px-4 py-3.5 text-sm text-left text-stone-500 whitespace-nowrap">{item.storageLocation}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Card>
 
       {/* 입고처리 모달 */}
@@ -414,6 +479,7 @@ export default function ReceivingTargetPage() {
                     <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
                     <th className="p-3 text-right font-semibold text-gray-600">단가</th>
                     <th className="p-3 text-right font-semibold text-gray-600">발주수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">잔여수량</th>
                     <th className="p-3 text-right font-semibold text-gray-600">입고수량</th>
                     <th className="p-3 text-right font-semibold text-gray-600">입고금액</th>
                     <th className="p-3 text-left font-semibold text-gray-600">저장위치</th>
@@ -426,12 +492,13 @@ export default function ReceivingTargetPage() {
                       <td className="p-3">{item.itemName}</td>
                       <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
                       <td className="p-3 text-right">{formatNumber(item.orderQuantity)}</td>
+                      <td className="p-3 text-right">{formatNumber(item.remainingQuantity)}</td>
                       <td className="p-3 text-right">
                         <input 
                           type="number" 
                           value={item.receivedQuantity}
                           min={0}
-                          max={item.orderQuantity}
+                          max={item.remainingQuantity}
                           className="w-20 px-2 py-1 border rounded text-right"
                           onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
                         />

@@ -70,6 +70,13 @@ public interface GoodsReceiptMapper {
                         @Param("status") String status,
                         @Param("modUserId") String modUserId);
 
+        /**
+         * 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트
+         */
+        int updateAllHeadersStatusByPO(@Param("poNo") String poNo,
+                        @Param("status") String status,
+                        @Param("modUserId") String modUserId);
+
         // ========== 상태 계산용 ==========
         /**
          * 특정 PO의 누적 입고수량 조회 (정상 상태만)
@@ -90,4 +97,9 @@ public interface GoodsReceiptMapper {
          * GR 번호로 PO 번호 조회 (상태 재계산 시 필요)
          */
         String selectPoNoByGrNo(@Param("grNo") String grNo);
+
+        /**
+         * 특정 PO의 품목별 입고된 총 수량 조회
+         */
+        Integer getReceivedQuantity(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
 }
