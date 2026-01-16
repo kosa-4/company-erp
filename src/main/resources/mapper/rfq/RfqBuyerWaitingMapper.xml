@@ -53,7 +53,7 @@
             AND u.USER_NM LIKE CONCAT('%', #{reqUserNm}, '%')
         </if>
         GROUP BY ph.PR_NUM, ph.PR_SUBJECT, DATE(ph.REG_DATE), u.USER_NM, d.DEPT_NM,
-                 ph.PROGRESS_CD, c1.CODE_NAME, ph.PC_TYPE, c2.CODE_NAME
+                 ph.PROGRESS_CD, c1.CODE_NAME, ph.PC_TYPE, c2.CODE_NAME, ph.PR_AMT
         ORDER BY MAX(ph.REG_DATE) DESC
     </select>
 
