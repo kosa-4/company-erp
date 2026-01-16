@@ -84,11 +84,46 @@ public class PurchaseOrderService {
         return list;
     }
 
+    // 협력사 전용: 본인 발주 목록 조회
+    public List<PurchaseOrderDTO> getVendorOrderList(String poNo, String poName, String status) {
+        SessionUser user = getSessionUser();
+        if (user == null || user.getVendorCd() == null) {
+            throw new SecurityException("협력사 정보가 없습니다.");
+        }
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("poNo", poNo);
+        params.put("poName", poName);
+        params.put("status", status);
+        params.put("vendorCd", user.getVendorCd()); // 본인 협력사 발주만 조회
+
+        List<PurchaseOrderDTO> list = purchaseOrderMapper.selectVendorOrderList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
+        return list;
+    }
+
     // 상세 조회
     public PurchaseOrderDTO getDetail(String poNo) {
         PurchaseOrderDTO header = purchaseOrderMapper.selectHeader(poNo);
         if (header == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+
+        // VENDOR인 경우: 본인 협력사 발주만 조회 가능
+        SessionUser user = getSessionUser();
+        if (user != null && "VENDOR".equals(user.getRole())) {
+            String userVendorCd = user.getVendorCd();
+            if (userVendorCd == null || !userVendorCd.equals(header.getVendorCode())) {
+                throw new SecurityException("본인 협력사의 발주만 조회할 수 있습니다.");
+            }
         }
 
         List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(poNo);
@@ -297,6 +332,16 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
+
+        // VENDOR 본인 협력사 발주만 수신확인 가능
+        SessionUser user = getSessionUser();
+        if (user != null && "VENDOR".equals(user.getRole())) {
+            String userVendorCd = user.getVendorCd();
+            if (userVendorCd == null || !userVendorCd.equals(existing.getVendorCode())) {
+                throw new SecurityException("본인 협력사의 발주만 수신확인할 수 있습니다.");
+            }
+        }
+
         // 발주전송(S) 상태에서만 수신확인 가능
         if (!PoStatusCode.SENT.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(

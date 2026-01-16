@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.po.dto.PurchaseOrderDTO;
 import com.company.erp.po.service.PurchaseOrderService;
 import com.company.erp.rfq.dto.RfqSelectedDTO;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/purchase-orders")
 @RequiredArgsConstructor
+@RequireRole({ "BUYER", "ADMIN" }) // 클래스 레벨 기본: 구매팀/관리자만 접근
 public class PurchaseOrderController {
     private final PurchaseOrderService purchaseOrderService;
 
@@ -57,7 +59,19 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(list);
     }
 
-    // 상세 조회
+    // ========== 협력사 전용: 본인 발주 목록 조회 ==========
+    @RequireRole({ "VENDOR" })
+    @GetMapping("/vendor/orders")
+    public ResponseEntity<List<PurchaseOrderDTO>> getVendorOrderList(
+            @RequestParam(required = false) String poNo,
+            @RequestParam(required = false) String poName,
+            @RequestParam(required = false) String status) {
+        List<PurchaseOrderDTO> list = purchaseOrderService.getVendorOrderList(poNo, poName, status);
+        return ResponseEntity.ok(list);
+    }
+
+    // 상세 조회 - VENDOR도 본인 발주 조회 가능 (Service에서 검증)
+    @RequireRole({ "BUYER", "VENDOR", "ADMIN" })
     @GetMapping("/{no}")
     public ResponseEntity<PurchaseOrderDTO> getDetail(@PathVariable String no) {
         PurchaseOrderDTO dto = purchaseOrderService.getDetail(no);
@@ -125,7 +139,8 @@ public class PurchaseOrderController {
         return ResponseEntity.ok().build();
     }
 
-    // 협력사 수신확인
+    // 협력사 수신확인 - VENDOR 전용
+    @RequireRole({ "VENDOR" })
     @PutMapping("/{no}/vendor-confirm")
     public ResponseEntity<Void> vendorConfirm(@PathVariable String no) {
         purchaseOrderService.vendorConfirm(no);
