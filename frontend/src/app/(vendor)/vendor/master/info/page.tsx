@@ -132,8 +132,8 @@ export default function VendorInfoChangePage() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:bg-gray-100"
                 >
                   <option value="">선택</option>
-                  <option value="A">개인</option>
-                  <option value="B">법인</option>
+                  <option value="INDIVIDUAL">개인</option>
+                  <option value="CORP">법인</option>
                 </select>
               </div>
               <div className="space-y-2">

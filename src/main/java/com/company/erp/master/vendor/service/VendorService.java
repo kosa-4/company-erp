@@ -76,7 +76,7 @@ public class VendorService {
             vendor.setSignDate(LocalDate.now());
             
             // 4) 상태값 확인
-            String status = dto.getStatus();
+            String status = vendor.getStatus();
             switch (status) {
 
                 case "N": // 신규 등록 시
