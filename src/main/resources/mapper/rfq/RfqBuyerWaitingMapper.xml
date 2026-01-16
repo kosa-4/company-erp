@@ -72,10 +72,18 @@
             pd.DELY_DATE as delyDate,
             pd.RMK as rmk
         FROM PRDT pd
-        WHERE pd.PR_NUM IN
-        <foreach collection="prNums" item="prNum" open="(" separator="," close=")">
-            #{prNum}
-        </foreach>
+        WHERE
+        <choose>
+            <when test="prNums != null and !prNums.isEmpty()">
+                pd.PR_NUM IN
+                <foreach collection="prNums" item="prNum" open="(" separator="," close=")">
+                    #{prNum}
+                </foreach>
+            </when>
+            <otherwise>
+                1=0
+            </otherwise>
+        </choose>
           AND pd.DEL_FLAG = 'N'
         ORDER BY pd.PR_NUM, pd.ITEM_CD
     </select>
