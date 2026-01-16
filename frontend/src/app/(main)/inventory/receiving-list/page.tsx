@@ -149,7 +149,7 @@ export default function ReceivingListPage() {
     const config: Record<string, { variant: 'yellow' | 'green' | 'red' | 'gray'; label: string }> = {
       'GRP': { variant: 'yellow', label: '부분입고' },
       'GRE': { variant: 'green', label: '입고완료' },
-      'GRC': { variant: 'red', label: '입고취소' },
+      'GRX': { variant: 'red', label: '입고취소' },
     };
     const { variant, label } = config[status] || { variant: 'gray', label: status };
     return <Badge variant={variant}>{label}</Badge>;
@@ -205,7 +205,17 @@ export default function ReceivingListPage() {
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
-    { key: 'grDate', header: '입고일자', width: 100, align: 'center' },
+    { 
+      key: 'grDate', 
+      header: '입고일자', 
+      width: 100, 
+      align: 'center',
+      render: (value): string => {
+        if (!value || value === '-') return String(value);
+        // ISO 8601 형식에서 날짜 부분만 추출
+        return String(value).split('T')[0];
+      }
+    },
     { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
   ];
 
@@ -338,7 +348,7 @@ export default function ReceivingListPage() {
             { value: '', label: '전체' },
             { value: 'GRP', label: '부분입고' },
             { value: 'GRE', label: '입고완료' },
-            { value: 'GRC', label: '입고취소' },
+            { value: 'GRX', label: '입고취소' },
           ]}
         />
       </SearchPanel>
