@@ -26,16 +26,18 @@ public class VendorUserPortalController {
 
     /* 협력 업체 사용자 조회 */
     @GetMapping
-    public ResponseEntity<?> getVendorUserList(VendorUserSearchDto vendorUserSearchDto, HttpSession currentSession) {
-        // 1) 현재 로그인 정보 반환
-        Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
-        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
-
-        // 2) 로그인 정보 확인
-        if (loginUser == null) {
-            // userObj가 null인 경우 예외를 던지거나 401 에러 반환
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 정보가 없습니다.");
-        }
+    public ResponseEntity<?> getVendorUserList(
+            VendorUserSearchDto vendorUserSearchDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+//        // 1) 현재 로그인 정보 반환
+//        Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
+//        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
+//
+//        // 2) 로그인 정보 확인
+//        if (loginUser == null) {
+//            // userObj가 null인 경우 예외를 던지거나 401 에러 반환
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 정보가 없습니다.");
+//        } 오류 확인 후 삭제
 
         // 3) id 반환
         String loginId = loginUser.getUserId();
