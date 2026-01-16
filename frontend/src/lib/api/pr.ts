@@ -35,21 +35,36 @@ export interface PrRequest {
 }
 
 /**
- * 구매요청 현황 목록 응답 DTO
+ * 구매요청 현황 목록 응답 DTO (헤더 정보만)
  */
 export interface PrListResponse {
-    progressCd: string;    // 상태코드
-    prNum: string;         // PR번호
-    pcType: string;       // 구매유형
-    requester: string;    // 요청자ID
-    deptName: string;       // 부서명
-    regDate: string | Date;      // 요청일 (YYYY-MM-DD 또는 Date 객체)
-    itemCd: string;       // 품목코드
-    itemDesc: string;     // 품목명
-    prQt: number;         // 수량
-    unitPrc: number;      // 단가
-    prAmt: number;        // 금액
-    delyDate: string | Date;     // 희망납기일 (YYYY-MM-DD 또는 Date 객체)
+    prNum: string;              // PR번호
+    prSubject?: string | null;  // 구매요청명 (optional)
+    progressCd?: string | null; // 진행상태 (CODE_NAME)
+    pcType?: string | null;     // 구매유형 (CODE_NAME)
+    requester?: string | null;  // 요청자명
+    deptName?: string | null;   // 부서명
+    regDate?: string | Date | null; // 등록일
+    prAmt?: number | null;      // 총 금액
+    rmk?: string | null;        // 비고 (optional)
+}
+
+/**
+ * 구매요청 상세 품목 정보 DTO (PrDtDTO)
+ */
+export interface PrDtDTO {
+    prNum: string;              // PR번호
+    regUserId: string;          // 등록자ID
+    delFlag: string;            // 삭제여부
+    itemCd: string;             // 품목코드
+    itemDesc: string;           // 품목명
+    itemSpec: string;           // 품목규격
+    unitCd: string;             // 단위코드
+    prQt: number;               // 수량
+    unitPrc: number;            // 단가
+    prAmt: number;              // 금액
+    delyDate: string | Date;    // 희망납기일
+    rmk: string;                // 비고
 }
 
 /**
@@ -102,7 +117,7 @@ export const prApi = {
     save: (data: PrRequest) => api.post<{ message: string }>('/pr/save', data),
 
     /**
-     * 구매요청 현황 목록 조회
+     * 구매요청 현황 목록 조회 (헤더만)
      */
     getList: (params?: PrListParams) => {
         // 프론트엔드 파라미터명을 백엔드 파라미터명으로 매핑
@@ -121,7 +136,36 @@ export const prApi = {
 
 
     /**
-     * 구매요청 삭제
+     * 구매요청 삭제 (논리적 삭제: DEL_FLAG='Y')
      */
-    delete: (prNum: string) => api.put<string>(`/pr/${prNum}/delete`),
+    delete: (prNum: string) => {
+        const endpoint = `/pr/${prNum}/delete`;
+        console.log('삭제 API 호출:', endpoint);
+        console.log('전체 URL:', `/api/v1${endpoint}`);
+        console.log('HTTP Method: PUT');
+        return api.put<{ message: string }>(endpoint);
+    },
+
+    /**
+     * 구매요청 승인
+     */
+    approve: (prNum: string) => {
+        console.log('prApi.approve 호출 - prNum:', prNum);
+        console.log('API URL:', `/pr/${prNum}/approve`);
+        return api.post<void>(`/pr/${prNum}/approve`);
+    },
+
+    /**
+     * 구매요청 반려
+     */
+    reject: (prNum: string) => {
+        console.log('prApi.reject 호출 - prNum:', prNum);
+        console.log('API URL:', `/pr/${prNum}/reject`);
+        return api.post<void>(`/pr/${prNum}/reject`);
+    },
+
+    /**
+     * 구매요청 상세 품목 목록 조회
+     */
+    getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/pr/${prNum}/detail`),
 };
