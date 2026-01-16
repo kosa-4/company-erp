@@ -52,6 +52,17 @@ public class GoodsReceiptService {
         for (PurchaseOrderDTO po : list) {
             if (po.getPoNo() != null) {
                 List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+
+                // 각 품목별 남은 입고 수량 계산
+                for (PurchaseOrderItemDTO item : items) {
+                    Integer receivedQty = goodsReceiptMapper.getReceivedQuantity(po.getPoNo(), item.getItemCode());
+                    if (receivedQty == null)
+                        receivedQty = 0;
+
+                    int remaining = item.getOrderQuantity() - receivedQty;
+                    item.setRemainingQuantity(Math.max(0, remaining));
+                }
+
                 po.setItems(items);
             }
         }
@@ -273,7 +284,9 @@ public class GoodsReceiptService {
         }
 
         // 헤더 상태 업데이트
-        goodsReceiptMapper.updateHeaderStatus(grNo, newStatus, userId);
+        // 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트 (취소 상태 제외)
+        // 이를 통해 부분입고였던 이전 GR 건들도 입고완료 시점에 일괄적으로 입고완료 처리됨
+        goodsReceiptMapper.updateAllHeadersStatusByPO(poNo, newStatus, userId);
 
         // 입고완료(GRE) 상태가 되면 PO 상태를 'C'(완료)로 자동 변경
         if (GoodsReceiptStatus.COMPLETED.equals(newStatus)) {

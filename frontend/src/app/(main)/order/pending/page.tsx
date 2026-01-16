@@ -238,7 +238,7 @@ export default function OrderPendingPage() {
       await purchaseOrderApi.create(purchaseOrderData);
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
-      const moveToProgress = window.confirm('성공적으로 저장되었습니다.\\n\\n발주진행현황으로 이동하시겠습니까?');
+      const moveToProgress = window.confirm('성공적으로 저장되었습니다. 발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
       } else {
@@ -312,7 +312,7 @@ export default function OrderPendingPage() {
       }
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
-      const moveToProgress = window.confirm('성공적으로 확정되었습니다.\\n\\n발주진행현황으로 이동하시겠습니까?');
+      const moveToProgress = window.confirm('성공적으로 확정되었습니다. 발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
       } else {
@@ -394,18 +394,18 @@ export default function OrderPendingPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-200">
-                  <th className="w-12 px-4 py-3.5"></th>
-                  <th className="w-12 px-4 py-3.5">
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap">
                     {/* 선택 체크박스 헤더 */}
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">RFQ번호</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">견적명</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">구매유형</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">담당자</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">견적요청일</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left">협력사명</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center">품목수</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right">총금액</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">견적명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">담당자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">견적요청일</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">협력사명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목수</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">총금액</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -443,7 +443,7 @@ export default function OrderPendingPage() {
                         `}
                       >
                         {/* 펼치기 아이콘 */}
-                        <td className="px-4 py-3.5 text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
                           <svg 
                             className={`w-5 h-5 text-stone-400 transition-transform duration-200 ${expandedRfqs.has(group.rfqNo) ? 'rotate-90' : ''}`}
                             fill="none" 
@@ -454,7 +454,7 @@ export default function OrderPendingPage() {
                           </svg>
                         </td>
                         {/* 선택 체크박스 */}
-                        <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedRfqNo === group.rfqNo}
@@ -462,20 +462,20 @@ export default function OrderPendingPage() {
                             className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
                           <span className="text-blue-600 font-medium">{group.rfqNo}</span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqName}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.purchaseTypeDisplay}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.buyer}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqDate}</td>
-                        <td className="px-4 py-3.5 text-sm text-left" onClick={() => toggleExpand(group.rfqNo)}>{group.vendorName}</td>
-                        <td className="px-4 py-3.5 text-sm text-center" onClick={() => toggleExpand(group.rfqNo)}>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.purchaseTypeDisplay}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.buyer}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqDate}</td>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.vendorName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {group.itemCount}개
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-right font-medium" onClick={() => toggleExpand(group.rfqNo)}>
+                        <td className="px-4 py-3.5 text-sm text-right font-medium whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
                           ₩{formatNumber(group.totalAmount)}
                         </td>
                       </tr>
@@ -609,24 +609,10 @@ export default function OrderPendingPage() {
                       <td className="p-3">{item.itemName}</td>
                       <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
                       <td className="p-3 text-right">
-                        <input 
-                          type="number" 
-                          value={item.orderQuantity}
-                          min={1}
-                          className="w-20 px-2 py-1 border rounded text-right"
-                          onChange={(e) => {
-                            const newQuantity = parseInt(e.target.value) || 0;
-                            const newAmount = item.unitPrice * newQuantity;
-                            setOrderForm(prev => ({
-                              ...prev,
-                              items: prev.items.map((it, i) => 
-                                i === index 
-                                  ? { ...it, orderQuantity: newQuantity, amount: newAmount }
-                                  : it
-                              ),
-                            }));
-                          }}
-                        />
+                        <span className="font-medium text-gray-900">
+                          {formatNumber(item.orderQuantity)}
+                        </span>
+                        <span className="ml-1 text-xs text-gray-900">{item.unit}</span>
                       </td>
                       <td className="p-3 text-right font-medium">₩{formatNumber(item.amount)}</td>
                       <td className="p-3 text-center">{item.deliveryDate}</td>

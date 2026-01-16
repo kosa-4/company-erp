@@ -29,4 +29,7 @@ public class PurchaseOrderDTO {
 
     // 상세 품목 리스트
     private List<PurchaseOrderItemDTO> items;
+
+    // 추가: 목록 조회 시 표시할 총 입고 수량
+    private BigDecimal receivedQuantity;
 }

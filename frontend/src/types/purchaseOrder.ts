@@ -32,4 +32,5 @@ export interface PurchaseOrderItemDTO {
     purchaseType: string;
     remark?: string;
     items: PurchaseOrderItemDTO[];
+    receivedQuantity?: number;
   }
