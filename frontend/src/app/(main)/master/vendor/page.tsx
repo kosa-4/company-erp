@@ -22,7 +22,7 @@ interface Vendor {
   vendorCode: string;
   vendorName: string;
   vendorNameEn?: string;
-  status: 'N' | 'P' | 'A' | 'R';
+  status: 'N' | 'C' | 'A' | 'R';
   businessType: 'CORP' | 'INDIVIDUAL';
   businessNo: string;
   ceoName: string;
@@ -33,7 +33,7 @@ interface Vendor {
   fax?: string;
   email: string;
   businessCategory?: string;
-  businessItem?: string;
+  industry?: string;
   establishDate?: string;
   useYn: 'Y' | 'N';
   stopReason?: string;
@@ -61,7 +61,7 @@ export default function VendorPage() {
     startDate: '',
     endDate: '',
     businessType: '',
-    businessItem: '',
+    industry: '',
     page: "1",
   });
   // 1-3. 모달 및 선택된 협력업체 상세 정보 상태 변수
@@ -120,7 +120,7 @@ export default function VendorPage() {
       startDate: '',
       endDate: '',
       businessType: '',
-      businessItem: '',
+      industry: '',
       page: "1",
     });
   };
@@ -133,7 +133,7 @@ export default function VendorPage() {
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
-      P: { variant: 'yellow' as const, label: '승인대기' },
+      C: { variant: 'yellow' as const, label: '변경' },
       A: { variant: 'green' as const, label: '승인' },
       R: { variant: 'red' as const, label: '반려' },
     };
@@ -190,7 +190,7 @@ export default function VendorPage() {
       render: (value) => value === 'CORP' ? '법인' : '개인',
     },
     {
-      key: 'businessItem',
+      key: 'industry',
       header: '업종',
       width: 150,
       align: 'left',
@@ -250,6 +250,7 @@ export default function VendorPage() {
 
       // 2-5. 오류 처리
       console.error("데이터 입력 중 오류 발생:", error);
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
     };
   };
 
@@ -297,6 +298,7 @@ export default function VendorPage() {
     } catch(error){
       // 3. 오류 처리
       console.error("협력업체 반려 중 오류 발생:", error);
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
     }; 
   }
 
@@ -358,8 +360,8 @@ export default function VendorPage() {
         <Input
           label="업종"
           placeholder="업종 입력"
-          value={searchParams.businessItem}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, businessItem: e.target.value }))}
+          value={searchParams.industry}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, industry: e.target.value }))}
         />
       </SearchPanel>
 
@@ -431,7 +433,7 @@ export default function VendorPage() {
             {selectedVendor?.status === 'A' && (
               <Button variant="primary">수정</Button>
             )}
-            {selectedVendor?.status === 'P' && (
+            {selectedVendor?.status === 'C' && (
               <>
                 <Button variant="danger">반려</Button>
                 <Button variant="success">승인</Button>
@@ -472,7 +474,7 @@ export default function VendorPage() {
               <Input label="이메일" value={selectedVendor.email} readOnly />
               <Input label="설립일자" value={selectedVendor.establishDate || ''} readOnly />
               <Input label="업태" value={selectedVendor.businessCategory || ''} readOnly />
-              <Input label="업종" value={selectedVendor.businessItem || ''} readOnly />
+              <Input label="업종" value={selectedVendor.industry || ''} readOnly />
             </div>
 
             <Textarea label="비고" value={selectedVendor.remark || ''} rows={3} readOnly />
@@ -530,7 +532,7 @@ export default function VendorPage() {
               <Input name="email" label="이메일" type="email" placeholder="email@example.com" required />
               <DatePicker name='foundationAt' label="설립일자" />
               <Input name="businessCategory" label="업태" placeholder="업태 입력" />
-              <Input name="businessItem" label="업종" placeholder="업종 입력" />
+              <Input name="industry" label="업종" placeholder="업종 입력" />
             </div>
             
             <div className="flex gap-6">
