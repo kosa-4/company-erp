@@ -11,6 +11,7 @@ import com.company.erp.master.vendoruser.dto.VendorUserUpdateDto;
 import com.company.erp.master.vendoruser.service.VendorUserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,19 +40,18 @@ public class VendorUserController {
     @PostMapping("/approve")
     public ApiResponse approveVendorUser(@RequestBody List<VendorUserRegisterDto> vendorUserRegisterDtoList, HttpSession currentSession) {
 
-        // 1) 객체 통째로 반환
-        Object sessionAttr = currentSession.getAttribute(SessionUser.class.getName());
+        // 1) 현재 로그인 정보 반환
+        Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
+        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
 
-        // 2) 객체의 타입이 SessionUser인지 확인 (안정성을 위한 세션 만료 여부 체크)
-        if(!(sessionAttr instanceof SessionUser)){
-            return ApiResponse.fail("세션이 만료되었습니다.");
+        // 2) 로그인 정보 확인
+        if (loginUser == null) {
+            // userObj가 null인 경우 예외를 던지거나 401 에러 반환
+            return ApiResponse.fail("로그인 정보가 없습니다.");
         }
 
-        // 3) 타입 전환
-        SessionUser userObj = (SessionUser) sessionAttr;
-
-        // 4) id 반환
-        String loginId = userObj.getUserId();
+        // 3) id 반환
+        String loginId = loginUser.getUserId();
 
         // 5) 승인 함수 실행
         vendorUserService.approveVendorUser(vendorUserRegisterDtoList, loginId);

@@ -11,7 +11,7 @@
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
-            INDUSTRY_TYPE AS businessItem,
+            INDUSTRY_TYPE AS industry,
             USE_FLAG AS useYn,
             PROGRESS_CD AS status,
             REG_DATE AS createdAt
@@ -37,9 +37,16 @@
             <if test="endDate != null">
                 AND REG_DATE <![CDATA[<=]]> #{endDate}
             </if>
-            <if test="businessItem != null and businessItem != ''">
-                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            <if test="industry != null and industry != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
+
+            AND PROGRESS_CD IN ('A')
+            AND VENDOR_CD NOT IN (
+                SELECT VENDOR_CD FROM VNCH
+                WHERE PROGRESS_CD IN ('N', 'C')
+                AND DEL_FLAG = 'N'
+            )
         </where>
 
         UNION ALL
@@ -51,7 +58,7 @@
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
-            INDUSTRY_TYPE AS businessItem,
+            INDUSTRY_TYPE AS industry,
             NULL AS useYn,
             PROGRESS_CD AS status,
             REG_DATE AS createdAt
@@ -77,9 +84,10 @@
             <if test="endDate != null">
                 AND REG_DATE <![CDATA[<=]]> #{endDate}
             </if>
-            <if test="businessItem != null and businessItem != ''">
-                AND INDUSTRY_TYPE LIKE CONCAT('%', #{businessItem}, '%')
+            <if test="industry != null and industry != ''">
+                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
+            AND PROGRESS_CD IN ('C', 'N', 'R')
         </where>
 
         ORDER BY
@@ -108,7 +116,7 @@
             FAX_NO AS fax,
             EMAIL AS email,
             FOUNDATION_DATE AS foundationDate,
-            INDUSTRY_TYPE AS businessItem,
+            INDUSTRY_TYPE AS industry,
             RMK AS remark,
             PROGRESS_CD AS status,
             SIGN_DATE AS signDate
@@ -171,7 +179,7 @@
             #{fax},
             #{email},
             #{foundationDate},
-            #{businessItem},
+            #{industry},
             #{attFileNum},
             #{remark},
             "A",
@@ -265,7 +273,7 @@
     <select id="selectVendorVNCHByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
 
         SELECT
-            VENDOR_CD AS vendorCode,
+            V.VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
             VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
@@ -276,7 +284,7 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
-            PROGRESS_CD AS status,
+            V.PROGRESS_CD AS status,
             RMK AS remark
             FROM
             VNCH V
@@ -295,7 +303,7 @@
     <select id="selectVendorVNGLByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
 
         SELECT
-            VENDOR_CD AS vendorCode,
+            V.VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
             VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
@@ -306,7 +314,7 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
-            PROGRESS_CD AS status,
+            V.PROGRESS_CD AS status,
             RMK AS remark
         FROM
             VNGL V
