@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @SessionIgnore
@@ -26,7 +27,7 @@ public class VendorUserPortalController {
 
     /* 협력 업체 사용자 조회 */
     @GetMapping
-    public ResponseEntity<?> getVendorUserList(
+    public ResponseEntity<List<VendorUserListDto>> getVendorUserList(
             VendorUserSearchDto vendorUserSearchDto,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
 //        // 1) 현재 로그인 정보 반환
@@ -44,7 +45,7 @@ public class VendorUserPortalController {
 
         List<VendorUserListDto> vendorUsers = vendorUserPortalService.getVendorUserListByVendorCode(vendorUserSearchDto, loginId);
         if(vendorUsers == null || vendorUsers.isEmpty()){
-            return ResponseEntity.ok("검색 결과가 없습니다.");
+            return ResponseEntity.ok(Collections.emptyList());
         }
         return ResponseEntity.ok().body(vendorUsers);
 
