@@ -61,7 +61,7 @@
     <select id="selectPrItems" resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrItemRow">
         SELECT 
             pd.PR_NUM as prNum,
-            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD) as lineNo,
+            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD, pd.REG_DATE) as lineNo,
             pd.ITEM_CD as itemCd,
             pd.ITEM_DESC as itemDesc,
             pd.ITEM_SPEC as itemSpec,
@@ -160,7 +160,7 @@
         )
         SELECT
             #{rfqNum},
-            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD),
+            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD, pd.REG_DATE),
             pd.ITEM_CD,
             pd.ITEM_DESC,
             pd.ITEM_SPEC,
