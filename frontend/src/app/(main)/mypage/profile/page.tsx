@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Building2, Lock, Phone, Mail, Save, X, Shield, Briefcase } from 'lucide-react';
 import { Card, Input, Button } from '@/components/ui';
 import { toast, Toaster } from 'sonner';
+import { mypageApi } from '@/lib/api/mypage';
 
 interface ProfileForm {
   userType: string;
@@ -25,25 +26,66 @@ interface ProfileForm {
 
 export default function ProfilePage() {
   const [form, setForm] = useState<ProfileForm>({
-    userType: '구매사',
-    role: '담당자',
-    companyCode: 'COMP001',
-    companyName: '(주)테스트회사',
-    departmentCode: 'DEPT001',
-    departmentName: '구매팀',
-    userId: 'hong.gildong',
+    userType: '',
+    role: '',
+    companyCode: '',
+    companyName: '',
+    departmentCode: '',
+    departmentName: '',
+    userId: '',
     password: '',
     passwordConfirm: '',
-    userNameKo: '홍길동',
-    userNameEn: 'Hong Gildong',
-    phone: '02-1234-5678',
-    email: 'hong.gildong@company.com',
-    mobile: '010-1234-5678',
-    fax: '02-1234-5679',
+    userNameKo: '',
+    userNameEn: '',
+    phone: '',
+    email: '',
+    mobile: '',
+    fax: '',
   });
 
   const [errors, setErrors] = useState<Partial<ProfileForm>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    const fetchInitData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await mypageApi.getInitData();
+        
+        console.log('백엔드에서 받은 데이터:', data);
+        console.log('  - phone:', data.phone);
+        console.log('  - email:', data.email);
+        console.log('  - fax:', data.fax);
+        
+        setForm({
+          userType: data.userType || '',
+          role: data.role || '',
+          companyCode: data.companyCode || '',
+          companyName: data.companyName || '',
+          departmentCode: data.departmentCode || '',
+          departmentName: data.departmentName || '',
+          userId: data.userId || '',
+          password: '',
+          passwordConfirm: '',
+          userNameKo: data.userNameKo || '',
+          userNameEn: data.userNameEn || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          mobile: data.mobile || '',
+          fax: data.fax || '',
+        });
+      } catch (error) {
+        console.error('초기 데이터 로드 실패:', error);
+        toast.error('사용자 정보를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitData();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -76,13 +118,61 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast.error('입력값을 확인해주세요.');
+      return;
+    }
 
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    toast.success('저장되었습니다.');
+    try {
+      setIsSaving(true);
+      
+      // 업데이트할 데이터만 전송 (비밀번호는 입력했을 때만)
+      const updateData: any = {
+        userNameEn: form.userNameEn,
+        phone: form.phone,
+        email: form.email,
+        fax: form.fax,
+      };
+      
+      // 비밀번호가 입력되었을 때만 포함
+      if (form.password && form.password.trim()) {
+        updateData.password = form.password;
+      }
+      
+      console.log('프로필 업데이트 요청:', updateData);
+      
+      await mypageApi.updateProfile(updateData);
+      
+      toast.success('프로필이 성공적으로 업데이트되었습니다.');
+      
+      // 비밀번호 필드 초기화
+      setForm(prev => ({
+        ...prev,
+        password: '',
+        passwordConfirm: '',
+      }));
+      
+    } catch (error: any) {
+      console.error('프로필 업데이트 실패:', error);
+      const errorMessage = error?.response?.data?.error || '프로필 업데이트에 실패했습니다.';
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl space-y-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-500">사용자 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -209,14 +299,6 @@ export default function ProfilePage() {
               onChange={handleChange}
               error={errors.email}
               leftIcon={<Mail className="w-4 h-4" />}
-            />
-            <Input
-              label="휴대폰"
-              name="mobile"
-              type="tel"
-              value={form.mobile}
-              onChange={handleChange}
-              placeholder="010-0000-0000"
             />
             <Input
               label="팩스번호"
