@@ -154,13 +154,13 @@
             ) U
         <where>
             U.delFlag = 'N'
-            <if test="vendorName != null and vendorName != ''">
-                AND (
-                        GL.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-                    OR
-                        CH.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-                    )
-            </if>
+<!--            <if test="vendorName != null and vendorName != ''">-->
+<!--                AND (-->
+<!--                        GL.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
+<!--                    OR-->
+<!--                        CH.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
+<!--                    )-->
+<!--            </if>-->
             <if test="userId != null and userId != ''">
                 AND U.userId LIKE CONCAT('%', #{userId}, '%')
             </if>

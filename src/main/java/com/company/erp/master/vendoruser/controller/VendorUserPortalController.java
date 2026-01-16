@@ -11,6 +11,7 @@ import com.company.erp.master.vendoruser.service.VendorUserPortalService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +34,7 @@ public class VendorUserPortalController {
         // 2) 로그인 정보 확인
         if (loginUser == null) {
             // userObj가 null인 경우 예외를 던지거나 401 에러 반환
-            return ResponseEntity.badRequest().body("로그인 정보가 없습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인 정보가 없습니다.");
         }
 
         // 3) id 반환

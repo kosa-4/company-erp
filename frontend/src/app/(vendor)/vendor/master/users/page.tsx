@@ -50,7 +50,7 @@ export default function VendorUsersPage() {
         userId: user.userId || '',
         email: user.email || '', // userEmail이 아닌 email로 통일
         phone: user.phone || '',
-        password: '',
+        password: '', // 수정 시에는 비밀번호 초기화하지 않음
       });
     } else {
       setEditingUser(null);
@@ -83,7 +83,11 @@ export default function VendorUsersPage() {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(
+          editingUser
+            ? { userName: formData.userName, userId: formData.userId, email: formData.email, phone: formData.phone }
+            : formData
+        ),
       });
 
       if (response.ok) {
