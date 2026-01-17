@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
 import { 
   FileText, Package, Clipboard, Warehouse, Building2, LayoutGrid,
   TrendingUp, TrendingDown, Bell, ChevronRight, Circle, Square, Triangle, Hexagon, Octagon, Pentagon
 } from 'lucide-react';
+import { mypageApi } from '@/lib/api/mypage';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 대시보드 통계 카드 (심플 버전)
 const StatCard: React.FC<{
@@ -91,6 +93,26 @@ const ActivityItem: React.FC<{
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const [userName, setUserName] = useState<string>('');
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const myInfo = await mypageApi.getInitData();
+        setUserName(myInfo.userNameKo || '');
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+        setUserName('');
+      }
+    };
+
+    if (user) {
+      loadUserInfo();
+    }
+  }, [user]);
+
   const stats = [
     { title: '이번 달 구매요청', value: '156', change: '12% 증가', changeType: 'positive' as const,
       icon: <Circle className="w-full h-full" /> },
@@ -124,7 +146,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
-              안녕하세요, 홍길동님
+              안녕하세요, {userName || '사용자'}님
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               오늘도 효율적인 구매 업무를 시작해보세요.

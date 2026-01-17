@@ -1,8 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserCircle, Save, Key } from 'lucide-react';
 import { Card, Input, Button, Badge } from '@/components/ui';
+import { vendorMypageApi } from '@/lib/api/vendorMypage';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+
+// 다음 우편번호 API 타입 선언
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          roadAddress: string;
+          jibunAddress: string;
+          buildingName: string;
+        }) => void;
+      }) => { open: () => void };
+    };
+  }
+}
 
 interface VendorProfileForm {
   // 협력사 정보
@@ -25,28 +44,64 @@ interface VendorProfileForm {
 }
 
 export default function VendorProfilePage() {
+  const { user: authUser } = useAuth();
   const [form, setForm] = useState<VendorProfileForm>({
     // 협력사 정보
-    vendorName: '(주)협력사',
-    vendorNameEn: 'Vendor Co., Ltd.',
-    businessType: '법인',
-    businessNo: '123-45-67890',
-    ceoName: '홍길동',
-    zipCode: '06234',
-    address: '서울시 강남구 테헤란로 123',
-    addressDetail: '협력빌딩 5층',
-    phone: '02-1234-5678',
-    industry: 'IT서비스',
+    vendorName: '',
+    vendorNameEn: '',
+    businessType: '',
+    businessNo: '',
+    ceoName: '',
+    zipCode: '',
+    address: '',
+    addressDetail: '',
+    phone: '',
+    industry: '',
     // 계정 정보
-    userName: '홍길동',
-    userId: 'vendor01',
-    email: 'vendor@partner.com',
+    userName: '',
+    userId: '',
+    email: '',
     password: '',
     passwordConfirm: '',
   });
 
   const [errors, setErrors] = useState<Partial<VendorProfileForm>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    const fetchInitData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await vendorMypageApi.getUserInfo();
+        
+        console.log('협력사 사용자 정보 조회 성공:', data);
+        
+        setForm(prev => ({
+          ...prev,
+          userName: data.userName || '',
+          userId: authUser?.userId || '', // 세션에서 userId 가져오기
+          email: data.email || '',
+          vendorName: data.vendorName || '',
+          vendorNameEn: data.vendorNameEn || '',
+          businessNo: data.businessNo || '',
+          address: data.address || '',
+          zipCode: data.zipCode || '',
+          ceoName: data.ceoName || '',
+          industry: data.industry || '',
+          phone: data.phone || '',
+        }));
+      } catch (error: any) {
+        console.error('초기 데이터 로드 실패:', error);
+        toast.error(error?.data?.error || '데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitData();
+  }, [authUser]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -55,6 +110,30 @@ export default function VendorProfilePage() {
     if (errors[name as keyof VendorProfileForm]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
+  };
+
+  // 다음 우편번호 검색
+  const handleAddressSearch = () => {
+    if (!window.daum?.Postcode) {
+      toast.error('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        // 도로명 주소 + 건물명 조합
+        let fullAddress = data.roadAddress;
+        if (data.buildingName) {
+          fullAddress += ` (${data.buildingName})`;
+        }
+
+        setForm(prev => ({
+          ...prev,
+          zipCode: data.zonecode,
+          address: fullAddress,
+        }));
+      }
+    }).open();
   };
 
   const validateForm = () => {
@@ -79,10 +158,29 @@ export default function VendorProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    alert('저장되었습니다.');
+    try {
+      // 비밀번호가 입력된 경우에만 비밀번호 업데이트 API 호출
+      if (form.password && form.password.trim() !== '') {
+        await vendorMypageApi.updatePassword(form.password);
+        toast.success('비밀번호가 변경되었습니다.');
+        
+        // 비밀번호 필드 초기화
+        setForm(prev => ({
+          ...prev,
+          password: '',
+          passwordConfirm: '',
+        }));
+      } else {
+        toast.info('변경할 내용이 없습니다.');
+      }
+    } catch (error: any) {
+      console.error('비밀번호 변경 실패:', error);
+      toast.error(error?.data?.error || '비밀번호 변경에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -178,23 +276,22 @@ export default function VendorProfilePage() {
                                         readOnly
                                         className="bg-gray-50"
                                     />
-                                    <Button type="button" variant="outline" className="whitespace-nowrap">
+                                    <Button 
+                                      type="button" 
+                                      variant="outline" 
+                                      className="whitespace-nowrap"
+                                      onClick={handleAddressSearch}
+                                    >
                                         우편번호 검색
                                     </Button>
                                 </div>
                             </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                             <div className="grid grid-cols-1 gap-2">
                                 <Input
                                     name="address"
                                     value={form.address}
                                     readOnly
-                                    className="bg-gray-50"
-                                />
-                                <Input
-                                    name="addressDetail"
-                                    value={form.addressDetail}
-                                    onChange={handleChange}
-                                    placeholder="상세주소 입력"
+                                    className="bg-gray-50 text-gray-500"
                                 />
                             </div>
                          </div>
@@ -220,21 +317,23 @@ export default function VendorProfilePage() {
                         <h2 className="font-semibold text-gray-900">계정 정보</h2>
                     </div>
                     <div className="p-6 space-y-4">
-                         <div className="space-y-1.5">
+                        <div className="space-y-1.5">
                             <label className="text-xs font-medium text-gray-500">아이디</label>
                             <Input
                                 name="userId"
                                 value={form.userId}
                                 readOnly
                                 className="bg-gray-50 text-gray-500"
+                                placeholder="로그인 시 확인 가능"
                             />
                         </div>
-                         <div className="space-y-1.5">
+                        <div className="space-y-1.5">
                             <label className="text-xs font-medium text-gray-500">사용자명</label>
                             <Input
                                 name="userName"
                                 value={form.userName}
-                                onChange={handleChange}
+                                readOnly
+                                className="bg-gray-50 text-gray-500"
                             />
                         </div>
                         <div className="space-y-1.5">
@@ -243,9 +342,9 @@ export default function VendorProfilePage() {
                                 name="email"
                                 type="email"
                                 value={form.email}
-                                onChange={handleChange}
+                                readOnly
+                                className="bg-gray-50 text-gray-500"
                             />
-                            {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                         </div>
                     </div>
                 </Card>
