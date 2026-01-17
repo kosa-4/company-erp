@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import lombok.extern.slf4j.Slf4j;
 
-
-
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -27,6 +25,7 @@ public class GlobalExceptionHandler {
         error.put("message", e.getMessage());
         return ResponseEntity.badRequest().body(error);
     }
+
     // 찾으려는 데이터가 없을 때 발생한 예외 처리
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(NoSuchElementException e) {
@@ -35,6 +34,7 @@ public class GlobalExceptionHandler {
         error.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
+
     // 필수 데이터 누락 등 null 참조 시 발생한 예외 처리
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<Map<String, String>> handleNullPointer(NullPointerException e) {
@@ -43,6 +43,7 @@ public class GlobalExceptionHandler {
         error.put("message", "필수 데이터가 누락되었습니다.");
         return ResponseEntity.badRequest().body(error);
     }
+
     // 모든 예외 처리
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
@@ -59,6 +60,15 @@ public class GlobalExceptionHandler {
         Map<String, String> error = new HashMap<>();
         error.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error); // 409 Conflict
+    }
+
+    // 인증 오류 처리
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException e) {
+        log.error("UnauthorizedException: {}", e.getMessage(), e);
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.fail(e.getMessage()));
     }
 
     // 파일 오류 예외 처리

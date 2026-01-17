@@ -31,7 +31,7 @@ async function apiClient<T>(
   const { params, body, headers, ...restOptions } = options;
 
   // URL 생성 (쿼리 파라미터 포함)
-  let url = `/api/v1${endpoint}`;
+  let url = `/api${endpoint}`;
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -117,7 +117,14 @@ async function apiClient<T>(
     return JSON.parse(text) as T;
   }
 
-  return response.json();
+  const result = await response.json();
+
+  // ApiResponse 형식(success, data 필드 존재)인 경우 data 필드만 반환
+  if (result && typeof result === 'object' && result.success === true && 'data' in result) {
+    return result.data;
+  }
+
+  return result;
 }
 
 /**
