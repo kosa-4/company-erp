@@ -253,12 +253,13 @@ export interface Notice {
   createdAt: string;
   createdBy: string;
   createdByName: string;
+  viewCnt?: number;
 }
 
 // 테이블 컬럼 정의
 export interface ColumnDef<T> {
   key: keyof T | string;
-  header: string;
+  header: string | React.ReactNode;
   width?: number | string;
   align?: 'left' | 'center' | 'right';
   sortable?: boolean;
