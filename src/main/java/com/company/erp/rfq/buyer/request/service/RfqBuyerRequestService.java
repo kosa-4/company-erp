@@ -4,6 +4,7 @@ import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSaveRequest;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSelectRequest;
+import com.company.erp.rfq.buyer.request.dto.request.RfqSendRequest;
 import com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse;
 import com.company.erp.rfq.buyer.request.mapper.RfqBuyerRequestMapper;
 import lombok.RequiredArgsConstructor;
@@ -71,7 +72,6 @@ public class RfqBuyerRequestService {
 
     /**
      * RFQ 상세 조회 및 상태 명칭 매핑
-     * - [피드백 보완] DTO 및 NPE 방어 기반 코드 매핑
      */
     @Transactional(readOnly = true)
     public RfqDetailResponse getRfqDetail(String rfqNum) {
@@ -186,6 +186,26 @@ public class RfqBuyerRequestService {
     }
 
     /**
+     * 업체 선정
+     */
+    @Transactional
+    public void selectVendor(RfqSelectRequest request, String userId) {
+        String rfqNum = request.getRfqNum();
+        String vendorCd = request.getVendorCd();
+
+        int hdUpdated = mapper.updateRfqStatusToSelected(rfqNum, userId);
+        if (hdUpdated != 1) {
+            throw new IllegalStateException("선정 권한이 없거나 개찰(G) 상태가 아닙니다.");
+        }
+
+        mapper.resetRfqVendorsSelection(rfqNum);
+        int vnUpdated = mapper.updateRfqVendorSelection(rfqNum, vendorCd, userId);
+        if (vnUpdated != 1) {
+            throw new IllegalStateException("선정된 협력사 정보 업데이트에 실패했습니다.");
+        }
+    }
+
+    /**
      * 협력업체 전송
      */
     @Transactional
@@ -222,22 +242,13 @@ public class RfqBuyerRequestService {
     }
 
     /**
-     * 업체 선정
+     * 견적 삭제 (Soft Delete)
      */
     @Transactional
-    public void selectVendor(RfqSelectRequest request, String userId) {
-        String rfqNum = request.getRfqNum();
-        String vendorCd = request.getVendorCd();
-
-        int hdUpdated = mapper.updateRfqStatusToSelected(rfqNum, userId);
-        if (hdUpdated != 1) {
-            throw new IllegalStateException("선정 권한이 없거나 개찰(G) 상태가 아닙니다.");
-        }
-
-        mapper.resetRfqVendorsSelection(rfqNum);
-        int vnUpdated = mapper.updateRfqVendorSelection(rfqNum, vendorCd, userId);
-        if (vnUpdated != 1) {
-            throw new IllegalStateException("선정된 협력사 정보 업데이트에 실패했습니다.");
+    public void deleteRfq(String rfqNum, String userId) {
+        int updated = mapper.deleteRfq(rfqNum, userId);
+        if (updated != 1) {
+            throw new IllegalStateException("삭제가 불가능한 상태(임시저장만 가능)이거나 권한이 없습니다.");
         }
     }
 }

@@ -105,7 +105,9 @@ export default function RfqRequestModal({
             pcType: detail.header.pcType,
             rfqSubject: detail.header.rfqSubject,
             rfqType: detail.header.rfqType,
-            reqCloseDate: detail.header.reqCloseDate.includes('T') ? detail.header.reqCloseDate : `${detail.header.reqCloseDate}T23:59:59`,
+            reqCloseDate: detail.header.reqCloseDate.includes('T')
+                ? detail.header.reqCloseDate
+                : `${detail.header.reqCloseDate}T23:59:59`,
             rmk: detail.header.rmk,
             vendorCodes: detail.vendors?.map(v => v.vendorCd) || [],
             items: detail.items?.map(item => ({
@@ -158,6 +160,24 @@ export default function RfqRequestModal({
             const vendorCodes = detail.vendors?.map(v => v.vendorCd) || [];
             await rfqApi.sendRfq(rfqNum, vendorCodes);
             toast.success('협력사 전송이 완료되었습니다.');
+            onSaveSuccess?.();
+            onClose();
+        } catch (error) {
+            toast.error(getErrorMessage(error));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 삭제 처리
+    const handleDelete = async () => {
+        if (!rfqNum) return;
+        if (!confirm('정말 이 견적 요청을 삭제하시겠습니까?')) return;
+
+        setLoading(true);
+        try {
+            await rfqApi.deleteRfq(rfqNum);
+            toast.success('삭제되었습니다.');
             onSaveSuccess?.();
             onClose();
         } catch (error) {
@@ -297,6 +317,9 @@ export default function RfqRequestModal({
                     <Button variant="outline" onClick={onClose}>취소</Button>
                     {isEditable && (
                         <>
+                            {rfqNum && (
+                                <Button variant="danger" onClick={handleDelete} loading={loading}>삭제</Button>
+                            )}
                             <Button variant="secondary" onClick={handleSave} loading={loading}>저장</Button>
                             {rfqNum && (
                                 <Button variant="primary" onClick={handleSend} loading={loading}>협력사 전송</Button>
@@ -339,7 +362,7 @@ export default function RfqRequestModal({
                             />
                             <DatePicker
                                 label="견적 마감일"
-                                value={detail?.header?.reqCloseDate || ''}
+                                value={detail?.header?.reqCloseDate?.split('T')[0] || ''}
                                 onChange={(e) => handleHeaderChange('reqCloseDate', e.target.value)}
                                 className={isEditable ? 'bg-blue-50/30 ring-1 ring-blue-100' : ''}
                                 readOnly={!isEditable}

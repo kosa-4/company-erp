@@ -21,9 +21,9 @@
                h.PC_TYPE        AS pcType
         FROM RFQHD h
         LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c1.CODE 
-                          AND c1.DEL_FLAG = 'N' AND c1.USE_FLAG = 'Y'
+                          AND c1.USE_YN = 'Y'
         LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c2.CODE 
-                          AND c2.DEL_FLAG = 'N' AND c2.USE_FLAG = 'Y'
+                          AND c2.USE_YN = 'Y'
         LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
         WHERE h.RFQ_NUM = #{rfqNum} 
           AND h.DEL_FLAG = 'N'
@@ -58,7 +58,7 @@
                v.TOTAL_AMT    AS totalAmt,
                v.SELECT_YN    AS selectYn
         FROM RFQVN v
-        INNER JOIN VENDOR vn ON v.VENDOR_CD = vn.VENDOR_CD 
+        INNER JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD 
                             AND vn.DEL_FLAG = 'N' AND vn.USE_FLAG = 'Y'
         WHERE v.RFQ_NUM = #{rfqNum} 
           AND v.DEL_FLAG = 'N'
@@ -108,8 +108,7 @@
         SELECT CODE AS code, CODE_NAME AS codeName
         FROM CODD
         WHERE CODE_GROUP = #{codeGroup}
-          AND USE_FLAG = 'Y'
-          AND DEL_FLAG = 'N'
+          AND USE_YN = 'Y'
     </select>
 
     <!-- 4. [추가] 원본 PR 필수 품목 라인번호 조회 -->
@@ -128,7 +127,7 @@
             DEL_FLAG, REG_DATE, REG_USER_ID
         )
         VALUES (
-            #{req.rfqNum}, #{req.rfqSubject}, NOW(), #{prNum}, 'T',
+            #{req.rfqNum}, #{req.rfqSubject}, NULL, #{prNum}, 'T',
             #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType},
             'N', NOW(), #{loginUserId}
         )
@@ -167,7 +166,7 @@
         </foreach>
     </insert>
 
-    <!-- 7. 저장: Items 동기화 (Batch Insert - DTO 직접 참조, 수식 제거) -->
+    <!-- 7. 저장: Items 동기화 (Batch Insert) -->
     <insert id="insertRfqItems">
         INSERT INTO RFQDT (RFQ_NUM, LINE_NO, ITEM_CD, ITEM_DESC, ITEM_SPEC, UNIT_CD, 
                            RFQ_QT, EST_UNIT_PRC, EST_AMT, DELY_DATE, WH_NM, RMK, 
@@ -180,19 +179,20 @@
         </foreach>
     </insert>
 
-    <!-- 8. 전송: Header 상태 전환 (Owner 체크 포함) -->
+    <!-- 8. 전송: Header 상태 전환 (T -> RFQS) -->
     <update id="updateRfqStatusToSend">
         UPDATE RFQHD
         SET PROGRESS_CD = 'RFQS',
+            RFQ_DATE    = NOW(),
             MOD_DATE    = NOW(),
             MOD_USER_ID = #{loginUserId}
-        WHERE RFQ_NUM = #{rfqNum} 
-          AND PROGRESS_CD = 'T' 
-          AND CTRL_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND PROGRESS_CD = 'T'
           AND DEL_FLAG = 'N'
+          AND CTRL_USER_ID = #{loginUserId}
     </update>
 
-    <!-- 9. 전송: Vendors 상태 업데이트 (이력 보존) -->
+    <!-- 9. 전송: Vendor 상태 전환 (T -> RFQS) -->
     <update id="updateRfqVendorsStatusToSend">
         UPDATE RFQVN
         SET PROGRESS_CD = 'RFQS',
@@ -200,6 +200,7 @@
             MOD_DATE    = NOW(),
             MOD_USER_ID = #{loginUserId}
         WHERE RFQ_NUM = #{rfqNum}
+          AND PROGRESS_CD = 'T'
           AND DEL_FLAG = 'N'
     </update>
 
@@ -241,5 +242,16 @@
           AND DEL_FLAG = 'N'
     </select>
 
+    <!-- 13. 삭제: RFQ 논리 삭제 (임시저장 상태만 가능) -->
+    <update id="deleteRfq">
+        UPDATE RFQHD
+        SET DEL_FLAG = 'Y',
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND PROGRESS_CD = 'T'
+          AND DEL_FLAG = 'N'
+          AND CTRL_USER_ID = #{loginUserId}
+    </update>
 
 </mapper>

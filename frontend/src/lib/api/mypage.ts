@@ -34,11 +34,11 @@ export const mypageApi = {
   /**
    * 마이페이지 초기 데이터 조회
    */
-  getInitData: () => api.get<MyInfoDTO>('/mypage/init'),
-  
+  getInitData: () => api.get<MyInfoDTO>('/v1/mypage/init'),
+
   /**
    * 마이페이지 정보 업데이트
    */
-  updateProfile: (data: MyInfoUpdateRequest) => 
-    api.put<{ message: string }>('/mypage/update', data),
+  updateProfile: (data: MyInfoUpdateRequest) =>
+    api.put<{ message: string }>('/v1/mypage/update', data),
 };
