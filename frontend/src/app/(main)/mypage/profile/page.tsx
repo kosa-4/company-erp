@@ -53,11 +53,8 @@ export default function ProfilePage() {
       try {
         setIsLoading(true);
         const data = await mypageApi.getInitData();
-        
-        console.log('백엔드에서 받은 데이터:', data);
-        console.log('  - phone:', data.phone);
-        console.log('  - email:', data.email);
-        console.log('  - fax:', data.fax);
+
+     
         
         setForm({
           userType: data.userType || '',

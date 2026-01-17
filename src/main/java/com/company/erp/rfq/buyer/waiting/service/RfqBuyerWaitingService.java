@@ -1,11 +1,9 @@
 package com.company.erp.rfq.buyer.waiting.service;
 
-import com.company.erp.rfq.buyer.waiting.dto.request.RfqCreateFromPrRequest;
 import com.company.erp.rfq.buyer.waiting.dto.request.RfqWaitingSearchRequest;
 import com.company.erp.rfq.buyer.waiting.dto.response.PrGroup;
 import com.company.erp.rfq.buyer.waiting.dto.response.PrHeaderRow;
 import com.company.erp.rfq.buyer.waiting.dto.response.PrItemRow;
-import com.company.erp.rfq.buyer.waiting.dto.response.RfqCreateFromPrResponse;
 import com.company.erp.rfq.buyer.waiting.mapper.RfqBuyerWaitingMapper;
 import com.company.erp.rfq.workflow.RfqWorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -92,15 +90,4 @@ public class RfqBuyerWaitingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * PR 기반 RFQ 초안 생성
-     */
-    public RfqCreateFromPrResponse createFromPr(RfqCreateFromPrRequest request, String userId) {
-
-        String rfqNum = rfqWorkflowService.createRfqDraftFromPr(request.getPrNum(), userId);
-
-        return new RfqCreateFromPrResponse(
-                rfqNum,
-                "견적요청 초안이 생성되었습니다.");
-    }
 }

@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, Package, LogOut } from 'lucide-react';
 import { navigationItems } from '@/constants/navigation';
 import { NavItem } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { mypageApi } from '@/lib/api/mypage';
+import { vendorMypageApi } from '@/lib/api/vendorMypage';
 
 interface NavItemProps {
   item: NavItem;
@@ -81,6 +83,41 @@ const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
+  const [userName, setUserName] = useState<string>('');
+  const [vendorName, setVendorName] = useState<string>('');
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        // 협력사인 경우 vn_user에서 정보 조회, 구매사인 경우 API 호출
+        if (user?.comType === 'V') {
+          const response = await vendorMypageApi.getUserInfo();
+          if (response && response.userName) {
+            setUserName(response.userName);
+            setVendorName(response.vendorName || '');
+          } else {
+            console.warn('협력사 사용자 정보를 가져올 수 없습니다.');
+            setUserName('');
+            setVendorName('');
+          }
+        } else {
+          const myInfo = await mypageApi.getInitData();
+          setUserName(myInfo.userNameKo || '');
+          setVendorName('');
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+        // 실패 시 빈 문자열로 설정
+        setUserName('');
+        setVendorName('');
+      }
+    };
+
+    if (user) {
+      loadUserInfo();
+    }
+  }, [user]);
 
   const toggleItem = (href: string) => {
     setOpenItems(prev => {
@@ -132,11 +169,11 @@ const Sidebar: React.FC = () => {
         <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
           <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
             <span className="text-white font-medium text-xs">
-              {user?.userId?.charAt(0)?.toUpperCase() || '홍'}
+              {(userName || user?.userId)?.charAt(0)?.toUpperCase() || 'U'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{user?.userId || '홍길동'}</p>
+            <p className="text-sm font-medium text-gray-900 truncate">{userName || user?.userId || '사용자'}</p>
             <p className="text-xs text-gray-500 truncate">담당자</p>
           </div>
           <button 

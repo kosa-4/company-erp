@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.rfq.buyer.progress.mapper.RfqProgressMapper">
+
+    <resultMap id="RfqProgressGroupMap" type="com.company.erp.rfq.buyer.progress.dto.response.RfqProgressGroupResponse">
+        <id property="rfqNum" column="rfqNum" />
+        <result property="rfqSubject" column="rfqSubject" />
+        <result property="rfqDate" column="rfqDate" />
+        <result property="rfqType" column="rfqType" />
+        <result property="rfqTypeNm" column="rfqTypeNm" />
+        <result property="progressCd" column="progressCd" />
+        <result property="progressNm" column="progressNm" />
+        <result property="ctrlUserNm" column="ctrlUserNm" />
+        <result property="regDate" column="regDate" />
+        <collection property="vendors" ofType="com.company.erp.rfq.buyer.progress.dto.response.RfqProgressGroupResponse$VendorStatus">
+            <id property="vendorCd" column="vendorCd" />
+            <result property="vendorNm" column="vendorNm" />
+            <result property="progressCd" column="v_progressCd" />
+            <result property="progressNm" column="v_progressNm" />
+            <result property="sendDate" column="sendDate" />
+            <result property="submitDate" column="submitDate" />
+        </collection>
+    </resultMap>
+
+    <select id="selectRfqProgressList" resultMap="RfqProgressGroupMap">
+        SELECT h.RFQ_NUM        AS rfqNum,
+               h.RFQ_SUBJECT    AS rfqSubject,
+               h.RFQ_DATE       AS rfqDate,
+               h.RFQ_TYPE       AS rfqType,
+               c1.CODE_NAME     AS rfqTypeNm,
+               h.PROGRESS_CD    AS progressCd,
+               c2.CODE_NAME     AS progressNm,
+               u.USER_NM        AS ctrlUserNm,
+               h.REG_DATE       AS regDate,
+               v.VENDOR_CD      AS vendorCd,
+               vn.VENDOR_NM     AS vendorNm,
+               v.PROGRESS_CD    AS v_progressCd,
+               c3.CODE_NAME     AS v_progressNm,
+               v.SEND_DATE      AS sendDate,
+               v.SUBMIT_DATE    AS submitDate
+        FROM RFQHD h
+        LEFT JOIN RFQVN v ON h.RFQ_NUM = v.RFQ_NUM AND v.DEL_FLAG = 'N'
+        LEFT JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD
+        LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
+        LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c1.CODE
+        LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c2.CODE
+        LEFT JOIN CODD c3 ON c3.CODE_GROUP = 'PROGRESS_CD' AND v.PROGRESS_CD = c3.CODE
+        WHERE h.DEL_FLAG = 'N'
+        <if test="req.rfqNum != null and req.rfqNum != ''">
+            AND h.RFQ_NUM LIKE CONCAT('%', #{req.rfqNum}, '%')
+        </if>
+        <if test="req.rfqSubject != null and req.rfqSubject != ''">
+            AND h.RFQ_SUBJECT LIKE CONCAT('%', #{req.rfqSubject}, '%')
+        </if>
+        <if test="req.fromDate != null and req.fromDate != ''">
+            AND h.RFQ_DATE &gt;= #{req.fromDate}
+        </if>
+        <if test="req.toDate != null and req.toDate != ''">
+            AND h.RFQ_DATE &lt;= CONCAT(#{req.toDate}, ' 23:59:59')
+        </if>
+        <if test="req.progressCd != null and req.progressCd != ''">
+            AND h.PROGRESS_CD = #{req.progressCd}
+        </if>
+        <if test="req.rfqType != null and req.rfqType != ''">
+            AND h.RFQ_TYPE = #{req.rfqType}
+        </if>
+        <if test="req.ctrlUserNm != null and req.ctrlUserNm != ''">
+            AND u.USER_NM LIKE CONCAT('%', #{req.ctrlUserNm}, '%')
+        </if>
+        ORDER BY h.REG_DATE DESC, v.VENDOR_CD ASC
+    </select>
+
+    <update id="updateRfqStatus">
+        UPDATE RFQHD
+        SET PROGRESS_CD = #{statusCd},
+            MOD_DATE    = NOW(),
+            MOD_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+          AND CTRL_USER_ID = #{loginUserId}
+          <if test="statusCd == 'RFQS'">
+              AND PROGRESS_CD = 'T'
+          </if>
+          <if test="statusCd == 'M'">
+              AND PROGRESS_CD IN ('RFQS', 'RFQC')
+          </if>
+    </update>
+
+    <update id="updateAllVendorStatus">
+        UPDATE RFQVN
+        SET PROGRESS_CD = #{statusCd},
+            <if test="statusCd == 'RFQS'">
+                SEND_DATE = NOW(),
+            </if>
+            MOD_DATE    = NOW(),
+            MOD_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+    </update>
+
+    <select id="selectRfqVendorCodes" resultType="string">
+        SELECT VENDOR_CD
+        FROM RFQVN
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+    </select>
+
+</mapper>
