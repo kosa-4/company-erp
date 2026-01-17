@@ -79,6 +79,7 @@
             h.PC_TYPE        AS pcType
         FROM PRHD h
         WHERE h.PR_NUM = #{prNum}
+          AND h.PROGRESS_CD = 'A'
           AND h.DEL_FLAG = 'N'
     </select>
 
