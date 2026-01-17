@@ -69,6 +69,7 @@ public class VendorUserPortalService {
         vendorUserRegisterDto.setCreatedAt(LocalDate.now());
         vendorUserRegisterDto.setCreatedBy(vendorUserRegisterDto.getUserId());
         vendorUserRegisterDto.setStatus("N");
+        vendorUserRegisterDto.setReqType("I");
 
         // 3. db 저장
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
@@ -98,7 +99,7 @@ public class VendorUserPortalService {
 //            비밀번호: 보안상 언제든 바꿀 수 있어야 합니다.
 
     /* 삭제 */
-    // 1. 구매사에서 사용자 삭제
+    // 1. 협력사 사용자 삭제
     @Transactional
     public void deleteVendorUser(
             VendorUserRegisterDto vendorUserRegisterDto,
@@ -128,9 +129,9 @@ public class VendorUserPortalService {
                 }
         
                 // 3) 최소 한명의 관리자 유지 필수
-                if("ADMIN".equals(vendorUserRegisterDto.getRole())){
+                if("VENDOR".equals(vendorUserRegisterDto.getRole())){
                     String vendorCode = vendorUserRegisterDto.getVendorCode();
-                    int countAdmin = vendorUserMapper.countAdminUsers(vendorCode);
+                    int countAdmin = vendorUserMapper.countVendorUsers(vendorCode);
                     if(countAdmin < 2){
                         throw new IllegalStateException("관리자 수는 최소 1명이 필요합니다.");
                     }
@@ -159,13 +160,25 @@ public class VendorUserPortalService {
                 vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
                 break;
             case "R": // 2-2. 반려 상태일 시
+                
+                // 1) 업데이트 dto 생성
                 VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
                 updateDto.setAskUserNum(vendorUser.getAskUserNum());
                 updateDto.setModifiedAt(LocalDate.now());
                 updateDto.setModifiedBy(loginId);
-                updateDto.setDelFlag("Y");
-                 // 삭제 전용 쿼리?
-                vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+
+                // 2) 마스터 테이블 존재 여부 조회
+                int countMaster = vendorUserMapper.countVendorUsersByUserId(vendorUser.getUserId());
+
+                if(countMaster > 0){
+                    updateDto.setStatus("C");
+                    updateDto.setReqType("D");
+                    updateDto.setRejectRemark("");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                } else{
+                    updateDto.setDelFlag("Y");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                }
                 break;
             default: // 2-3. 신규, 수정 요청 상태일 시
                 throw new IllegalStateException("심사 중인 사용자는 삭제할 수 없습니다.");

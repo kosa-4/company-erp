@@ -136,6 +136,7 @@ export default function VendorUsersPage() {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'N': return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px]">대기</Badge>;
+      case 'C': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">수정 요청</Badge>;
       case 'R': return <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px]">반려됨</Badge>;
       case 'A': return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">승인완료</Badge>;
       default: return null;

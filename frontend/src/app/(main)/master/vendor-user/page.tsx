@@ -14,6 +14,7 @@ interface VendorUser {
   status: 'C' | 'A' | 'R' | 'N';
   createdAt: string;
   blockFlag: 'Y' | 'N'; // isBlocked에서 변경
+  reqtype?: 'I' | 'D' | 'U'; // 등록/삭제/수정 요청 타입
 }
 
 export default function VendorUserPage() {
@@ -116,8 +117,10 @@ export default function VendorUserPage() {
 
       if (response.ok) {
         alert('처리가 완료되었습니다.');
+        // 처리된 항목을 목록에서 제거
+        const processedUserIds = new Set(targets.map(t => t.userId));
+        setVendorUsers(prev => prev.filter(user => !processedUserIds.has(user.userId)));
         setSelectedRows([]);
-        fetchVendorUsers();
       }
     } catch (e) {
       alert('처리 중 오류가 발생했습니다.');

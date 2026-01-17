@@ -72,7 +72,7 @@ public class VendorUserPortalController {
     }
 
     /* 협력 업체 사용자 삭제 */
-    @RequireRole({"ADMIN"})
+    @RequireRole({"VENDOR"})
     @DeleteMapping("/delete")
     public ApiResponse deleteVendorUser(
             @RequestBody VendorUserRegisterDto vendorUserRegisterDto,
