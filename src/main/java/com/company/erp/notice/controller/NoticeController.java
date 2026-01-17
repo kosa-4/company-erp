@@ -28,12 +28,6 @@ public class NoticeController {
     public ResponseEntity<Map<String, Object>> initNotice(HttpSession session) {
         SessionUser user = getSessionUser(session);
         
-        if (user == null) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
-        
         String userId = user.getUserId();
         Map<String, Object> initData = noticeService.initNoticeData(userId);
         
@@ -47,14 +41,6 @@ public class NoticeController {
             HttpSession session) {
         
         SessionUser user = getSessionUser(session);
-        
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
-        
-
         
         noticeService.insertNotice(request, user);
         
@@ -73,10 +59,6 @@ public class NoticeController {
         
         try {
             SessionUser user = getSessionUser(session);
-            
-            if (user == null) {
-                return ResponseEntity.status(401).build();
-            }
             
             // 구매사/협력사 코드 설정
             String buyerCd = null;
@@ -106,10 +88,6 @@ public class NoticeController {
         
         SessionUser user = getSessionUser(session);
         
-        if (user == null) {
-            return ResponseEntity.status(401).build();
-        }
-        
         NoticeDetailResponse noticeDetail = noticeService.selectNoticeDetail(noticeNum);
         
         if (noticeDetail == null) {
@@ -130,12 +108,6 @@ public class NoticeController {
             HttpSession session) {
         
         SessionUser user = getSessionUser(session);
-        
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
         
         // 구매사가 아닌 경우 에러 반환
         if (!"B".equals(user.getComType())) {
@@ -173,14 +145,6 @@ public class NoticeController {
             HttpSession session) {
         
         SessionUser user = getSessionUser(session);
-        
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
-        
-
         
         try {
             noticeService.deleteNotice(noticeNum, user);

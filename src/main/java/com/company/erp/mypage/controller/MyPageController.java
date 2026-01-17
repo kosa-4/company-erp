@@ -63,12 +63,6 @@ public class MyPageController {
     public ResponseEntity<Map<String, String>> getVendorUserInfo(HttpSession httpSession) {
         SessionUser user = getSessionUser(httpSession);
 
-        if (user == null) {
-            System.err.println("세션 사용자 정보가 없습니다.");
-            return ResponseEntity.status(401).build();
-        }
-
-
         try {
             Map<String, String> userInfo = myPageService.getVendorUserInfo(user.getUserId());
             
@@ -93,10 +87,6 @@ public class MyPageController {
             HttpSession httpSession) {
         
         SessionUser user = getSessionUser(httpSession);
-        
-        if (user == null) {
-            return ResponseEntity.status(401).build();
-        }
         
         try {
             String password = request.get("password");
