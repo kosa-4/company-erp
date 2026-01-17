@@ -4,6 +4,8 @@ import com.company.erp.mypage.dto.MyInfoDTO;
 import com.company.erp.mypage.dto.MyInfoUpdateDTO;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Map;
+
 public interface MyPageMapper {
 
     MyInfoDTO selectMyInfo(
@@ -16,4 +18,8 @@ public interface MyPageMapper {
     );
     
     int updateMyInfo(MyInfoUpdateDTO dto);
+
+    Map<String, String> selectVendorUserInfo(@Param("userId") String userId);
+
+    int updateVendorUserInfo(@Param("userId") String userId, @Param("password") String password);
 }
