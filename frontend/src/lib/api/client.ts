@@ -120,7 +120,7 @@ async function apiClient<T>(
   const result = await response.json();
 
   // ApiResponse 형식(success, data 필드 존재)인 경우 data 필드만 반환
-  if (result && typeof result === 'object' && 'success' in result && 'data' in result) {
+  if (result && typeof result === 'object' && result.success === true && 'data' in result) {
     return result.data;
   }
 

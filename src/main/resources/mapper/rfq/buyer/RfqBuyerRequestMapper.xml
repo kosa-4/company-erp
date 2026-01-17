@@ -85,7 +85,7 @@
     <!-- [신규] PR 기반 초기화 데이터 조회: Items -->
     <select id="selectRfqInitItems" resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
         SELECT 
-            ROW_NUMBER() OVER (ORDER BY pd.ITEM_CD) AS lineNo,
+            pd.LINE_NO       AS lineNo,
             pd.ITEM_CD       AS itemCd,
             pd.ITEM_DESC     AS itemDesc,
             pd.ITEM_SPEC     AS itemSpec,
@@ -152,6 +152,11 @@
         DELETE FROM RFQDT WHERE RFQ_NUM = #{rfqNum}
     </delete>
 
+    <!-- 7. 저장/수정: Vendors 정리 및 생성 -->
+    <delete id="deleteRfqVendors">
+        DELETE FROM RFQVN WHERE RFQ_NUM = #{rfqNum}
+    </delete>
+
     <insert id="insertRfqVendors">
         INSERT INTO RFQVN (RFQ_NUM, VENDOR_CD, PROGRESS_CD, DEL_FLAG, REG_DATE, REG_USER_ID)
         VALUES
@@ -185,18 +190,16 @@
           AND DEL_FLAG = 'N'
     </update>
 
-    <!-- 9. 전송: Vendors 정리 및 생성 -->
-    <delete id="deleteRfqVendors">
-        DELETE FROM RFQVN WHERE RFQ_NUM = #{rfqNum}
-    </delete>
-
-    <insert id="insertRfqVendorsOnSend">
-        INSERT INTO RFQVN (RFQ_NUM, VENDOR_CD, PROGRESS_CD, SEND_DATE, DEL_FLAG, REG_DATE, REG_USER_ID)
-        VALUES
-        <foreach collection="vendorCodes" item="vendorCd" separator=",">
-            (#{rfqNum}, #{vendorCd}, 'RFQS', NOW(), 'N', NOW(), #{loginUserId})
-        </foreach>
-    </insert>
+    <!-- 9. 전송: Vendors 상태 업데이트 (이력 보존) -->
+    <update id="updateRfqVendorsStatusToSend">
+        UPDATE RFQVN
+        SET PROGRESS_CD = 'RFQS',
+            SEND_DATE   = NOW(),
+            MOD_DATE    = NOW(),
+            MOD_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+    </update>
 
     <!-- 10. 선정: Header 상태 전환 (Owner 체크 포함) -->
     <update id="updateRfqStatusToSelected">

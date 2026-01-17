@@ -49,11 +49,11 @@ public interface RfqBuyerRequestMapper {
         // (1) HD 상태 전환 (T -> RFQS) + Owner 체크
         int updateRfqStatusToSend(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
 
-        // (2) VN 최초 생성 (Batch Insert)
-        int deleteRfqVendors(@Param("rfqNum") String rfqNum);
+        // (2) VN 전송 상태 업데이트 (이력 보존을 위해 삭제 후 재삽입 대신 상태 업데이트 사용)
+        int updateRfqVendorsStatusToSend(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
 
-        int insertRfqVendorsOnSend(@Param("rfqNum") String rfqNum, @Param("vendorCodes") List<String> vendorCodes,
-                        @Param("loginUserId") String loginUserId);
+        // (3) VN 물리 삭제 (임시저장 시 동기화를 위한 용도)
+        int deleteRfqVendors(@Param("rfqNum") String rfqNum);
 
         // --- 선정 (Select) ---
         // (1) HD 상태 전환 (G -> J) + Owner 체크

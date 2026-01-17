@@ -40,6 +40,7 @@ public class RfqBuyerRequestService {
         response.setHeader(header);
         response.setItems(mapper.selectRfqInitItems(prNum));
         // 초기 단계에서는 벤더 없음
+        response.setVendors(java.util.Collections.emptyList());
         return response;
     }
 
@@ -48,11 +49,18 @@ public class RfqBuyerRequestService {
      */
     @Transactional
     public String createRfq(RfqSaveRequest request, String userId) {
-        // 1. 번호 채번
+        // 1. 필수 파라미터 검증
+        if (request.getPrNum() == null || request.getPrNum().isBlank()) {
+            throw new IllegalArgumentException("PR 번호는 필수입니다.");
+        }
+        if (request.getPcType() == null || request.getPcType().isBlank()) {
+            throw new IllegalArgumentException("구매유형은 필수입니다.");
+        }
+        // 2. 번호 채번
         String rfqNum = docNumService.generateDocNumStr(DocKey.RQ);
         request.setRfqNum(rfqNum);
 
-        // 2. HD 저장
+        // 3. HD 저장
         mapper.insertRfqHeader(request, request.getPrNum(), request.getPcType(), userId);
 
         // 3. DT/VN 저장
@@ -134,11 +142,11 @@ public class RfqBuyerRequestService {
         // 품목 정합성 체크 (라인번호 등)
         validateRfqItems(request);
 
-        // DT 동기화
+        // DT 동기화 (물리 삭제 후 재삽입)
         mapper.deleteRfqItems(rfqNum);
         mapper.insertRfqItems(rfqNum, request.getItems(), userId);
 
-        // VN 동기화
+        // VN 동기화 (임시저장 시점에 협력사 목록 확정 및 동기화)
         mapper.deleteRfqVendors(rfqNum);
         if (request.getVendorCodes() != null && !request.getVendorCodes().isEmpty()) {
             mapper.insertRfqVendors(rfqNum, request.getVendorCodes(), userId);
@@ -186,11 +194,11 @@ public class RfqBuyerRequestService {
             throw new IllegalStateException("전송 권한이 없거나 전송 가능한 상태(임시저장)가 아닙니다.");
         }
 
-        mapper.deleteRfqVendors(rfqNum);
-        int vnInserted = mapper.insertRfqVendorsOnSend(rfqNum, distinctVendors, userId);
+        // [피드백 반영] 전송 시 협력사 정보를 삭제 후 재생성하지 않고, 상태만 업데이트하여 생성 이력을 보존함
+        int vnUpdated = mapper.updateRfqVendorsStatusToSend(rfqNum, userId);
 
-        if (vnInserted != distinctVendors.size()) {
-            throw new IllegalStateException("일부 협력사 정보 전송에 실패했습니다.");
+        if (vnUpdated == 0) {
+            throw new IllegalStateException("전송할 협력사 정보가 없거나 전송에 실패했습니다.");
         }
     }
 
