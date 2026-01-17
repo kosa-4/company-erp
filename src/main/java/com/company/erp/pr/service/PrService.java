@@ -82,6 +82,7 @@ public class PrService {
                     .prAmt(dtAmt)
                     .delyDate(reqDt.getDelyDate())
                     .regUserId(userId)
+                    .rmk(item.getRmk())
                     .build();
 
             prDtDTOList.add(prDtDTO);
@@ -123,16 +124,62 @@ public class PrService {
 
 
 
-    //구매요청현황 목록 조회(필터 처리 필요)
-    public List<PrListResponse> selectPrList(String prNum, String prSubject,String requester,
+    //구매요청현황 목록 조회 (헤더만)
+    public List<PrListResponse> selectPrList(String prNum, String prSubject, String requester,
                                              String deptNm, String progressCd, String startDate, String endDate){
         //페이징 처리 필요
-        return prMapper.selectPrList(prNum,prSubject,requester,deptNm,progressCd,startDate,endDate);
+        return prMapper.selectPrList(prNum, prSubject, requester, deptNm, progressCd, startDate, endDate);
+    }
+    
+    //구매요청 상세 품목 목록 조회
+    public List<PrDtDTO> selectPrDetail(String prNum){
+        return prMapper.selectPrDetail(prNum);
+    }
+
+    //구매요청 승인
+    @Transactional
+    public void approvePrRequest(String prNum, String userId, String deptCd){
+        // 구매요청 존재 여부 확인
+        PrHdDTO prHd = prMapper.selectPrNum(prNum);
+        if(prHd == null){
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        if("Y".equals(prHd.getDelFlag())){
+            throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
+        }
+
+        // 승인 처리
+        int updatedRows = prMapper.approvePr(userId, deptCd, prNum);
+        
+        if(updatedRows == 0){
+            throw new IllegalStateException("구매요청 승인에 실패했습니다. 승인 코드가 존재하지 않거나 이미 삭제된 구매요청일 수 있습니다.");
+        }
+    }
+
+    //구매요청 반려
+    @Transactional
+    public void rejectPr(String prNum, String userId, String deptCd){
+        // 구매요청 존재 여부 확인
+        PrHdDTO prHd = prMapper.selectPrNum(prNum);
+        if(prHd == null){
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        if("Y".equals(prHd.getDelFlag())){
+            throw new IllegalArgumentException("존재하지 않는 구매요청입니다.");
+        }
+
+        // 반려 처리
+        prMapper.rejectPr(prNum, userId, deptCd);
+
+        PrHdDTO updatedPrHd = prMapper.selectPrNum(prNum);
+        if(updatedPrHd == null || updatedPrHd.getProgressCd() == null){
+            throw new IllegalStateException("구매요청 반려에 실패했습니다.");
+        }
     }
 
     //구매요청 삭제
     @Transactional
-    public void deletePrRequest(String prNum, String itemCd){
+    public void deletePrRequest(String prNum){
         PrHdDTO prHd = prMapper.selectPrNum(prNum);
 
         if(prHd == null){
@@ -141,10 +188,30 @@ public class PrService {
         if("Y".equals(prHd.getDelFlag())){
             throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
         }
+        
+        // 승인 상태인 구매요청은 삭제 불가
+        String progressCd = prHd.getProgressCd();
+        if(progressCd != null && isApprovedStatus(progressCd)){
+            throw new IllegalStateException("승인된 구매요청은 삭제할 수 없습니다.");
+        }
 
         prMapper.deletePrHd(prNum);
         prMapper.deletePrDt(prNum);
 
+    }
+    
+    //승인 상태 확인 메서드
+    private boolean isApprovedStatus(String progressCd) {
+        if (progressCd == null || progressCd.isEmpty()) {
+            return false;
+        }
+        
+        try {
+            String codeName = prMapper.selectProgressCdName(progressCd);
+            return "승인".equals(codeName);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("진행 상태 조회에 실패하였습니다.");
+        }
     }
 
     //구매요청 수정

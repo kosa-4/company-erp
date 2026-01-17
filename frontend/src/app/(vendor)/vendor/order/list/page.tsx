@@ -11,6 +11,9 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  unit: string;              // 단위
+  deliveryDate: string;      // 납기일
+  storageLocation: string;   // 배송지 (저장위치)
 }
 
 interface Order {
@@ -35,8 +38,8 @@ export default function VendorOrderListPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      // 발주전송(S) 상태만 조회
-      const response = await fetch('/api/v1/purchase-orders?status=S');
+      // 협력사 전용 API 사용 (자동으로 본인 협력사 발주만 조회)
+      const response = await fetch('/api/v1/purchase-orders/vendor/orders?status=S');
       
       if (!response.ok) {
         throw new Error('발주서 조회에 실패했습니다.');
@@ -58,6 +61,9 @@ export default function VendorOrderListPage() {
           quantity: item.orderQuantity || 0,
           unitPrice: item.unitPrice || 0,
           amount: item.amount || 0,
+          unit: item.unit || 'EA',
+          deliveryDate: item.deliveryDate || '',
+          storageLocation: item.storageLocation || '',
         })),
       }));
 
@@ -172,9 +178,9 @@ export default function VendorOrderListPage() {
                 <th className="px-6 py-3 font-medium">발주번호</th>
                 <th className="px-6 py-3 font-medium">발주명</th>
                 <th className="px-6 py-3 font-medium">발주일자</th>
+                <th className="px-6 py-3 font-medium text-right">총수량</th>
                 <th className="px-6 py-3 font-medium text-right">발주금액</th>
                 <th className="px-6 py-3 font-medium text-center">수신상태</th>
-                <th className="px-6 py-3 font-medium text-center">액션</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -189,7 +195,11 @@ export default function VendorOrderListPage() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.poNo} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={order.poNo} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => handleViewDetail(order)}
+                  >
                     <td className="px-6 py-4 font-medium text-gray-900">{order.poNo}</td>
                     <td className="px-6 py-4 text-gray-600">{order.poName}</td>
                     <td className="px-6 py-4 text-gray-500">
@@ -198,6 +208,9 @@ export default function VendorOrderListPage() {
                         {order.poDate}
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-right text-gray-900 font-medium">
+                      {order.items.reduce((sum, item) => sum + item.quantity, 0).toLocaleString()}
+                    </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
                       {formatCurrency(order.totalAmount)}
                     </td>
@@ -205,30 +218,6 @@ export default function VendorOrderListPage() {
                       <Badge variant={order.checkFlag === 'Y' ? 'green' : 'orange'}>
                         {order.checkFlag === 'Y' ? '확인완료' : '미확인'}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetail(order)}
-                          className="w-8 h-8 p-0"
-                          title="상세보기"
-                        >
-                          <Eye className="w-4 h-4 text-gray-500" />
-                        </Button>
-                        {order.checkFlag === 'N' && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleConfirm(order.poNo)}
-                            className="h-8 text-xs gap-1"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            수신확인
-                          </Button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))
@@ -281,9 +270,12 @@ export default function VendorOrderListPage() {
                     <tr>
                       <th className="px-4 py-2.5 text-left font-medium text-gray-500">품목코드</th>
                       <th className="px-4 py-2.5 text-left font-medium text-gray-500">품목명</th>
+                      <th className="px-4 py-2.5 text-center font-medium text-gray-500">단위</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">수량</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">단가</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">금액</th>
+                      <th className="px-4 py-2.5 text-center font-medium text-gray-500">납기일</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-gray-500">배송지</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -291,9 +283,12 @@ export default function VendorOrderListPage() {
                       <tr key={item.itemCode}>
                         <td className="px-4 py-3 text-gray-600 font-mono text-xs">{item.itemCode}</td>
                         <td className="px-4 py-3 text-gray-900">{item.itemName}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{item.unit}</td>
                         <td className="px-4 py-3 text-right text-gray-900">{item.quantity}</td>
                         <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.unitPrice)}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.amount)}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{item.deliveryDate || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.storageLocation || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

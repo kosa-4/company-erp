@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.session.SessionConst;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,11 +84,46 @@ public class PurchaseOrderService {
         return list;
     }
 
+    // 협력사 전용: 본인 발주 목록 조회
+    public List<PurchaseOrderDTO> getVendorOrderList(String poNo, String poName, String status) {
+        SessionUser user = getSessionUser();
+        if (user == null || user.getVendorCd() == null) {
+            throw new SecurityException("협력사 정보가 없습니다.");
+        }
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("poNo", poNo);
+        params.put("poName", poName);
+        params.put("status", status);
+        params.put("vendorCd", user.getVendorCd()); // 본인 협력사 발주만 조회
+
+        List<PurchaseOrderDTO> list = purchaseOrderMapper.selectVendorOrderList(params);
+
+        // 각 PO에 대해 품목 상세 조회하여 추가
+        for (PurchaseOrderDTO po : list) {
+            if (po.getPoNo() != null) {
+                List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+                po.setItems(items);
+            }
+        }
+
+        return list;
+    }
+
     // 상세 조회
     public PurchaseOrderDTO getDetail(String poNo) {
         PurchaseOrderDTO header = purchaseOrderMapper.selectHeader(poNo);
         if (header == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+
+        // VENDOR인 경우: 본인 협력사 발주만 조회 가능
+        SessionUser user = getSessionUser();
+        if (user != null && "VENDOR".equals(user.getRole())) {
+            String userVendorCd = user.getVendorCd();
+            if (userVendorCd == null || !userVendorCd.equals(header.getVendorCode())) {
+                throw new SecurityException("본인 협력사의 발주만 조회할 수 있습니다.");
+            }
         }
 
         List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(poNo);
@@ -159,7 +195,7 @@ public class PurchaseOrderService {
 
     // 세션에서 로그인 사용자 정보 가져오기
     private SessionUser getSessionUser() {
-        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = httpSession.getAttribute(SessionConst.LOGIN_USER);
         return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
     }
 
@@ -183,10 +219,10 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다 : " + poNo);
         }
-        // 저장(T) 상태에서만 수정 가능
+        // 수정 가능: T(임시저장)만
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                    "저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
+                    "임시저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
         dto.setPoNo(poNo);
 
@@ -215,10 +251,10 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-        // 저장(T) 상태에서만 삭제 가능
+        // 삭제 가능: T(임시저장)만
         if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(
-                    "저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus());
+                    "임시저장 상태에서만 삭제할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
 
         purchaseOrderMapper.deleteHeader(poNo);
@@ -229,6 +265,15 @@ public class PurchaseOrderService {
     // 확정
     @Transactional
     public Boolean confirm(String poNo) {
+        PurchaseOrderDTO existing = purchaseOrderMapper.selectHeader(poNo);
+        if (existing == null) {
+            throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
+        }
+        // 확정 가능: T(임시저장)만
+        if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                    "임시저장 상태에서만 확정할 수 있습니다. 현재 상태: " + existing.getStatus());
+        }
         String currentUserId = getCurrentUserId();
         return updateStatus(poNo, PoStatusCode.CONFIRMED.getCode(), currentUserId);
     }
@@ -240,7 +285,7 @@ public class PurchaseOrderService {
         return updateStatus(poNo, PoStatusCode.APPROVED.getCode(), currentUserId);
     }
 
-    // 반려
+    // 반려 (확정 → 임시저장으로 복귀)
     @Transactional
     public Boolean reject(String poNo, String rejectReason) {
         // 반려 사유 필수 검증
@@ -251,12 +296,16 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
-        // 상태 전이 검증 (확정 → 반려)
-        validateStatusTransition(existing.getStatus(), PoStatusCode.REJECTED.getCode());
+        // 확정(D) 상태에서만 반려 가능
+        if (!PoStatusCode.CONFIRMED.getCode().equals(existing.getStatus())) {
+            throw new IllegalStateException(
+                    "확정 상태에서만 반려할 수 있습니다. 현재 상태: " + existing.getStatus());
+        }
         String currentUserId = getCurrentUserId();
+        // 반려 시 임시저장(T) 상태로 복귀
         purchaseOrderMapper.updateStatusWithReason(
                 poNo,
-                PoStatusCode.REJECTED.getCode(),
+                PoStatusCode.SAVED.getCode(),
                 rejectReason,
                 currentUserId);
         return true;
@@ -283,6 +332,16 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다: " + poNo);
         }
+
+        // VENDOR 본인 협력사 발주만 수신확인 가능
+        SessionUser user = getSessionUser();
+        if (user != null && "VENDOR".equals(user.getRole())) {
+            String userVendorCd = user.getVendorCd();
+            if (userVendorCd == null || !userVendorCd.equals(existing.getVendorCode())) {
+                throw new SecurityException("본인 협력사의 발주만 수신확인할 수 있습니다.");
+            }
+        }
+
         // 발주전송(S) 상태에서만 수신확인 가능
         if (!PoStatusCode.SENT.getCode().equals(existing.getStatus())) {
             throw new IllegalStateException(

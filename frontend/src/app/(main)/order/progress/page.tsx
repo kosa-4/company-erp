@@ -8,43 +8,39 @@ import {
   Input,
   Select,
   DatePicker,
-  DataGrid,
   SearchPanel,
-  Badge,
   Modal,
-  ModalFooter,
   Textarea,
 } from '@/components/ui';
-import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
 import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
 import { getErrorMessage } from '@/lib/api/error';
 
-interface OrderProgress {
+// PO 그룹 인터페이스
+interface PoGroup {
   poNo: string;
   poName: string;
+  poDate: string;
   purchaseType: string;
+  purchaseTypeDisplay: string;
   buyer: string;
-  progressStatus: 'SAVED' | 'CONFIRMED' | 'REJECTED' | 'PENDING' | 'APPROVED' | 'SENT' | 'DELIVERED' | 'CLOSED';
+  status: string;
+  statusDisplay: string;
+  statusBadgeColor: string;
   vendorCode: string;
   vendorName: string;
-  itemCode: string;
-  itemName: string;
-  spec: string;
-  unit: string;
-  unitPrice: number;
-  orderQuantity: number;
-  amount: number;
-  deliveryDate: string;
-  paymentTerms: string;
-  storageLocation: string;
+  itemCount: number;
+  totalAmount: number;
   remark: string;
+  items: PurchaseOrderItemDTO[];
+  receivedQuantity: number;
 }
 
 export default function OrderProgressPage() {
-  const [data, setData] = useState<OrderProgress[]>([]);
-  const [selectedRows, setSelectedRows] = useState<OrderProgress[]>([]);
+  const [poGroups, setPoGroups] = useState<PoGroup[]>([]);
+  const [expandedPos, setExpandedPos] = useState<Set<string>>(new Set());
+  const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useState({
     poNo: '',
     poName: '',
@@ -93,73 +89,18 @@ export default function OrderProgressPage() {
     return statusMap[code] || code;
   };
 
-  // PurchaseOrderDTO를 OrderProgress 형식으로 변환
-  const transformToOrderProgress = (orders: PurchaseOrderDTO[]): OrderProgress[] => {
-    const result: OrderProgress[] = [];
-    orders.forEach((order) => {
-      // items가 없으면 헤더 정보만 표시 (빈 품목으로)
-      if (!order.items || order.items.length === 0) {
-        result.push({
-          poNo: order.poNo || '',
-          poName: order.poName || '',
-          purchaseType: order.purchaseType || '',
-          buyer: order.purchaseManager || '',
-          progressStatus: mapStatusToProgressStatus(order.status || ''),
-          vendorCode: order.vendorCode || '',
-          vendorName: order.vendorName || '',
-          itemCode: '-',
-          itemName: '-',
-          spec: '-',
-          unit: '-',
-          unitPrice: 0,
-          orderQuantity: 0,
-          amount: Number(order.totalAmount || 0),
-          deliveryDate: '-',
-          paymentTerms: '-',
-          storageLocation: '-',
-          remark: order.remark || '',
-        });
-      } else {
-        // items가 있으면 각 품목별로 행 생성
-        order.items.forEach((item) => {
-          result.push({
-            poNo: order.poNo || '',
-            poName: order.poName || '',
-            purchaseType: order.purchaseType || '',
-            buyer: order.purchaseManager || '',
-            progressStatus: mapStatusToProgressStatus(order.status || ''),
-            vendorCode: order.vendorCode || '',
-            vendorName: order.vendorName || '',
-            itemCode: item.itemCode || '',
-            itemName: item.itemName || '',
-            spec: item.specification || '',
-            unit: item.unit || '',
-            unitPrice: Number(item.unitPrice || 0),
-            orderQuantity: item.orderQuantity || 0,
-            amount: Number(item.amount || 0),
-            deliveryDate: item.deliveryDate || '',
-            paymentTerms: item.paymentTerms || '',
-            storageLocation: item.storageLocation || '',
-            remark: item.remark || '',
-          });
-        });
-      }
-    });
-    return result;
-  };
-
-  // 상태 매핑 함수
-  const mapStatusToProgressStatus = (status: string): OrderProgress['progressStatus'] => {
-    const statusMap: Record<string, OrderProgress['progressStatus']> = {
-      'T': 'SAVED',
-      'D': 'CONFIRMED',
-      'R': 'REJECTED',
-      'A': 'APPROVED',
-      'S': 'SENT',
-      'C': 'DELIVERED',
-      'E': 'CLOSED',
+  // 상태별 배지 색상
+  const getStatusBadgeColor = (code: string): string => {
+    const colorMap: Record<string, string> = {
+      'T': 'bg-gray-100 text-gray-800',
+      'D': 'bg-blue-100 text-blue-800',
+      'R': 'bg-red-100 text-red-800',
+      'A': 'bg-green-100 text-green-800',
+      'S': 'bg-blue-100 text-blue-800',
+      'C': 'bg-green-100 text-green-800',
+      'E': 'bg-gray-100 text-gray-800',
     };
-    return statusMap[status] || 'SAVED';
+    return colorMap[code] || 'bg-gray-100 text-gray-800';
   };
 
   // API로 데이터 조회
@@ -176,21 +117,40 @@ export default function OrderProgressPage() {
         status: searchParams.status || undefined,
       });
 
-      // 안전한 처리: 배열이 아니거나 null인 경우 빈 배열로 처리
-      if (!result) {
-        console.warn('API 응답이 null입니다.');
-        setData([]);
+      if (!result || !Array.isArray(result)) {
+        setPoGroups([]);
         return;
       }
 
-      if (!Array.isArray(result)) {
-        console.error('API 응답이 배열이 아닙니다:', result);
-        setData([]);
-        return;
-      }
+      // PO별로 그룹화
+      const groups: PoGroup[] = result.map((po: PurchaseOrderDTO) => {
+        const purchaseTypeDisplay = 
+          po.purchaseType === 'G' ? '일반' : 
+          po.purchaseType === 'C' ? '단가계약' : 
+          po.purchaseType === 'E' ? '긴급' : 
+          po.purchaseType || '';
 
-      const transformedData = transformToOrderProgress(result);
-      setData(transformedData);
+        return {
+          poNo: po.poNo || '',
+          poName: po.poName || '',
+          poDate: po.poDate?.toString() || '',
+          purchaseType: po.purchaseType || '',
+          purchaseTypeDisplay,
+          buyer: po.purchaseManager || '',
+          status: po.status || '',
+          statusDisplay: statusCodeToDisplay(po.status || ''),
+          statusBadgeColor: getStatusBadgeColor(po.status || ''),
+          vendorCode: po.vendorCode || '',
+          vendorName: po.vendorName || '',
+          itemCount: po.items?.length || 0,
+          totalAmount: Number(po.totalAmount) || 0,
+          remark: po.remark || '',
+          items: po.items || [],
+          receivedQuantity: Number(po.receivedQuantity) || 0,
+        };
+      });
+
+      setPoGroups(groups);
     } catch (error) {
       alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
       console.error(error);
@@ -220,24 +180,26 @@ export default function OrderProgressPage() {
     });
   };
 
-  const getStatusBadge = (status: OrderProgress['progressStatus']) => {
-    const config = {
-      SAVED: { variant: 'gray' as const, label: '저장' },
-      CONFIRMED: { variant: 'blue' as const, label: '확정' },
-      REJECTED: { variant: 'red' as const, label: '반려' },
-      PENDING: { variant: 'yellow' as const, label: '승인대기' },
-      APPROVED: { variant: 'green' as const, label: '승인' },
-      SENT: { variant: 'blue' as const, label: '발주전송' },
-      DELIVERED: { variant: 'green' as const, label: '납품완료' },
-      CLOSED: { variant: 'gray' as const, label: '종결' },
-    };
-    const { variant, label } = config[status];
-    return <Badge variant={variant}>{label}</Badge>;
+  // PO 행 펼치기/접기
+  const toggleExpand = (poNo: string) => {
+    const newExpanded = new Set(expandedPos);
+    if (newExpanded.has(poNo)) {
+      newExpanded.delete(poNo);
+    } else {
+      newExpanded.add(poNo);
+    }
+    setExpandedPos(newExpanded);
   };
 
-  const handleRowClick = async (row: OrderProgress) => {
+  // PO 선택
+  const handleSelectPo = (poNo: string) => {
+    setSelectedPoNo(selectedPoNo === poNo ? null : poNo);
+  };
+
+  // 상세 보기
+  const handleViewDetail = async (poNo: string) => {
     try {
-      const detail = await purchaseOrderApi.getDetail(row.poNo);
+      const detail = await purchaseOrderApi.getDetail(poNo);
       setSelectedPo(detail);
       setIsDetailModalOpen(true);
     } catch (error) {
@@ -245,206 +207,26 @@ export default function OrderProgressPage() {
     }
   };
 
-  const columns: ColumnDef<OrderProgress>[] = [
-    {
-      key: 'poNo',
-      header: 'PO번호',
-      width: 130,
-      align: 'center',
-      render: (value) => (
-        <span className="text-blue-600 hover:underline cursor-pointer font-medium">
-          {String(value)}
-        </span>
-      ),
-    },
-    { key: 'poName', header: '발주명', width: 150, align: 'left' },
-    { key: 'purchaseType', header: '구매유형', width: 90, align: 'center' },
-    { key: 'buyer', header: '발주담당자', width: 100, align: 'center' },
-    {
-      key: 'progressStatus',
-      header: '진행상태',
-      width: 100,
-      align: 'center',
-      render: (value) => getStatusBadge(value as OrderProgress['progressStatus']),
-    },
-    { key: 'vendorCode', header: '협력사코드', width: 130, align: 'center' },
-    { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
-    { key: 'itemCode', header: '품목코드', width: 130, align: 'center' },
-    { key: 'itemName', header: '품목명', width: 150, align: 'left' },
-    { key: 'spec', header: '규격', width: 150, align: 'left' },
-    { key: 'unit', header: '단위', width: 60, align: 'center' },
-    {
-      key: 'unitPrice',
-      header: '단가',
-      width: 100,
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    {
-      key: 'orderQuantity',
-      header: '발주수량',
-      width: 90,
-      align: 'right',
-      render: (value) => formatNumber(Number(value)),
-    },
-    {
-      key: 'amount',
-      header: '금액',
-      width: 120,
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    { key: 'deliveryDate', header: '납기가능일', width: 100, align: 'center' },
-    { key: 'paymentTerms', header: '결제조건', width: 80, align: 'center' },
-    { key: 'storageLocation', header: '저장위치', width: 100, align: 'left' },
-  ];
-
-  const handleApprove = async () => {
-    if (selectedRows.length === 0) {
-      alert('선택한 문서가 없습니다.');
-      return;
-    }
-    const approvedItems = selectedRows.filter(
-      (r) => r.progressStatus === 'CONFIRMED'
-    );
-    if (approvedItems.length === 0) {
-      alert('확정 상태의 항목만 승인할 수 있습니다.');
-      return;
-    }
-
-    try {
-      const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
-      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.approve(poNo)));
-      alert(`${uniquePoNos.length}건이 승인되었습니다.`);
-      setSelectedRows([]);
-      await fetchData();
-    } catch (error) {
-      alert('승인 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-    }
-  };
-
-  const handleReject = async () => {
-    if (selectedRows.length === 0) {
-      alert('선택한 문서가 없습니다.');
-      return;
-    }
-    const rejectItems = selectedRows.filter(
-      (r) => r.progressStatus === 'CONFIRMED'
-    );
-    if (rejectItems.length === 0) {
-      alert('확정 상태의 항목만 반려할 수 있습니다.');
-      return;
-    }
-    const reason = prompt('반려사유를 입력해주세요.');
-    if (reason) {
-      try {
-        const uniquePoNos = [...new Set(rejectItems.map((item) => item.poNo))];
-        await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.reject(poNo, reason)));
-        alert(`${uniquePoNos.length}건이 반려되었습니다.`);
-        setSelectedRows([]);
-        await fetchData();
-      } catch (error) {
-        alert('반려 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-      }
-    }
-  };
-
-  const handleClose = async () => {
-    if (selectedRows.length === 0) {
-      alert('선택한 문서가 없습니다.');
-      return;
-    }
-    const deliveredItems = selectedRows.filter((r) => r.progressStatus === 'DELIVERED');
-    if (deliveredItems.length === 0) {
-      alert('납품완료 상태의 항목만 종결할 수 있습니다.');
-      return;
-    }
-    try {
-      const uniquePoNos = [...new Set(deliveredItems.map((item) => item.poNo))];
-      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.close(poNo)));
-      alert(`${uniquePoNos.length}건이 종결되었습니다.`);
-      setSelectedRows([]);
-      await fetchData();
-    } catch (error) {
-      alert('종결 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-    }
-  };
-
-  const handleConfirm = async () => {
-    if (selectedRows.length === 0) {
-      alert('선택한 문서가 없습니다.');
-      return;
-    }
-    const savedItems = selectedRows.filter(
-      (r) => r.progressStatus === 'SAVED'
-    );
-    if (savedItems.length === 0) {
-      alert('저장 상태의 항목만 확정할 수 있습니다.');
-      return;
-    }
-    try {
-      const uniquePoNos = [...new Set(savedItems.map((item) => item.poNo))];
-      await Promise.all(
-        uniquePoNos.map((poNo) => purchaseOrderApi.confirm(poNo))
-      );
-      alert(`${uniquePoNos.length}건이 확정되었습니다.`);
-      setSelectedRows([]);
-      await fetchData();
-    } catch (error) {
-      alert('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-    }
-  };
-
-  // 발주전송
-  const handleSend = async () => {
-    if (selectedRows.length === 0) {
-      alert('선택한 문서가 없습니다.');
-      return;
-    }
-    const approvedItems = selectedRows.filter(
-      (r) => r.progressStatus === 'APPROVED'
-    );
-    if (approvedItems.length === 0) {
-      alert('승인 상태의 항목만 발주전송할 수 있습니다.');
-      return;
-    }
-    try {
-      const uniquePoNos = [...new Set(approvedItems.map((item) => item.poNo))];
-      await Promise.all(uniquePoNos.map((poNo) => purchaseOrderApi.send(poNo)));
-      alert(`${uniquePoNos.length}건이 발주전송되었습니다.`);
-      setSelectedRows([]);
-      await fetchData();
-    } catch (error) {
-      alert('발주전송 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-    }
-  };
-
   // 수정 모달 열기
   const handleEdit = async () => {
-    if (selectedRows.length === 0) {
+    if (!selectedPoNo) {
       alert('선택한 문서가 없습니다.');
       return;
     }
-    const savedItems = selectedRows.filter((r) => r.progressStatus === 'SAVED');
-    if (savedItems.length === 0) {
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'T') {
       alert('저장 상태의 항목만 수정할 수 있습니다.');
       return;
     }
-    if (savedItems.length > 1) {
-      const uniquePoNos = [...new Set(savedItems.map((item) => item.poNo))];
-      if (uniquePoNos.length > 1) {
-        alert('한 번에 하나의 발주만 수정할 수 있습니다.');
-        return;
-      }
-    }
 
     try {
-      const poNo = savedItems[0].poNo;
-      const detail = await purchaseOrderApi.getDetail(poNo);
+      const detail = await purchaseOrderApi.getDetail(selectedPoNo);
       setEditingPo(detail);
       setEditForm({
         poName: detail.poName || '',
-        poDate: detail.poDate || '',
+        poDate: detail.poDate?.toString() || '',
         remark: detail.remark || '',
         items: detail.items?.map((item) => ({
           itemCode: item.itemCode || '',
@@ -501,12 +283,125 @@ export default function OrderProgressPage() {
       alert('발주가 수정되었습니다.');
       setIsEditModalOpen(false);
       setEditingPo(null);
-      setSelectedRows([]);
+      setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
       alert('발주 수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!selectedPoNo) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'T') {
+      alert('저장 상태의 항목만 확정할 수 있습니다.');
+      return;
+    }
+    try {
+      await purchaseOrderApi.confirm(selectedPoNo);
+      alert('발주가 확정되었습니다.');
+      setSelectedPoNo(null);
+      await fetchData();
+    } catch (error) {
+      alert('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedPoNo) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'D') {
+      alert('확정 상태의 항목만 승인할 수 있습니다.');
+      return;
+    }
+    try {
+      await purchaseOrderApi.approve(selectedPoNo);
+      alert('발주가 승인되었습니다.');
+      setSelectedPoNo(null);
+      await fetchData();
+    } catch (error) {
+      alert('승인 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedPoNo) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'D') {
+      alert('확정 상태의 항목만 반려할 수 있습니다.');
+      return;
+    }
+    const reason = prompt('반려사유를 입력해주세요.');
+    if (reason) {
+      try {
+        await purchaseOrderApi.reject(selectedPoNo, reason);
+        alert('발주가 반려되었습니다.');
+        setSelectedPoNo(null);
+        await fetchData();
+      } catch (error) {
+        alert('반려 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      }
+    }
+  };
+
+  const handleSend = async () => {
+    if (!selectedPoNo) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'A') {
+      alert('승인 상태의 항목만 발주전송할 수 있습니다.');
+      return;
+    }
+    try {
+      await purchaseOrderApi.send(selectedPoNo);
+      alert('발주가 전송되었습니다.');
+      setSelectedPoNo(null);
+      await fetchData();
+    } catch (error) {
+      alert('발주전송 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  const handleClose = async () => {
+    if (!selectedPoNo) {
+      alert('선택한 문서가 없습니다.');
+      return;
+    }
+    const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
+    if (!selectedGroup) return;
+
+    if (selectedGroup.status !== 'C') {
+      alert('납품완료 상태의 항목만 종결할 수 있습니다.');
+      return;
+    }
+    try {
+      await purchaseOrderApi.close(selectedPoNo);
+      alert('발주가 종결되었습니다.');
+      setSelectedPoNo(null);
+      await fetchData();
+    } catch (error) {
+      alert('종결 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -624,17 +519,163 @@ export default function OrderProgressPage() {
           </div>
         }
       >
-        <DataGrid
-          columns={columns}
-          data={data}
-          keyField="poNo"
-          loading={loading}
-          selectable
-          selectedRows={selectedRows}
-          onSelectionChange={(rows) => setSelectedRows(rows.length > 0 ? [rows[rows.length - 1]] : [])}
-          onRowClick={handleRowClick}
-          emptyMessage="발주 내역이 없습니다."
-        />
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-200">
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
+                  <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주담당자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주일자</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">진행상태</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고상태</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">협력사명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목수</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">총금액</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="animate-spin w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span className="text-stone-500">데이터를 불러오는 중...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : poGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <svg className="w-14 h-14 text-stone-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <span className="text-stone-500">발주 내역이 없습니다.</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  poGroups.map((group) => (
+                    <React.Fragment key={group.poNo}>
+                      {/* PO 메인 행 */}
+                      <tr 
+                        className={`
+                          transition-colors duration-150 cursor-pointer
+                          ${selectedPoNo === group.poNo ? 'bg-teal-50' : 'hover:bg-stone-50'}
+                        `}
+                      >
+                        {/* 펼치기 아이콘 */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          <svg 
+                            className={`w-5 h-5 text-stone-400 transition-transform duration-200 ${expandedPos.has(group.poNo) ? 'rotate-90' : ''}`}
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </td>
+                        {/* 선택 체크박스 */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedPoNo === group.poNo}
+                            onChange={() => handleSelectPo(group.poNo)}
+                            className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                          />
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => handleViewDetail(group.poNo)}>
+                          <span className="text-blue-600 font-medium hover:underline">{group.poNo}</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.poName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.purchaseTypeDisplay}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.buyer}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.poDate}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${group.statusBadgeColor}`}>
+                            {group.statusDisplay}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          {group.status === 'C' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              입고완료
+                            </span>
+                          ) : group.receivedQuantity > 0 ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              입고진행중
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              미입고
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>{group.vendorName}</td>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {group.itemCount}개
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-right font-medium whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
+                          ₩{formatNumber(group.totalAmount)}
+                        </td>
+                      </tr>
+                      
+                      {/* 펼쳐진 품목 상세 */}
+                      {expandedPos.has(group.poNo) && (
+                        <tr>
+                          <td colSpan={12} className="bg-stone-50/50 px-4 py-3">
+                            <div className="ml-12">
+                              <table className="w-full border border-stone-200 rounded-lg overflow-hidden">
+                                <thead className="bg-stone-100">
+                                  <tr>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">품목코드</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">품목명</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">규격</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">단위</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">수량</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">단가</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">금액</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">납기일</th>
+                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">저장위치</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-stone-100">
+                                  {group.items.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-stone-50">
+                                      <td className="px-3 py-2 text-xs text-center">{item.itemCode}</td>
+                                      <td className="px-3 py-2 text-xs text-left">{item.itemName}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.specification || '-'}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.unit}</td>
+                                      <td className="px-3 py-2 text-xs text-right">{formatNumber(item.orderQuantity)}</td>
+                                      <td className="px-3 py-2 text-xs text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                                      <td className="px-3 py-2 text-xs text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
+                                      <td className="px-3 py-2 text-xs text-center">{item.deliveryDate?.toString().split('T')[0] || '-'}</td>
+                                      <td className="px-3 py-2 text-xs text-left">{item.storageLocation || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Card>
 
       {/* 상세 모달 */}
@@ -644,27 +685,16 @@ export default function OrderProgressPage() {
         title="발주 상세"
         size="lg"
         footer={
-          <ModalFooter
-            onClose={() => setIsDetailModalOpen(false)}
-            cancelText="닫기"
-          />
+          <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
         }
       >
         {selectedPo && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b">
               <h3 className="text-lg font-semibold">{selectedPo.poName}</h3>
-              <Badge
-                variant={
-                  selectedPo.status === 'A' ? 'green' :
-                    selectedPo.status === 'R' ? 'red' :
-                      selectedPo.status === 'E' ? 'gray' :
-                        selectedPo.status === 'C' ? 'green' :
-                          'blue'
-                }
-              >
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedPo.status || '')}`}>
                 {statusCodeToDisplay(selectedPo.status || '')}
-              </Badge>
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -690,21 +720,11 @@ export default function OrderProgressPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="p-3 text-left text-sm font-semibold text-gray-600">
-                      품목코드
-                    </th>
-                    <th className="p-3 text-left text-sm font-semibold text-gray-600">
-                      품목명
-                    </th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
-                      수량
-                    </th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
-                      단가
-                    </th>
-                    <th className="p-3 text-right text-sm font-semibold text-gray-600">
-                      금액
-                    </th>
+                    <th className="p-3 text-left text-sm font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left text-sm font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right text-sm font-semibold text-gray-600">금액</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -712,15 +732,9 @@ export default function OrderProgressPage() {
                     <tr key={index} className="border-t">
                       <td className="p-3 text-sm">{item.itemCode}</td>
                       <td className="p-3 text-sm">{item.itemName}</td>
-                      <td className="p-3 text-sm text-right">
-                        {formatNumber(item.orderQuantity)}
-                      </td>
-                      <td className="p-3 text-sm text-right">
-                        ₩{formatNumber(Number(item.unitPrice))}
-                      </td>
-                      <td className="p-3 text-sm text-right font-medium">
-                        ₩{formatNumber(Number(item.amount))}
-                      </td>
+                      <td className="p-3 text-sm text-right">{formatNumber(item.orderQuantity)}</td>
+                      <td className="p-3 text-sm text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                      <td className="p-3 text-sm text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
                     </tr>
                   ))}
                 </tbody>

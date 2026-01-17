@@ -1,250 +1,226 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle, Lock } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
 
 export default function VendorInfoChangePage() {
+  // 1. DTO 필드명과 100% 일치시킨 초기 상태
   const [formData, setFormData] = useState({
-    vendorName: '(주)협력사',
-    vendorNameEn: 'Partner Co., Ltd.',
-    businessType: '법인',
-    businessNo: '123-45-67890',
-    ceoName: '김대표',
-    zipCode: '06234',
-    address: '서울시 강남구 테헤란로 123',
-    addressDetail: '협력빌딩 5층',
-    phone: '02-1234-5678',
-    industry: 'IT서비스',
+    vendorCode: '',
+    vendorName: '',
+    vendorNameEng: '',   // DTO: vendorNameEng
+    businessType: '',    // DTO: businessType (A 또는 B)
+    businessNo: '',      // DTO: businessNo
+    ceoName: '',         // DTO: ceoName
+    zipCode: '',         // DTO: zipCode
+    address: '',         // DTO: address
+    addressDetail: '',   // DTO: addressDetail
+    tel: '',             // DTO: tel
+    industry: '',        // DTO: industry
+    remark: '',          // DTO: remark
+    status: '',
+    editable: true,
   });
 
-  const [changeReason, setChangeReason] = useState('');
+  const [changeReason, setChangeReason] = useState(''); // 변경 사유(remark에 담김)
+  const [loading, setLoading] = useState(true);
+
+  // 2. 초기 데이터 패치
+  useEffect(() => {
+    const fetchVendorData = async () => {
+      try {
+        const response = await fetch('/api/v1/vendor-portal/info', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // DTO 필드명과 일치하므로 데이터 그대로 세팅
+          setFormData(data);
+          // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
+          if(data.remark) setChangeReason(data.remark);
+        } else {
+          alert('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVendorData();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
-    handleRequestChange();
-  };
-
-  // 수정 요청
-  const handleRequestChange =  async () => {
-    // 1. 변경 사유 작성 필수
+  const handleRequestChange = async () => {
+    if (!formData.editable) return;
     if (!changeReason.trim()) {
       alert('변경 사유를 입력해주세요.');
       return;
     }
 
-    // 2. 변경 사유 추가
-    const updatedData = { ...formData, remark:changeReason };
+    // DTO 구조와 동일하게 전달
+    const requestBody = {
+      ...formData,
+      remark: changeReason // 상세 사유를 remark 필드에 담아 전송
+    };
     
-    // 3.API 요청
-    try{
-      const response = await fetch('/api/v1/vendors/users/change', {
+    try {
+      const response = await fetch('/api/v1/vendor-portal/info/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify(requestBody),
+        credentials: 'include',
       });
   
-      // 4. 응답 처리
-      if(!response.ok) {
-        alert('변경 신청에 실패했습니다.');
-        return;
+      if (response.ok) {
+        alert('협력업체 변경 신청이 접수되었습니다.');
+        window.location.reload();
+      } else {
+        alert('신청 처리 중 오류가 발생했습니다.');
       }
-  
-      alert('협력업체 변경 신청이 접수되었습니다.\n관리자 승인 후 반영됩니다.');
     } catch (error) {
-      console.error('변경 신청 오류:', error);
-      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      alert('네트워크 오류가 발생했습니다.');
     }
   };
 
+  if (loading) return <div className="p-10 text-center">데이터 로딩 중...</div>;
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Page Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-          <Building2 className="w-5 h-5 text-gray-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">협력업체 변경신청</h1>
-          <p className="text-sm text-gray-500">협력업체 정보 변경을 신청합니다. 관리자 승인 후 반영됩니다.</p>
-        </div>
-      </div>
+      {/* Header & Banner 생략 (기존과 동일) */}
 
-      {/* Info Banner */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">변경 신청 안내</p>
-          <p className="text-sm text-gray-600 mt-1">
-            사업자등록번호는 변경할 수 없습니다. 변경이 필요한 경우 담당자에게 문의해주세요.
-          </p>
-        </div>
-      </div>
-
-      {/* Form */}
-      <Card className="overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-gray-900">협력업체 정보</h2>
-            <div className="h-4 w-px bg-gray-200" />
-            <p className="text-sm text-gray-500">현재 등록된 정보를 수정합니다.</p>
-          </div>
-        </div>
-
+      <Card className={`overflow-hidden ${!formData.editable ? 'opacity-85' : ''}`}>
         <div className="p-6 space-y-8">
-          {/* 기본 정보 */}
           <section>
             <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-gray-900 rounded-full"/>
-              기본 정보
+              <span className="w-1 h-4 bg-gray-900 rounded-full"/> 기본 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">협력사명 *</label>
                 <Input
                   name="vendorName"
-                  value={formData.vendorName}
+                  value={formData.vendorName || ''}
                   onChange={handleChange}
+                  disabled={!formData.editable}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">협력사명 (영문)</label>
                 <Input
-                  name="vendorNameEn"
-                  value={formData.vendorNameEn}
+                  name="vendorNameEng" // DTO 필드명 일치
+                  value={formData.vendorNameEng || ''}
                   onChange={handleChange}
+                  disabled={!formData.editable}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">사업형태 *</label>
                 <select
-                  name="businessType"
-                  value={formData.businessType}
+                  name="businessType" // DTO 필드명 일치
+                  value={formData.businessType || ''}
                   onChange={handleChange}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!formData.editable}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:bg-gray-100"
                 >
-                  <option value="법인">법인</option>
-                  <option value="개인">개인</option>
-                  <option value="일반과세자">일반과세자</option>
-                  <option value="간이과세자">간이과세자</option>
+                  <option value="">선택</option>
+                  <option value="INDIVIDUAL">개인</option>
+                  <option value="CORP">법인</option>
                 </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">사업자등록번호</label>
-                <Input
-                  name="businessNo"
-                  value={formData.businessNo}
-                  disabled
-                  className="bg-gray-50 text-gray-500 cursor-not-allowed"
-                />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">대표자명 *</label>
                 <Input
-                  name="ceoName"
-                  value={formData.ceoName}
+                  name="ceoName" // DTO 필드명 일치
+                  value={formData.ceoName || ''}
                   onChange={handleChange}
+                  disabled={!formData.editable}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500">전화번호 *</label>
+                <Input
+                  name="tel" // DTO 필드명 일치 (phone -> tel)
+                  value={formData.tel || ''}
+                  onChange={handleChange}
+                  disabled={!formData.editable}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">업종 *</label>
                 <Input
-                  name="industry"
-                  value={formData.industry}
+                  name="industry" // DTO 필드명 일치
+                  value={formData.industry || ''}
                   onChange={handleChange}
+                  disabled={!formData.editable}
                 />
               </div>
             </div>
           </section>
 
-          <div className="h-px bg-gray-100" />
-
-          {/* 주소 및 연락처 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-1 h-4 bg-gray-900 rounded-full"/>
-                주소 및 연락처
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 md:col-span-2">
-                    <div className="space-y-2">
-                        <label className="text-xs font-medium text-gray-500">주소</label>
-                        <div className="flex gap-2 max-w-md">
-                            <Input
-                                name="zipCode"
-                                value={formData.zipCode}
-                                onChange={handleChange}
-                                placeholder="우편번호"
-                                readOnly
-                                className="w-32 bg-gray-50"
-                            />
-                            <Button variant="outline" className="gap-2">
-                                <Search className="w-3.5 h-3.5" />
-                                검색
-                            </Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                            <Input
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                placeholder="기본주소"
-                            />
-                            <Input
-                                name="addressDetail"
-                                value={formData.addressDetail}
-                                onChange={handleChange}
-                                placeholder="상세주소"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-500">전화번호 *</label>
+          {/* 주소 섹션 */}
+          <section className="space-y-4">
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500">주소 *</label>
+                <div className="flex gap-2 w-full max-w-sm">
                     <Input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
+                        name="zipCode" // DTO 필드명 일치
+                        value={formData.zipCode || ''}
+                        readOnly
+                        className="bg-gray-50"
                     />
+                    <Button variant="outline" size="sm" disabled={!formData.editable}>검색</Button>
                 </div>
-            </div>
+                <Input
+                    name="address" // DTO 필드명 일치
+                    value={formData.address || ''}
+                    onChange={handleChange}
+                    disabled={!formData.editable}
+                    className="mt-2"
+                />
+                <Input
+                    name="addressDetail" // DTO 필드명 일치
+                    value={formData.addressDetail || ''}
+                    onChange={handleChange}
+                    disabled={!formData.editable}
+                    className="mt-2"
+                />
+             </div>
           </section>
-
-          <div className="h-px bg-gray-100" />
 
           {/* 변경 사유 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-1 h-4 bg-gray-900 rounded-full"/>
-                변경 사유
-            </h3>
-            <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">상세 사유 *</label>
-                <textarea
-                    value={changeReason}
-                    onChange={(e) => setChangeReason(e.target.value)}
-                    placeholder="변경 사유를 상세히 입력해주세요."
-                    rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-            </div>
-          </section>
+          {formData.editable && (
+            <section className="pt-6 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-blue-600 rounded-full"/> 변경 사유 입력
+              </h3>
+              <textarea
+                  name="remark"
+                  value={changeReason}
+                  onChange={(e) => setChangeReason(e.target.value)}
+                  placeholder="변경 사유를 입력하세요."
+                  rows={3}
+                  className="flex w-full rounded-md border border-input px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </section>
+          )}
         </div>
 
-        {/* Actions */}
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
           <Button
-            onClick={handleSubmit}
-            variant="primary"
-            icon={<Save className="w-4 h-4" />}
+            onClick={handleRequestChange}
+            variant={formData.editable ? "primary" : "outline"}
+            disabled={!formData.editable}
           >
-            변경 신청
+            {formData.editable ? "변경 신청 하기" : "승인 심사 대기 중"}
           </Button>
         </div>
       </Card>

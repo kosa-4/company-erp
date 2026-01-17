@@ -8,6 +8,7 @@ import {
   Circle, Square, Triangle, Hexagon, Warehouse, LayoutGrid, Clipboard
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { vendorMypageApi } from '@/lib/api/vendorMypage';
 
 // 대시보드 통계 카드 (심플 버전)
 const StatCard: React.FC<{
@@ -88,6 +89,27 @@ const ActivityItem: React.FC<{
 
 export default function VendorHomePage() {
   const { user } = useAuth();
+  const [userName, setUserName] = React.useState<string>('');
+  
+  React.useEffect(() => {
+    const loadUserName = async () => {
+      if (user) {
+        try {
+          const response = await vendorMypageApi.getUserInfo();
+          if (response && response.userName) {
+            setUserName(response.userName);
+          } else {
+            console.warn('협력사 사용자 정보를 가져올 수 없습니다.');
+            setUserName('');
+          }
+        } catch (error) {
+          console.error('사용자 정보 로드 실패:', error);
+          setUserName('');
+        }
+      }
+    };
+    loadUserName();
+  }, [user]);
   
   const stats = [
     { title: '미확인 발주', value: '3', change: '+2 건', changeType: 'negative' as const, // 미확인은 negative(빨강) 등 주의 필요
@@ -136,7 +158,7 @@ export default function VendorHomePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
-              안녕하세요, {user?.userName || '홍길동'}님
+              안녕하세요, {userName}님
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               협력사 포털에 오신 것을 환영합니다.

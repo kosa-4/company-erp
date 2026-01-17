@@ -37,6 +37,7 @@ export interface GoodsReceiptItemDTO {
 
 // 입고대상(PO) 조회용 타입 (PurchaseOrderDTO 축소형)
 export interface PendingPODTO {
+  rfqNo?: string;
   poNo?: string;
   poName?: string;
   poDate?: string;
@@ -49,6 +50,7 @@ export interface PendingPODTO {
     specification?: string;
     unit?: string;
     orderQuantity?: number;
+    remainingQuantity?: number; // 남은 입고 가능 수량
     unitPrice?: number;
     amount?: number;
     storageLocation?: string;

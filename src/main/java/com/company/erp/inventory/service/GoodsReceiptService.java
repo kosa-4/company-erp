@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.company.erp.common.session.SessionConst;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,17 @@ public class GoodsReceiptService {
         for (PurchaseOrderDTO po : list) {
             if (po.getPoNo() != null) {
                 List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
+
+                // 각 품목별 남은 입고 수량 계산
+                for (PurchaseOrderItemDTO item : items) {
+                    Integer receivedQty = goodsReceiptMapper.getReceivedQuantity(po.getPoNo(), item.getItemCode());
+                    if (receivedQty == null)
+                        receivedQty = 0;
+
+                    int remaining = item.getOrderQuantity() - receivedQty;
+                    item.setRemainingQuantity(Math.max(0, remaining));
+                }
+
                 po.setItems(items);
             }
         }
@@ -68,7 +80,17 @@ public class GoodsReceiptService {
         params.put("startDate", startDate);
         params.put("endDate", endDate);
 
-        return goodsReceiptMapper.selectList(params);
+        List<GoodsReceiptDTO> list = goodsReceiptMapper.selectList(params);
+
+        // 각 입고 건에 대해 품목 상세 조회하여 추가
+        for (GoodsReceiptDTO gr : list) {
+            if (gr.getGrNo() != null) {
+                List<GoodsReceiptItemDTO> items = goodsReceiptMapper.selectItems(gr.getGrNo());
+                gr.setItems(items);
+            }
+        }
+
+        return list;
     }
 
     // 입고 상세 조회
@@ -130,9 +152,19 @@ public class GoodsReceiptService {
         // 헤더 등록
         goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
+        // PO에서 협력사 코드 조회
+        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(dto.getPoNo());
+        if (poHeader == null) {
+            throw new NoSuchElementException("발주 정보를 찾을 수 없습니다: " + dto.getPoNo());
+        }
+        String vendorCode = poHeader.getVendorCode();
+
         // 품목 등록
         for (GoodsReceiptItemDTO item : dto.getItems()) {
             item.setGrNo(grNo);
+            item.setVendorCode(vendorCode); // PO에서 조회한 협력사 코드 설정
+            item.setCtrlUserId(currentUserId); // 담당자 설정
+            item.setCtrlDeptCd(currentDeptCd); // 담당자 부서 설정
             // statusCode 기본값 'N' (정상입고)
             if (item.getStatusCode() == null || item.getStatusCode().isEmpty()) {
                 item.setStatusCode("N");
@@ -252,17 +284,19 @@ public class GoodsReceiptService {
         }
 
         // 헤더 상태 업데이트
-        goodsReceiptMapper.updateHeaderStatus(grNo, newStatus, userId);
+        // 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트 (취소 상태 제외)
+        // 이를 통해 부분입고였던 이전 GR 건들도 입고완료 시점에 일괄적으로 입고완료 처리됨
+        goodsReceiptMapper.updateAllHeadersStatusByPO(poNo, newStatus, userId);
 
         // 입고완료(GRE) 상태가 되면 PO 상태를 'C'(완료)로 자동 변경
         if (GoodsReceiptStatus.COMPLETED.equals(newStatus)) {
-            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.DELIVERED.getCode(), userId);
+            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.COMPLETED.getCode(), userId);
         }
     }
 
     // 세션에서 로그인 사용자 정보 가져오기
     private SessionUser getSessionUser() {
-        Object sessionAttr = httpSession.getAttribute(SessionUser.class.getName());
+        Object sessionAttr = httpSession.getAttribute(SessionConst.LOGIN_USER);
         return (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
     }
 

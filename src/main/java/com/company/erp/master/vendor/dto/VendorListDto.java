@@ -9,15 +9,21 @@ public class VendorListDto {
     private String askNum;
     private String vendorCode;
     private String vendorName;
+    private String vendorNameEng;
     private String businessType;
+    private String businessNo;
     private String ceoName;
     private String address;
-    private String businessItem; // 업종
+    private String addressDetail;
+    private String industry; // 업종
     private String useYn;
     private String status;
     private String createdBy;
     private LocalDate createdAt;
-
+    private String zipCode;
+    private String tel;
+    private String remark;
+    private boolean editable;
 }
 
 /*

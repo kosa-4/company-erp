@@ -18,6 +18,7 @@ public interface PrMapper {
     void deletePrHd(@Param("prNum") String prNum);
     void deletePrDt(@Param("prNum") String prNum);
 
+    // 구매요청 현황 목록 조회 (헤더만)
     List<PrListResponse> selectPrList(@Param("prNum") String prNum,
                                       @Param("prSubject") String prSubject,
                                       @Param("requester") String requester,
@@ -25,6 +26,17 @@ public interface PrMapper {
                                       @Param("progressCd") String progressCd,
                                       @Param("startDate") String startDate,
                                       @Param("endDate") String endDate);
+    
+    // 구매요청 상세 품목 목록 조회
+    List<PrDtDTO> selectPrDetail(@Param("prNum") String prNum);
 
+
+    int approvePr(@Param("userId") String userId, @Param("deptCd") String deptCd,
+                              @Param("prNum") String prNum);
+
+    void rejectPr(@Param("prNum") String prNum, @Param("userId") String userId, @Param("deptCd") String deptCd);
+
+    // PROGRESS_CD의 CODE_NAME 조회 (승인 상태 확인용)
+    String selectProgressCdName(@Param("progressCd") String progressCd);
 
 }

@@ -1,37 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, ChevronDown, User, LogOut, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface VendorUser {
-  id: string;
-  userId: string;
-  userName: string;
-  email: string;
-  vendorCode: string;
-  vendorName: string;
-}
+import { vendorMypageApi } from '@/lib/api/vendorMypage';
 
 interface VendorHeaderProps {
-  user?: VendorUser;
+  user?: any;
 }
 
-// 임시 Mock 사용자 데이터
-const mockVendorUser: VendorUser = {
-  id: '1',
-  userId: 'vendor01',
-  userName: '홍길동',
-  email: 'vendor@partner.com',
-  vendorCode: 'VND001',
-  vendorName: '(주)협력사',
-};
-
-const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) => {
-  const { logout } = useAuth();
+const VendorHeader: React.FC<VendorHeaderProps> = () => {
+  const { logout, user: authUser } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [vendorName, setVendorName] = useState<string>('');
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const response = await vendorMypageApi.getUserInfo();
+        if (response && response.userName) {
+          setUserName(response.userName);
+          setUserEmail(response.email || '');
+          setVendorName(response.vendorName || '');
+        }
+      } catch (error) {
+        console.error('협력사 사용자 정보 로드 실패:', error);
+      }
+    };
+
+    if (authUser) {
+      loadUserInfo();
+    }
+  }, [authUser]);
 
   const handleLogout = async () => {
     setShowUserMenu(false);
@@ -50,7 +55,7 @@ const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) =>
         {/* Left: Welcome Message */}
         <div className="flex items-center gap-3">
           <h2 className="text-base font-medium text-gray-900">
-            Welcome, <span className="font-semibold">{user.vendorName}</span>
+            Welcome, <span className="font-semibold">{userName || authUser?.userId || '사용자'}</span>
           </h2>
           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">
             협력사
@@ -114,24 +119,29 @@ const VendorHeader: React.FC<VendorHeaderProps> = ({ user = mockVendorUser }) =>
             >
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-sm">
-                  {user.userName.charAt(0)}
+                  {(userName || authUser?.userId || 'U').charAt(0).toUpperCase()}
                 </span>
               </div>
+              <span className="text-sm font-medium text-gray-700">
+                {userName || authUser?.userId || '사용자'}
+              </span>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
                 <div className="p-3 border-b border-gray-100">
-                  <p className="font-medium text-gray-900">{user.userName}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="font-medium text-gray-900">{userName || authUser?.userId || '사용자'}</p>
+                  <p className="text-sm text-gray-500">{userEmail || ''}</p>
                   <div className="mt-2 flex gap-1.5">
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                       협력사
                     </span>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                      {user.vendorName}
-                    </span>
+                    {vendorName && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                        {vendorName}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="py-1">

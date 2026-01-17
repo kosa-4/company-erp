@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, 
   Calendar,
-  X 
+  X,
+  Search
 } from 'lucide-react';
 import { 
   Card, 
@@ -12,29 +13,94 @@ import {
   Input, 
   Badge 
 } from '@/components/ui';
+import { noticeApi, NoticeListResponse, NoticeDetailResponse } from '@/lib/api/notice';
+import { Notice } from '@/types';
 
 
 
 export default function VendorNoticePage() {
-  const [notices] = useState<any[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
     endDate: '',
     title: '',
   });
-  const [selectedNotice, setSelectedNotice] = useState<any | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+  // 공지사항 목록 조회
+  const fetchNoticeList = async () => {
+    try {
+      setLoading(true);
+      const response = await noticeApi.getList({
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
+        subject: searchParams.title || undefined,
+      });
+      
+      // NoticeListResponse를 Notice 타입으로 변환
+      const transformedNotices: Notice[] = response.map((item: NoticeListResponse) => ({
+        noticeNo: item.noticeNum,
+        title: item.subject,
+        content: '',
+        startDate: item.startDate || '',
+        endDate: item.endDate || '',
+        createdAt: item.regDate || '',
+        createdBy: item.regUserId || '',
+        createdByName: item.regUserName || '',
+      }));
+      
+      setNotices(transformedNotices);
+    } catch (error: any) {
+      console.error('공지사항 목록 조회 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRowClick = (notice: any) => {
-    setSelectedNotice(notice);
-    setIsDetailModalOpen(true);
+  // 초기 목록 로드
+  useEffect(() => {
+    fetchNoticeList();
+  }, []);
+
+  const handleSearch = async () => {
+    await fetchNoticeList();
+  };
+
+  const handleReset = () => {
+    setSearchParams({
+      startDate: '',
+      endDate: '',
+      title: '',
+    });
+  };
+
+  const handleRowClick = async (notice: Notice) => {
+    try {
+      setIsDetailModalOpen(true);
+      // 상세 조회 API 호출
+      const detail = await noticeApi.getDetail(notice.noticeNo);
+      
+      // NoticeDetailResponse를 Notice 타입으로 변환
+      const noticeDetail: Notice = {
+        noticeNo: detail.noticeNum,
+        title: detail.subject,
+        content: detail.content,
+        startDate: detail.startDate,
+        endDate: detail.endDate,
+        createdAt: detail.regDate,
+        createdBy: detail.regUserId,
+        createdByName: detail.regUserName,
+      };
+      
+      setSelectedNotice(noticeDetail);
+    } catch (error: any) {
+      console.error('공지사항 상세 조회 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
+      setIsDetailModalOpen(false);
+    }
   };
 
   return (
@@ -76,9 +142,17 @@ export default function VendorNoticePage() {
                 placeholder="공지명을 입력하세요"
                 value={searchParams.title}
                 onChange={(e) => setSearchParams(prev => ({ ...prev, title: e.target.value }))}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
               />
-              <Button variant="primary" onClick={handleSearch} disabled={loading}>
-                {loading ? '검색중...' : '검색'}
+              <Button variant="primary" onClick={handleSearch} disabled={loading} className="px-3">
+                <Search className="w-4 h-4" />
+              </Button>
+              <Button variant="secondary" onClick={handleReset} disabled={loading} className="px-3">
+                초기화
               </Button>
             </div>
           </div>
@@ -87,40 +161,51 @@ export default function VendorNoticePage() {
 
       {/* 목록 */}
       <Card padding={false} className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-3 font-medium text-center w-32">공지번호</th>
-                <th className="px-6 py-3 font-medium">공지명</th>
-                <th className="px-6 py-3 font-medium text-center w-32">등록일자</th>
-                <th className="px-6 py-3 font-medium text-center w-24">등록자</th>
-                <th className="px-6 py-3 font-medium text-center w-48">게시기간</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {notices.map((notice) => (
-                <tr 
-                  key={notice.noticeNo} 
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => handleRowClick(notice)}
-                >
-                  <td className="px-6 py-4 text-center font-medium text-gray-900">{notice.noticeNo}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-gray-900 font-medium hover:text-emerald-600 transition-colors">
-                      {notice.title}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center text-gray-500">{notice.createdAt}</td>
-                  <td className="px-6 py-4 text-center text-gray-600">{notice.createdByName}</td>
-                  <td className="px-6 py-4 text-center text-xs text-gray-500">
-                    {notice.startDate} ~ {notice.endDate}
-                  </td>
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p className="mt-2 text-sm text-gray-500">로딩 중...</p>
+          </div>
+        ) : notices.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            등록된 공지사항이 없습니다.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-3 font-medium text-center w-32">공지번호</th>
+                  <th className="px-6 py-3 font-medium">공지명</th>
+                  <th className="px-6 py-3 font-medium text-center w-32">등록일자</th>
+                  <th className="px-6 py-3 font-medium text-center w-24">등록자</th>
+                  <th className="px-6 py-3 font-medium text-center w-48">게시기간</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {notices.map((notice) => (
+                  <tr 
+                    key={notice.noticeNo} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => handleRowClick(notice)}
+                  >
+                    <td className="px-6 py-4 text-center font-medium text-gray-900">{notice.noticeNo}</td>
+                    <td className="px-6 py-4">
+                      <span className="text-gray-900 font-medium hover:text-emerald-600 transition-colors">
+                        {notice.title}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-500">{notice.createdAt}</td>
+                    <td className="px-6 py-4 text-center text-gray-600">{notice.createdByName}</td>
+                    <td className="px-6 py-4 text-center text-xs text-gray-500">
+                      {notice.startDate} ~ {notice.endDate}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* 상세보기 모달 */}
