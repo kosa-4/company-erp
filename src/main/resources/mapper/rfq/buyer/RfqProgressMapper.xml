@@ -63,6 +63,12 @@
         <if test="req.progressCd != null and req.progressCd != ''">
             AND h.PROGRESS_CD = #{req.progressCd}
         </if>
+        <if test="req.rfqType != null and req.rfqType != ''">
+            AND h.RFQ_TYPE = #{req.rfqType}
+        </if>
+        <if test="req.ctrlUserNm != null and req.ctrlUserNm != ''">
+            AND u.USER_NM LIKE CONCAT('%', #{req.ctrlUserNm}, '%')
+        </if>
         ORDER BY h.REG_DATE DESC, v.VENDOR_CD ASC
     </select>
 
