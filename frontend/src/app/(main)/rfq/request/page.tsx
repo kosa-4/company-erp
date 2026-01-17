@@ -22,24 +22,30 @@ export default function RfqRequestPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const rfqNum = searchParams.get('rfqNum');
+    const prNum = searchParams.get('prNum');
 
     const [loading, setLoading] = useState(false);
     const [detail, setDetail] = useState<RfqDetailResponse | null>(null);
 
     // 데이터 조회
     const fetchDetail = useCallback(async () => {
-        if (!rfqNum) return;
+        if (!rfqNum && !prNum) return;
         setLoading(true);
         try {
-            const response = await rfqApi.getRfqDetail(rfqNum);
-            setDetail(response);
+            if (rfqNum) {
+                const response = await rfqApi.getRfqDetail(rfqNum);
+                setDetail(response);
+            } else if (prNum) {
+                const response = await rfqApi.getRfqInitFromPr(prNum);
+                setDetail(response);
+            }
         } catch (error) {
             console.error(error);
-            toast.error('견적 상세 정보를 불러오는데 실패했습니다.');
+            toast.error('견적 정보를 불러오는데 실패했습니다.');
         } finally {
             setLoading(false);
         }
-    }, [rfqNum]);
+    }, [rfqNum, prNum]);
 
     useEffect(() => {
         fetchDetail();
@@ -47,7 +53,7 @@ export default function RfqRequestPage() {
 
     // 저장 처리
     const handleSave = async () => {
-        if (!detail || !rfqNum) return;
+        if (!detail) return;
 
         // 기본 검증
         if (!detail.header.rfqSubject) return toast.warning('견적 제목을 입력해주세요.');
@@ -55,13 +61,20 @@ export default function RfqRequestPage() {
         if (!detail.header.reqCloseDate) return toast.warning('마감 일시를 입력해주세요.');
 
         const saveRequest: RfqSaveRequest = {
+            rfqNum: rfqNum || undefined,
+            prNum: detail.header.prNum,
+            pcType: detail.header.pcType,
             rfqSubject: detail.header.rfqSubject,
             rfqType: detail.header.rfqType,
             reqCloseDate: detail.header.reqCloseDate,
             rmk: detail.header.rmk,
+            vendorCodes: detail.vendors.map(v => v.vendorCd),
             items: detail.items.map(item => ({
                 lineNo: item.lineNo,
                 itemCd: item.itemCd,
+                itemDesc: item.itemDesc,
+                itemSpec: item.itemSpec,
+                unitCd: item.unitCd,
                 rfqQt: item.rfqQt,
                 estUnitPrc: item.estUnitPrc,
                 delyDate: item.delyDate,
@@ -72,9 +85,18 @@ export default function RfqRequestPage() {
 
         setLoading(true);
         try {
-            await rfqApi.saveRfq(rfqNum, saveRequest);
-            toast.success('임시저장 되었습니다.');
-            fetchDetail();
+            if (rfqNum) {
+                // 기존 데이터 수정
+                await rfqApi.saveRfq(rfqNum, saveRequest);
+                toast.success('수정되었습니다.');
+                fetchDetail();
+            } else {
+                // 신규 생성
+                const newRfqNum = await rfqApi.createRfq(saveRequest);
+                toast.success('견적이 생성되었습니다.');
+                // 생성 후 rfqNum을 쿼리 스트링에 넣어서 페이지 유지 (또는 이동)
+                router.replace(`/rfq/request?rfqNum=${newRfqNum}`);
+            }
         } catch (error) {
             toast.error(getErrorMessage(error));
         } finally {
@@ -137,8 +159,8 @@ export default function RfqRequestPage() {
     };
 
     // 상태에 따른 제어 값
-    const isEditable = detail?.header.progressCd === 'T'; // 임시저장 상태만 수정 가능
-    const isSelectionMode = detail?.header.progressCd === 'G'; // 개찰 상태일 때만 선정 가능
+    const isEditable = !rfqNum || detail?.header.progressCd === 'T'; // 신규 작성이거나 임시저장 상태일 때만 수정 가능
+    const isSelectionMode = !!rfqNum && detail?.header.progressCd === 'G'; // 개찰 상태일 때만 선정 가능
 
     // 품목 그리드 컬럼
     const itemColumns: ColumnDef<any>[] = [
@@ -152,15 +174,18 @@ export default function RfqRequestPage() {
             header: '요청수량',
             width: 100,
             align: 'right',
-            render: (val, row, idx) => isEditable ? (
+            render: (val, row) => isEditable ? (
                 <input
                     type="number"
                     className="w-full text-right border-none bg-transparent focus:ring-1 focus:ring-teal-500 rounded"
                     value={Number(val)}
                     onChange={(e) => {
-                        const newItems = [...detail!.items];
-                        newItems[idx].rfqQt = Number(e.target.value);
-                        newItems[idx].estAmt = newItems[idx].rfqQt * (newItems[idx].estUnitPrc || 0);
+                        const newValue = Number(e.target.value);
+                        const newItems = detail!.items.map(item =>
+                            item.lineNo === row.lineNo
+                                ? { ...item, rfqQt: newValue, estAmt: newValue * (item.estUnitPrc || 0) }
+                                : item
+                        );
                         setDetail({ ...detail!, items: newItems });
                     }}
                 />
@@ -171,15 +196,18 @@ export default function RfqRequestPage() {
             header: '예상단가',
             width: 120,
             align: 'right',
-            render: (val, row, idx) => isEditable ? (
+            render: (val, row) => isEditable ? (
                 <input
                     type="number"
                     className="w-full text-right border-none bg-transparent focus:ring-1 focus:ring-teal-500 rounded"
                     value={Number(val)}
                     onChange={(e) => {
-                        const newItems = [...detail!.items];
-                        newItems[idx].estUnitPrc = Number(e.target.value);
-                        newItems[idx].estAmt = (newItems[idx].rfqQt || 0) * newItems[idx].estUnitPrc;
+                        const newUnitPrc = Number(e.target.value);
+                        const newItems = detail!.items.map(item =>
+                            item.lineNo === row.lineNo
+                                ? { ...item, estUnitPrc: newUnitPrc, estAmt: (item.rfqQt || 0) * newUnitPrc }
+                                : item
+                        );
                         setDetail({ ...detail!, items: newItems });
                     }}
                 />
@@ -233,43 +261,53 @@ export default function RfqRequestPage() {
         },
     ];
 
-    if (!detail && !loading) {
-        return <div className="p-8 text-center text-stone-500">대상을 찾을 수 없습니다.</div>;
+    if (loading && !detail) {
+        return <div className="p-16 text-center">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full mb-4"></div>
+            <p className="text-stone-500">데이터를 불러오는 중입니다...</p>
+        </div>;
     }
+
+    if (!detail) {
+        return <div className="p-16 text-center text-stone-500">대상을 찾을 수 없습니다.</div>;
+    }
+
+    const displayRfqNum = rfqNum || '신규';
 
     return (
         <div className="space-y-6">
             <PageHeader
-                title="견적요청 관리"
-                subtitle={`[${detail?.header.rfqNum || '신규'}] 견적 정보를 작성하고 협력사에 요청합니다.`}
-                actions={
-                    <div className="flex gap-2">
-                        {isEditable && (
-                            <>
-                                <Button variant="secondary" onClick={handleSave} loading={loading}>저장</Button>
+                title="견적요청"
+                subtitle={`[${displayRfqNum}] 견적 정보를 작성하고 협력사에 요청합니다.`}
+            >
+                <div className="flex gap-2">
+                    {isEditable && (
+                        <>
+                            <Button variant="secondary" onClick={handleSave} loading={loading}>저장</Button>
+                            {rfqNum && (
                                 <Button variant="primary" onClick={handleSend} loading={loading}>협력사 전송</Button>
-                            </>
-                        )}
-                        <Button variant="outline" onClick={() => router.back()}>목록으로</Button>
-                    </div>
-                }
-            />
+                            )}
+                        </>
+                    )}
+                    <Button variant="outline" onClick={() => router.back()}>목록으로</Button>
+                </div>
+            </PageHeader>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* 견적 기본 정보 */}
                 <Card title="견적 기본 정보" className="xl:col-span-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Input label="견적번호" value={detail?.header.rfqNum || ''} readOnly />
+                        <Input label="견적번호" value={detail?.header?.rfqNum || '신규'} readOnly />
                         <Input
                             label="견적 제목"
-                            value={detail?.header.rfqSubject || ''}
+                            value={detail?.header?.rfqSubject || ''}
                             onChange={(e) => handleHeaderChange('rfqSubject', e.target.value)}
                             readOnly={!isEditable}
                             required
                         />
                         <Select
                             label="견적 유형"
-                            value={detail?.header.rfqType || ''}
+                            value={detail?.header?.rfqType || ''}
                             onChange={(e) => handleHeaderChange('rfqType', e.target.value)}
                             disabled={!isEditable}
                             options={[
@@ -280,17 +318,17 @@ export default function RfqRequestPage() {
                         />
                         <DatePicker
                             label="견적 마감일"
-                            value={detail?.header.reqCloseDate || ''}
+                            value={detail?.header?.reqCloseDate || ''}
                             onChange={(e) => handleHeaderChange('reqCloseDate', e.target.value)}
                             readOnly={!isEditable}
                             required
                         />
-                        <Input label="구매유형" value={detail?.header.pcType || ''} readOnly />
-                        <Input label="PR번호" value={detail?.header.prNum || ''} readOnly />
-                        <Input label="담당자" value={detail?.header.ctrlUserNm || ''} readOnly />
+                        <Input label="구매유형" value={detail?.header?.pcType || ''} readOnly />
+                        <Input label="PR번호" value={detail?.header?.prNum || ''} readOnly />
+                        <Input label="담당자" value={detail?.header?.ctrlUserNm || ''} readOnly />
                         <Input
                             label="진행상태"
-                            value={detail?.header.progressNm || ''}
+                            value={detail?.header?.progressNm || ''}
                             className="font-bold text-teal-600"
                             readOnly
                         />
@@ -298,7 +336,7 @@ export default function RfqRequestPage() {
                     <div className="mt-4">
                         <Input
                             label="비고"
-                            value={detail?.header.rmk || ''}
+                            value={detail?.header?.rmk || ''}
                             onChange={(e) => handleHeaderChange('rmk', e.target.value)}
                             readOnly={!isEditable}
                         />

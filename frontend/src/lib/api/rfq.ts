@@ -43,16 +43,116 @@ export interface RfqCreateFromPrResponse {
     message: string;
 }
 
+export interface RfqDetailResponse {
+    header: {
+        rfqNum: string;
+        rfqSubject: string;
+        rfqDate: string;
+        progressCd: string;
+        progressNm: string;
+        rfqType: string;
+        rfqTypeNm: string;
+        reqCloseDate: string;
+        rmk: string;
+        ctrlUserId: string;
+        ctrlUserNm: string;
+        prNum: string;
+        pcType: string;
+    };
+    items: {
+        lineNo: number;
+        itemCd: string;
+        itemDesc: string;
+        itemSpec: string;
+        unitCd: string;
+        rfqQt: number;
+        estUnitPrc: number;
+        estAmt: number;
+        delyDate: string;
+        whNm: string;
+        rmk: string;
+    }[];
+    vendors: {
+        vendorCd: string;
+        vendorNm: string;
+        progressCd: string;
+        progressNm: string;
+        sendDate?: string;
+        submitDate?: string;
+        totalAmt?: number;
+        selectYn: string;
+    }[];
+}
+
+export interface RfqSaveRequest {
+    rfqNum?: string;
+    prNum?: string;
+    pcType?: string;
+    rfqSubject: string;
+    rfqType: string;
+    reqCloseDate: string;
+    rmk?: string;
+    vendorCodes?: string[];
+    items: {
+        lineNo: number;
+        itemCd: string;
+        itemDesc?: string;
+        itemSpec?: string;
+        unitCd?: string;
+        rfqQt: number;
+        estUnitPrc?: number;
+        delyDate?: string;
+        whNm?: string;
+        rmk?: string;
+    }[];
+}
+
 export const rfqApi = {
     /**
      * 견적대기목록 조회
      */
     getWaitingList: (params: RfqWaitingSearchRequest) =>
-        api.get<PrGroup[]>('/rfq/buyer/waiting/list', { ...params }),
+        api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { ...params }),
 
     /**
      * PR 기반 RFQ 초안 생성
      */
     createFromPr: (prNum: string) =>
-        api.post<RfqCreateFromPrResponse>('/rfq/buyer/waiting/create', { prNum }),
+        api.post<RfqCreateFromPrResponse>('/v1/rfq/buyer/waiting/create', { prNum }),
+
+    /**
+     * RFQ 상세 조회
+     */
+    getRfqDetail: (rfqNum: string) =>
+        api.get<RfqDetailResponse>(`/v1/buyer/rfqs/${rfqNum}`),
+
+    /**
+     * [신규] PR 기반 견적 초안 초기 데이터 조회
+     */
+    getRfqInitFromPr: (prNum: string) =>
+        api.get<RfqDetailResponse>(`/v1/buyer/rfqs/init/${prNum}`),
+
+    /**
+     * [신규] RFQ 최초 생성 (저장 시점에 호출)
+     */
+    createRfq: (data: RfqSaveRequest) =>
+        api.post<string>('/v1/buyer/rfqs', data),
+
+    /**
+     * RFQ 저장 (임시저장 상태)
+     */
+    saveRfq: (rfqNum: string, data: RfqSaveRequest) =>
+        api.put<void>(`/v1/buyer/rfqs/${rfqNum}`, data),
+
+    /**
+     * 협력업체 전송
+     */
+    sendRfq: (rfqNum: string, vendorCodes: string[]) =>
+        api.post<void>(`/v1/buyer/rfqs/${rfqNum}/send`, { vendorCodes }),
+
+    /**
+     * 업체 선정
+     */
+    selectVendor: (rfqNum: string, vendorCd: string) =>
+        api.post<void>(`/v1/buyer/rfqs/${rfqNum}/select`, { vendorCd }),
 };

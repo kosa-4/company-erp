@@ -24,7 +24,15 @@ public interface RfqBuyerRequestMapper {
         // [보완] 원본 PR 필수 품목 라인번호 조회 (검증용)
         List<Integer> selectPrItemLineNos(@Param("prNum") String prNum);
 
+        // [신규] PR 기반 초기화 데이터 조회
+        RfqDetailResponse.Header selectRfqInitHeader(@Param("prNum") String prNum);
+
+        List<RfqDetailResponse.Item> selectRfqInitItems(@Param("prNum") String prNum);
+
         // --- 저장 및 수정 (Save/Update) ---
+        int insertRfqHeader(@Param("req") RfqSaveRequest request, @Param("prNum") String prNum,
+                        @Param("pcType") String pcType, @Param("loginUserId") String loginUserId);
+
         // [보완] DTO 오염 방지를 위해 loginUserId를 별도 파라미터로 분리
         int updateRfqHeader(@Param("req") RfqSaveRequest request, @Param("loginUserId") String loginUserId);
 
@@ -32,6 +40,9 @@ public interface RfqBuyerRequestMapper {
         int deleteRfqItems(@Param("rfqNum") String rfqNum);
 
         int insertRfqItems(@Param("rfqNum") String rfqNum, @Param("items") List<RfqSaveRequest.RfqItemDTO> items,
+                        @Param("loginUserId") String loginUserId);
+
+        int insertRfqVendors(@Param("rfqNum") String rfqNum, @Param("vendorCodes") List<String> vendorCodes,
                         @Param("loginUserId") String loginUserId);
 
         // --- 전송 (Send) ---

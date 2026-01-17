@@ -1,5 +1,7 @@
 package com.company.erp.rfq.buyer.request.service;
 
+import com.company.erp.common.docNum.service.DocKey;
+import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSaveRequest;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSelectRequest;
 import com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse;
@@ -22,6 +24,42 @@ import java.util.stream.Collectors;
 public class RfqBuyerRequestService {
 
     private final RfqBuyerRequestMapper mapper;
+    private final DocNumService docNumService;
+
+    /**
+     * [신규] PR 기반 견적 초안 초기 데이터 조회
+     */
+    @Transactional(readOnly = true)
+    public RfqDetailResponse getRfqInitFromPr(String prNum) {
+        RfqDetailResponse response = new RfqDetailResponse();
+
+        RfqDetailResponse.Header header = mapper.selectRfqInitHeader(prNum);
+        if (header == null) {
+            throw new IllegalArgumentException("존재하지 않거나 승인되지 않은 구매요청입니다. 번호: " + prNum);
+        }
+        response.setHeader(header);
+        response.setItems(mapper.selectRfqInitItems(prNum));
+        // 초기 단계에서는 벤더 없음
+        return response;
+    }
+
+    /**
+     * [신규] RFQ 최초 생성
+     */
+    @Transactional
+    public String createRfq(RfqSaveRequest request, String userId) {
+        // 1. 번호 채번
+        String rfqNum = docNumService.generateDocNumStr(DocKey.RQ);
+        request.setRfqNum(rfqNum);
+
+        // 2. HD 저장
+        mapper.insertRfqHeader(request, request.getPrNum(), request.getPcType(), userId);
+
+        // 3. DT/VN 저장
+        saveRfqSubData(request, userId);
+
+        return rfqNum;
+    }
 
     /**
      * RFQ 상세 조회 및 상태 명칭 매핑
@@ -48,7 +86,9 @@ public class RfqBuyerRequestService {
                         c -> String.valueOf(c.get("codeName")),
                         (existing, replacement) -> existing));
 
-        // 정책: 구매사 화면에서 RFQT는 '접수'로 고정 (Override)
+        // 정책: 구매사 화면에서 전송 전 상태(T)는 '요청 전', RFQS는 '발송', RFQT는 '접수'로 고정 (Override)
+        statusMap.put("T", "요청 전");
+        statusMap.put("RFQS", "발송");
         statusMap.put("RFQT", "접수");
 
         vendors.forEach(v -> {
@@ -59,36 +99,11 @@ public class RfqBuyerRequestService {
         return response;
     }
 
-    /**
-     * RFQ 저장 (임시저장 단계)
-     * - [피드백 보완] LINE_NO 중복/Null 검증 및 PRDT 기반 필수 항목 보존
-     */
     @Transactional
     public void saveRfq(RfqSaveRequest request, String userId) {
         String rfqNum = request.getRfqNum();
 
-        // [피드백 반영] 서비스 레이어 단독 호출 시 대비용 rfqNum 필수 체크
-        if (rfqNum == null || rfqNum.isBlank()) {
-            throw new IllegalArgumentException("견적 번호(rfqNum)가 없습니다.");
-        }
-
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new IllegalArgumentException("저장할 품목이 하나 이상 있어야 합니다.");
-        }
-
-        // [피드백 반영] LINE_NO 중복 및 Null 검증 (가독성 및 견고함 강화)
-        if (request.getItems().stream().anyMatch(i -> i.getLineNo() == null)) {
-            throw new IllegalArgumentException("모든 품목에는 라인번호(LINE_NO)가 있어야 합니다.");
-        }
-
-        Set<Integer> lineNos = request.getItems().stream()
-                .map(RfqSaveRequest.RfqItemDTO::getLineNo)
-                .collect(Collectors.toSet());
-
-        if (lineNos.size() != request.getItems().size()) {
-            throw new IllegalArgumentException("품목 라인번호(LINE_NO)가 중복되었습니다.");
-        }
-
+        // 1. 상태 및 권한 체크
         RfqDetailResponse.Header currentHeader = mapper.selectRfqHeader(rfqNum);
         if (currentHeader == null)
             throw new IllegalArgumentException("대상 견적이 없습니다.");
@@ -97,17 +112,52 @@ public class RfqBuyerRequestService {
         if (!userId.equals(currentHeader.getCtrlUserId()))
             throw new SecurityException("작성자만 수정 가능합니다.");
 
-        // [피드백 반영] PRDT 기반 필수 품목 보존 검증
-        if (currentHeader.getPrNum() != null && !currentHeader.getPrNum().isBlank()) {
-            List<Integer> mandatoryLines = mapper.selectPrItemLineNos(currentHeader.getPrNum());
-            for (Integer lineNo : mandatoryLines) {
-                if (!lineNos.contains(lineNo)) {
-                    throw new IllegalStateException("원본 PR 품목(라인: " + lineNo + ")은 삭제할 수 없습니다.");
-                }
-            }
+        // 2. HD 업데이트
+        int updated = mapper.updateRfqHeader(request, userId);
+        if (updated != 1)
+            throw new IllegalStateException("저장 중 오류가 발생했습니다.");
+
+        // 3. DT/VN 저장
+        saveRfqSubData(request, userId);
+    }
+
+    /**
+     * 하위 데이터(품목, 업체) 공통 저장 로직
+     */
+    private void saveRfqSubData(RfqSaveRequest request, String userId) {
+        String rfqNum = request.getRfqNum();
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("저장할 품목이 하나 이상 있어야 합니다.");
         }
 
-        // 금액 선계산 및 사용자 세팅
+        // 품목 정합성 체크 (라인번호 등)
+        validateRfqItems(request);
+
+        // DT 동기화
+        mapper.deleteRfqItems(rfqNum);
+        mapper.insertRfqItems(rfqNum, request.getItems(), userId);
+
+        // VN 동기화
+        mapper.deleteRfqVendors(rfqNum);
+        if (request.getVendorCodes() != null && !request.getVendorCodes().isEmpty()) {
+            mapper.insertRfqVendors(rfqNum, request.getVendorCodes(), userId);
+        }
+    }
+
+    private void validateRfqItems(RfqSaveRequest request) {
+        // LINE_NO 중복 및 Null 검증
+        if (request.getItems().stream().anyMatch(i -> i.getLineNo() == null)) {
+            throw new IllegalArgumentException("모든 품목에는 라인번호가 있어야 합니다.");
+        }
+        Set<Integer> lineNos = request.getItems().stream()
+                .map(RfqSaveRequest.RfqItemDTO::getLineNo)
+                .collect(Collectors.toSet());
+        if (lineNos.size() != request.getItems().size()) {
+            throw new IllegalArgumentException("품목 라인번호가 중복되었습니다.");
+        }
+
+        // 금액 선계산
         for (RfqSaveRequest.RfqItemDTO item : request.getItems()) {
             if (item.getRfqQt() != null && item.getEstUnitPrc() != null) {
                 item.setEstAmt(item.getRfqQt().multiply(item.getEstUnitPrc()));
@@ -115,13 +165,6 @@ public class RfqBuyerRequestService {
                 item.setEstAmt(BigDecimal.ZERO);
             }
         }
-
-        int updated = mapper.updateRfqHeader(request, userId);
-        if (updated != 1)
-            throw new IllegalStateException("저장 중 오류가 발생했습니다. (권한 또는 상태 확인)");
-
-        mapper.deleteRfqItems(rfqNum);
-        mapper.insertRfqItems(rfqNum, request.getItems(), userId);
     }
 
     /**

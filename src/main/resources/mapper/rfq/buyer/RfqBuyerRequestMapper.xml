@@ -65,6 +65,42 @@
         ORDER BY v.VENDOR_CD
     </select>
 
+    <!-- [신규] PR 기반 초기화 데이터 조회: Header -->
+    <select id="selectRfqInitHeader" resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+        SELECT 
+            NULL             AS rfqNum,
+            NULL             AS rfqSubject,
+            NOW()            AS rfqDate,
+            'T'              AS progressCd,
+            '임시저장'       AS progressNm,
+            'OC'             AS rfqType,  -- 기본값: 수의계약
+            '수의계약'       AS rfqTypeNm,
+            h.PR_NUM         AS prNum,
+            h.PC_TYPE        AS pcType
+        FROM PRHD h
+        WHERE h.PR_NUM = #{prNum}
+          AND h.DEL_FLAG = 'N'
+    </select>
+
+    <!-- [신규] PR 기반 초기화 데이터 조회: Items -->
+    <select id="selectRfqInitItems" resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
+        SELECT 
+            ROW_NUMBER() OVER (ORDER BY pd.ITEM_CD) AS lineNo,
+            pd.ITEM_CD       AS itemCd,
+            pd.ITEM_DESC     AS itemDesc,
+            pd.ITEM_SPEC     AS itemSpec,
+            pd.UNIT_CD       AS unitCd,
+            pd.PR_QT         AS rfqQt,
+            pd.UNIT_PRC      AS estUnitPrc,
+            pd.PR_AMT        AS estAmt,
+            pd.DELY_DATE     AS delyDate,
+            NULL             AS whNm,
+            pd.RMK           AS rmk
+        FROM PRDT pd
+        WHERE pd.PR_NUM = #{prNum}
+          AND pd.DEL_FLAG = 'N'
+    </select>
+
     <!-- [복구] 프로젝트 공통 방식(Map)에 따라 조회 -->
     <select id="selectCodeNames" resultType="map">
         SELECT CODE AS code, CODE_NAME AS codeName
@@ -82,7 +118,21 @@
           AND DEL_FLAG = 'N'
     </select>
 
-    <!-- 5. 저장: Header 수정 (2중 방어 - 상태 + Owner 체크) -->
+    <!-- 5. 생성: Header 신규 생성 -->
+    <insert id="insertRfqHeader">
+        INSERT INTO RFQHD (
+            RFQ_NUM, RFQ_SUBJECT, RFQ_DATE, PR_NUM, PROGRESS_CD, 
+            RFQ_TYPE, REQ_CLOSE_DATE, RMK, CTRL_USER_ID, PC_TYPE,
+            DEL_FLAG, REG_DATE, REG_USER_ID
+        )
+        VALUES (
+            #{req.rfqNum}, #{req.rfqSubject}, NOW(), #{prNum}, 'T',
+            #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType},
+            'N', NOW(), #{loginUserId}
+        )
+    </insert>
+
+    <!-- 6. 저장: Header 수정 (2중 방어 - 상태 + Owner 체크) -->
     <update id="updateRfqHeader">
         UPDATE RFQHD
         SET RFQ_SUBJECT    = #{req.rfqSubject},
@@ -101,6 +151,14 @@
     <delete id="deleteRfqItems">
         DELETE FROM RFQDT WHERE RFQ_NUM = #{rfqNum}
     </delete>
+
+    <insert id="insertRfqVendors">
+        INSERT INTO RFQVN (RFQ_NUM, VENDOR_CD, PROGRESS_CD, DEL_FLAG, REG_DATE, REG_USER_ID)
+        VALUES
+        <foreach collection="vendorCodes" item="vendorCd" separator=",">
+            (#{rfqNum}, #{vendorCd}, 'T', 'N', NOW(), #{loginUserId})
+        </foreach>
+    </insert>
 
     <!-- 7. 저장: Items 동기화 (Batch Insert - DTO 직접 참조, 수식 제거) -->
     <insert id="insertRfqItems">

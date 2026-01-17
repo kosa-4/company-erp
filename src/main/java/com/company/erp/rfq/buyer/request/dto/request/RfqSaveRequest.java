@@ -22,6 +22,8 @@ import java.util.List;
 public class RfqSaveRequest {
 
     private String rfqNum;
+    private String prNum; // 신규 생성 시 필요
+    private String pcType; // 신규 생성 시 필요
 
     @NotBlank(message = "견적 제목은 필수입니다.")
     private String rfqSubject;
@@ -33,6 +35,8 @@ public class RfqSaveRequest {
     private LocalDateTime reqCloseDate;
 
     private String rmk;
+
+    private List<String> vendorCodes; // [추가] 저장 시 업체 목록
 
     @NotEmpty(message = "품목을 하나 이상 선택해야 합니다.")
     @Valid

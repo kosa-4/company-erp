@@ -15,6 +15,7 @@ import {
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { rfqApi, RfqDetailResponse, RfqSaveRequest } from '@/lib/api/rfq';
+import { vendorApi, VendorDTO } from '@/lib/api/vendor';
 import { getErrorMessage } from '@/lib/api/error';
 import { toast } from 'sonner';
 
@@ -35,6 +36,12 @@ export default function RfqRequestModal({
 }: RfqRequestModalProps) {
     const [loading, setLoading] = useState(false);
     const [detail, setDetail] = useState<RfqDetailResponse | null>(null);
+
+    // 협력사 추가 모달 상태
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+    const [vendorList, setVendorList] = useState<VendorDTO[]>([]);
+    const [selectedVendorCodes, setSelectedVendorCodes] = useState<string[]>([]);
+    const [vendorSearch, setVendorSearch] = useState({ vendorCode: '', vendorName: '' });
 
     // 데이터 조회
     const fetchDetail = useCallback(async () => {
@@ -61,8 +68,28 @@ export default function RfqRequestModal({
             fetchDetail();
         } else {
             setDetail(null);
+            setIsVendorModalOpen(false);
+            setVendorList([]);
+            setSelectedVendorCodes([]);
         }
     }, [isOpen, fetchDetail]);
+
+    // 협력사 목록 조회 (모달 열릴 때)
+    const fetchVendorList = useCallback(async () => {
+        try {
+            const response = await vendorApi.getVendorList(vendorSearch);
+            setVendorList(response.vendors || []);
+        } catch (error) {
+            console.error(error);
+            toast.error('협력사 목록을 불러오는데 실패했습니다.');
+        }
+    }, [vendorSearch]);
+
+    useEffect(() => {
+        if (isVendorModalOpen) {
+            fetchVendorList();
+        }
+    }, [isVendorModalOpen, fetchVendorList]);
 
     // 저장 처리
     const handleSave = async () => {
@@ -78,10 +105,10 @@ export default function RfqRequestModal({
             pcType: detail.header.pcType,
             rfqSubject: detail.header.rfqSubject,
             rfqType: detail.header.rfqType,
-            reqCloseDate: detail.header.reqCloseDate,
+            reqCloseDate: detail.header.reqCloseDate.includes('T') ? detail.header.reqCloseDate : `${detail.header.reqCloseDate}T23:59:59`,
             rmk: detail.header.rmk,
-            vendorCodes: detail.vendors.map(v => v.vendorCd),
-            items: detail.items.map(item => ({
+            vendorCodes: detail.vendors?.map(v => v.vendorCd) || [],
+            items: detail.items?.map(item => ({
                 lineNo: item.lineNo,
                 itemCd: item.itemCd,
                 itemDesc: item.itemDesc,
@@ -113,12 +140,13 @@ export default function RfqRequestModal({
         }
     };
 
-    // 전송 처리 (모달에서는 저장 후 별도 진행 권장하나 기능 유지)
+    // 전송 처리
     const handleSend = async () => {
         if (!detail || !rfqNum) return;
 
-        if (detail.vendors.length === 0) {
-            return toast.warning('전송할 협력사를 추가해주세요.');
+        if (!detail.vendors || detail.vendors.length === 0) {
+            alert('협력사를 선택해주세요.');
+            return;
         }
 
         if (!confirm('협력사로 견적 요청을 전송하시겠습니까?\n전송 후에는 품목 수정이 불가능합니다.')) {
@@ -127,7 +155,7 @@ export default function RfqRequestModal({
 
         setLoading(true);
         try {
-            const vendorCodes = detail.vendors.map(v => v.vendorCd);
+            const vendorCodes = detail.vendors?.map(v => v.vendorCd) || [];
             await rfqApi.sendRfq(rfqNum, vendorCodes);
             toast.success('협력사 전송이 완료되었습니다.');
             onSaveSuccess?.();
@@ -145,6 +173,30 @@ export default function RfqRequestModal({
             ...detail,
             header: { ...detail.header, [field]: value }
         });
+    };
+
+    // 협력사 추가 처리
+    const handleAddSelectedVendors = () => {
+        if (!detail) return;
+        const selectedVendorRows = vendorList.filter(v => selectedVendorCodes.includes(v.vendorCode))
+            .map(v => ({
+                vendorCd: v.vendorCode,
+                vendorNm: v.vendorName,
+                progressCd: '', // 아직 요청 전이므로 코드는 비워둠
+                progressNm: '요청 전',
+                selectYn: 'N'
+            }));
+
+        // 중복 제거 후 추가
+        const currentVendorCds = (detail.vendors || []).map(v => v.vendorCd);
+        const newVendors = selectedVendorRows.filter(v => !currentVendorCds.includes(v.vendorCd));
+
+        setDetail({
+            ...detail,
+            vendors: [...(detail.vendors || []), ...newVendors]
+        });
+        setIsVendorModalOpen(false);
+        setSelectedVendorCodes([]);
     };
 
     const isEditable = !rfqNum || detail?.header.progressCd === 'T';
@@ -218,7 +270,11 @@ export default function RfqRequestModal({
             header: '상태',
             width: 100,
             align: 'center',
-            render: (val) => <Badge variant="blue">{String(val)}</Badge>
+            render: (val: any) => (
+                <Badge variant={val === '요청 전' ? 'gray' : 'blue'}>
+                    {String(val || '요청 전')}
+                </Badge>
+            )
         },
         { key: 'submitDate', header: '제출일시', width: 160, align: 'center' },
         {
@@ -330,7 +386,13 @@ export default function RfqRequestModal({
                             className="xl:col-span-1"
                             padding={false}
                             actions={isEditable && (
-                                <Button variant="secondary" size="sm">추가</Button>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setIsVendorModalOpen(true)}
+                                >
+                                    추가
+                                </Button>
                             )}
                         >
                             <div className="overflow-x-auto">
@@ -348,6 +410,110 @@ export default function RfqRequestModal({
             ) : (
                 <div className="p-16 text-center text-stone-500">대상을 찾을 수 없습니다.</div>
             )}
+            {/* 협력사 선택 모달 */}
+            <Modal
+                isOpen={isVendorModalOpen}
+                onClose={() => setIsVendorModalOpen(false)}
+                title="협력사 선택"
+                size="xl"
+                footer={
+                    <ModalFooter
+                        onClose={() => {
+                            setIsVendorModalOpen(false);
+                            setSelectedVendorCodes([]);
+                        }}
+                        onConfirm={handleAddSelectedVendors}
+                        confirmText="추가"
+                    />
+                }
+            >
+                <div className="space-y-4">
+                    {/* 검색 영역 */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <Input
+                            label="업체코드"
+                            value={vendorSearch.vendorCode}
+                            onChange={(e) => setVendorSearch({ ...vendorSearch, vendorCode: e.target.value })}
+                        />
+                        <Input
+                            label="업체명"
+                            value={vendorSearch.vendorName}
+                            onChange={(e) => setVendorSearch({ ...vendorSearch, vendorName: e.target.value })}
+                        />
+                        <div className="flex items-end">
+                            <Button variant="primary" onClick={fetchVendorList}>검색</Button>
+                        </div>
+                    </div>
+
+                    {/* 협력사 목록 */}
+                    <div className="border rounded-lg overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-stone-50">
+                                <tr className="border-b">
+                                    <th className="w-10 p-3 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={vendorList.length > 0 && selectedVendorCodes.length === vendorList.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedVendorCodes(vendorList.map(v => v.vendorCode));
+                                                } else {
+                                                    setSelectedVendorCodes([]);
+                                                }
+                                            }}
+                                        />
+                                    </th>
+                                    <th className="p-3 text-left text-sm font-semibold text-stone-600">업체코드</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-stone-600">업체명</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-stone-600">대표자</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-stone-600">업종</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vendorList.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-8 text-center text-stone-500">
+                                            조회된 협력사가 없습니다.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    vendorList.map((vendor) => (
+                                        <tr
+                                            key={vendor.vendorCode}
+                                            className="border-b hover:bg-stone-50 cursor-pointer"
+                                            onClick={() => {
+                                                if (selectedVendorCodes.includes(vendor.vendorCode)) {
+                                                    setSelectedVendorCodes(selectedVendorCodes.filter(c => c !== vendor.vendorCode));
+                                                } else {
+                                                    setSelectedVendorCodes([...selectedVendorCodes, vendor.vendorCode]);
+                                                }
+                                            }}
+                                        >
+                                            <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedVendorCodes.includes(vendor.vendorCode)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedVendorCodes([...selectedVendorCodes, vendor.vendorCode]);
+                                                        } else {
+                                                            setSelectedVendorCodes(selectedVendorCodes.filter(c => c !== vendor.vendorCode));
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
+                                            <td className="p-3 text-sm">{vendor.vendorCode}</td>
+                                            <td className="p-3 text-sm font-medium">{vendor.vendorName}</td>
+                                            <td className="p-3 text-sm">{vendor.ceoName}</td>
+                                            <td className="p-3 text-sm">{vendor.industry}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </Modal>
         </Modal>
     );
 }
