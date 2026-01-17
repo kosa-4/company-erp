@@ -71,7 +71,7 @@ public class MyPageController {
                 return ResponseEntity.status(404).body(Map.of("error", "사용자 정보를 찾을 수 없습니다."));
             }
             
-            System.out.println("협력사 사용자 정보 조회 성공: " + userInfo);
+
             return ResponseEntity.ok(userInfo);
         } catch (Exception e) {
             System.err.println("협력사 사용자 정보 조회 중 에러 발생: " + e.getMessage());
