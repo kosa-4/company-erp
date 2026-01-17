@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.company.erp.notice.mapper.NoticeMapper">
+
+    <!-- 사용자명 조회 -->
+    <select id="selectUserName" resultType="String">
+        SELECT USER_NM FROM BY_USER
+        WHERE USER_ID = #{userId}
+        AND DEL_FLAG = 'N'
+    </select>
+
+    <!-- 공지사항 등록 -->
+    <insert id="insertNotice" parameterType="com.company.erp.notice.dto.NoticeDTO">
+        INSERT INTO NOTC
+        (NOTICE_NUM, SUBJECT, CONTENT, REG_DATE, REG_USER_ID, DEL_FLAG, START_DATE, END_DATE, VIEW_CNT, BUYER_CD, VENDOR_CD)
+        VALUES
+        (#{noticeNum}, #{subject}, #{content}, NOW(), #{regUserId}, 'N', #{startDate}, #{endDate}, 0, #{buyerCd}, #{vendorCd})
+    </insert>
+
+    <!-- 공지사항 목록 조회 -->
+    <select id="selectNoticeList" resultType="com.company.erp.notice.dto.NoticeListResponse">
+        SELECT 
+            N.NOTICE_NUM as noticeNum,
+            N.SUBJECT as subject,
+            DATE_FORMAT(N.REG_DATE, '%Y-%m-%d') as regDate,
+            N.REG_USER_ID as regUserId,
+            COALESCE(U.USER_NM, '') as regUserName,
+            DATE_FORMAT(N.START_DATE, '%Y-%m-%d') as startDate,
+            DATE_FORMAT(N.END_DATE, '%Y-%m-%d') as endDate,
+            COALESCE(N.VIEW_CNT, 0) as viewCnt
+        FROM NOTC N
+        LEFT JOIN BY_USER U ON N.REG_USER_ID = U.USER_ID
+        WHERE N.DEL_FLAG = 'N'
+        <if test="startDate != null and startDate != ''">
+            AND DATE(N.START_DATE) >= DATE(#{startDate})
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND DATE(N.END_DATE) &lt;= DATE(#{endDate})
+        </if>
+        <if test="subject != null and subject != ''">
+            AND N.SUBJECT LIKE CONCAT('%', #{subject}, '%')
+        </if>
+        <if test="buyerCd != null and buyerCd != ''">
+            AND (N.BUYER_CD = #{buyerCd} OR N.BUYER_CD IS NULL)
+        </if>
+        <if test="vendorCd != null and vendorCd != ''">
+            AND (N.VENDOR_CD = #{vendorCd} OR N.VENDOR_CD IS NULL)
+        </if>
+        <!-- 구매사가 등록한 공지사항 조회 -->
+        ORDER BY N.REG_DATE DESC
+    </select>
+
+    <!-- 공지사항 상세 조회 -->
+    <select id="selectNoticeDetail" resultType="com.company.erp.notice.dto.NoticeDetailResponse">
+        SELECT 
+            N.NOTICE_NUM as noticeNum,
+            N.SUBJECT as subject,
+            N.CONTENT as content,
+            DATE_FORMAT(N.REG_DATE, '%Y-%m-%d') as regDate,
+            N.REG_USER_ID as regUserId,
+            COALESCE(U.USER_NM, '') as regUserName,
+            DATE_FORMAT(N.START_DATE, '%Y-%m-%d') as startDate,
+            DATE_FORMAT(N.END_DATE, '%Y-%m-%d') as endDate,
+            N.VIEW_CNT as viewCnt,
+            DATE_FORMAT(N.MOD_DATE, '%Y-%m-%d') as modDate,
+            N.MOD_USER_ID as modUserId
+        FROM NOTC N
+        LEFT JOIN BY_USER U ON N.REG_USER_ID = U.USER_ID
+        WHERE N.NOTICE_NUM = #{noticeNum}
+        AND N.DEL_FLAG = 'N'
+    </select>
+
+    <!-- 공지사항 수정  -->
+    <update id="updateNotice" parameterType="com.company.erp.notice.dto.NoticeDTO">
+        UPDATE NOTC
+        <set>
+            <if test="subject != null and subject != ''">
+                SUBJECT = #{subject},
+            </if>
+            <if test="content != null and content != ''">
+                CONTENT = #{content},
+            </if>
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        </set>
+        WHERE NOTICE_NUM = #{noticeNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 공지사항 삭제  -->
+    <update id="deleteNotice">
+        UPDATE NOTC
+        SET DEL_FLAG = 'Y',
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        WHERE NOTICE_NUM = #{noticeNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 공지사항 조회수 증가 -->
+    <update id="incrementViewCnt">
+        UPDATE NOTC
+        SET VIEW_CNT = COALESCE(VIEW_CNT, 0) + 1
+        WHERE NOTICE_NUM = #{noticeNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+</mapper>
