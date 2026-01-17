@@ -1,33 +1,74 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, ChevronDown, User, LogOut, MessageSquare } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { mypageApi } from '@/lib/api/mypage';
+import { vendorMypageApi } from '@/lib/api/vendorMypage';
 
 interface HeaderProps {
   user?: UserType;
 }
 
-// 임시 Mock 사용자 데이터
-const mockUser: UserType = {
-  id: '1',
-  userId: 'admin',
-  userName: '홍길동',
-  email: 'admin@company.com',
-  companyCode: 'COMP001',
-  companyName: '(주)테스트회사',
-  departmentCode: 'DEPT001',
-  departmentName: '구매팀',
-  userType: 'BUYER',
-  role: 'MANAGER',
-};
-
-const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
-  const { logout } = useAuth();
+const Header: React.FC<HeaderProps> = ({ user: propUser }) => {
+  const { logout, user: authUser } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [departmentName, setDepartmentName] = useState<string>('');
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        // 협력사인 경우 vn_user에서 정보 조회, 구매사인 경우 API 호출
+        if (authUser?.comType === 'V') {
+          const response = await vendorMypageApi.getUserInfo();
+          if (response && response.userName) {
+            setUserName(response.userName);
+            setUserEmail(response.email || '');
+            setDepartmentName(''); // 협력사는 부서명 없음
+          } else {
+            setUserName('');
+            setUserEmail('');
+            setDepartmentName('');
+          }
+        } else {
+          const myInfo = await mypageApi.getInitData();
+          setUserName(myInfo.userNameKo || authUser?.userId || '');
+          setUserEmail(myInfo.email || '');
+          setDepartmentName(myInfo.departmentName || '');
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error);
+        // 실패 시 빈 문자열로 설정
+        setUserName('');
+        setUserEmail('');
+        setDepartmentName('');
+      }
+    };
+
+    if (authUser) {
+      loadUserInfo();
+    }
+  }, [authUser]);
+
+  // API에서 가져온 userName을 우선 사용 (propUser 무시)
+  const user: UserType = {
+    id: authUser?.userId || '',
+    userId: authUser?.userId || '',
+    userName: userName || authUser?.userId || '', // API에서 가져온 userName 우선 사용
+    email: userEmail,
+    companyCode: '',
+    companyName: '',
+    departmentCode: '',
+    departmentName: departmentName,
+    userType: authUser?.comType === 'B' ? 'BUYER' : 'VENDOR',
+    role: authUser?.role || 'USER',
+  };
 
   const handleLogout = async () => {
     setShowUserMenu(false);
@@ -46,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
         {/* Left: Welcome Message */}
         <div className="flex items-center gap-3">
           <h2 className="text-base font-medium text-gray-900">
-            Welcome, <span className="font-semibold">{user.userName}</span>
+            Welcome, <span className="font-semibold">{userName || user.userName || user.userId || '사용자'}</span>
           </h2>
           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">
             {user.role === 'ADMIN' ? '관리자' : user.role === 'MANAGER' ? '담당자' : '사용자'}
@@ -110,24 +151,29 @@ const Header: React.FC<HeaderProps> = ({ user = mockUser }) => {
             >
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-sm">
-                  {user.userName.charAt(0)}
+                  {(userName || user.userName || user.userId)?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
+              <span className="text-sm font-medium text-gray-700">
+                {userName || user.userName || user.userId || '사용자'}
+              </span>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
                 <div className="p-3 border-b border-gray-100">
-                  <p className="font-medium text-gray-900">{user.userName}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="font-medium text-gray-900">{userName || user.userName || user.userId || '사용자'}</p>
+                  <p className="text-sm text-gray-500">{userEmail || user.email || ''}</p>
                   <div className="mt-2 flex gap-1.5">
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                       {user.role === 'ADMIN' ? '관리자' : user.role === 'MANAGER' ? '담당자' : '사용자'}
                     </span>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                      {user.departmentName}
-                    </span>
+                    {departmentName && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                        {departmentName}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="py-1">
