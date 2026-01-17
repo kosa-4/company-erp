@@ -42,7 +42,7 @@ public class VendorUserService {
             // 3) 상태값 확인
             String status = vendorUser.getStatus();
             if(!"C".equals(status) && !"N".equals(status)){
-                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+                throw new IllegalStateException("선택 가능한 상태가 아닙니다.");
             }
 
             // 4) 입력값 설정
@@ -53,7 +53,23 @@ public class VendorUserService {
             dto.setSignDate(LocalDate.now());
             dto.setPassword(vendorUser.getPassword());
 
-            // 5) 마스터 테이블 추가
+            // 5) 요청 타입에 따라 분기
+            String req = dto.getReqType();
+            switch(req){
+                
+                case "I": // 5-1. 등록
+                    // 5-1-1) 관리자 권한 부여 설정
+                    int countVendorUsers = vendorUserMapper.countVendorUsersByVendorCode(vendorUser.getVendorCode());
+                    if(countVendorUsers == 0){
+                        dto.setRole("ADMIN");
+                    } else{
+                        dto.setRole("VENDOR");
+                    }
+                    break;
+                case "D": // 5-2. 삭제
+                case "U": // 5-3. 수정
+            }
+
             vendorUserMapper.insertUserVN_USER(dto);
             
             // 6) 대기 테이블 업데이트

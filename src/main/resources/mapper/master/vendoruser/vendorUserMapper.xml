@@ -208,6 +208,57 @@
         ) U
         LIMIT 1
     </select>
+
+    <!--협력사 사용자 수 조회-->
+    <select id="countVendorUsersByVendorCode" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--협력사 사용자 관리자 수 조회-->
+    <select id="countAdminUsers" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            ROLE = 'ADMIN'
+        AND
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+    
+    <!--승인 대기 조회-->
+    <select id="countWaitRequest" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VNCH_US
+        WHERE
+            USER_ID = #{userId}
+        AND
+            PROGRESS_CD NOT IN ('A', 'R')
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--진행중인 프로세스 조회-->
+    <select id="countActiveProcess" parameterType="String" resultType="int">
+        SELECT
+        (SELECT COUNT(*) FROM PRHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'A')) +
+        (SELECT COUNT(*) FROM RFQHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'RFQS', 'G', 'J')) +
+        (SELECT COUNT(*) FROM POHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'D', 'A', 'S', 'C')) +
+        (SELECT COUNT(*) FROM GRHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('GRN', 'GRP'))
+    </select>
+
+
     <!--저장-->
     <!--마스터 테이블 협력사 유저 정보 저장-->
     <insert id="insertUserVN_USER" parameterType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
@@ -292,7 +343,7 @@
             #{userId},
             #{userName},
             #{status},
-            'I',
+            #{reqType},
             #{phone},
             #{fax},
             #{email},
@@ -339,18 +390,18 @@
     <!--협력사 유저 단일 조회-->
     <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
         SELECT
-        ASK_USER_NUM AS askUserNum,
-        VENDOR_CD AS vendorCode,
-        REG_DATE AS createdAt,
-        REG_USER_ID AS createdBy,
-        MOD_DATE AS modifiedAt,
-        MOD_USER_ID AS modifiedBy,
-        USER_NM AS userName,
-        TEL_NO AS phone,
-        FAX_NO AS fax,
-        EMAIL AS email,
-        PROGRESS_CD AS status,
-        PASSWORD AS password
+            ASK_USER_NUM AS askUserNum,
+            VENDOR_CD AS vendorCode,
+            REG_DATE AS createdAt,
+            REG_USER_ID AS createdBy,
+            MOD_DATE AS modifiedAt,
+            MOD_USER_ID AS modifiedBy,
+            USER_NM AS userName,
+            TEL_NO AS phone,
+            FAX_NO AS fax,
+            EMAIL AS email,
+            PROGRESS_CD AS status,
+            PASSWORD AS password
         FROM
             VNCH_US
         WHERE
@@ -359,6 +410,21 @@
             PROGRESS_CD IN ('N', 'C')
         AND
             DEL_FLAG = 'N'
+    </select>
+
+    <select id="selectVendorUserByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+        SELECT
+            PROGRESS_CD AS status,
+            PASSWORD AS password
+        FROM
+            VNCH_US
+        WHERE
+            USER_ID = #{userId}
+        AND
+            DEL_FLAG = 'N'
+        ORDER BY
+            ASK_USER_NUM DESC
+        LIMIT 1
     </select>
 
 </mapper>

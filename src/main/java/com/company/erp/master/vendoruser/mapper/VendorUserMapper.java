@@ -16,6 +16,8 @@ public interface VendorUserMapper {
     List<VendorUserListDto> selectVendorUserList(VendorUserSearchDto VendorUserSearchDto);
     // 2. 협력 업체 사용자 단일 조회
     VendorUserRegisterDto selectVendorUserByAskUserNum(String askUserNum);
+    // 3. 최초 회원가입 여부 확인
+    int countVendorUsersByVendorCode(String vendorCode);
     
     /* 저장 */
     // 1. 마스터 테이블 저장
@@ -33,6 +35,14 @@ public interface VendorUserMapper {
     List<VendorUserListDto> selectVendorUserListByVendorCode(VendorUserSearchDto VendorUserSearchDto);
     // 3. 로그인 id로 회사 코드 조회
     String selectVendorCodeByLoginId(String loginId);
+    // 4. 관리자 수 조회
+    int countAdminUsers(String vendorCode);
+    // 5. 승인 대기 조회
+    int countWaitRequest(String userId);
+    // 6. 진행 중인 프로세스 조회
+    int countActiveProcess(String userId);
+    // 7. user id로 조회
+    VendorUserRegisterDto selectVendorUserByUserId(String userId);
 
     /* 저장 */
     // 1. 대기 테이블 저장

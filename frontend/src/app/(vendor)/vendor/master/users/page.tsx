@@ -103,16 +103,31 @@ export default function VendorUsersPage() {
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDelete = async (user: any) => {
     if (confirm('해당 사용자를 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`/api/v1/vendor-portal/users/${userId}`, { method: 'DELETE' });
+        const response = await fetch(`/api/v1/vendor-portal/users/delete  `, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.userId,
+            userName: user.userName,
+            email: user.email,
+            phone: user.phone,
+            status: user.status,
+            vendorCode: user.vendorCode
+          })
+        });
+
         if (response.ok) {
           alert('삭제되었습니다.');
           fetchUserList();
+        } else {
+          const err = await response.json();
+          alert(err.message || '삭제 중 오류가 발생했습니다.');
         }
       } catch (error) {
-        alert('삭제 중 오류가 발생했습니다.');
+        alert('서버와 통신할 수 없습니다.');
       }
     }
   };
@@ -196,7 +211,7 @@ export default function VendorUsersPage() {
                   <Button variant="ghost" size="sm" onClick={() => handleOpenModal(user)} className="h-8 w-8 p-0">
                     <Edit2 className="w-3.5 h-3.5 text-gray-500" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(user.userId)} className="h-8 w-8 p-0 hover:text-red-600">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(user)} className="h-8 w-8 p-0 hover:text-red-600">
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>

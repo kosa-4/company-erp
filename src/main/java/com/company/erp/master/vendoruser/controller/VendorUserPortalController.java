@@ -1,5 +1,6 @@
 package com.company.erp.master.vendoruser.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
@@ -68,6 +69,16 @@ public class VendorUserPortalController {
         String loginId = loginUser.getUserId();
         vendorUserPortalService.addVendorUser(vendorUserRegisterDto, loginId);
         return ApiResponse.ok("사용자 승인 요청이 완료 되었습니다.");
+    }
+
+    /* 협력 업체 사용자 삭제 */
+    @RequireRole({"ADMIN"})
+    @DeleteMapping("/delete")
+    public ApiResponse deleteVendorUser(
+            @RequestBody VendorUserRegisterDto vendorUserRegisterDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        vendorUserPortalService.deleteVendorUser(vendorUserRegisterDto, loginUser);
+        return ApiResponse.ok("사용자 삭제 요청이 완료 되었습니다.");
     }
 
 }
