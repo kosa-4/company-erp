@@ -38,11 +38,6 @@ export interface RfqWaitingSearchRequest {
     reqUserNm?: string;
 }
 
-export interface RfqCreateFromPrResponse {
-    rfqNum: string;
-    message: string;
-}
-
 export interface RfqDetailResponse {
     header: {
         rfqNum: string;
@@ -115,12 +110,6 @@ export const rfqApi = {
         api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { ...params }),
 
     /**
-     * PR 기반 RFQ 초안 생성
-     */
-    createFromPr: (prNum: string) =>
-        api.post<RfqCreateFromPrResponse>('/v1/rfq/buyer/waiting/create', { prNum }),
-
-    /**
      * RFQ 상세 조회
      */
     getRfqDetail: (rfqNum: string) =>
@@ -128,12 +117,16 @@ export const rfqApi = {
 
     /**
      * [신규] PR 기반 견적 초안 초기 데이터 조회
+     * - 기존 /v1/rfq/buyer/waiting/create (삭제됨) 대신 사용
      */
     getRfqInitFromPr: (prNum: string) =>
         api.get<RfqDetailResponse>(`/v1/buyer/rfqs/init/${prNum}`),
 
     /**
      * [신규] RFQ 최초 생성 (저장 시점에 호출)
+     * - 백엔드 컨트롤러가 ApiResponse<String>으로 감싸서 내려주면,
+     *   client.ts에서 unwrap 해주는지에 따라 타입이 달라질 수 있음.
+     *   (프로젝트 다른 API들과 동일 패턴이면 그대로 사용)
      */
     createRfq: (data: RfqSaveRequest) =>
         api.post<string>('/v1/buyer/rfqs', data),

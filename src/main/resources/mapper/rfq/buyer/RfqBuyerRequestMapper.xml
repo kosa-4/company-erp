@@ -100,6 +100,7 @@
         FROM PRDT pd
         WHERE pd.PR_NUM = #{prNum}
           AND pd.DEL_FLAG = 'N'
+        ORDER BY pd.LINE_NO
     </select>
 
     <!-- [복구] 프로젝트 공통 방식(Map)에 따라 조회 -->
