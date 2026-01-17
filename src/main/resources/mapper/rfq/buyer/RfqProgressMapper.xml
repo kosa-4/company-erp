@@ -15,7 +15,7 @@
         <result property="ctrlUserNm" column="ctrlUserNm" />
         <result property="regDate" column="regDate" />
         <collection property="vendors" ofType="com.company.erp.rfq.buyer.progress.dto.response.RfqProgressGroupResponse$VendorStatus">
-            <result property="vendorCd" column="vendorCd" />
+            <id property="vendorCd" column="vendorCd" />
             <result property="vendorNm" column="vendorNm" />
             <result property="progressCd" column="v_progressCd" />
             <result property="progressNm" column="v_progressNm" />
