@@ -232,4 +232,12 @@
           AND DEL_FLAG = 'N'
     </update>
 
+    <select id="selectRfqVendorCodes" resultType="string">
+        SELECT VENDOR_CD
+        FROM RFQVN
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+    </select>
+
+
 </mapper>

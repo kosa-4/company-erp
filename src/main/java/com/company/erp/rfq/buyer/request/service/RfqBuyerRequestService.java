@@ -139,17 +139,27 @@ public class RfqBuyerRequestService {
             throw new IllegalArgumentException("저장할 품목이 하나 이상 있어야 합니다.");
         }
 
-        // 품목 정합성 체크 (라인번호 등)
         validateRfqItems(request);
 
-        // DT 동기화 (물리 삭제 후 재삽입)
+        // DT 동기화
         mapper.deleteRfqItems(rfqNum);
         mapper.insertRfqItems(rfqNum, request.getItems(), userId);
 
-        // VN 동기화 (임시저장 시점에 협력사 목록 확정 및 동기화)
+        // VN 동기화
         mapper.deleteRfqVendors(rfqNum);
-        if (request.getVendorCodes() != null && !request.getVendorCodes().isEmpty()) {
-            mapper.insertRfqVendors(rfqNum, request.getVendorCodes(), userId);
+
+        List<String> vendorCodes = request.getVendorCodes();
+        if (vendorCodes != null && !vendorCodes.isEmpty()) {
+
+            // ✅ 중복 제거 + 공백/NULL 제거
+            List<String> distinctVendors = vendorCodes.stream()
+                    .filter(v -> v != null && !v.isBlank())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            if (!distinctVendors.isEmpty()) {
+                mapper.insertRfqVendors(rfqNum, distinctVendors, userId);
+            }
         }
     }
 
@@ -184,19 +194,28 @@ public class RfqBuyerRequestService {
             throw new IllegalArgumentException("전송할 협력사가 선택되지 않았습니다.");
         }
 
-        // [피드백 반영] 중복 코드 필터링
-        List<String> distinctVendors = vendorCodes.stream()
+        List<String> reqVendors = vendorCodes.stream()
+                .filter(v -> v != null && !v.isBlank())
                 .distinct()
-                .collect(Collectors.toList());
+                .sorted()
+                .toList();
+
+        // DB에 저장된 VN 목록 조회 (T 상태에서 구성된 “현재 협력사 리스트”)
+        List<String> dbVendors = mapper.selectRfqVendorCodes(rfqNum).stream()
+                .sorted()
+                .toList();
+
+        if (!reqVendors.equals(dbVendors)) {
+            throw new IllegalStateException("전송 대상 협력사 목록이 현재 RFQ 협력사 목록과 일치하지 않습니다. 새로고침 후 다시 시도해주세요.");
+        }
 
         int hdUpdated = mapper.updateRfqStatusToSend(rfqNum, userId);
         if (hdUpdated != 1) {
             throw new IllegalStateException("전송 권한이 없거나 전송 가능한 상태(임시저장)가 아닙니다.");
         }
 
-        // [피드백 반영] 전송 시 협력사 정보를 삭제 후 재생성하지 않고, 상태만 업데이트하여 생성 이력을 보존함
+        // ✅ RFQ_NUM 전체 업데이트 (정책 A)
         int vnUpdated = mapper.updateRfqVendorsStatusToSend(rfqNum, userId);
-
         if (vnUpdated == 0) {
             throw new IllegalStateException("전송할 협력사 정보가 없거나 전송에 실패했습니다.");
         }

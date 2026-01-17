@@ -65,4 +65,7 @@ public interface RfqBuyerRequestMapper {
         // (3) 대상 Vendor 선정 (Y)
         int updateRfqVendorSelection(@Param("rfqNum") String rfqNum, @Param("vendorCd") String vendorCd,
                         @Param("loginUserId") String loginUserId);
+
+        List<String> selectRfqVendorCodes(@Param("rfqNum") String rfqNum);
+
 }
