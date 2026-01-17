@@ -167,7 +167,8 @@ public class VendorUserPortalService {
                 updateDto.setModifiedAt(LocalDate.now());
                 updateDto.setModifiedBy(loginId);
 
-                // 2) 마스터 테이블 존재 여부 조회
+                // 2) 마스터 테이블 등록 이력 조회
+                // 등록 이력 존재 시 재삭제 요청 / 미등록 시 바로 삭제 처리
                 int countMaster = vendorUserMapper.countVendorUsersByUserId(vendorUser.getUserId());
 
                 if(countMaster > 0){
