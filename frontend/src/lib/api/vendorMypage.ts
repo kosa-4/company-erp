@@ -27,11 +27,11 @@ export const vendorMypageApi = {
   /**
    * 협력사 사용자 정보 조회
    */
-  getUserInfo: () => api.get<VendorUserInfoResponse>('/mypage/vendor/user-info'),
-  
+  getUserInfo: () => api.get<VendorUserInfoResponse>('/v1/mypage/vendor/user-info'),
+
   /**
    * 협력사 비밀번호 업데이트
    */
-  updatePassword: (password: string) => 
-    api.put<{ message: string }>('/mypage/vendor/update-password', { password }),
+  updatePassword: (password: string) =>
+    api.put<{ message: string }>('/v1/mypage/vendor/update-password', { password }),
 };

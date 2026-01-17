@@ -79,6 +79,36 @@ export interface RfqDetailResponse {
     }[];
 }
 
+export interface RfqProgressGroup {
+    rfqNum: string;
+    rfqSubject: string;
+    rfqDate: string;
+    rfqType: string;
+    rfqTypeNm: string;
+    progressCd: string;
+    progressNm: string;
+    ctrlUserNm: string;
+    regDate: string;
+    vendors: {
+        vendorCd: string;
+        vendorNm: string;
+        progressCd: string;
+        progressNm: string;
+        sendDate?: string;
+        submitDate?: string;
+    }[];
+}
+
+export interface RfqProgressSearchRequest {
+    rfqNum?: string;
+    rfqSubject?: string;
+    fromDate?: string;
+    toDate?: string;
+    rfqType?: string;
+    progressCd?: string;
+    ctrlUserNm?: string;
+}
+
 export interface RfqSaveRequest {
     rfqNum?: string;
     prNum?: string;
@@ -138,14 +168,32 @@ export const rfqApi = {
         api.put<void>(`/v1/buyer/rfqs/${rfqNum}`, data),
 
     /**
-     * 협력업체 전송
+     * 협력업체 전송 (T -> RFQS)
      */
     sendRfq: (rfqNum: string, vendorCodes: string[]) =>
-        api.post<void>(`/v1/buyer/rfqs/${rfqNum}/send`, { vendorCodes }),
+        api.post<void>(`/v1/buyer/rfqs/progress/${rfqNum}/send`, { vendorCodes }),
 
     /**
      * 업체 선정
      */
     selectVendor: (rfqNum: string, vendorCd: string) =>
         api.post<void>(`/v1/buyer/rfqs/${rfqNum}/select`, { vendorCd }),
+
+    /**
+     * 견적 진행 현황 목록 조회 (그룹화)
+     */
+    getProgressList: (params: RfqProgressSearchRequest) =>
+        api.get<RfqProgressGroup[]>(`/v1/buyer/rfqs/progress`, { ...params }),
+
+    /**
+     * RFQ 마감 (M 상태로 전환)
+     */
+    closeRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/buyer/rfqs/progress/${rfqNum}/close`, {}),
+
+    /**
+     * RFQ 삭제 (Soft Delete)
+     */
+    deleteRfq: (rfqNum: string) =>
+        api.delete<void>(`/v1/buyer/rfqs/${rfqNum}`),
 };

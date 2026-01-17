@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/buyer/rfqs") // 설계안이 /api/buyer/rfqs면 여기 v1 여부 통일 필요
 @RequiredArgsConstructor
@@ -54,8 +56,7 @@ public class RfqBuyerRequestController {
     @PostMapping
     public ResponseEntity<ApiResponse<String>> createRfq(
             HttpSession session,
-            @Valid @RequestBody RfqSaveRequest request
-    ) {
+            @Valid @RequestBody RfqSaveRequest request) {
         String userId = loginUserId(session);
         String rfqNum = service.createRfq(request, userId);
         return ResponseEntity.ok(ApiResponse.ok(rfqNum, "견적이 생성되었습니다."));
@@ -68,26 +69,11 @@ public class RfqBuyerRequestController {
     public ResponseEntity<ApiResponse<Void>> saveRfq(
             HttpSession session,
             @PathVariable String rfqNum,
-            @Valid @RequestBody RfqSaveRequest request
-    ) {
+            @Valid @RequestBody RfqSaveRequest request) {
         String userId = loginUserId(session);
         request.setRfqNum(rfqNum);
         service.saveRfq(request, userId);
         return ResponseEntity.ok(ApiResponse.ok("저장되었습니다."));
-    }
-
-    /**
-     * 협력업체 전송 (T -> RFQS, Lock)
-     */
-    @PostMapping("/{rfqNum}/send")
-    public ResponseEntity<ApiResponse<Void>> sendRfq(
-            HttpSession session,
-            @PathVariable String rfqNum,
-            @Valid @RequestBody RfqSendRequest request
-    ) {
-        String userId = loginUserId(session);
-        service.sendRfq(rfqNum, request.getVendorCodes(), userId);
-        return ResponseEntity.ok(ApiResponse.ok("협력업체 전송이 완료되었습니다."));
     }
 
     /**
@@ -97,11 +83,35 @@ public class RfqBuyerRequestController {
     public ResponseEntity<ApiResponse<Void>> selectVendor(
             HttpSession session,
             @PathVariable String rfqNum,
-            @Valid @RequestBody RfqSelectRequest request
-    ) {
+            @Valid @RequestBody RfqSelectRequest request) {
         String userId = loginUserId(session);
         request.setRfqNum(rfqNum);
         service.selectVendor(request, userId);
         return ResponseEntity.ok(ApiResponse.ok("업체 선정이 완료되었습니다."));
+    }
+
+    /**
+     * 협력업체 전송
+     */
+    @PostMapping("/{rfqNum}/send")
+    public ResponseEntity<ApiResponse<Void>> sendRfq(
+            HttpSession session,
+            @PathVariable String rfqNum,
+            @RequestBody RfqSendRequest request) {
+        String userId = loginUserId(session);
+        service.sendRfq(rfqNum, request.getVendorCodes(), userId);
+        return ResponseEntity.ok(ApiResponse.ok("전송되었습니다."));
+    }
+
+    /**
+     * 견적 삭제
+     */
+    @DeleteMapping("/{rfqNum}")
+    public ResponseEntity<ApiResponse<Void>> deleteRfq(
+            HttpSession session,
+            @PathVariable String rfqNum) {
+        String userId = loginUserId(session);
+        service.deleteRfq(rfqNum, userId);
+        return ResponseEntity.ok(ApiResponse.ok("삭제되었습니다."));
     }
 }

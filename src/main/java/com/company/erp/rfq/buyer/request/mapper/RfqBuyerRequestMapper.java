@@ -52,7 +52,6 @@ public interface RfqBuyerRequestMapper {
         // (2) VN 전송 상태 업데이트 (이력 보존을 위해 삭제 후 재삽입 대신 상태 업데이트 사용)
         int updateRfqVendorsStatusToSend(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
 
-        // (3) VN 물리 삭제 (임시저장 시 동기화를 위한 용도)
         int deleteRfqVendors(@Param("rfqNum") String rfqNum);
 
         // --- 선정 (Select) ---
@@ -65,6 +64,9 @@ public interface RfqBuyerRequestMapper {
         // (3) 대상 Vendor 선정 (Y)
         int updateRfqVendorSelection(@Param("rfqNum") String rfqNum, @Param("vendorCd") String vendorCd,
                         @Param("loginUserId") String loginUserId);
+
+        // --- 마감 및 삭제 (Close/Delete) ---
+        int deleteRfq(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
 
         List<String> selectRfqVendorCodes(@Param("rfqNum") String rfqNum);
 
