@@ -96,7 +96,40 @@ export interface RfqProgressGroup {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
+        totalAmt?: number;
+        selectYn?: string;
     }[];
+}
+
+export interface RfqSelectionResponse {
+    rfqNum: string;
+    rfqSubject: string;
+    rfqType: string;
+    rfqTypeNm: string;
+    progressCd: string;
+    progressNm: string;
+    ctrlUserId: string;
+    ctrlUserNm: string;
+    regDate: string;
+    vendorCd: string;
+    vendorNm: string;
+    vnProgressCd: string;
+    vnProgressNm: string;
+    sendDate?: string;
+    submitDate?: string;
+    totalAmt?: number;
+    selectYn?: string;
+    rmk?: string;
+}
+
+export interface RfqSelectionSearchRequest {
+    rfqNum?: string;
+    rfqSubject?: string;
+    fromDate?: string;
+    toDate?: string;
+    rfqType?: string;
+    progressCd?: string;
+    ctrlUserNm?: string;
 }
 
 export interface RfqProgressSearchRequest {
@@ -107,6 +140,37 @@ export interface RfqProgressSearchRequest {
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
+}
+
+export interface RfqSelectionResultResponse {
+    rfqNum: string;
+    rfqSubject: string;
+    rfqType: string;
+    rfqTypeNm: string;
+    vendorCd: string;
+    vendorNm: string;
+    totalAmt: number;
+    ctrlUserId: string;
+    ctrlUserNm: string;
+    regDate: string;
+    selectDate: string;
+}
+
+export interface RfqResultItem {
+    itemCd: string;
+    itemNm: string;
+    spec: string;
+    unit: string;
+    qty: number;
+    unitPrice: number;
+    amt: number;
+    dlvyDate: string;
+    rmk: string;
+}
+
+export interface RfqSelectionResultDetailResponse {
+    header: RfqSelectionResultResponse;
+    items: RfqResultItem[];
 }
 
 export interface RfqSaveRequest {
@@ -176,8 +240,20 @@ export const rfqApi = {
     /**
      * 업체 선정
      */
-    selectVendor: (rfqNum: string, vendorCd: string) =>
-        api.post<void>(`/v1/buyer/rfqs/${rfqNum}/select`, { vendorCd }),
+    selectVendor: (rfqNum: string, vendorCd: string, selectRmk?: string) =>
+        api.post<void>(`/v1/buyer/rfq-selections/${rfqNum}/select`, { vendorCd, selectRmk }),
+
+    /**
+     * 견적 개찰 (M -> G)
+     */
+    openRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/buyer/rfq-selections/${rfqNum}/open`, {}),
+
+    /**
+     * 선정 대상 견적 목록 조회
+     */
+    getSelectionList: (params: RfqSelectionSearchRequest) =>
+        api.get<RfqSelectionResponse[]>(`/v1/buyer/rfq-selections`, { ...params }),
 
     /**
      * 견적 진행 현황 목록 조회 (그룹화)
@@ -196,4 +272,61 @@ export const rfqApi = {
      */
     deleteRfq: (rfqNum: string) =>
         api.delete<void>(`/v1/buyer/rfqs/${rfqNum}`),
+
+    /**
+     * 선정 결과 목록 조회
+     */
+    getSelectionResultList: (params: RfqSelectionSearchRequest) =>
+        api.get<RfqSelectionResultResponse[]>('/v1/buyer/rfq-selection-results', { ...params }),
+
+    /**
+     * 선정 결과 상세 조회
+     */
+    getSelectionResultDetail: (rfqNum: string) =>
+        api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
+
+    // ========== 협력사 API ==========
+    
+    /**
+     * 협력사 RFQ 목록 조회
+     */
+    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; startDate?: string; endDate?: string }) =>
+        api.get<any[]>('/v1/vendor/rfqs', { ...params }),
+
+    /**
+     * 협력사 RFQ 상세 조회
+     */
+    getVendorRfqDetail: (rfqNum: string) =>
+        api.get<any>(`/v1/vendor/rfqs/${rfqNum}`),
+
+    /**
+     * RFQ 접수
+     */
+    acceptRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/accept`, {}),
+
+    /**
+     * RFQ 포기
+     */
+    rejectRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/reject`, {}),
+
+    /**
+     * 견적 데이터 조회 (편집용)
+     */
+    getVendorQuote: (rfqNum: string) =>
+        api.get<any>(`/v1/vendor/rfqs/${rfqNum}/quote`),
+
+    /**
+     * 견적 임시저장
+     */
+    saveVendorQuote: (rfqNum: string, data: { items: any[] }) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/quote/save`, data),
+
+    /**
+     * 견적 제출
+     */
+    submitVendorQuote: (rfqNum: string, data: { items: any[] }) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/quote/submit`, data),
 };
+

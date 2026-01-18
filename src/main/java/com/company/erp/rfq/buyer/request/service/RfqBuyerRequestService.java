@@ -3,7 +3,6 @@ package com.company.erp.rfq.buyer.request.service;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSaveRequest;
-import com.company.erp.rfq.buyer.request.dto.request.RfqSelectRequest;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSendRequest;
 import com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse;
 import com.company.erp.rfq.buyer.request.mapper.RfqBuyerRequestMapper;
@@ -182,26 +181,6 @@ public class RfqBuyerRequestService {
             } else {
                 item.setEstAmt(BigDecimal.ZERO);
             }
-        }
-    }
-
-    /**
-     * 업체 선정
-     */
-    @Transactional
-    public void selectVendor(RfqSelectRequest request, String userId) {
-        String rfqNum = request.getRfqNum();
-        String vendorCd = request.getVendorCd();
-
-        int hdUpdated = mapper.updateRfqStatusToSelected(rfqNum, userId);
-        if (hdUpdated != 1) {
-            throw new IllegalStateException("선정 권한이 없거나 개찰(G) 상태가 아닙니다.");
-        }
-
-        mapper.resetRfqVendorsSelection(rfqNum);
-        int vnUpdated = mapper.updateRfqVendorSelection(rfqNum, vendorCd, userId);
-        if (vnUpdated != 1) {
-            throw new IllegalStateException("선정된 협력사 정보 업데이트에 실패했습니다.");
         }
     }
 

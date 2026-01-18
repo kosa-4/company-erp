@@ -204,6 +204,7 @@
           AND DEL_FLAG = 'N'
     </update>
 
+
     <!-- 10. 선정: Header 상태 전환 (Owner 체크 포함) -->
     <update id="updateRfqStatusToSelected">
         UPDATE RFQHD
