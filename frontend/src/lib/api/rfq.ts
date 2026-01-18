@@ -284,4 +284,49 @@ export const rfqApi = {
      */
     getSelectionResultDetail: (rfqNum: string) =>
         api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
+
+    // ========== 협력사 API ==========
+    
+    /**
+     * 협력사 RFQ 목록 조회
+     */
+    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; startDate?: string; endDate?: string }) =>
+        api.get<any[]>('/v1/vendor/rfqs', { ...params }),
+
+    /**
+     * 협력사 RFQ 상세 조회
+     */
+    getVendorRfqDetail: (rfqNum: string) =>
+        api.get<any>(`/v1/vendor/rfqs/${rfqNum}`),
+
+    /**
+     * RFQ 접수
+     */
+    acceptRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/accept`, {}),
+
+    /**
+     * RFQ 포기
+     */
+    rejectRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/reject`, {}),
+
+    /**
+     * 견적 데이터 조회 (편집용)
+     */
+    getVendorQuote: (rfqNum: string) =>
+        api.get<any>(`/v1/vendor/rfqs/${rfqNum}/quote`),
+
+    /**
+     * 견적 임시저장
+     */
+    saveVendorQuote: (rfqNum: string, data: { items: any[] }) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/quote/save`, data),
+
+    /**
+     * 견적 제출
+     */
+    submitVendorQuote: (rfqNum: string, data: { items: any[] }) =>
+        api.post<void>(`/v1/vendor/rfqs/${rfqNum}/quote/submit`, data),
 };
+

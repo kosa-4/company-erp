@@ -1,68 +1,96 @@
 'use client';
 
-import React, { useState } from 'react';
-import { FileText, Upload, Calendar, Building2, Search, Send, X, CheckCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
-import { Card, Button, Input, Badge } from '@/components/ui';
-
-
+import { Card, Button, Badge } from '@/components/ui';
+import { rfqApi } from '@/lib/api/rfq';
+import { useRouter } from 'next/navigation';
 
 export default function VendorRfqSubmitPage() {
+  const router = useRouter();
   const [rfqList, setRfqList] = useState<any[]>([]);
-  const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('');
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      toast.success('파일이 첨부되었습니다.', {
-        description: file.name,
+  // RFQ 목록 조회
+  const fetchRfqList = async () => {
+    try {
+      setLoading(true);
+      const data = await rfqApi.getVendorRfqList({
+        searchText: searchText || undefined,
+        progressCd: filterStatus || undefined,
       });
+      setRfqList(data);
+    } catch (error: any) {
+      toast.error('견적 목록 조회에 실패했습니다.');
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      toast.success('파일이 첨부되었습니다.', {
-        description: file.name,
-      });
+  useEffect(() => {
+    fetchRfqList();
+  }, []);
+
+  // 검색
+  const handleSearch = () => {
+    fetchRfqList();
+  };
+
+  // RFQ 접수
+  const handleAccept = async (rfqNum: string) => {
+    if (!confirm('이 견적 요청을 접수하시겠습니까?')) return;
+
+    try {
+      await rfqApi.acceptRfq(rfqNum);
+      toast.success('견적 요청을 접수했습니다.');
+      fetchRfqList();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || '접수에 실패했습니다.');
     }
   };
 
-  const handleSubmit = () => {
-    if (!uploadedFile) {
-      toast.error('견적서 파일을 첨부해주세요.');
-      return;
+  // RFQ 포기
+  const handleReject = async (rfqNum: string) => {
+    if (!confirm('이 견적을 포기하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+
+    try {
+      await rfqApi.rejectRfq(rfqNum);
+      toast.success('견적을 포기했습니다.');
+      fetchRfqList();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || '포기 처리에 실패했습니다.');
     }
-    if (selectedRfq) {
-      setRfqList(prev => prev.map(r => 
-        r.rfqNo === selectedRfq.rfqNo 
-          ? { ...r, status: 'SUBMITTED' }
-          : r
-      ));
-    }
-    toast.success('견적서가 제출되었습니다!', {
-      description: selectedRfq?.rfqNo,
-    });
-    setShowSubmitModal(false);
-    setUploadedFile(null);
-    setSelectedRfq(null);
+  };
+
+  // 견적 작성 페이지로 이동
+  const handleGoToQuote = (rfqNum: string) => {
+    router.push(`/vendor/rfq/submit/${rfqNum}`);
   };
 
   const filteredRfqList = rfqList.filter(rfq =>
-    rfq.rfqNo.toLowerCase().includes(searchText.toLowerCase()) ||
-    rfq.rfqName.toLowerCase().includes(searchText.toLowerCase())
+    (searchText === '' || 
+     rfq.rfqNum.toLowerCase().includes(searchText.toLowerCase()) ||
+     rfq.rfqSubject.toLowerCase().includes(searchText.toLowerCase())) &&
+    (filterStatus === '' || rfq.vendorProgressCd === filterStatus)
   );
 
-  const waitingCount = rfqList.filter(r => r.status === 'WAITING').length;
+  const waitingCount = rfqList.filter(r => r.vendorProgressCd === 'RFQS').length;
+
+  // 상태별 배지 색상
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'RFQS': return 'yellow';
+      case 'RFQJ': return 'blue';
+      case 'RFQT': return 'gray';
+      case 'RFQC': return 'green';
+      case 'F': return 'red';
+      default: return 'gray';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -75,7 +103,7 @@ export default function VendorRfqSubmitPage() {
             <FileText className="w-5 h-5 text-gray-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">견적현황</h1>
+            <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
             <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
           </div>
         </div>
@@ -98,9 +126,50 @@ export default function VendorRfqSubmitPage() {
               placeholder="견적번호 또는 견적명으로 검색"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={filterStatus === '' ? 'primary' : 'outline'} 
+              onClick={() => { setFilterStatus(''); fetchRfqList(); }}
+              size="sm"
+            >
+              전체
+            </Button>
+            <Button 
+              variant={filterStatus === 'RFQS' ? 'primary' : 'outline'} 
+              onClick={() => { setFilterStatus('RFQS'); fetchRfqList(); }}
+              size="sm"
+            >
+              요청
+            </Button>
+            <Button 
+              variant={filterStatus === 'RFQJ' ? 'primary' : 'outline'} 
+              onClick={() => { setFilterStatus('RFQJ'); fetchRfqList(); }}
+              size="sm"
+            >
+              접수
+            </Button>
+            <Button 
+              variant={filterStatus === 'RFQT' ? 'primary' : 'outline'} 
+              onClick={() => { setFilterStatus('RFQT'); fetchRfqList(); }}
+              size="sm"
+            >
+              임시저장
+            </Button>
+            <Button 
+              variant={filterStatus === 'RFQC' ? 'primary' : 'outline'} 
+              onClick={() => { setFilterStatus('RFQC'); fetchRfqList(); }}
+              size="sm"
+            >
+              제출완료
+            </Button>
+          </div>
+          <Button variant="primary" onClick={handleSearch}>
+            검색
+          </Button>
         </div>
       </div>
 
@@ -112,14 +181,20 @@ export default function VendorRfqSubmitPage() {
               <tr>
                 <th className="px-6 py-3 font-medium">견적번호</th>
                 <th className="px-6 py-3 font-medium">견적명</th>
-                <th className="px-6 py-3 font-medium">발주사</th>
+                <th className="px-6 py-3 font-medium">견적유형</th>
                 <th className="px-6 py-3 font-medium">마감일</th>
                 <th className="px-6 py-3 font-medium text-center">상태</th>
                 <th className="px-6 py-3 font-medium text-center">액션</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredRfqList.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                    로딩 중...
+                  </td>
+                </tr>
+              ) : filteredRfqList.length === 0 ? (
                 <tr>
                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
@@ -130,50 +205,86 @@ export default function VendorRfqSubmitPage() {
                 </tr>
               ) : (
                 filteredRfqList.map((rfq) => (
-                  <tr key={rfq.rfqNo} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{rfq.rfqNo}</td>
-                    <td className="px-6 py-4 text-gray-600">{rfq.rfqName}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        <span>{rfq.buyerName}</span>
-                      </div>
-                    </td>
+                  <tr key={rfq.rfqNum} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{rfq.rfqNum}</td>
+                    <td className="px-6 py-4 text-gray-600">{rfq.rfqSubject}</td>
+                    <td className="px-6 py-4 text-gray-600">{rfq.rfqTypeName || rfq.rfqType}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="w-4 h-4" />
-                        <span>{rfq.dueDate}</span>
+                        <span>{rfq.reqCloseDate ? new Date(rfq.reqCloseDate).toLocaleDateString('ko-KR') : '-'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Badge variant={rfq.status === 'WAITING' ? 'yellow' : 'green'}>
-                        {rfq.status === 'WAITING' ? '접수대기' : '제출완료'}
+                      <Badge variant={getStatusBadgeVariant(rfq.vendorProgressCd)}>
+                        {rfq.vendorProgressName}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        {rfq.status === 'WAITING' ? (
+                        {rfq.vendorProgressCd === 'RFQS' && (
+                          <>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleAccept(rfq.rfqNum)}
+                              className="h-8 text-xs gap-1.5"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              접수
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReject(rfq.rfqNum)}
+                              className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              포기
+                            </Button>
+                          </>
+                        )}
+                        {(rfq.vendorProgressCd === 'RFQJ' || rfq.vendorProgressCd === 'RFQT') && (
+                          <>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleGoToQuote(rfq.rfqNum)}
+                              className="h-8 text-xs gap-1.5"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              견적작성
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReject(rfq.rfqNum)}
+                              className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              포기
+                            </Button>
+                          </>
+                        )}
+                        {rfq.vendorProgressCd === 'RFQC' && (
                           <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRfq(rfq);
-                              setShowSubmitModal(true);
-                            }}
-                            className="h-8 text-xs gap-1.5"
-                          >
-                             <Send className="w-3.5 h-3.5" />
-                             견적제출
-                          </Button>
-                        ) : (
-                           <Button
                             variant="ghost"
                             size="sm"
                             disabled
                             className="h-8 text-xs text-gray-400"
-                           >
-                            제출됨
-                           </Button>
+                          >
+                            제출완료
+                          </Button>
+                        )}
+                        {rfq.vendorProgressCd === 'F' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            className="h-8 text-xs text-gray-400"
+                          >
+                            포기됨
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -184,119 +295,6 @@ export default function VendorRfqSubmitPage() {
           </table>
         </div>
       </Card>
-
-      {/* Submit Modal */}
-      {showSubmitModal && selectedRfq && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">견적서 제출</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{selectedRfq.rfqNo} - {selectedRfq.rfqName}</p>
-              </div>
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              {/* File Upload */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  견적서 파일 첨부 <span className="text-red-500">*</span>
-                </label>
-                <div 
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
-                    isDragging 
-                      ? 'border-gray-500 bg-gray-50' 
-                      : uploadedFile 
-                        ? 'border-emerald-300 bg-emerald-50' 
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    accept=".pdf,.xlsx,.xls,.doc,.docx"
-                    onChange={handleFileUpload}
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer block">
-                    <div className={`w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center ${
-                      uploadedFile 
-                        ? 'bg-emerald-500 shadow-md shadow-emerald-200' 
-                        : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {uploadedFile ? (
-                        <CheckCircle className="w-6 h-6 text-white" />
-                      ) : (
-                        <Upload className="w-6 h-6" />
-                      )}
-                    </div>
-                    {uploadedFile ? (
-                      <div>
-                        <p className="text-emerald-700 font-semibold">{uploadedFile.name}</p>
-                        <p className="text-xs text-emerald-600 mt-1">파일이 준비되었습니다</p>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-gray-900 font-medium">파일을 선택하거나 이곳에 드래그하세요</p>
-                        <p className="text-xs text-gray-500 mt-1">PDF, Excel, Word 파일 지원</p>
-                      </>
-                    )}
-                  </label>
-                </div>
-              </div>
-
-              {/* Item List */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-3">요청 품목</p>
-                <ul className="space-y-3">
-                  {selectedRfq.items.map(item => (
-                    <li key={item.itemCode} className="flex items-start gap-3 text-sm">
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-1.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                            <span className="font-medium text-gray-900">{item.itemName}</span>
-                            <span className="text-gray-600">{item.quantity}개</span>
-                        </div>
-                        <p className="text-gray-500 text-xs mt-0.5">{item.spec}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowSubmitModal(false);
-                  setUploadedFile(null);
-                }}
-              >
-                취소
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmit}
-                icon={<Send className="w-4 h-4" />}
-              >
-                제출하기
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
