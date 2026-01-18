@@ -382,6 +382,18 @@
             <if test="status != null and status != ''">
                 PROGRESS_CD = #{status},
             </if>
+            <if test="userName != null and userName != ''">
+                USER_NM = #{userName},
+            </if>
+            <if test="password != null and password != ''">
+                PASSWORD = #{password},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="phone != null and phone != ''">
+                TEL_NUM = #{phone},
+            </if>
         </set>
         WHERE
             USER_ID = #{userId}
@@ -434,7 +446,7 @@
     </select>
 
     <!--협력사 유저 단일 조회-->
-    <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+    <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
         SELECT
             ASK_USER_NUM AS askUserNum,
             VENDOR_CD AS vendorCode,
@@ -460,7 +472,7 @@
             DEL_FLAG = 'N'
     </select>
 
-    <select id="selectVendorUserVNCH_USByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+    <select id="selectVendorUserVNCH_USByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
         SELECT
             CH.PROGRESS_CD AS status,
             CH.PASSWORD AS password,
