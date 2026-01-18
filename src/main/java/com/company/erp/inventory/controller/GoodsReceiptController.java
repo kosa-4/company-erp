@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.inventory.dto.GoodsReceiptDTO;
 import com.company.erp.inventory.dto.GoodsReceiptItemDTO;
 import com.company.erp.inventory.service.GoodsReceiptService;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/goods-receipts")
 @RequiredArgsConstructor
+@RequireRole({ "BUYER", "ADMIN" }) // 입고 모듈: 구매팀/관리자만 접근 가능
 public class GoodsReceiptController {
 
     private final GoodsReceiptService goodsReceiptService;

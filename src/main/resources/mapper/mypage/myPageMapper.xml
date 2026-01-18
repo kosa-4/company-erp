@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.company.erp.mypage.mapper.MyPageMapper">
+
+    <!-- 사용자 정보 조회 -->
+    <select id="selectMyInfo" resultType="com.company.erp.mypage.dto.MyInfoDTO">
+        SELECT
+            #{userId} AS userId,
+            #{userNameKo} AS userNameKo,
+            COALESCE(U.USER_NM_ENG, '') AS userNameEn,
+            #{userType} AS userType,
+            #{role} AS role,
+            COALESCE(D.BUYER_CD, '') AS companyCode,
+            COALESCE(B.BUYER_NM, '') AS companyName,
+            COALESCE(#{deptCd}, '') AS departmentCode,
+            COALESCE(#{deptName}, '') AS departmentName,
+            COALESCE(U.TEL_NUM, '') AS phone,
+            COALESCE(U.EMAIL, '') AS email,
+            '' AS mobile,
+            COALESCE(U.FAX_NUM, '') AS fax
+        FROM BY_USER U
+        LEFT JOIN DEPT D ON D.dept_cd = U.dept_cd AND D.DEL_FLAG = 'N'
+        LEFT JOIN BUYER B ON B.BUYER_CD = D.BUYER_CD
+        WHERE U.USER_ID = #{userId}
+        AND U.DEL_FLAG = 'N'
+    </select>
+
+    <!-- 내 정보 업데이트 -->
+    <update id="updateMyInfo">
+        UPDATE BY_USER
+        <set>
+            <if test="userNameEn != null and userNameEn != ''">
+                USER_NM_ENG = #{userNameEn},
+            </if>
+            <if test="phone != null and phone != ''">
+                TEL_NUM = #{phone},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="fax != null and fax != ''">
+                FAX_NUM = #{fax},
+            </if>
+            <if test="password != null and password != ''">
+                PASSWORD = #{password},
+            </if>
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{userId}
+        </set>
+        WHERE USER_ID = #{userId}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 협력사 사용자 정보 조회  -->
+    <select id="selectVendorUserInfo" resultType="map">
+        SELECT 
+            COALESCE(U.USER_NM, '') AS userName,
+            COALESCE(U.EMAIL, '') AS email,
+            COALESCE(V.VENDOR_NM, '') AS vendorName,
+            COALESCE(V.VENDOR_ENG_NM, '') AS vendorNameEn,
+            COALESCE(V.IRS_NO, '') AS businessNo,
+            COALESCE(V.ADDR, '') AS address,
+            COALESCE(V.CEO_USER_NM, '') AS ceoName,
+            COALESCE(V.INDUSTRY_TYPE, '') AS industry,
+            COALESCE(V.TEL_NO, '') AS phone,
+            COALESCE(V.ZIP_CD, '') AS zipCode
+        FROM VN_USER U
+        LEFT JOIN VNGL V ON V.VENDOR_CD = U.VENDOR_CD AND V.DEL_FLAG = 'N'
+        WHERE U.USER_ID = #{userId}
+        AND U.DEL_FLAG = 'N'
+        LIMIT 1
+    </select>
+
+    <!-- 협력사 사용자 정보 업데이트 (비밀번호) -->
+    <update id="updateVendorUserInfo">
+        UPDATE VN_USER
+        SET PASSWORD = #{password},
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{userId}
+        WHERE USER_ID = #{userId}
+        AND DEL_FLAG = 'N'
+    </update>
+
+</mapper>

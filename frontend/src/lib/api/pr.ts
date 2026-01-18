@@ -93,12 +93,12 @@ export const prApi = {
     /**
      * 구매요청 화면 초기 데이터 조회
      */
-    getInitData: () => api.get<PrInitData>('/pr/init'),
+    getInitData: () => api.get<PrInitData>('/v1/pr/init'),
 
     /**
      * 품목선택 팝업에서의 품목 목록 조회
      */
-    getItemList: () => api.get<PrItemDTO[]>('/pr/item/list'),
+    getItemList: () => api.get<PrItemDTO[]>('/v1/pr/item/list'),
 
     /**
      * 구매요청 화면에서 품목정보 조회 (품목코드 리스트로 조회)
@@ -108,13 +108,13 @@ export const prApi = {
         // URLSearchParams를 사용하여 배열 파라미터 처리 (Spring은 같은 파라미터명으로 배열을 받음)
         const searchParams = new URLSearchParams();
         itemCodes.forEach(code => searchParams.append('itemCodes', code));
-        return api.get<PrItemDTO[]>(`/pr/item-info/list?${searchParams.toString()}`);
+        return api.get<PrItemDTO[]>(`/v1/pr/item-info/list?${searchParams.toString()}`);
     },
 
     /**
      * 구매요청 등록
      */
-    save: (data: PrRequest) => api.post<{ message: string }>('/pr/save', data),
+    save: (data: PrRequest) => api.post<{ message: string }>('/v1/pr/save', data),
 
     /**
      * 구매요청 현황 목록 조회 (헤더만)
@@ -130,7 +130,7 @@ export const prApi = {
         if (params?.startDate) mappedParams.startDate = params.startDate;
         if (params?.endDate) mappedParams.endDate = params.endDate;
 
-        return api.get<PrListResponse[]>('/pr/list', mappedParams);
+        return api.get<PrListResponse[]>('/v1/pr/list', mappedParams);
     },
 
 
@@ -143,7 +143,7 @@ export const prApi = {
         console.log('삭제 API 호출:', endpoint);
         console.log('전체 URL:', `/api/v1${endpoint}`);
         console.log('HTTP Method: PUT');
-        return api.put<{ message: string }>(endpoint);
+        return api.put<{ message: string }>(`/v1${endpoint}`);
     },
 
     /**
@@ -152,7 +152,7 @@ export const prApi = {
     approve: (prNum: string) => {
         console.log('prApi.approve 호출 - prNum:', prNum);
         console.log('API URL:', `/pr/${prNum}/approve`);
-        return api.post<void>(`/pr/${prNum}/approve`);
+        return api.post<void>(`/v1/pr/${prNum}/approve`);
     },
 
     /**
@@ -161,11 +161,11 @@ export const prApi = {
     reject: (prNum: string) => {
         console.log('prApi.reject 호출 - prNum:', prNum);
         console.log('API URL:', `/pr/${prNum}/reject`);
-        return api.post<void>(`/pr/${prNum}/reject`);
+        return api.post<void>(`/v1/pr/${prNum}/reject`);
     },
 
     /**
      * 구매요청 상세 품목 목록 조회
      */
-    getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/pr/${prNum}/detail`),
+    getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/v1/pr/${prNum}/detail`),
 };

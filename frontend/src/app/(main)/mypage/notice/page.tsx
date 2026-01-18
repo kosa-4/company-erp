@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Plus, Calendar, User, FileText, Upload, Eye } from 'lucide-react';
+import { Bell, Plus, Calendar, User, FileText, Upload, Eye, Trash2, X, Download } from 'lucide-react';
 import { 
   Card, 
   Button, 
@@ -15,11 +15,13 @@ import {
   ModalFooter
 } from '@/components/ui';
 import { Notice, ColumnDef } from '@/types';
+import { noticeApi, NoticeListResponse, NoticeDetailResponse, FileListItemResponse } from '@/lib/api/notice';
+import { toast } from 'sonner';
 
 
 
 export default function NoticePage() {
-  const [notices] = useState<Notice[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
     endDate: '',
@@ -29,11 +31,67 @@ export default function NoticePage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    subject: '',
+    content: '',
+  });
+  const [selectedNotices, setSelectedNotices] = useState<string[]>([]);
+  const [regUserName, setRegUserName] = useState('');
+  const [formData, setFormData] = useState({
+    subject: '',
+    content: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<FileListItemResponse[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // 공지사항 목록 조회
+  const fetchNoticeList = async () => {
+    try {
+      setLoading(true);
+      console.log('공지사항 목록 조회 시작:', searchParams);
+      const response = await noticeApi.getList({
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
+        subject: searchParams.title || undefined,
+      });
+      
+      console.log('공지사항 목록 응답:', response);
+      
+      // NoticeListResponse를 Notice 타입으로 변환
+      const transformedNotices: Notice[] = response.map((item: NoticeListResponse) => ({
+        noticeNo: item.noticeNum,
+        title: item.subject,
+        content: '',
+        startDate: item.startDate || '',
+        endDate: item.endDate || '',
+        createdAt: item.regDate || '',
+        createdBy: item.regUserId || '',
+        createdByName: item.regUserName || '',
+        viewCnt: item.viewCnt || 0,
+      }));
+      
+      console.log('변환된 공지사항 목록:', transformedNotices);
+      setNotices(transformedNotices);
+    } catch (error: any) {
+      console.error('공지사항 목록 조회 실패:', error);
+      console.error('에러 상세:', {
+        status: error?.status,
+        message: error?.message,
+        data: error?.data
+      });
+      alert(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    await fetchNoticeList();
   };
 
   const handleReset = () => {
@@ -44,12 +102,308 @@ export default function NoticePage() {
     });
   };
 
-  const handleRowClick = (notice: Notice) => {
-    setSelectedNotice(notice);
-    setIsDetailModalOpen(true);
+  const handleRowClick = async (notice: Notice) => {
+    try {
+      setIsDetailModalOpen(true);
+      setIsEditing(false);
+      // 상세 조회 API 호출
+      const detail = await noticeApi.getDetail(notice.noticeNo);
+      
+      // NoticeDetailResponse를 Notice 타입으로 변환
+      const noticeDetail: Notice = {
+        noticeNo: detail.noticeNum,
+        title: detail.subject,
+        content: detail.content,
+        startDate: detail.startDate,
+        endDate: detail.endDate,
+        createdAt: detail.regDate,
+        createdBy: detail.regUserId,
+        createdByName: detail.regUserName,
+        viewCnt: detail.viewCnt || 0,
+      };
+      
+      setSelectedNotice(noticeDetail);
+      setEditFormData({
+        subject: detail.subject,
+        content: detail.content,
+      });
+      
+      // 목록의 조회수도 업데이트
+      setNotices(prev => prev.map(n => 
+        n.noticeNo === noticeDetail.noticeNo 
+          ? { ...n, viewCnt: detail.viewCnt || 0 }
+          : n
+      ));
+    } catch (error: any) {
+      console.error('공지사항 상세 조회 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
+      setIsDetailModalOpen(false);
+    }
+  };
+  
+  const handleContentClick = () => {
+    setIsEditing(true);
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (selectedNotice) {
+      setEditFormData({
+        subject: selectedNotice.title,
+        content: selectedNotice.content,
+      });
+    }
+  };
+  
+  const handleUpdate = async () => {
+    if (!selectedNotice) return;
+    
+    // 유효성 검사
+    if (!editFormData.subject || !editFormData.content) {
+      alert('제목과 내용을 입력해주세요.');
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      await noticeApi.update(selectedNotice.noticeNo, {
+        subject: editFormData.subject,
+        content: editFormData.content,
+      });
+      
+      alert('공지사항이 수정되었습니다.');
+      setIsEditing(false);
+      
+      // 상세 정보 새로고침
+      const detail = await noticeApi.getDetail(selectedNotice.noticeNo);
+      const noticeDetail: Notice = {
+        noticeNo: detail.noticeNum,
+        title: detail.subject,
+        content: detail.content,
+        startDate: detail.startDate,
+        endDate: detail.endDate,
+        createdAt: detail.regDate,
+        createdBy: detail.regUserId,
+        createdByName: detail.regUserName,
+        viewCnt: detail.viewCnt || 0,
+      };
+      setSelectedNotice(noticeDetail);
+      
+      // 목록 새로고침
+      await fetchNoticeList();
+    } catch (error: any) {
+      console.error('공지사항 수정 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 수정에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleDelete = async (noticeNum: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
+    if (!confirm('정말 삭제하시겠습니까?')) {
+      return;
+    }
+    
+    try {
+      await noticeApi.delete(noticeNum);
+      alert('공지사항이 삭제되었습니다.');
+      await fetchNoticeList();
+    } catch (error: any) {
+      console.error('공지사항 삭제 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+    }
+  };
+  
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedNotices(notices.map(n => n.noticeNo));
+    } else {
+      setSelectedNotices([]);
+    }
+  };
+  
+  const handleSelectNotice = (noticeNo: string, checked: boolean) => {
+    if (checked) {
+      setSelectedNotices(prev => [...prev, noticeNo]);
+    } else {
+      setSelectedNotices(prev => prev.filter(n => n !== noticeNo));
+    }
+  };
+  
+  const handleDeleteSelected = async () => {
+    if (selectedNotices.length === 0) {
+      alert('삭제할 공지사항을 선택해주세요.');
+      return;
+    }
+    
+    if (!confirm(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`)) {
+      return;
+    }
+    
+    try {
+      await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
+      alert('선택한 공지사항이 삭제되었습니다.');
+      setSelectedNotices([]);
+      await fetchNoticeList();
+    } catch (error: any) {
+      console.error('공지사항 일괄 삭제 실패:', error);
+      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+    }
+  };
+
+  // 초기 목록 로드
+  useEffect(() => {
+    fetchNoticeList();
+  }, []);
+
+  // 공지사항 등록 모달 열릴 때 초기 데이터 로드
+  useEffect(() => {
+    const loadInitData = async () => {
+      if (isCreateModalOpen) {
+        try {
+          console.log('공지사항 초기 데이터 로드 시작');
+          const initData = await noticeApi.getInitData();
+          console.log('공지사항 초기 데이터 응답:', initData);
+          setRegUserName(initData.regUserName || '');
+          setFormData({
+            subject: '',
+            content: '',
+            startDate: '',
+            endDate: '',
+          });
+        } catch (error: any) {
+          console.error('초기 데이터 로드 실패:', error);
+          console.error('에러 상세:', {
+            status: error?.status,
+            message: error?.message,
+            data: error?.data
+          });
+          // 에러가 발생해도 모달은 열어둠 (기본값으로 표시)
+          setRegUserName('');
+        }
+      }
+    };
+
+    loadInitData();
+  }, [isCreateModalOpen]);
+
+  // 파일 선택 핸들러
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  // 파일 제거 핸들러
+  const handleFileRemove = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // 공지사항 저장 핸들러
+  const handleSave = async () => {
+    // 저장 확인 팝업
+    if (!confirm('저장하시겠습니까?')) {
+      return;
+    }
+
+    // 유효성 검사
+    if (!formData.subject || !formData.content || !formData.startDate || !formData.endDate) {
+      toast.error('모든 필수 항목을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await noticeApi.save({
+        subject: formData.subject,
+        content: formData.content,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+      });
+      
+      // 공지사항 번호 가져오기
+      const noticeNum = (response as any).noticeNum;
+      
+      // 파일 업로드 (실패해도 공지사항은 저장됨)
+      if (uploadedFiles.length > 0 && noticeNum) {
+        for (const file of uploadedFiles) {
+          try {
+            await noticeApi.uploadFile(noticeNum, file);
+          } catch (error: any) {
+            console.error('파일 업로드 실패:', error);
+            toast.error(`${file.name} 업로드에 실패했습니다.`);
+          }
+        }
+      }
+      
+      // 공지사항 저장 성공 메시지 표시
+      toast.success('공지사항이 등록되었습니다.');
+      setIsCreateModalOpen(false);
+      
+      // 목록 새로고침
+      await fetchNoticeList();
+      
+      // 폼 초기화
+      setFormData({
+        subject: '',
+        content: '',
+        startDate: '',
+        endDate: '',
+      });
+      setUploadedFiles([]);
+    } catch (error: any) {
+      console.error('공지사항 저장 실패:', error);
+      toast.error(error?.data?.error || error?.message || '공지사항 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns: ColumnDef<Notice>[] = [
+    {
+      key: 'checkbox',
+      header: (
+        <input
+          type="checkbox"
+          checked={selectedNotices.length === notices.length && notices.length > 0}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500 cursor-pointer"
+        />
+      ),
+      width: 50,
+      align: 'center',
+      render: (_, notice) => (
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="flex items-center justify-center w-full h-full"
+        >
+          <input
+            type="checkbox"
+            checked={selectedNotices.includes(notice.noticeNo)}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleSelectNotice(notice.noticeNo, e.target.checked);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500 cursor-pointer"
+          />
+        </div>
+      ),
+    },
     {
       key: 'noticeNo',
       header: '공지번호',
@@ -90,6 +444,32 @@ export default function NoticePage() {
       width: 120,
       align: 'center',
     },
+    {
+      key: 'viewCnt',
+      header: '조회수',
+      width: 80,
+      align: 'center',
+      render: (value) => (
+        <span className="text-gray-600">{value || 0}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '삭제',
+      width: 80,
+      align: 'center',
+      render: (_, notice) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => handleDelete(notice.noticeNo, e)}
+          icon={<Trash2 className="w-4 h-4" />}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          삭제
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -109,13 +489,24 @@ export default function NoticePage() {
             <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
           </div>
         </div>
-        <Button 
-          variant="primary" 
-          onClick={() => setIsCreateModalOpen(true)}
-          icon={<Plus className="w-4 h-4" />}
-        >
-          등록
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="primary" 
+            onClick={() => setIsCreateModalOpen(true)}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            등록
+          </Button>
+          {selectedNotices.length > 0 && (
+            <Button 
+              variant="danger" 
+              onClick={handleDeleteSelected}
+              icon={<Trash2 className="w-4 h-4" />}
+            >
+              선택 삭제 ({selectedNotices.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search Panel */}
@@ -156,47 +547,115 @@ export default function NoticePage() {
       {/* Detail Modal */}
       <Modal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setIsEditing(false);
+        }}
         title="공지사항 상세"
         size="lg"
         footer={
-          <ModalFooter
-            onClose={() => setIsDetailModalOpen(false)}
-            cancelText="닫기"
-          />
+          isEditing ? (
+            <ModalFooter
+              onClose={handleCancelEdit}
+              onConfirm={handleUpdate}
+              cancelText="취소"
+              confirmText="저장"
+              disabled={saving}
+            />
+          ) : (
+            <ModalFooter
+              onClose={() => {
+                setIsDetailModalOpen(false);
+                setIsEditing(false);
+              }}
+              cancelText="닫기"
+            />
+          )
         }
       >
         {selectedNotice && (
           <div className="space-y-6">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-gray-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">{selectedNotice.title}</h2>
-                <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                  <span className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {selectedNotice.createdByName}
-                  </span>
-                  <span className="flex items-center gap-1">
+            {isEditing ? (
+              <>
+                <Input 
+                  label="공지명" 
+                  placeholder="공지명을 입력하세요" 
+                  value={editFormData.subject}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, subject: e.target.value }))}
+                  required 
+                />
+                
+                <Textarea 
+                  label="공지내용" 
+                  rows={10} 
+                  placeholder="공지 내용을 입력하세요" 
+                  value={editFormData.content}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, content: e.target.value }))}
+                  required 
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">{selectedNotice.title}</h2>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                      <span className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        {selectedNotice.createdByName}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {selectedNotice.createdAt}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm">
                     <Calendar className="w-4 h-4" />
-                    {selectedNotice.createdAt}
+                    공지기간: {selectedNotice.startDate} ~ {selectedNotice.endDate}
                   </span>
                 </div>
-              </div>
-            </div>
 
-            <div>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm">
-                <Calendar className="w-4 h-4" />
-                공지기간: {selectedNotice.startDate} ~ {selectedNotice.endDate}
-              </span>
-            </div>
+                <div 
+                  className="bg-stone-50 rounded-2xl p-6 min-h-[200px] cursor-pointer hover:bg-stone-100 transition-colors"
+                  onClick={handleContentClick}
+                  title="클릭하여 수정"
+                >
+                  <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">{selectedNotice.content}</p>
+                </div>
 
-            <div className="bg-stone-50 rounded-2xl p-6 min-h-[200px]">
-              <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">{selectedNotice.content}</p>
-            </div>
+                {/* 첨부파일 목록 */}
+                {attachedFiles.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
+                    <div className="space-y-2">
+                      {attachedFiles.map((file) => (
+                        <div
+                          key={file.fileNum}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() => noticeApi.downloadFile(file.fileNum)}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{file.originName}</p>
+                              <p className="text-xs text-gray-500">{formatFileSize(file.fileSize)}</p>
+                            </div>
+                          </div>
+                          <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </Modal>
@@ -210,38 +669,97 @@ export default function NoticePage() {
         footer={
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
-            onConfirm={() => {
-              alert('저장되었습니다.');
-              setIsCreateModalOpen(false);
-            }}
+            onConfirm={handleSave}
             confirmText="저장"
+            disabled={saving}
           />
         }
       >
         <div className="space-y-5">
-          <Input label="공지명" placeholder="공지명을 입력하세요" required />
+          <Input 
+            label="공지명" 
+            placeholder="공지명을 입력하세요" 
+            value={formData.subject}
+            onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+            required 
+          />
           
           <div className="grid grid-cols-2 gap-4">
-            <DatePicker label="공지 시작일" required />
-            <DatePicker label="공지 종료일" required />
+            <DatePicker 
+              label="공지 시작일" 
+              value={formData.startDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+              required 
+            />
+            <DatePicker 
+              label="공지 종료일" 
+              value={formData.endDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+              required 
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Input label="등록일자" value={new Date().toISOString().split('T')[0]} readOnly />
-            <Input label="등록자명" value="홍길동" readOnly />
+            <Input label="등록자명" value={regUserName} readOnly />
           </div>
 
-          <Textarea label="공지내용" rows={8} placeholder="공지 내용을 입력하세요" required />
+          <Textarea 
+            label="공지내용" 
+            rows={8} 
+            placeholder="공지 내용을 입력하세요" 
+            value={formData.content}
+            onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+            required 
+          />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
-              <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors">
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                multiple
+                onChange={handleFileSelect}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+              />
+              <label
+                htmlFor="file-upload"
+                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors block"
+              >
                 <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                   <Upload className="w-5 h-5 text-gray-500" />
                 </div>
                 <p className="text-sm text-gray-600">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
                 <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLSX, 이미지 파일 (최대 10MB)</p>
-              </div>
+              </label>
+              
+              {/* 선택된 파일 목록 */}
+              {uploadedFiles.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleFileRemove(index)}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
         </div>
       </Modal>

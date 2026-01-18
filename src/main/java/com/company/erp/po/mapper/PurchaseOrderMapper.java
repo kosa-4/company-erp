@@ -16,6 +16,9 @@ public interface PurchaseOrderMapper {
 
         List<PurchaseOrderDTO> selectList(Map<String, Object> params);
 
+        // 협력사 전용: 본인 발주 목록 조회
+        List<PurchaseOrderDTO> selectVendorOrderList(Map<String, Object> params);
+
         PurchaseOrderDTO selectHeader(String poNo);
 
         List<PurchaseOrderItemDTO> selectItems(String poNo);

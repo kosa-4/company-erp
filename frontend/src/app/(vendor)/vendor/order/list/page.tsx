@@ -11,6 +11,9 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  unit: string;              // 단위
+  deliveryDate: string;      // 납기일
+  storageLocation: string;   // 배송지 (저장위치)
 }
 
 interface Order {
@@ -35,8 +38,8 @@ export default function VendorOrderListPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      // 발주전송(S) 상태만 조회
-      const response = await fetch('/api/v1/purchase-orders?status=S');
+      // 협력사 전용 API 사용 (자동으로 본인 협력사 발주만 조회)
+      const response = await fetch('/api/v1/purchase-orders/vendor/orders?status=S');
       
       if (!response.ok) {
         throw new Error('발주서 조회에 실패했습니다.');
@@ -58,6 +61,9 @@ export default function VendorOrderListPage() {
           quantity: item.orderQuantity || 0,
           unitPrice: item.unitPrice || 0,
           amount: item.amount || 0,
+          unit: item.unit || 'EA',
+          deliveryDate: item.deliveryDate || '',
+          storageLocation: item.storageLocation || '',
         })),
       }));
 
@@ -264,9 +270,12 @@ export default function VendorOrderListPage() {
                     <tr>
                       <th className="px-4 py-2.5 text-left font-medium text-gray-500">품목코드</th>
                       <th className="px-4 py-2.5 text-left font-medium text-gray-500">품목명</th>
+                      <th className="px-4 py-2.5 text-center font-medium text-gray-500">단위</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">수량</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">단가</th>
                       <th className="px-4 py-2.5 text-right font-medium text-gray-500">금액</th>
+                      <th className="px-4 py-2.5 text-center font-medium text-gray-500">납기일</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-gray-500">배송지</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -274,9 +283,12 @@ export default function VendorOrderListPage() {
                       <tr key={item.itemCode}>
                         <td className="px-4 py-3 text-gray-600 font-mono text-xs">{item.itemCode}</td>
                         <td className="px-4 py-3 text-gray-900">{item.itemName}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{item.unit}</td>
                         <td className="px-4 py-3 text-right text-gray-900">{item.quantity}</td>
                         <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(item.unitPrice)}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(item.amount)}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{item.deliveryDate || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.storageLocation || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
