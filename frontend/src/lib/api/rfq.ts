@@ -142,6 +142,37 @@ export interface RfqProgressSearchRequest {
     ctrlUserNm?: string;
 }
 
+export interface RfqSelectionResultResponse {
+    rfqNum: string;
+    rfqSubject: string;
+    rfqType: string;
+    rfqTypeNm: string;
+    vendorCd: string;
+    vendorNm: string;
+    totalAmt: number;
+    ctrlUserId: string;
+    ctrlUserNm: string;
+    regDate: string;
+    selectDate: string;
+}
+
+export interface RfqResultItem {
+    itemCd: string;
+    itemNm: string;
+    spec: string;
+    unit: string;
+    qty: number;
+    unitPrice: number;
+    amt: number;
+    dlvyDate: string;
+    rmk: string;
+}
+
+export interface RfqSelectionResultDetailResponse {
+    header: RfqSelectionResultResponse;
+    items: RfqResultItem[];
+}
+
 export interface RfqSaveRequest {
     rfqNum?: string;
     prNum?: string;
@@ -241,4 +272,16 @@ export const rfqApi = {
      */
     deleteRfq: (rfqNum: string) =>
         api.delete<void>(`/v1/buyer/rfqs/${rfqNum}`),
+
+    /**
+     * 선정 결과 목록 조회
+     */
+    getSelectionResultList: (params: RfqSelectionSearchRequest) =>
+        api.get<RfqSelectionResultResponse[]>('/v1/buyer/rfq-selection-results', { ...params }),
+
+    /**
+     * 선정 결과 상세 조회
+     */
+    getSelectionResultDetail: (rfqNum: string) =>
+        api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
 };
