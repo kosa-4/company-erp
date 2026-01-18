@@ -2,9 +2,11 @@ package com.company.erp.master.vendoruser.service;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
+import com.company.erp.master.vendoruser.dto.VendorUserUpdateDto;
 import com.company.erp.master.vendoruser.mapper.VendorUserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,9 +69,108 @@ public class VendorUserPortalService {
         vendorUserRegisterDto.setCreatedAt(LocalDate.now());
         vendorUserRegisterDto.setCreatedBy(vendorUserRegisterDto.getUserId());
         vendorUserRegisterDto.setStatus("N");
+        vendorUserRegisterDto.setReqType("I");
 
         // 3. db 저장
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
     }
 
+    /* 수정 */
+//
+//2. 수정해도 괜찮은 항목 (Soft Update)
+//    업무 진행과는 상관없는 단순 신상 정보는 굳이 막지 않아도 됩니다.
+//
+//    사용자 이름: 오타 수정이나 개명 등.
+//
+//    연락처 / 이메일: 업무 연락을 위해 오히려 최신화되어야 하는 정보입니다.
+//
+//            비밀번호: 보안상 언제든 바꿀 수 있어야 합니다.
+
+    /* 삭제 */
+    // 1. 협력사 사용자 삭제
+    @Transactional
+    public void deleteVendorUser(
+            VendorUserRegisterDto vendorUserRegisterDto,
+            SessionUser loginUser){
+
+        String userId = vendorUserRegisterDto.getUserId();
+        String loginId = loginUser.getUserId();
+
+        
+        VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserVNCH_USByUserId(userId);
+        // 1) 존재 여부 확인
+        if(vendorUser == null){
+            throw new IllegalStateException("사용자 정보가 없습니다.");
+        }
+        // 2) 상태 값 확인
+        switch(vendorUser.getStatus()){
+            case "A": // 2-1. 승인 상태일 시
+
+                // 1) 자신은 삭제 불가
+                if(loginId.equals(userId)){
+                    throw new IllegalStateException("본인 계정은 삭제할 수 없습니다.");
+                }
+                
+                // 2) 같은 협력체 소속 사용자만 삭제 가능 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+                if(!loginUser.getVendorCd().equals(vendorUser.getVendorCode()) ){
+                    throw new IllegalStateException("타업체 사용자는 삭제할 수 없습니다.");
+                }
+        
+                // 3) 최소 한명의 관리자 유지 필수 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+                if("VENDOR".equals(vendorUser.getRole())){
+                    String vendorCode = vendorUser.getVendorCode();
+                    int countAdmin = vendorUserMapper.countVendorUsers(vendorCode);
+                    if(countAdmin < 2){
+                        throw new IllegalStateException("관리자 수는 최소 1명이 필요합니다.");
+                    }
+                }
+        
+                // 4) 삭제 승인 중복 시 삭제 불가
+                int countWaitRequest = vendorUserMapper.countWaitRequest(userId);
+                if (countWaitRequest > 0) {
+                    throw new IllegalStateException("이미 심사 중인 삭제 요청이 있어 삭제할 수 없습니다.");
+                }
+        
+                // 5) 진행 중인 승인 건 존재 시 삭제 불가
+                int countActiveProcess = vendorUserMapper.countActiveProcess(userId);
+                if(countActiveProcess > 0){
+                    throw new IllegalStateException("진행 중인 프로세스가 존재하여 삭제할 수 없습니다.");
+                }
+                
+                String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
+                vendorUserRegisterDto.setAskUserNum(askUserNum);
+                vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+                vendorUserRegisterDto.setCreatedBy(loginId);
+                vendorUserRegisterDto.setStatus("C");
+                vendorUserRegisterDto.setReqType("D");
+                vendorUserRegisterDto.setPassword(vendorUser.getPassword());
+
+                vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
+                break;
+            case "R": // 2-2. 반려 상태일 시
+                
+                // 1) 업데이트 dto 생성
+                VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+                updateDto.setAskUserNum(vendorUser.getAskUserNum());
+                updateDto.setModifiedAt(LocalDate.now());
+                updateDto.setModifiedBy(loginId);
+
+                // 2) 마스터 테이블 등록 이력 조회
+                // 등록 이력 존재 시 재삭제 요청 / 미등록 시 바로 삭제 처리
+                int countMaster = vendorUserMapper.countVendorUsersByUserId(vendorUser.getUserId());
+
+                if(countMaster > 0){
+                    updateDto.setStatus("C");
+                    updateDto.setReqType("D");
+                    updateDto.setRejectRemark("");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                } else{
+                    updateDto.setDelFlag("Y");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                }
+                break;
+            default: // 2-3. 신규, 수정 요청 상태일 시
+                throw new IllegalStateException("심사 중인 사용자는 삭제할 수 없습니다.");
+        }
+    }
 }
