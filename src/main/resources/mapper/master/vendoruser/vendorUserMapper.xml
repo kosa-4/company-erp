@@ -467,7 +467,7 @@
             M.VENDOR_CD AS vendorCode
         FROM
             VNCH_US CH
-        INNER JOIN
+        LEFT JOIN
             VN_USER M
         ON
             CH.USER_ID = M.USER_ID
