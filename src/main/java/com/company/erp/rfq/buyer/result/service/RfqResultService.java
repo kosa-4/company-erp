@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +35,7 @@ public class RfqResultService {
         // 헤더 정보 조회
         RfqSelectionResultResponse header = mapper.selectRfqResultHeader(rfqNum);
         if (header == null) {
-            throw new IllegalArgumentException("해당 견적 결과가 존재하지 않거나 선정되지 않았습니다.");
+            throw new NoSuchElementException("해당 견적 결과가 존재하지 않거나 선정되지 않았습니다.");
         }
 
         // 품목 정보 조회

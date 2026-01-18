@@ -66,24 +66,28 @@
           AND h.DEL_FLAG = 'N'
     </select>
 
-    <!-- 선정된 업체의 견적 상세 품목 조회 -->
+    <!-- 선정된 업체의 견적 상세 품목 조회 (RFQDT 기준) -->
     <select id="selectRfqResultItems" resultType="com.company.erp.rfq.buyer.result.dto.response.RfqResultItem">
-        SELECT d.ITEM_CD    AS itemCd,
-               d.ITEM_NM    AS itemNm,
-               d.SPEC       AS spec,
-               d.UNIT       AS unit,
-               d.QTY        AS qty,
-               d.UNIT_PRICE AS unitPrice,
-               d.AMT        AS amt,
-               d.DLVY_DATE  AS dlvyDate,
-               d.RMK        AS rmk
-        FROM RFQVNDT d
-        INNER JOIN RFQVN v ON d.RFQ_NUM = v.RFQ_NUM 
-            AND d.VENDOR_CD = v.VENDOR_CD
-        WHERE d.RFQ_NUM = #{rfqNum}
-          AND v.SELECT_YN = 'Y'
-          AND d.DEL_FLAG = 'N'
-        ORDER BY d.ITEM_CD ASC
+        SELECT rd.ITEM_CD       AS itemCd,
+               rd.ITEM_DESC     AS itemNm,
+               rd.ITEM_SPEC     AS spec,
+               rd.UNIT_CD       AS unit,
+               rvd.QUOTE_QT     AS qty,
+               rvd.QUOTE_UNIT_PRC AS unitPrice,
+               rvd.QUOTE_AMT    AS amt,
+               rvd.DELY_DATE    AS dlvyDate,
+               rvd.RMK          AS rmk
+        FROM RFQHD rh
+        INNER JOIN RFQDT rd ON rh.RFQ_NUM = rd.RFQ_NUM AND rd.DEL_FLAG = 'N'
+        INNER JOIN RFQVN rv ON rh.RFQ_NUM = rv.RFQ_NUM AND rv.SELECT_YN = 'Y' AND rv.DEL_FLAG = 'N'
+        LEFT JOIN RFQVNDT rvd ON rd.RFQ_NUM = rvd.RFQ_NUM 
+             AND rd.LINE_NO = rvd.LINE_NO 
+             AND rvd.VENDOR_CD = rv.VENDOR_CD 
+             AND rvd.DEL_FLAG = 'N'
+        WHERE rh.RFQ_NUM = #{rfqNum}
+          AND rh.PROGRESS_CD = 'J'
+          AND rh.DEL_FLAG = 'N'
+        ORDER BY rd.LINE_NO ASC, rd.ITEM_CD ASC
     </select>
 
 </mapper>
