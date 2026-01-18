@@ -76,16 +76,77 @@ public class VendorUserPortalService {
     }
 
     /* 수정 */
-//
-//2. 수정해도 괜찮은 항목 (Soft Update)
-//    업무 진행과는 상관없는 단순 신상 정보는 굳이 막지 않아도 됩니다.
-//
-//    사용자 이름: 오타 수정이나 개명 등.
-//
-//    연락처 / 이메일: 업무 연락을 위해 오히려 최신화되어야 하는 정보입니다.
-//
-//            비밀번호: 보안상 언제든 바꿀 수 있어야 합니다.
 
+    @Transactional
+    public void updateVendorUser(
+            VendorUserRegisterDto vendorUserRegisterDto,
+            SessionUser loginUser) {
+        String userId = vendorUserRegisterDto.getUserId();
+        String loginId = loginUser.getUserId();
+
+        // !프론트 값 신뢰 금지
+        VendorUserListDto vendorUser = vendorUserMapper.selectVendorUserVNCH_USByUserId(userId);
+
+        // 1) 정보 존재 여부 확인
+        if (vendorUser == null) {
+            throw new IllegalStateException("사용자 정보가 없습니다.");
+        }
+
+        // 2) 같은 협력체 소속 사용자만 삭제 가능 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+        if(!loginUser.getVendorCd().equals(vendorUser.getVendorCode()) ){
+            throw new IllegalStateException("타업체 사용자는 수정할 수 없습니다.");
+        }
+
+        // 3) 비밀 번호 암호화
+        String encryptedPassword = null;
+        String password = vendorUserRegisterDto.getPassword();
+        if(!"".equals(password) && password != null ){
+            encryptedPassword = passwordEncoder.encode(vendorUserRegisterDto.getPassword());
+
+        }
+
+        // 4) 승인 상태 확인
+        // 승인 대기 상태('C', 'N')일 시 수정 불가
+        String status = vendorUser.getStatus();
+
+        switch (status) {
+            case "A": // 4-1. 승인 상태일 시
+                
+                // 4-1-1) 입력 값 저장
+                String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
+                vendorUserRegisterDto.setAskUserNum(askUserNum);
+                vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+                vendorUserRegisterDto.setCreatedBy(loginId);
+                vendorUserRegisterDto.setStatus("C");
+                vendorUserRegisterDto.setReqType("U");
+
+                encryptedPassword = encryptedPassword  != null ? encryptedPassword : vendorUser.getPassword();
+                vendorUserRegisterDto.setPassword(encryptedPassword);
+
+                vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
+                break;
+
+            case "R": // 4-2. 반려 상태일 시
+
+                // 4-2-1) 업데이트 dto 생성
+                VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+                updateDto.setAskUserNum(vendorUser.getAskUserNum());
+                updateDto.setModifiedAt(LocalDate.now());
+                updateDto.setModifiedBy(loginId);
+                updateDto.setStatus("C");
+                updateDto.setReqType("U");
+                updateDto.setUserId(vendorUserRegisterDto.getUserId());
+                updateDto.setEmail(vendorUserRegisterDto.getEmail());
+                updateDto.setPhone(vendorUserRegisterDto.getPhone());
+                updateDto.setPassword(encryptedPassword);
+
+                vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                break;
+
+            default: // 2-3. 신규, 수정 요청 상태일 시
+                throw new IllegalStateException("심사 중일 시 수정이 불가합니다.");
+        }
+    }
     /* 삭제 */
     // 1. 협력사 사용자 삭제
     @Transactional
@@ -96,8 +157,8 @@ public class VendorUserPortalService {
         String userId = vendorUserRegisterDto.getUserId();
         String loginId = loginUser.getUserId();
 
-        
-        VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserVNCH_USByUserId(userId);
+
+        VendorUserListDto vendorUser = vendorUserMapper.selectVendorUserVNCH_USByUserId(userId);
         // 1) 존재 여부 확인
         if(vendorUser == null){
             throw new IllegalStateException("사용자 정보가 없습니다.");

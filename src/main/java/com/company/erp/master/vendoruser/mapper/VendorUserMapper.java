@@ -46,7 +46,7 @@ public interface VendorUserMapper {
     // 6. 진행 중인 프로세스 조회
     int countActiveProcess(String userId);
     // 7. user id로 대기 테이블 조회
-    VendorUserRegisterDto selectVendorUserVNCH_USByUserId(String userId);
+    VendorUserListDto selectVendorUserVNCH_USByUserId(String userId);
 
     /* 저장 */
     // 1. 대기 테이블 저장

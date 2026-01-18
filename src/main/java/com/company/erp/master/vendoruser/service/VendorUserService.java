@@ -99,7 +99,8 @@ public class VendorUserService {
                     vendorUserMapper.updateVN_USERByUserId(vendorUserUpdateDto);
                     vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
                     break;
-//                case "U": // 5-3. 수정
+                case "U": // 5-3. 수정
+                    // 1) 마스터 테이블 업데이트
             }
 
 
@@ -142,10 +143,9 @@ public class VendorUserService {
                     dto.setDelFlag("N");
                     vendorUserMapper.updateVNCH_USByAskUserNum(dto);
                     break;
+                case "U":
+                    // 대기 테이블 업데이트
             }
-
-//            // 4) 대기 테이블 업데이트
-//            vendorUserMapper.updateVNCH_USByAskUserNum(dto);
         }
     }
     

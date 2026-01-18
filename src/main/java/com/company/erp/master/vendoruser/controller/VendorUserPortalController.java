@@ -71,6 +71,15 @@ public class VendorUserPortalController {
         return ApiResponse.ok("사용자 승인 요청이 완료 되었습니다.");
     }
 
+    /* 협력 업체 사용자 수정 */
+    @PutMapping("/update")
+    public ApiResponse updateVendorUser(
+            @Valid @RequestBody VendorUserRegisterDto vendorUserRegisterDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        vendorUserPortalService.updateVendorUser(vendorUserRegisterDto, loginUser);
+        return ApiResponse.ok("사용자 수정 요청이 완료 되었습니다.");
+    }
+
     /* 협력 업체 사용자 삭제 */
     @RequireRole({"VENDOR"})
     @DeleteMapping("/delete")
