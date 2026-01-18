@@ -91,8 +91,14 @@ public class VendorUserPortalService {
         if (vendorUser == null) {
             throw new IllegalStateException("사용자 정보가 없습니다.");
         }
+        
+        // 2) 요청 여부 확인
+        int existsRequest = vendorUserMapper.countWaitRequest(userId);
+        if (existsRequest > 0) {
+            throw new IllegalStateException("이미 요청된 id 입니다.");
+        }
 
-        // 2) 같은 협력체 소속 사용자만 삭제 가능 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+        // 2) 같은 협력체 소속 사용자만 수정 가능 (프론트 값 신뢰 금지, db에서 조회 후 입력)
         if(!loginUser.getVendorCd().equals(vendorUser.getVendorCode()) ){
             throw new IllegalStateException("타업체 사용자는 수정할 수 없습니다.");
         }
@@ -102,7 +108,6 @@ public class VendorUserPortalService {
         String password = vendorUserRegisterDto.getPassword();
         if(!"".equals(password) && password != null ){
             encryptedPassword = passwordEncoder.encode(vendorUserRegisterDto.getPassword());
-
         }
 
         // 4) 승인 상태 확인
@@ -115,6 +120,7 @@ public class VendorUserPortalService {
                 // 4-1-1) 입력 값 저장
                 String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
                 vendorUserRegisterDto.setAskUserNum(askUserNum);
+                vendorUserRegisterDto.setVendorCode(vendorUser.getVendorCode());
                 vendorUserRegisterDto.setCreatedAt(LocalDate.now());
                 vendorUserRegisterDto.setCreatedBy(loginId);
                 vendorUserRegisterDto.setStatus("C");

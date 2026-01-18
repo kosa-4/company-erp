@@ -79,7 +79,7 @@ export default function VendorUsersPage() {
 
     try {
       const method = editingUser ? 'PUT' : 'POST';
-      const url = editingUser ? `/api/v1/vendor-portal/users/${editingUser.userId}` : "/api/v1/vendor-portal/users/add";
+      const url = editingUser ? `/api/v1/vendor-portal/users/update` : "/api/v1/vendor-portal/users/add";
 
       const payload: any = {
         userName: formData.userName,
