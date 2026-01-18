@@ -5,7 +5,6 @@ import com.company.erp.common.exception.UnauthorizedException;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSaveRequest;
-import com.company.erp.rfq.buyer.request.dto.request.RfqSelectRequest;
 import com.company.erp.rfq.buyer.request.dto.request.RfqSendRequest;
 import com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse;
 import com.company.erp.rfq.buyer.request.service.RfqBuyerRequestService;
@@ -74,20 +73,6 @@ public class RfqBuyerRequestController {
         request.setRfqNum(rfqNum);
         service.saveRfq(request, userId);
         return ResponseEntity.ok(ApiResponse.ok("저장되었습니다."));
-    }
-
-    /**
-     * 업체 선정 (G 상태에서만, 단일 선정)
-     */
-    @PostMapping("/{rfqNum}/select")
-    public ResponseEntity<ApiResponse<Void>> selectVendor(
-            HttpSession session,
-            @PathVariable String rfqNum,
-            @Valid @RequestBody RfqSelectRequest request) {
-        String userId = loginUserId(session);
-        request.setRfqNum(rfqNum);
-        service.selectVendor(request, userId);
-        return ResponseEntity.ok(ApiResponse.ok("업체 선정이 완료되었습니다."));
     }
 
     /**
