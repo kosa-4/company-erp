@@ -42,29 +42,67 @@ public class VendorUserService {
             // 3) 상태값 확인
             String status = vendorUser.getStatus();
             if(!"C".equals(status) && !"N".equals(status)){
-                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+                throw new IllegalStateException("선택 가능한 상태가 아닙니다.");
             }
 
-            // 4) 입력값 설정
-            dto.setCreatedAt(LocalDate.now());
-            dto.setCreatedBy(loginId);
-            dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(loginId);
-            dto.setSignDate(LocalDate.now());
-            dto.setPassword(vendorUser.getPassword());
+            // 5) 요청 타입에 따라 분기
+            String req = vendorUser.getReqType();
+            switch(req){
+                
+                case "I": // 5-1. 등록
+                    
+                    // 재가입 여부 확인
+                    int historyCount = vendorUserMapper.countVendorUserHistoryByUserId(vendorUser.getUserId());
+                    if(historyCount > 0){
+                        VendorUserUpdateDto masterUpdateDto = new VendorUserUpdateDto();
+                        masterUpdateDto.setModifiedAt(LocalDate.now());
+                        masterUpdateDto.setModifiedBy(loginId);
+                        masterUpdateDto.setAskUserNum(askUserNum);
+                        masterUpdateDto.setDelFlag("N");
+                        masterUpdateDto.setStatus("A");
+                        masterUpdateDto.setUserId(vendorUser.getUserId());
 
-            // 5) 마스터 테이블 추가
-            vendorUserMapper.insertUserVN_USER(dto);
-            
-            // 6) 대기 테이블 업데이트
-            VendorUserUpdateDto vendorUserUpdateDto = new VendorUserUpdateDto();
-            vendorUserUpdateDto.setModifiedAt(LocalDate.now());
-            vendorUserUpdateDto.setModifiedBy(loginId);
-            vendorUserUpdateDto.setAskUserNum(askUserNum);
-            vendorUserUpdateDto.setDelFlag("N");
-            vendorUserUpdateDto.setStatus("A");
+                        vendorUserMapper.updateVN_USERByUserId(masterUpdateDto);
+                    } else{
+                        dto.setCreatedAt(LocalDate.now());
+                        dto.setCreatedBy(loginId);
+                        dto.setModifiedAt(LocalDate.now());
+                        dto.setModifiedBy(loginId);
+                        dto.setSignDate(LocalDate.now());
+                        dto.setPassword(vendorUser.getPassword());
+                        dto.setRole("VENDOR");
 
-            vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+                        vendorUserMapper.insertUserVN_USER(dto);
+                    }
+
+                    // 6) 대기 테이블 업데이트
+                    VendorUserUpdateDto requestUpdateDto = new VendorUserUpdateDto();
+                    requestUpdateDto.setModifiedAt(LocalDate.now());
+                    requestUpdateDto.setModifiedBy(loginId);
+                    requestUpdateDto.setAskUserNum(askUserNum);
+                    requestUpdateDto.setDelFlag("N");
+                    requestUpdateDto.setStatus("A");
+
+                    vendorUserMapper.updateVNCH_USByAskUserNum(requestUpdateDto);
+                    break;
+                case "D": // 5-2. 삭제
+                    // 1) 마스터 / 대기 테이블 업데이트
+                    VendorUserUpdateDto vendorUserUpdateDto = new VendorUserUpdateDto();
+                    vendorUserUpdateDto.setUserId(vendorUser.getUserId());
+                    vendorUserUpdateDto.setModifiedAt(LocalDate.now());
+                    vendorUserUpdateDto.setModifiedBy(loginId);
+                    vendorUserUpdateDto.setDelFlag("Y");
+                    vendorUserUpdateDto.setStatus("A");
+//                    vendorUserUpdateDto.setStatus("R");
+                    vendorUserUpdateDto.setAskUserNum(askUserNum);
+
+                    vendorUserMapper.updateVN_USERByUserId(vendorUserUpdateDto);
+                    vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+                    break;
+//                case "U": // 5-3. 수정
+            }
+
+
         }
     }
 
@@ -88,13 +126,26 @@ public class VendorUserService {
                 throw new IllegalStateException("반려 가능한 상태가 아닙니다.");
             }
 
-            // 3) 입력값 설정
-            dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(String.valueOf(loginId));
-            dto.setStatus("R");
-            
-            // 4) 대기 테이블 업데이트
-            vendorUserMapper.updateVNCH_USByAskUserNum(dto);
+            // 3) 요청 타입 확인
+            String reqType = vendorUser.getReqType();
+            switch(reqType){
+                case "I": // 등록 요청 시
+                    dto.setModifiedAt(LocalDate.now());
+                    dto.setModifiedBy(String.valueOf(loginId));
+                    dto.setStatus("R");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(dto);
+                    break;
+                case "D": // 삭제 요청 반려 시
+                    dto.setModifiedAt(LocalDate.now());
+                    dto.setModifiedBy(String.valueOf(loginId));
+                    dto.setStatus("R");
+                    dto.setDelFlag("N");
+                    vendorUserMapper.updateVNCH_USByAskUserNum(dto);
+                    break;
+            }
+
+//            // 4) 대기 테이블 업데이트
+//            vendorUserMapper.updateVNCH_USByAskUserNum(dto);
         }
     }
     

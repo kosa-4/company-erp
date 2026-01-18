@@ -34,6 +34,9 @@ public class VendorUserRegisterDto {
     private String password;
     private String comType;
     private LocalDate signDate;
+    private String role;
+    private String reqType;
+    private String delFlag;
 }
 // VN_USER //
 /*

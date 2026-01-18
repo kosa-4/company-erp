@@ -7,12 +7,12 @@ import java.time.LocalDate;
 @Data
 public class VendorUserUpdateDto {
     private String askUserNum;
-
+    private String userId;
     private String delFlag;
     private String status;
     private LocalDate modifiedAt;
     private String modifiedBy;
-
+    private String reqType;
     private String rejectRemark;
 
 }
