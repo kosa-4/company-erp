@@ -89,7 +89,7 @@
         UPDATE RFQVN
         SET SELECT_YN   = 'Y',
             PROGRESS_CD = 'J',
-            RMK         = #{selectRmk},
+            SELECT_RMK  = #{selectRmk},
             MOD_DATE    = NOW(),
             MOD_USER_ID = #{loginUserId}
         WHERE RFQ_NUM = #{rfqNum} 
