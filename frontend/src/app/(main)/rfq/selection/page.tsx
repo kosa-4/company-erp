@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  PageHeader, 
-  Card, 
-  Button, 
-  Input, 
+import React, { useState, useEffect } from 'react';
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
   Select,
   DatePicker,
   DataGrid,
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { rfqApi, RfqProgressGroup } from '@/lib/api/rfq';
+import { toast } from 'sonner';
 
 interface RfqSelection {
   rfqNo: string;
@@ -28,7 +30,7 @@ interface RfqSelection {
   quotedAmount: number | null;
   vendorName: string;
   vendorCode: string;
-  status: 'CLOSED' | 'OPENED' | 'SELECTED';
+  status: 'M' | 'G' | 'J';
   sentDate: string;
   submittedDate: string;
 }
@@ -36,7 +38,7 @@ interface RfqSelection {
 
 
 export default function RfqSelectionPage() {
-  const [data] = useState<RfqSelection[]>([]);
+  const [data, setData] = useState<RfqSelection[]>([]);
   const [selectedRows, setSelectedRows] = useState<RfqSelection[]>([]);
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
@@ -50,10 +52,46 @@ export default function RfqSelectionPage() {
   const [loading, setLoading] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
+  // 선정 사유 모달 상태
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [selectionReason, setSelectionReason] = useState('');
+
   const handleSearch = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setLoading(false);
+    try {
+      const response = await rfqApi.getSelectionList({
+        rfqNum: searchParams.rfqNo,
+        rfqSubject: searchParams.rfqName,
+        fromDate: searchParams.startDate,
+        toDate: searchParams.endDate,
+        rfqType: searchParams.rfqType,
+        progressCd: searchParams.status,
+        ctrlUserNm: searchParams.buyer
+      });
+
+      // 신규 API는 이미 플래트닝된 데이터를 내려주므로 간단히 변환
+      const formatted: RfqSelection[] = response.map(item => ({
+        rfqNo: item.rfqNum,
+        rfqName: item.rfqSubject,
+        rfqType: item.rfqTypeNm,
+        buyer: item.ctrlUserNm,
+        createdAt: item.regDate?.substring(0, 10),
+        itemCode: '-',
+        itemName: '-',
+        estimatedAmount: 0,
+        quotedAmount: item.totalAmt || 0,
+        vendorName: item.vendorNm,
+        vendorCode: item.vendorCd,
+        status: item.progressCd as any,
+        sentDate: item.sendDate?.substring(0, 10) || '-',
+        submittedDate: item.submitDate?.substring(0, 10) || '-',
+      }));
+      setData(formatted);
+    } catch (error) {
+      toast.error('목록 조회 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
@@ -68,15 +106,19 @@ export default function RfqSelectionPage() {
     });
   };
 
+  useEffect(() => {
+    handleSearch();
+  }, []);
 
 
-  const getStatusBadge = (status: RfqSelection['status']) => {
-    const config = {
-      CLOSED: { variant: 'gray' as const, label: '마감' },
-      OPENED: { variant: 'blue' as const, label: '개찰' },
-      SELECTED: { variant: 'green' as const, label: '선정완료' },
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { variant: any, label: string }> = {
+      M: { variant: 'gray' as const, label: '마감' },
+      G: { variant: 'blue' as const, label: '개찰' },
+      J: { variant: 'green' as const, label: '선정완료' },
     };
-    const { variant, label } = config[status];
+    const { variant, label } = config[status] || { variant: 'gray', label: status };
     return <Badge variant={variant}>{label}</Badge>;
   };
 
@@ -98,21 +140,21 @@ export default function RfqSelectionPage() {
     { key: 'createdAt', header: '등록일', width: 90, align: 'center' },
     { key: 'itemCode', header: '품목코드', width: 120, align: 'center' },
     { key: 'itemName', header: '품목명', width: 140, align: 'left' },
-    { 
-      key: 'estimatedAmount', 
-      header: '예상금액', 
-      width: 110, 
+    {
+      key: 'estimatedAmount',
+      header: '예상금액',
+      width: 110,
       align: 'right',
       render: (value) => `₩${formatNumber(Number(value))}`,
     },
-    { 
-      key: 'quotedAmount', 
-      header: '견적금액', 
-      width: 110, 
+    {
+      key: 'quotedAmount',
+      header: '총 견적금액',
+      width: 120,
       align: 'right',
       render: (value, row) => {
-        if (row.status === 'CLOSED') {
-          return <span className="text-gray-400">***</span>;
+        if (row.status === 'M') {
+          return <span className="text-gray-400 font-bold tracking-widest">****</span>;
         }
         return value ? `₩${formatNumber(Number(value))}` : '-';
       },
@@ -130,30 +172,66 @@ export default function RfqSelectionPage() {
     { key: 'submittedDate', header: '제출일', width: 90, align: 'center' },
   ];
 
-  const handleOpen = () => {
-    const closedItems = selectedRows.filter(r => r.status === 'CLOSED');
-    if (closedItems.length === 0) {
-      alert('마감 상태의 항목만 개찰할 수 있습니다.');
+  const handleOpen = async () => {
+    const mRows = selectedRows.filter(r => r.status === 'M');
+    if (mRows.length === 0) {
+      toast.error('마감(M) 상태의 항목만 개찰할 수 있습니다.');
       return;
     }
-    alert(`${closedItems.length}건이 개찰되었습니다. 견적금액이 공개됩니다.`);
-    setSelectedRows([]);
+
+    // 개찰은 RFQ 단위로 수행 (중복 제거)
+    const rfqNums = Array.from(new Set(mRows.map(r => r.rfqNo)));
+
+    if (!confirm(`${rfqNums.length}건을 개찰하시겠습니까? 개찰 후에는 금액이 공개됩니다.`)) return;
+
+    try {
+      setLoading(true);
+      await Promise.all(rfqNums.map(num => rfqApi.openRfq(num)));
+      toast.success('개찰 처리가 완료되었습니다.');
+      handleSearch();
+      setSelectedRows([]);
+    } catch (error) {
+      toast.error('개찰 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelect = () => {
-    const openedItems = selectedRows.filter(r => r.status === 'OPENED');
-    if (openedItems.length === 0) {
-      alert('개찰 상태의 항목만 선정할 수 있습니다.');
+    if (selectedRows.length !== 1) {
+      toast.error('선정할 협력사를 하나만 선택해주세요.');
       return;
     }
-    alert('협력업체가 선정되었습니다.');
-    setSelectedRows([]);
+    const row = selectedRows[0];
+    if (row.status !== 'G') {
+      toast.error('개찰(G) 상태인 항목만 선정할 수 있습니다.');
+      return;
+    }
+
+    setSelectionReason('');
+    setIsReasonModalOpen(true);
+  };
+
+  const confirmSelection = async () => {
+    const row = selectedRows[0];
+    try {
+      setLoading(true);
+      await rfqApi.selectVendor(row.rfqNo, row.vendorCode, selectionReason);
+      toast.success('협력업체 선정이 완료되었습니다.');
+      setIsReasonModalOpen(false);
+      handleSearch();
+      setSelectedRows([]);
+    } catch (error) {
+      toast.error('선정 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div>
-      <PageHeader 
-        title="협력업체 선정" 
+      <PageHeader
+        title="협력업체 선정"
         subtitle="마감된 견적에 대해 협력업체를 선정합니다."
         icon={
           <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -201,9 +279,9 @@ export default function RfqSelectionPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
           options={[
             { value: '', label: '전체' },
-            { value: 'CLOSED', label: '마감' },
-            { value: 'OPENED', label: '개찰' },
-            { value: 'SELECTED', label: '선정완료' },
+            { value: 'M', label: '마감' },
+            { value: 'G', label: '개찰' },
+            { value: 'J', label: '선정완료' },
           ]}
         />
         <Input
@@ -214,7 +292,7 @@ export default function RfqSelectionPage() {
         />
       </SearchPanel>
 
-      <Card 
+      <Card
         title="협력업체 선정 목록"
         padding={false}
         actions={
@@ -304,6 +382,35 @@ export default function RfqSelectionPage() {
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary">엑셀다운로드</Button>
             <Button variant="secondary" onClick={() => setIsCompareModalOpen(false)}>닫기</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 선정 사유 입력 모달 */}
+      <Modal
+        isOpen={isReasonModalOpen}
+        onClose={() => setIsReasonModalOpen(false)}
+        title="업체 선정 사유 입력"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-blue-50 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>선정 대상:</strong> {selectedRows[0]?.vendorName} ({selectedRows[0]?.vendorCode})
+            </p>
+          </div>
+          <Input
+            label="선정 사유"
+            placeholder="선정 사유를 입력하세요 (예: 최저가 낙찰, 납기 준수 등)"
+            value={selectionReason}
+            onChange={(e) => setSelectionReason(e.target.value)}
+            required
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>취소</Button>
+            <Button variant="success" onClick={confirmSelection} disabled={!selectionReason || loading}>
+              최종 선정 확정
+            </Button>
           </div>
         </div>
       </Modal>

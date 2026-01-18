@@ -54,17 +54,6 @@ public interface RfqBuyerRequestMapper {
 
         int deleteRfqVendors(@Param("rfqNum") String rfqNum);
 
-        // --- 선정 (Select) ---
-        // (1) HD 상태 전환 (G -> J) + Owner 체크
-        int updateRfqStatusToSelected(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
-
-        // (2) Vendor 선정 상태 초기화
-        int resetRfqVendorsSelection(@Param("rfqNum") String rfqNum);
-
-        // (3) 대상 Vendor 선정 (Y)
-        int updateRfqVendorSelection(@Param("rfqNum") String rfqNum, @Param("vendorCd") String vendorCd,
-                        @Param("loginUserId") String loginUserId);
-
         // --- 마감 및 삭제 (Close/Delete) ---
         int deleteRfq(@Param("rfqNum") String rfqNum, @Param("loginUserId") String loginUserId);
 

@@ -96,7 +96,40 @@ export interface RfqProgressGroup {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
+        totalAmt?: number;
+        selectYn?: string;
     }[];
+}
+
+export interface RfqSelectionResponse {
+    rfqNum: string;
+    rfqSubject: string;
+    rfqType: string;
+    rfqTypeNm: string;
+    progressCd: string;
+    progressNm: string;
+    ctrlUserId: string;
+    ctrlUserNm: string;
+    regDate: string;
+    vendorCd: string;
+    vendorNm: string;
+    vnProgressCd: string;
+    vnProgressNm: string;
+    sendDate?: string;
+    submitDate?: string;
+    totalAmt?: number;
+    selectYn?: string;
+    rmk?: string;
+}
+
+export interface RfqSelectionSearchRequest {
+    rfqNum?: string;
+    rfqSubject?: string;
+    fromDate?: string;
+    toDate?: string;
+    rfqType?: string;
+    progressCd?: string;
+    ctrlUserNm?: string;
 }
 
 export interface RfqProgressSearchRequest {
@@ -176,8 +209,20 @@ export const rfqApi = {
     /**
      * 업체 선정
      */
-    selectVendor: (rfqNum: string, vendorCd: string) =>
-        api.post<void>(`/v1/buyer/rfqs/${rfqNum}/select`, { vendorCd }),
+    selectVendor: (rfqNum: string, vendorCd: string, selectRmk?: string) =>
+        api.post<void>(`/v1/buyer/rfq-selections/${rfqNum}/select`, { vendorCd, selectRmk }),
+
+    /**
+     * 견적 개찰 (M -> G)
+     */
+    openRfq: (rfqNum: string) =>
+        api.post<void>(`/v1/buyer/rfq-selections/${rfqNum}/open`, {}),
+
+    /**
+     * 선정 대상 견적 목록 조회
+     */
+    getSelectionList: (params: RfqSelectionSearchRequest) =>
+        api.get<RfqSelectionResponse[]>(`/v1/buyer/rfq-selections`, { ...params }),
 
     /**
      * 견적 진행 현황 목록 조회 (그룹화)
