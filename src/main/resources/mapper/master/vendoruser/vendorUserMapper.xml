@@ -109,7 +109,8 @@
             U.status,
             U.createdAt,
             U.blockFlag,
-            U.delFlag
+            U.delFlag,
+            U.reqType
         FROM (
             <!--테이블 결합-->
             SELECT
@@ -122,7 +123,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 'N' AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                REQ_TYPE AS reqType
             FROM
                 VNCH_US
             WHERE
@@ -142,7 +144,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 BLOCK_FLAG AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                NULL AS reqType
             FROM
                 VN_USER
             WHERE
