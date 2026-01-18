@@ -106,7 +106,7 @@ export default function VendorUsersPage() {
   const handleDelete = async (user: any) => {
     if (confirm('해당 사용자를 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`/api/v1/vendor-portal/users/delete  `, {
+        const response = await fetch(`/api/v1/vendor-portal/users/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

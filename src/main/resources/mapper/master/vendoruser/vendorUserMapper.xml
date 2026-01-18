@@ -413,7 +413,7 @@
             <!--마스터 테이블 존재 여부 확인-->
             SELECT 1 FROM VN_USER WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
             UNION ALL
-            <!--대기 테이블 존재 여부 확인 (반려 제외) -->
+            <!--대기 테이블 존재 여부 확인 -->
             SELECT 1 FROM VNCH_US WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
         ) <!--1 => 데이터 존재 여부만 확인-->
     </select>

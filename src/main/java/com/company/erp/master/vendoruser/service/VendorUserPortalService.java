@@ -111,13 +111,13 @@ public class VendorUserPortalService {
                     throw new IllegalStateException("본인 계정은 삭제할 수 없습니다.");
                 }
                 
-                // 2) 같은 협력체 소속 사용자만 삭제 가능
-                if(!loginUser.getVendorCd().equals(vendorUserRegisterDto.getVendorCode()) ){
+                // 2) 같은 협력체 소속 사용자만 삭제 가능 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+                if(!loginUser.getVendorCd().equals(vendorUser.getVendorCode()) ){
                     throw new IllegalStateException("타업체 사용자는 삭제할 수 없습니다.");
                 }
         
-                // 3) 최소 한명의 관리자 유지 필수
-                if("VENDOR".equals(vendorUserRegisterDto.getRole())){
+                // 3) 최소 한명의 관리자 유지 필수 (프론트 값 신뢰 금지, db에서 조회 후 입력)
+                if("VENDOR".equals(vendorUser.getRole())){
                     String vendorCode = vendorUserRegisterDto.getVendorCode();
                     int countAdmin = vendorUserMapper.countVendorUsers(vendorCode);
                     if(countAdmin < 2){

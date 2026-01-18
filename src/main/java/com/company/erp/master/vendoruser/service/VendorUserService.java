@@ -22,11 +22,7 @@ public class VendorUserService {
 
     /* 조회 */
     public List<VendorUserListDto> getVendorUserList(VendorUserSearchDto vendorUserSearchDto) {
-        List<VendorUserListDto> vendorUsers = vendorUserMapper.selectVendorUserList(vendorUserSearchDto);
-        if(vendorUsers == null || vendorUsers.isEmpty()) {
-            throw new IllegalStateException("검색 결과가 없습니다.");
-        }
-        return vendorUsers;
+        return vendorUserMapper.selectVendorUserList(vendorUserSearchDto);
     }
     
     /* 저장 */
@@ -97,7 +93,7 @@ public class VendorUserService {
                     vendorUserUpdateDto.setModifiedBy(loginId);
                     vendorUserUpdateDto.setDelFlag("Y");
                     vendorUserUpdateDto.setStatus("A");
-                    vendorUserUpdateDto.setStatus("R");
+//                    vendorUserUpdateDto.setStatus("R");
                     vendorUserUpdateDto.setAskUserNum(askUserNum);
 
                     vendorUserMapper.updateVN_USERByUserId(vendorUserUpdateDto);
@@ -143,7 +139,6 @@ public class VendorUserService {
                     dto.setModifiedBy(String.valueOf(loginId));
                     dto.setStatus("R");
                     dto.setDelFlag("N");
-                    vendorUserMapper.updateVNCH_USByAskUserNum(dto);
                     vendorUserMapper.updateVNCH_USByAskUserNum(dto);
                     break;
             }

@@ -118,8 +118,12 @@ export default function VendorUserPage() {
       if (response.ok) {
         alert('처리가 완료되었습니다.');
         // 처리된 항목을 목록에서 제거
-        const processedUserIds = new Set(targets.map(t => t.userId));
-        setVendorUsers(prev => prev.filter(user => !processedUserIds.has(user.userId)));
+        const processedKeys = new Set(
+          targets.map(t => `${t.userId}::${t.askUserNum}`)
+        );
+        setVendorUsers(prev =>
+          prev.filter(user => !processedKeys.has(`${user.userId}::${user.askUserNum}`))
+        );
         setSelectedRows([]);
       }
     } catch (e) {
