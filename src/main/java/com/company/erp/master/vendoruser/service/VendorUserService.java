@@ -98,6 +98,7 @@ public class VendorUserService {
 
                     vendorUserMapper.updateVN_USERByUserId(vendorUserUpdateDto);
                     vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+                    break;
 //                case "U": // 5-3. 수정
             }
 

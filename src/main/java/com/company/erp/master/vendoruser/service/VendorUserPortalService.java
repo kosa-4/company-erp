@@ -97,7 +97,7 @@ public class VendorUserPortalService {
         String loginId = loginUser.getUserId();
 
         
-        VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByUserId(userId);
+        VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserVNCH_USByUserId(userId);
         // 1) 존재 여부 확인
         if(vendorUser == null){
             throw new IllegalStateException("사용자 정보가 없습니다.");
@@ -118,7 +118,7 @@ public class VendorUserPortalService {
         
                 // 3) 최소 한명의 관리자 유지 필수 (프론트 값 신뢰 금지, db에서 조회 후 입력)
                 if("VENDOR".equals(vendorUser.getRole())){
-                    String vendorCode = vendorUserRegisterDto.getVendorCode();
+                    String vendorCode = vendorUser.getVendorCode();
                     int countAdmin = vendorUserMapper.countVendorUsers(vendorCode);
                     if(countAdmin < 2){
                         throw new IllegalStateException("관리자 수는 최소 1명이 필요합니다.");

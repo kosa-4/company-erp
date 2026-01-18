@@ -414,7 +414,19 @@
             SELECT 1 FROM VN_USER WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
             UNION ALL
             <!--대기 테이블 존재 여부 확인 -->
-            SELECT 1 FROM VNCH_US WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
+            SELECT 1 FROM (
+                SELECT
+                    DEL_FLAG
+                FROM
+                    VNCH_US
+                WHERE
+                    USER_ID = #{userId}
+                ORDER BY
+                    ASK_USER_NUM DESC
+                LIMIT 1
+            ) AS CH
+            WHERE CH.DEL_FLAG = 'N'
+            <!--과거 내역까지 조회되는 문제 발생 => 최신값 하나만 조회하여 delflag 확인-->
         ) <!--1 => 데이터 존재 여부만 확인-->
     </select>
 
@@ -445,20 +457,26 @@
             DEL_FLAG = 'N'
     </select>
 
-    <select id="selectVendorUserByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+    <select id="selectVendorUserVNCH_USByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
         SELECT
-            PROGRESS_CD AS status,
-            PASSWORD AS password,
-            ASK_USER_NUM as askUserNum,
-            USER_ID AS userId
+            CH.PROGRESS_CD AS status,
+            CH.PASSWORD AS password,
+            CH.ASK_USER_NUM as askUserNum,
+            CH.USER_ID AS userId,
+            M.ROLE AS role,
+            M.VENDOR_CD AS vendorCode
         FROM
-            VNCH_US
+            VNCH_US CH
+        INNER JOIN
+            VN_USER M
+        ON
+            CH.USER_ID = M.USER_ID
         WHERE
-            USER_ID = #{userId}
+            CH.USER_ID = #{userId}
         AND
-            DEL_FLAG = 'N'
+            CH.DEL_FLAG = 'N'
         ORDER BY
-            ASK_USER_NUM DESC
+            CH.ASK_USER_NUM DESC
         LIMIT 1
     </select>
 
