@@ -57,18 +57,19 @@ export interface NoticeDetailResponse {
     viewCnt: number;        // 조회수
     modDate?: string;       // 수정일
     modUserId?: string;     // 수정자ID
+    files?: FileListItemResponse[];  // 첨부파일 목록
 }
 
 export const noticeApi = {
     /**
      * 공지사항 등록 화면 초기 데이터 조회
      */
-    getInitData: () => api.get<NoticeInitData>('/notice/init'),
+    getInitData: () => api.get<NoticeInitData>('/v1/notice/init'),
 
     /**
      * 공지사항 등록
      */
-    save: (data: NoticeRequest) => api.post<{ message: string }>('/notice/save', data),
+    save: (data: NoticeRequest) => api.post<{ message: string }>('/v1/notice/save', data),
 
     /**
      * 공지사항 목록 조회
@@ -79,25 +80,25 @@ export const noticeApi = {
         if (params?.endDate) mappedParams.endDate = params.endDate;
         if (params?.subject) mappedParams.subject = params.subject;
         
-        return api.get<NoticeListResponse[]>('/notice/list', mappedParams);
+        return api.get<NoticeListResponse[]>('/v1/notice/list', mappedParams);
     },
 
     /**
      * 공지사항 상세 조회
      */
-    getDetail: (noticeNum: string) => api.get<NoticeDetailResponse>(`/notice/${noticeNum}/detail`),
+    getDetail: (noticeNum: string) => api.get<NoticeDetailResponse>(`/v1/notice/${noticeNum}/detail`),
     
     /**
      * 공지사항 수정 (제목, 내용만)
      */
     update: (noticeNum: string, data: { subject: string; content: string }) => 
-        api.put<{ message: string }>(`/notice/${noticeNum}/update`, data),
+        api.put<{ message: string }>(`/v1/notice/${noticeNum}/update`, data),
     
     /**
      * 공지사항 삭제
      */
     delete: (noticeNum: string) => 
-        api.delete<{ message: string }>(`/notice/${noticeNum}`),
+        api.delete<{ message: string }>(`/v1/notice/${noticeNum}`),
     
     /**
      * 공지사항 첨부파일 업로드
@@ -121,17 +122,23 @@ export const noticeApi = {
     },
     
     /**
-     * 공지사항 첨부파일 목록 조회
+     * 공지사항 첨부파일 목록 조회 (FileController 사용)
      */
     getFileList: (noticeNum: string) => 
-        api.get<FileListItemResponse[]>(`/notice/${noticeNum}/files`),
+        api.get<FileListItemResponse[]>('/files', { refType: 'NOTICE', refNo: noticeNum }),
     
     /**
-     * 파일 다운로드
+     * 파일 다운로드 (FileController 사용)
      */
     downloadFile: (fileNum: string) => {
-        window.open(`/api/v1/files/${fileNum}`, '_blank');
+        window.open(`/api/files/${fileNum}`, '_blank');
     },
+    
+    /**
+     * 파일 삭제 (FileController 사용)
+     */
+    deleteFile: (fileNum: string) => 
+        api.delete<{ message: string }>(`/files/${fileNum}`),
 };
 
 /**
