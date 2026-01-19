@@ -117,10 +117,6 @@ public class NoticeController {
         try {
             SessionUser user = getSessionUser(session);
             
-            System.out.println("파일 업로드 시작 - noticeNum: " + noticeNum);
-            System.out.println("파일명: " + file.getOriginalFilename());
-            System.out.println("파일 크기: " + file.getSize() + " bytes");
-            System.out.println("Content-Type: " + file.getContentType());
             
             // vendorCd 설정: 구매사는 null, 협력사는 세션의 vendorCd
             String vendorCd = null;
