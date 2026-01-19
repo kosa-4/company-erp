@@ -248,7 +248,13 @@ export default function VendorPage() {
         body: JSON.stringify(data),
       });
 
+      if (!res.ok) throw new Error('협력업체 저장에 실패했습니다.');
       const result = await res.json(); // { success: true, message: "...", data: "VN..." }
+
+      if (!result.success) {
+        alert(result.message || '저장에 실패했습니다.');
+        return;
+      }
 
       if (result.success) {
         const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
@@ -389,7 +395,7 @@ const fetchVendorFiles = async (vendorCode: string) => {
     const response = await fetch(`/api/v1/vendors/${vendorCode}/files`);
     if (response.ok) {
       const result = await response.json(); // ApiResponse 객체
-      console.log("백엔드 파일 응답:", result); // 여기서 구조를 꼭 확인해보세요!
+      // console.log("백엔드 파일 응답:", result); // 여기서 구조를 꼭 확인해보세요!
 
       // result가 아니라 result.data(실제 리스트)를 세팅해야 함
       if (result.success && result.data) {

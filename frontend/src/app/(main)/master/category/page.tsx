@@ -52,6 +52,22 @@ export default function CategoryPage() {
             setCateMap(tempMap);
             setRootList(tempRoot);
             setInputDatas([]); 
+            // 2. ★ 선택 상태 정합성 보정 로직 추가 ★
+            // 현재 선택된 ID들이 새로 받아온 tempMap에 여전히 존재하는지 확인합니다.
+            const nextMainId = tempMap[selectedMainId] ? selectedMainId : "";
+            
+            // 중분류는 대분류가 살아있고, 대분류의 자식 중에 중분류 ID가 있어야 함
+            const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some(c => c.itemCls === selectedMidId))
+                ? selectedMidId : "";
+            
+            // 소분류는 중분류가 살아있고, 중분류의 자식 중에 소분류 ID가 있어야 함
+            const nextSubId = (nextMidId && tempMap[nextMidId]?.children?.some(c => c.itemCls === selectedSubId))
+                ? selectedSubId : "";
+
+            // 보정된 값으로 상태 업데이트
+            setSelectedMainId(nextMainId);
+            setSelectedMidId(nextMidId);
+            setSelectedSubId(nextSubId);
         } catch (err) {
             console.error("데이터 로딩 중 오류 발생", err);
         }
@@ -107,10 +123,9 @@ export default function CategoryPage() {
         
         const dataToSave = inputDatas.filter(d => {
             const isSameParent = d.parentItemCls === currentParent;
-            // 수정한 부분: 명칭만 필수값으로 체크 (코드는 자동채번일 경우 비어있을 수 있음)
             const isNameFilled = d.itemClsNm && d.itemClsNm.trim() !== '';
-            
-            return isSameParent && isNameFilled;
+            const isCodeFilled = d.itemLvl !== 0 || (d.itemCls && d.itemCls.trim() !== ''); // 최상위에서 code 미입력 시
+            return isSameParent && isNameFilled && isCodeFilled;
         });
 
         if (dataToSave.length === 0) {

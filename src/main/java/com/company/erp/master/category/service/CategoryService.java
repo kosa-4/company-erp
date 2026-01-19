@@ -61,7 +61,11 @@ public class CategoryService {
                         String maxChildCls = categoryMapper.selectMaxChild(parentCls);
                         int startNum = 1;
                         if(maxChildCls != null){
-                            startNum = Integer.parseInt(maxChildCls.substring(parentCls.length())) + 1;
+                            try {
+                                startNum = Integer.parseInt(maxChildCls.substring(parentCls.length())) + 1;
+                            } catch (NumberFormatException e) {
+                                throw new IllegalStateException("카테고리 코드 형식이 올바르지 않습니다: " + maxChildCls);
+                            }
                         }
                         maxChildClassMap.put(parentCls, startNum);
                     }
