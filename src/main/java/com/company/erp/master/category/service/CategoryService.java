@@ -77,7 +77,7 @@ public class CategoryService {
                     filteredList.add(dto);
 
                     // 3) 숫자 제한 체크
-                    if(currentNum + 1 > 9){
+                    if(currentNum > 9){
                         throw new IllegalArgumentException("[" + parentCls + "] 카테고리의 자식 생성 한도(9개)를 초과했습니다.");
                     }
 

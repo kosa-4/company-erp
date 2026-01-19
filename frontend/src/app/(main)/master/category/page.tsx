@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PageHeader } from '@/components/ui';
 import CategoryTable from './CategoryTable';
 import { Category } from '../item/TreeItem';
@@ -24,6 +24,19 @@ export default function CategoryPage() {
     const [selectedMainId, setSelectedMainId] = useState(""); // 1단 선택
     const [selectedMidId, setSelectedMidId] = useState("");  // 2단 선택
     const [selectedSubId, setSelectedSubId] = useState("");  // 3단 선택
+
+    
+      // 현재 선택 상태를 실시간으로 추적하는 '상자(Ref)'를 만듭니다.
+    const selectedMainIdRef = useRef(selectedMainId);
+    const selectedMidIdRef = useRef(selectedMidId);
+    const selectedSubIdRef = useRef(selectedSubId);
+
+    // 상태값이 바뀔 때마다 상자 안의 내용물(.current)을 최신으로 갈아끼웁니다.
+    useEffect(() => {
+        selectedMainIdRef.current = selectedMainId;
+        selectedMidIdRef.current = selectedMidId;
+        selectedSubIdRef.current = selectedSubId;
+    }, [selectedMainId, selectedMidId, selectedSubId]);
 
     const [inputDatas, setInputDatas] = useState<InputCategory[]>([]);
 
@@ -52,19 +65,15 @@ export default function CategoryPage() {
             setCateMap(tempMap);
             setRootList(tempRoot);
             setInputDatas([]); 
-            // 2. ★ 선택 상태 정합성 보정 로직 추가 ★
-            // 현재 선택된 ID들이 새로 받아온 tempMap에 여전히 존재하는지 확인합니다.
-            const nextMainId = tempMap[selectedMainId] ? selectedMainId : "";
             
-            // 중분류는 대분류가 살아있고, 대분류의 자식 중에 중분류 ID가 있어야 함
-            const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some(c => c.itemCls === selectedMidId))
-                ? selectedMidId : "";
+            const nextMainId = tempMap[selectedMainIdRef.current] ? selectedMainIdRef.current : "";
             
-            // 소분류는 중분류가 살아있고, 중분류의 자식 중에 소분류 ID가 있어야 함
-            const nextSubId = (nextMidId && tempMap[nextMidId]?.children?.some(c => c.itemCls === selectedSubId))
-                ? selectedSubId : "";
+            const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some(c => c.itemCls === selectedMidIdRef.current))
+                ? selectedMidIdRef.current : "";
+            
+            const nextSubId = (nextMidId && tempMap[nextMidId]?.children?.some(c => c.itemCls === selectedSubIdRef.current))
+                ? selectedSubIdRef.current : "";
 
-            // 보정된 값으로 상태 업데이트
             setSelectedMainId(nextMainId);
             setSelectedMidId(nextMidId);
             setSelectedSubId(nextSubId);

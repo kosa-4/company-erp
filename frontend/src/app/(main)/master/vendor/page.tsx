@@ -54,6 +54,7 @@ interface AttFile {
 
 export default function VendorPage() {
 
+
   /* 검색 및 조회 */
 
   // 1. 상태 변수 정의
@@ -770,7 +771,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                           className="text-gray-400 hover:text-red-500 transition-colors"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l18 18" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
                       </li>
