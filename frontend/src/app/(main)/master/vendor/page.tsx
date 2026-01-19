@@ -21,7 +21,7 @@ interface Vendor {
   askNum:string;
   vendorCode: string;
   vendorName: string;
-  vendorNameEn?: string;
+  vendorNameEng?: string;
   status: 'N' | 'C' | 'A' | 'R';
   businessType: 'CORP' | 'INDIVIDUAL';
   businessNo: string;
@@ -34,7 +34,7 @@ interface Vendor {
   email: string;
   businessCategory?: string;
   industry?: string;
-  establishDate?: string;
+  foundationDate?: string;
   useYn: 'Y' | 'N';
   stopReason?: string;
   remark?: string;
@@ -256,7 +256,7 @@ export default function VendorPage() {
 
   
   /* 승인 */
-  const approveVendor = async () => {
+  const approveVendor = async (targets: Vendor[] = selectedVendors) => {
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/approve`, {
@@ -264,7 +264,7 @@ export default function VendorPage() {
         headers:{
           'Content-Type':'application/json',
         },
-        body:JSON.stringify(selectedVendors),
+        body:JSON.stringify(targets),
       });
       if(!response.ok){
         throw new Error('협력업체 승인에 실패했습니다.');
@@ -279,7 +279,7 @@ export default function VendorPage() {
   };
 
   /* 반려 */
-  const rejectVendor = async () => {
+  const rejectVendor = async (targets: Vendor[] = selectedVendors) => {
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/reject`, {
@@ -287,7 +287,7 @@ export default function VendorPage() {
         headers:{
           'Content-Type':'application/json',
         },
-        body:JSON.stringify(selectedVendors),
+        body:JSON.stringify(targets),
       });
       if(!response.ok){
         throw new Error('협력업체 반려에 실패했습니다.');
@@ -370,8 +370,8 @@ export default function VendorPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="success" onClick={approveVendor}>승인</Button>
-            <Button variant="danger" onClick={rejectVendor}>반려</Button>
+            <Button variant="danger" onClick={() => selectedVendor && rejectVendor([selectedVendor])}>반려</Button>
+            <Button variant="success" onClick={() => selectedVendor && approveVendor([selectedVendor])}>승인</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -425,7 +425,7 @@ export default function VendorPage() {
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title="협력업체 상세"
+        title="협력업체 상세 정보"
         size="xl"
         footer={
           <>
@@ -433,26 +433,34 @@ export default function VendorPage() {
             {selectedVendor?.status === 'A' && (
               <Button variant="primary">수정</Button>
             )}
-            {selectedVendor?.status === 'C' && (
+            {/* {(selectedVendor?.status === 'N' || selectedVendor?.status === 'C') && (
               <>
-                <Button variant="danger">반려</Button>
-                <Button variant="success">승인</Button>
+                <Button variant="danger" onClick={rejectVendor}>반려</Button>
+                <Button variant="success" onClick={approveVendor}>승인</Button>
               </>
-            )}
+            )} */}
           </>
         }
       >
         {selectedVendor && (
           <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b">
-              <h3 className="text-lg font-semibold">{selectedVendor.vendorName}</h3>
-              {getStatusBadge(selectedVendor.status)}
+            {/* 상단 헤더: 업체명 및 상태 */}
+            <div className="flex items-center justify-between pb-4 border-b">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-gray-800">{selectedVendor.vendorName}</h3>
+                {getStatusBadge(selectedVendor.status)}
+              </div>
+              <div className="text-sm text-gray-500">
+                등록일: {selectedVendor.createdAt} | 등록자: {selectedVendor.createdBy}
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly />
-              <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
-              <Input label="협력사명(영문)" value={selectedVendor.vendorNameEn || ''} readOnly />
+            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+              {/* 기본 정보 */}
+              <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-gray-50" />
+              <Input label="협력사명(국문)" value={selectedVendor.vendorName} readOnly />
+              <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly />
+              
               <Select
                 disabled
                 label="사업형태"
@@ -464,20 +472,41 @@ export default function VendorPage() {
               />
               <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
               <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
-              <Input label="우편번호" value={selectedVendor.zipCode} readOnly />
+
+              {/* 연락처 정보 */}
+              <Input label="전화번호" value={selectedVendor.phone || '-'} readOnly />
+              <Input label="팩스번호" value={selectedVendor.fax || '-'} readOnly />
+              <Input label="이메일" value={selectedVendor.email} readOnly />
+
+              {/* 주소 정보 (전체 너비 사용) */}
+              <div className="col-span-1">
+                <Input label="우편번호" value={selectedVendor.zipCode} readOnly />
+              </div>
               <div className="col-span-2">
                 <Input label="주소" value={selectedVendor.address} readOnly />
               </div>
-              <Input label="상세주소" value={selectedVendor.addressDetail || ''} readOnly />
-              <Input label="전화번호" value={selectedVendor.phone || ''} readOnly />
-              <Input label="팩스번호" value={selectedVendor.fax || ''} readOnly />
-              <Input label="이메일" value={selectedVendor.email} readOnly />
-              <Input label="설립일자" value={selectedVendor.establishDate || ''} readOnly />
-              <Input label="업태" value={selectedVendor.businessCategory || ''} readOnly />
-              <Input label="업종" value={selectedVendor.industry || ''} readOnly />
+              <div className="col-span-3">
+                <Input label="상세주소" value={selectedVendor.addressDetail || '-'} readOnly />
+              </div>
+
+              {/* 기타 정보 */}
+              <Input label="설립일자" value={selectedVendor.foundationDate || '-'} readOnly />
+              <Input label="업종" value={selectedVendor.industry || '-'} readOnly />
+              <div className="col-span-1">
+                <Input label="사용여부" value={selectedVendor.useYn === 'Y' ? '사용' : '미사용'} readOnly 
+                        className={selectedVendor.useYn === 'Y' ? 'text-emerald-600' : 'text-red-500'} />
+              </div>
+              {selectedVendor.status === 'R' && (
+                <div className="col-span-2">
+                  <Input label="반려사유" value={selectedVendor.stopReason || '-'} readOnly className="text-red-600" />
+                </div>
+              )}
             </div>
 
-            <Textarea label="비고" value={selectedVendor.remark || ''} rows={3} readOnly />
+            {/* 비고란 (하단 배치) */}
+            <div className="pt-4 border-t">
+              <Textarea label="비고" value={selectedVendor.remark || '등록된 비고가 없습니다.'} rows={3} readOnly />
+            </div>
           </div>
         )}
       </Modal>
@@ -531,7 +560,6 @@ export default function VendorPage() {
               <Input name="fax" label="팩스번호" placeholder="02-0000-0000" />
               <Input name="email" label="이메일" type="email" placeholder="email@example.com" required />
               <DatePicker name='foundationAt' label="설립일자" />
-              <Input name="businessCategory" label="업태" placeholder="업태 입력" />
               <Input name="industry" label="업종" placeholder="업종 입력" />
             </div>
             

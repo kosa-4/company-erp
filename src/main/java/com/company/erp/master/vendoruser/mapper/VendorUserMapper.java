@@ -15,7 +15,7 @@ public interface VendorUserMapper {
     // 1. 협력 업체 사용자 전체 조회
     List<VendorUserListDto> selectVendorUserList(VendorUserSearchDto VendorUserSearchDto);
     // 2. 협력 업체 사용자 단일 조회
-    VendorUserRegisterDto selectVendorUserByAskUserNum(String askUserNum);
+    VendorUserListDto selectVendorUserByAskUserNum(String askUserNum);
     // 3. 협력 업체 사용자 마스터 테이블 단일 조회
     int countVendorUsersByUserId(String userId);
     // 4. 협력사 사용자 과거 이력 조회
@@ -46,7 +46,7 @@ public interface VendorUserMapper {
     // 6. 진행 중인 프로세스 조회
     int countActiveProcess(String userId);
     // 7. user id로 대기 테이블 조회
-    VendorUserRegisterDto selectVendorUserVNCH_USByUserId(String userId);
+    VendorUserListDto selectVendorUserVNCH_USByUserId(String userId);
 
     /* 저장 */
     // 1. 대기 테이블 저장

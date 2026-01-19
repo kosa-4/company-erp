@@ -10,6 +10,11 @@ import java.time.LocalDate;
 
 @Data
 public class VendorUserRegisterDto {
+    // --- validation group ---
+    public interface OnCreate{}
+    public interface OnUpdate{}
+    // ------------------------
+
     private String askUserNum;
     private String vendorCode;
     private LocalDate createdAt;
@@ -26,7 +31,7 @@ public class VendorUserRegisterDto {
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "전화번호 형식이 올바르지 않습니다.")
     private String phone;
     private String fax;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(groups = OnCreate.class, message = "필수 입력 사항입니다.")
     @Email(message = "이메일 형식이 올바르지 않습니다")
     private String email;
     @NotBlank(message = "필수 입력 사항입니다.")

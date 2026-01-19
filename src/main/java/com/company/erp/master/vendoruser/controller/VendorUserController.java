@@ -36,7 +36,7 @@ public class VendorUserController {
     }
 
     /* 저장 */
-    // 1. 협력 업체 사용자 승인
+    // 1. 구매사에서 승인
     @PostMapping("/approve")
     public ApiResponse approveVendorUser(@RequestBody List<VendorUserRegisterDto> vendorUserRegisterDtoList, HttpSession currentSession) {
 
