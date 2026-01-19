@@ -15,7 +15,6 @@ const vendorPathNames: Record<string, string> = {
   '/vendor/master/users': '담당자관리',
   '/vendor/rfq': '견적관리',
   '/vendor/rfq/submit': '견적현황',
-  '/vendor/rfq/result': '견적결과',
   '/vendor/order': '발주관리',
   '/vendor/order/list': '발주서 조회',
 };

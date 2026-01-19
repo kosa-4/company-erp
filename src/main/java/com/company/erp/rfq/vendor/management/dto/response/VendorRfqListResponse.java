@@ -27,4 +27,5 @@ public class VendorRfqListResponse {
     private Integer itemCount; // 품목 수
     private String rfqType; // 견적 유형 (OC: 수의계약, AC: 지명경쟁)
     private String rfqTypeName; // 견적 유형명
+    private String selectYn; // 선정 여부 (Y: 선정, N: 미선정)
 }
