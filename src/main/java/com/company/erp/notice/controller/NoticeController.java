@@ -1,5 +1,8 @@
 package com.company.erp.notice.controller;
 
+import com.company.erp.common.file.dto.FileListItemResponse;
+import com.company.erp.common.file.dto.FileUploadResponse;
+import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.notice.dto.NoticeDetailResponse;
@@ -11,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +26,9 @@ import java.util.Map;
 public class NoticeController {
 
     private final NoticeService noticeService;
+    private final FileService fileService;
+    
+    private static final String REF_TYPE_NOTICE = "NOTICE";
 
     //공지사항 초기 데이터
     @GetMapping("/init")
@@ -42,10 +49,11 @@ public class NoticeController {
         
         SessionUser user = getSessionUser(session);
         
-        noticeService.insertNotice(request, user);
+        String noticeNum = noticeService.insertNotice(request, user);
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "공지사항이 등록되었습니다.");
+        response.put("noticeNum", noticeNum);
         return ResponseEntity.ok(response);
     }
 
@@ -88,13 +96,67 @@ public class NoticeController {
         
         SessionUser user = getSessionUser(session);
         
-        NoticeDetailResponse noticeDetail = noticeService.selectNoticeDetail(noticeNum);
+        NoticeDetailResponse noticeDetail = noticeService.selectNoticeDetail(noticeNum, user);
         
         if (noticeDetail == null) {
             return ResponseEntity.notFound().build();
         }
         
         return ResponseEntity.ok(noticeDetail);
+    }
+    
+    /**
+     * 공지사항 첨부파일 업로드
+     */
+    @PostMapping("/{noticeNum}/files")
+    public ResponseEntity<FileUploadResponse> uploadFile(
+            @PathVariable String noticeNum,
+            @RequestParam("file") MultipartFile file,
+            HttpSession session) {
+        
+        try {
+            SessionUser user = getSessionUser(session);
+            
+            if (user == null) {
+                System.err.println("파일 업로드 실패 - 세션 정보 없음");
+                return ResponseEntity.status(401).build();
+            }
+            
+            System.out.println("파일 업로드 시작 - noticeNum: " + noticeNum);
+            System.out.println("파일명: " + file.getOriginalFilename());
+            System.out.println("파일 크기: " + file.getSize() + " bytes");
+            System.out.println("Content-Type: " + file.getContentType());
+            
+            // vendorCd 설정: 구매사는 null, 협력사는 세션의 vendorCd
+            String vendorCd = null;
+            if ("V".equals(user.getComType())) {
+                vendorCd = user.getVendorCd();
+            }
+            
+            FileUploadResponse response = fileService.upload(file, REF_TYPE_NOTICE, noticeNum, vendorCd, user);
+            
+            System.out.println("파일 업로드 성공 - fileNum: " + response.getFileNum());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("파일 업로드 실패 - noticeNum: " + noticeNum + ", error: " + e.getMessage());
+            throw e;
+        }
+    }
+    
+    /**
+     * 공지사항 첨부파일 목록 조회
+     */
+    @GetMapping("/{noticeNum}/files")
+    public ResponseEntity<List<FileListItemResponse>> getFileList(
+            @PathVariable String noticeNum,
+            HttpSession session) {
+        
+        SessionUser user = getSessionUser(session);
+        
+        List<FileListItemResponse> files = fileService.list(REF_TYPE_NOTICE, noticeNum, user);
+        return ResponseEntity.ok(files);
     }
     
     /**
