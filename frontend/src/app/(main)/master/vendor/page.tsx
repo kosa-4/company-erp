@@ -716,7 +716,6 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
               saveVendor();
-              setIsCreateModalOpen(false);
             }}
             confirmText="저장"
           />
