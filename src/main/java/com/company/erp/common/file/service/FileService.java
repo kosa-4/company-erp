@@ -126,6 +126,22 @@ public class FileService {
         return new FileUploadResponse(fileNum, originName, file.getSize(), file.getContentType());
     }
 
+    // 파일 정보 조회 (다운로드용 파일명, Content-Type 가져오기)
+    @Transactional(readOnly = true)
+    public AttFileEntity getFileInfo(String fileNum, SessionUser ses) {
+        if (ses == null) throw new FileException("세션 정보가 없습니다.");
+        if (isBlank(fileNum)) throw new FileException("파일번호는 필수입니다.");
+
+        AttFileEntity file = fileMapper.findByFileNum(fileNum);
+        if (file == null) throw new FileException("파일을 찾을 수 없습니다.");
+        if ("Y".equalsIgnoreCase(file.getDelFlag())) throw new FileException("삭제된 파일입니다.");
+
+        // 조회 권한 검증: V는 vendorCd 일치만 허용 / B는 전체 허용
+        assertVendorAccess(file, ses);
+
+        return file;
+    }
+
     // 다운로드
     @Transactional(readOnly = true)
     public Resource download(String fileNum, SessionUser ses) {
@@ -157,7 +173,7 @@ public class FileService {
 
         // 협력사는 자기 협력사의 파일만 노출, 구매사는 전체
         return list.stream()
-                .filter(f -> canView(f, ses))
+                .filter(f -> canView(f, ses, refType))
                 .map(f -> new FileListItemResponse(
                         f.getFileNum(),
                         f.getOriginName(),
@@ -209,6 +225,9 @@ public class FileService {
         // 구매사(B)는 전체 허용
         if (!"V".equalsIgnoreCase(ses.getComType())) return;
 
+        // 공지사항(NOTICE)은 모든 협력사가 접근 가능
+        if ("NOTICE".equalsIgnoreCase(file.getRefType())) return;
+
         String myVendor = ses.getVendorCd();
         String fileVendor = file.getVendorCd();
 
@@ -218,8 +237,14 @@ public class FileService {
         }
     }
 
-    private boolean canView(AttFileEntity file, SessionUser ses) {
+    private boolean canView(AttFileEntity file, SessionUser ses, String refType) {
+        // 구매사는 전체 파일 조회 가능
         if (!"V".equalsIgnoreCase(ses.getComType())) return true;
+        
+        // 공지사항(NOTICE)은 모든 협력사가 볼 수 있음 (구매사가 업로드한 파일 포함)
+        if ("NOTICE".equalsIgnoreCase(refType)) return true;
+        
+        // 그 외 문서는 협력사는 자신의 vendorCd와 일치하는 파일만 조회 가능
         String myVendor = ses.getVendorCd();
         return !isBlank(myVendor) && myVendor.equals(file.getVendorCd());
     }

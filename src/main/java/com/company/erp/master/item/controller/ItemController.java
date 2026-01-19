@@ -3,15 +3,18 @@ package com.company.erp.master.item.controller;
 import com.company.erp.common.docNum.dto.DocNumDTO;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionIgnore;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.item.dto.ItemDetailDto;
 import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
 import com.company.erp.master.item.service.ItemService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,19 +61,11 @@ public class ItemController {
 
     // 품목 저장
     @PostMapping("/new")
-    public ResponseEntity<String> registerItem(@RequestBody ItemDetailDto itemDetailDto){
-        try{
-            itemService.registerItem(itemDetailDto);
-            return ResponseEntity.ok().body("상품 등록이 완료되었습니다.");
-        }
-        catch (RuntimeException e){
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-        catch (Exception e){
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-
+    public ApiResponse registerItem(
+            @Valid @RequestBody ItemDetailDto itemDetailDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser){
+        itemService.registerItem(itemDetailDto, loginUser);
+        return ApiResponse.ok("상품 등록이 완료되었습니다.");
     }
 
     // 품목 수정

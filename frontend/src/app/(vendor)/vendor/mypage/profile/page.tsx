@@ -91,6 +91,7 @@ export default function VendorProfilePage() {
           ceoName: data.ceoName || '',
           industry: data.industry || '',
           phone: data.phone || '',
+          businessType: data.businessType || '',
         }));
       } catch (error: any) {
         console.error('초기 데이터 로드 실패:', error);
@@ -220,7 +221,8 @@ export default function VendorProfilePage() {
                                 <Input
                                     name="vendorNameEn"
                                     value={form.vendorNameEn}
-                                    onChange={handleChange}
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -237,29 +239,26 @@ export default function VendorProfilePage() {
                                 <Input
                                     name="ceoName"
                                     value={form.ceoName}
-                                    onChange={handleChange}
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
                                 />
                             </div>
                              <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-gray-500">사업형태</label>
-                                <select
+                                <Input
                                     name="businessType"
                                     value={form.businessType}
-                                    onChange={handleChange}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <option value="법인">법인</option>
-                                    <option value="개인">개인</option>
-                                    <option value="일반과세자">일반과세자</option>
-                                    <option value="간이과세자">간이과세자</option>
-                                </select>
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-gray-500">업종</label>
                                 <Input
                                     name="industry"
                                     value={form.industry}
-                                    onChange={handleChange}
+                                    readOnly
+                                    className="bg-gray-50 text-gray-500"
                                 />
                             </div>
                          </div>
@@ -274,16 +273,8 @@ export default function VendorProfilePage() {
                                         name="zipCode"
                                         value={form.zipCode}
                                         readOnly
-                                        className="bg-gray-50"
+                                        className="bg-gray-50 text-gray-500"
                                     />
-                                    <Button 
-                                      type="button" 
-                                      variant="outline" 
-                                      className="whitespace-nowrap"
-                                      onClick={handleAddressSearch}
-                                    >
-                                        우편번호 검색
-                                    </Button>
                                 </div>
                             </div>
                              <div className="grid grid-cols-1 gap-2">
@@ -302,8 +293,8 @@ export default function VendorProfilePage() {
                                 name="phone"
                                 type="tel"
                                 value={form.phone}
-                                onChange={handleChange}
-                                className="max-w-md"
+                                readOnly
+                                className="bg-gray-50 text-gray-500 max-w-md"
                              />
                          </div>
                     </div>

@@ -80,10 +80,10 @@
         WHERE RFQ_NUM = #{rfqNum}
           AND DEL_FLAG = 'N'
           AND CTRL_USER_ID = #{loginUserId}
-          <if test="statusCd == 'RFQS'">
+          <if test='statusCd == "RFQS"'>
               AND PROGRESS_CD = 'T'
           </if>
-          <if test="statusCd == 'M'">
+          <if test='statusCd == "M"'>
               AND PROGRESS_CD IN ('RFQS', 'RFQC')
           </if>
     </update>
@@ -91,7 +91,7 @@
     <update id="updateAllVendorStatus">
         UPDATE RFQVN
         SET PROGRESS_CD = #{statusCd},
-            <if test="statusCd == 'RFQS'">
+            <if test='statusCd == "RFQS"'>
                 SEND_DATE = NOW(),
             </if>
             MOD_DATE    = NOW(),

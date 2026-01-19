@@ -403,5 +403,18 @@
         ) > 0
     </select>
 
+    <!--회사 코드로 파일 조회-->
+    <select id="selectFileNumByVendorCode" parameterType="String" resultType="String">
+        SELECT
+            FILE_NUM
+        FROM
+            ATT_FILE
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+        ORDER BY
+            REG_DATE DESC
+    </select>
 
 </mapper>
