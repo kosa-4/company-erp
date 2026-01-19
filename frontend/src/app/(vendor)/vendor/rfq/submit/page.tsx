@@ -47,7 +47,7 @@ export default function VendorRfqSubmitPage() {
 
   useEffect(() => {
     fetchRfqList();
-  }, []);
+  }, [filterStatus]);
 
   // 검색
   const handleSearch = () => {
@@ -153,35 +153,35 @@ export default function VendorRfqSubmitPage() {
           <div className="flex items-center gap-2">
             <Button 
               variant={filterStatus === '' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus(''); fetchRfqList(); }}
+              onClick={() => setFilterStatus('')}
               size="sm"
             >
               전체
             </Button>
             <Button 
               variant={filterStatus === 'RFQS' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQS'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQS')}
               size="sm"
             >
               요청
             </Button>
             <Button 
               variant={filterStatus === 'RFQJ' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQJ'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQJ')}
               size="sm"
             >
               접수
             </Button>
             <Button 
               variant={filterStatus === 'RFQT' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQT'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQT')}
               size="sm"
             >
               임시저장
             </Button>
             <Button 
               variant={filterStatus === 'DONE' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('DONE'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('DONE')}
               size="sm"
             >
               결과확인
