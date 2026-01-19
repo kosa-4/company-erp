@@ -71,14 +71,8 @@ export default function VendorRfqSubmitPage() {
     router.push(`/vendor/rfq/submit/${rfqNum}`);
   };
 
-  const filteredRfqList = rfqList.filter(rfq =>
-    (searchText === '' || 
-     rfq.rfqNum.toLowerCase().includes(searchText.toLowerCase()) ||
-     rfq.rfqSubject.toLowerCase().includes(searchText.toLowerCase())) &&
-    (filterStatus === '' || rfq.vendorProgressCd === filterStatus)
-  );
-
   const waitingCount = rfqList.filter(r => r.vendorProgressCd === 'RFQS').length;
+
 
   // 상태별 배지 색상
   const getStatusBadgeVariant = (status: string) => {
@@ -194,7 +188,7 @@ export default function VendorRfqSubmitPage() {
                     로딩 중...
                   </td>
                 </tr>
-              ) : filteredRfqList.length === 0 ? (
+              ) : rfqList.length === 0 ? (
                 <tr>
                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
@@ -204,7 +198,7 @@ export default function VendorRfqSubmitPage() {
                   </td>
                 </tr>
               ) : (
-                filteredRfqList.map((rfq) => (
+                rfqList.map((rfq) => (
                   <tr key={rfq.rfqNum} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{rfq.rfqNum}</td>
                     <td className="px-6 py-4 text-gray-600">{rfq.rfqSubject}</td>
