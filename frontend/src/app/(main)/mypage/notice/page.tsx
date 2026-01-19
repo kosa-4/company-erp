@@ -47,6 +47,7 @@ export default function NoticePage() {
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [attachedFiles, setAttachedFiles] = useState<FileListItemResponse[]>([]);
+  const [originalAttachedFiles, setOriginalAttachedFiles] = useState<FileListItemResponse[]>([]);
   const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
   const [deletedFileNums, setDeletedFileNums] = useState<string[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -132,7 +133,9 @@ export default function NoticePage() {
       });
       
       // 첨부파일 목록 설정
-      setAttachedFiles(detail.files || []);
+      const files = detail.files || [];
+      setAttachedFiles(files);
+      setOriginalAttachedFiles(files);
       
       // 목록의 조회수도 업데이트
       setNotices(prev => prev.map(n => 
@@ -163,6 +166,8 @@ export default function NoticePage() {
     setIsEditing(false);
     setEditUploadedFiles([]);
     setDeletedFileNums([]);
+    // 첨부파일 목록을 원본 상태로 복원
+    setAttachedFiles([...originalAttachedFiles]);
     if (selectedNotice) {
       setEditFormData({
         subject: selectedNotice.title,
@@ -641,6 +646,12 @@ export default function NoticePage() {
         onClose={() => {
           setIsDetailModalOpen(false);
           setIsEditing(false);
+          setEditUploadedFiles([]);
+          setDeletedFileNums([]);
+          // 모달 닫을 때도 첨부파일 상태 복원
+          if (selectedNotice) {
+            setAttachedFiles([...originalAttachedFiles]);
+          }
         }}
         title="공지사항 상세"
         size="lg"
