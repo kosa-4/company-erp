@@ -28,9 +28,7 @@ public class RfqVendorQuoteController {
      */
     private SessionUser getSessionUser(HttpSession session) {
         SessionUser user = (SessionUser) session.getAttribute(SessionConst.LOGIN_USER);
-        if (user == null || user.getUserId() == null || user.getUserId().isBlank()) {
-            throw new UnauthorizedException("인증 세션이 유효하지 않습니다.");
-        }
+
         if (!"V".equals(user.getComType())) {
             throw new UnauthorizedException("협력사 사용자만 접근 가능합니다.");
         }

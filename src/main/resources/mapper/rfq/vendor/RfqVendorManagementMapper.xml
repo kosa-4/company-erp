@@ -13,9 +13,10 @@
         v.PROGRESS_CD WHEN 'RFQS' THEN '요청' WHEN 'RFQJ' THEN '접수' WHEN 'RFQT' THEN '임시저장' WHEN
         'RFQC' THEN '제출완료' WHEN 'F' THEN '포기' ELSE v.PROGRESS_CD END as vendorProgressName,
         h.RFQ_TYPE as rfqType, CASE h.RFQ_TYPE WHEN 'OC' THEN '수의계약' WHEN 'AC' THEN '지명경쟁' ELSE
-        h.RFQ_TYPE END as rfqTypeName, (SELECT COUNT(*) FROM rfqdt WHERE RFQ_NUM = h.RFQ_NUM AND
-        DEL_FLAG = 'N') as itemCount FROM rfqhd h INNER JOIN rfqvn v ON h.RFQ_NUM = v.RFQ_NUM WHERE
-        v.VENDOR_CD = #{vendorCd} AND h.DEL_FLAG = 'N' AND v.DEL_FLAG = 'N' <if
+        h.RFQ_TYPE END as rfqTypeName, v.SELECT_YN as selectYn, (SELECT COUNT(*) FROM rfqdt WHERE
+        RFQ_NUM = h.RFQ_NUM AND DEL_FLAG = 'N') as itemCount FROM rfqhd h INNER JOIN rfqvn v ON
+        h.RFQ_NUM = v.RFQ_NUM WHERE v.VENDOR_CD = #{vendorCd} AND h.DEL_FLAG = 'N' AND v.DEL_FLAG =
+        'N' <if
             test="search != null">
             <if test="search.searchText != null and search.searchText != ''"> AND ( h.RFQ_NUM LIKE
         CONCAT('%', #{search.searchText}, '%') OR h.RFQ_SUBJECT LIKE CONCAT('%',
