@@ -65,7 +65,7 @@ export default function CategoryPage() {
             setCateMap(tempMap);
             setRootList(tempRoot);
             setInputDatas([]); 
-            
+
             const nextMainId = tempMap[selectedMainIdRef.current] ? selectedMainIdRef.current : "";
             
             const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some(c => c.itemCls === selectedMidIdRef.current))
@@ -189,7 +189,7 @@ export default function CategoryPage() {
                         title="품목 종류"
                         itemLvl={0}
                         categories={rootList}
-                        inputDatas={inputDatas.filter(d => d.itemLvl === 0)}
+                        inputDatas={inputDatas.filter(d => d.itemLvl === 0 && d.parentItemCls === null)}
                         itemCls={selectedMainId}
                         handleChildItemType={(e: any) => handleRowClick(e, 0)}
                         handleAddRow={handleAddRow}
@@ -205,7 +205,7 @@ export default function CategoryPage() {
                         title="대분류"
                         itemLvl={1}
                         categories={class1List}
-                        inputDatas={inputDatas.filter(d => d.parentItemCls === (selectedMainId || null))}
+                        inputDatas={inputDatas.filter(d => d.itemLvl === 1 && d.parentItemCls === (selectedMainId || null))}
                         itemCls={selectedMidId}
                         parentCls={selectedMainId}
                         handleChildItemType={(e: any) => handleRowClick(e, 1)}
@@ -222,7 +222,7 @@ export default function CategoryPage() {
                         title="중분류"
                         itemLvl={2}
                         categories={class2List}
-                        inputDatas={inputDatas.filter(d => d.parentItemCls === (selectedMidId || null))}
+                        inputDatas={inputDatas.filter(d => d.itemLvl === 2 && d.parentItemCls === (selectedMidId || null))}
                         itemCls={selectedSubId}
                         parentCls={selectedMidId}
                         handleChildItemType={(e: any) => handleRowClick(e, 2)}
@@ -239,7 +239,7 @@ export default function CategoryPage() {
                         title="소분류"
                         itemLvl={3}
                         categories={class3List}
-                        inputDatas={inputDatas.filter(d => d.parentItemCls === (selectedSubId || null))}
+                        inputDatas={inputDatas.filter(d => d.itemLvl === 3 && d.parentItemCls === (selectedSubId || null))}
                         itemCls="" // 소분류는 하위 단계가 없으므로 선택 상태를 관리할 필요 없음
                         parentCls={selectedSubId}
                         handleChildItemType={() => {}} // 하위 단계가 없으므로 빈 함수

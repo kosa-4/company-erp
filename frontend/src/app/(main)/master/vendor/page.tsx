@@ -139,8 +139,11 @@ export default function VendorPage() {
     fetchVendors(resetParams);
   };
 
+  const latestVendorCodeRef = useRef<string | null>(null);
+
   const handleRowClick = (vendor: Vendor) => {
     setSelectedVendor(vendor);
+    latestVendorCodeRef.current = vendor.vendorCode;
     setAttachedFiles([]); // 이전 데이터 초기화
     fetchVendorFiles(vendor.vendorCode); // 파일 목록 조회 호출
     setIsDetailModalOpen(true);
@@ -259,11 +262,19 @@ export default function VendorPage() {
 
       if (result.success) {
         const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
-        console.log("생성된 업체 코드:", vendorCode);
+        // console.log("생성된 업체 코드:", vendorCode);
 
         // 파일이 있을 때만 파일 업로드 실행
         if (selectedFiles.length > 0 && vendorCode) {
-          await uploadFiles(vendorCode);
+          try {
+         await uploadFiles(vendorCode);
+          } catch (e) {
+            console.error("파일 업로드 실패:", e);
+            alert('업체는 등록됐지만 파일 업로드에 실패했습니다. 다시 시도해주세요.');
+            setIsCreateModalOpen(false);
+            fetchVendors();
+            return;
+          }
         }
 
         alert(result.message || '등록이 완료되었습니다.');
@@ -397,7 +408,7 @@ const fetchVendorFiles = async (vendorCode: string) => {
     if (response.ok) {
       const result = await response.json(); // ApiResponse 객체
       // console.log("백엔드 파일 응답:", result); // 여기서 구조를 꼭 확인해보세요!
-
+      if (latestVendorCodeRef.current !== vendorCode) return; // 최신 조회한 업체 코드와 다르면 무시
       // result가 아니라 result.data(실제 리스트)를 세팅해야 함
       if (result.success && result.data) {
         setAttachedFiles(result.data); 
