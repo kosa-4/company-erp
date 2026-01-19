@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class VendorService {
@@ -33,11 +34,20 @@ public class VendorService {
                 1
         );
     }
+    
+    // 2. 회사 코드로 파일 번호 조회
+    public List<String> getFileNumByVendorCode(String vendorCode) {
+        List<String> fileNumList = vendorMapper.selectFileNumByVendorCode(vendorCode);
+        if(fileNumList.isEmpty()){
+            throw new NoSuchElementException("검색 결과가 없습니다.");
+        }
+        return fileNumList;
+    }
 
     /* 저장 */
     // 1. 구매사에서 직접 등록 -> 바로 승인 후 마스터 테이블로 이동
     @Transactional
-    public void registerVendorInternal(VendorRegisterDto vendorRegisterDto, String sessionId) {
+    public String registerVendorInternal(VendorRegisterDto vendorRegisterDto, String sessionId) {
 
         // 1. 중복 체크
         boolean existsBusinessNo = vendorMapper.existsByBusinessNo(vendorRegisterDto.getBusinessNo());
@@ -55,6 +65,9 @@ public class VendorService {
 
         // 3. 마스터 테이블에 저장
         vendorMapper.insertVendorVNGL(vendorRegisterDto);
+
+        // 4. 파일 저장 시 사용할 회사 코드 반환
+        return vendorCode;
     }
 
     // 2. 구매사에서 승인
