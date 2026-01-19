@@ -1,9 +1,12 @@
 package com.company.erp.notice.dto;
 
+import com.company.erp.common.file.dto.FileListItemResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 //공지사항 상세 조회용 DTO
 @Data
@@ -22,4 +25,5 @@ public class NoticeDetailResponse {
     private Integer viewCnt;//조회수
     private String modDate;//수정일 (YYYY-MM-DD 형식)
     private String modUserId;//수정자ID
+    private List<FileListItemResponse> files;//첨부파일 목록
 }
