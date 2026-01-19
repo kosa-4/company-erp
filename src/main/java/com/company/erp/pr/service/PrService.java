@@ -108,8 +108,8 @@ public class PrService {
 
 
     //구매요청에서의 품목 조회
-    public List<PrItemDTO> selectPrItem(){
-        List<PrItemDTO> prItems = prMapper.selectPrItem();
+    public List<PrItemDTO> selectPrItem(String itemCode, String itemName){
+        List<PrItemDTO> prItems = prMapper.selectPrItem(itemCode, itemName);
 
         return prItems;
     }
@@ -214,8 +214,29 @@ public class PrService {
         }
     }
 
-    //구매요청 수정
+    //구매요청 헤더 수정 (구매요청명, 구매유형만)
+    @Transactional
+    public void updatePr(String prNum, String prSubject, String pcType, String userId) {
+        // 구매요청 존재 여부 확인
+        PrHdDTO prHd = prMapper.selectPrNum(prNum);
+        if (prHd == null) {
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        if ("Y".equals(prHd.getDelFlag())) {
+            throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
+        }
 
+        // 승인 상태인 구매요청은 수정 불가
+        String progressCd = prHd.getProgressCd();
+        if (progressCd != null && isApprovedStatus(progressCd)) {
+            throw new IllegalStateException("승인된 구매요청은 수정할 수 없습니다.");
+        }
 
+        // 구매유형을 한글에서 코드로 변환하여 저장
+        int updatedRows = prMapper.updatePrHd(prNum, prSubject, pcType, userId);
+        if (updatedRows == 0) {
+            throw new IllegalStateException("구매요청 수정에 실패했습니다.");
+        }
+    }
 
 }

@@ -126,6 +126,22 @@ public class FileService {
         return new FileUploadResponse(fileNum, originName, file.getSize(), file.getContentType());
     }
 
+    // 파일 정보 조회 (다운로드용 파일명, Content-Type 가져오기)
+    @Transactional(readOnly = true)
+    public AttFileEntity getFileInfo(String fileNum, SessionUser ses) {
+        if (ses == null) throw new FileException("세션 정보가 없습니다.");
+        if (isBlank(fileNum)) throw new FileException("파일번호는 필수입니다.");
+
+        AttFileEntity file = fileMapper.findByFileNum(fileNum);
+        if (file == null) throw new FileException("파일을 찾을 수 없습니다.");
+        if ("Y".equalsIgnoreCase(file.getDelFlag())) throw new FileException("삭제된 파일입니다.");
+
+        // 조회 권한 검증: V는 vendorCd 일치만 허용 / B는 전체 허용
+        assertVendorAccess(file, ses);
+
+        return file;
+    }
+
     // 다운로드
     @Transactional(readOnly = true)
     public Resource download(String fileNum, SessionUser ses) {

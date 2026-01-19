@@ -47,6 +47,13 @@
         SELECT ITEM_CD, ITEM_NM, ITEM_SPEC, UNIT_CD
         FROM MTGL
         WHERE DEL_FLAG = 'N'
+        <if test="itemCode != null and itemCode != ''">
+            AND ITEM_CD LIKE CONCAT('%', #{itemCode}, '%')
+        </if>
+        <if test="itemName != null and itemName != ''">
+            AND ITEM_NM LIKE CONCAT('%', #{itemName}, '%')
+        </if>
+        ORDER BY ITEM_CD ASC
     </select>
 
 
@@ -66,6 +73,21 @@
         FROM PRHD
         WHERE PR_NUM = #{prNum}
     </select>
+
+    <!-- 구매요청 헤더 수정 (구매요청명, 구매유형만) -->
+    <update id="updatePrHd">
+        UPDATE PRHD
+        SET PR_SUBJECT = #{prSubject},
+            PC_TYPE = (SELECT CODE FROM CODD
+                      WHERE CODE_GROUP = 'PC_TYPE'
+                      AND CODE_NAME = #{pcType}
+                      AND USE_YN = 'Y'
+                      LIMIT 1),
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
 
     <!-- 구매요청 헤더 삭제 -->
     <update id="deletePrHd">
@@ -131,9 +153,9 @@
             AND U.USER_NM LIKE CONCAT('%', #{requester}, '%')
         </if>
         
-        <!-- 부서 검색 -->
+        <!-- 부서 검색 (숫자 제외하고 비교) -->
         <if test="deptName != null and deptName != ''">
-            AND D.DEPT_NM LIKE CONCAT('%', #{deptName}, '%')
+            AND REGEXP_REPLACE(D.DEPT_NM, '[0-9]', '') LIKE CONCAT('%', REGEXP_REPLACE(#{deptName}, '[0-9]', ''), '%')
         </if>
         
         <!-- 상태 검색 -->

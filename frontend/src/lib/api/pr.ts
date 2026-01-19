@@ -98,7 +98,12 @@ export const prApi = {
     /**
      * 품목선택 팝업에서의 품목 목록 조회
      */
-    getItemList: () => api.get<PrItemDTO[]>('/v1/pr/item/list'),
+    getItemList: (params?: { itemCode?: string; itemName?: string }) => {
+        const mappedParams: Record<string, string> = {};
+        if (params?.itemCode) mappedParams.itemCode = params.itemCode;
+        if (params?.itemName) mappedParams.itemName = params.itemName;
+        return api.get<PrItemDTO[]>('/v1/pr/item/list', mappedParams);
+    },
 
     /**
      * 구매요청 화면에서 품목정보 조회 (품목코드 리스트로 조회)
@@ -168,4 +173,10 @@ export const prApi = {
      * 구매요청 상세 품목 목록 조회
      */
     getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/v1/pr/${prNum}/detail`),
+
+    /**
+     * 구매요청 헤더 수정 (구매요청명, 구매유형만)
+     */
+    update: (prNum: string, data: { prSubject: string; pcType: string }) =>
+        api.put<{ message: string }>(`/v1/pr/${prNum}/update`, data),
 };

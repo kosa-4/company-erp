@@ -38,6 +38,10 @@ export default function PurchaseRequestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [itemList, setItemList] = useState<PrItemDTO[]>([]); // 품목 선택 모달용
   const [selectedItemCodes, setSelectedItemCodes] = useState<string[]>([]); // 품목 선택 모달에서 선택된 품목코드
+  const [itemSearchParams, setItemSearchParams] = useState({
+    itemCode: '',
+    itemName: '',
+  });
 
   const [formData, setFormData] = useState({
     prNo: '',
@@ -72,21 +76,31 @@ export default function PurchaseRequestPage() {
     loadInitData();
   }, []);
 
+  // 품목 목록 로드 함수
+  const loadItemList = async () => {
+    try {
+      const items = await prApi.getItemList({
+        itemCode: itemSearchParams.itemCode || undefined,
+        itemName: itemSearchParams.itemName || undefined,
+      });
+      setItemList(items);
+    } catch (error) {
+      console.error('품목 목록 로드 실패:', error);
+      alert('품목 목록을 불러오는데 실패했습니다.');
+    }
+  };
+
   // 품목 목록 로드 (품목 선택 모달 열 때)
   useEffect(() => {
     if (isItemModalOpen) {
-      const loadItemList = async () => {
-        try {
-          const items = await prApi.getItemList();
-          setItemList(items);
-        } catch (error) {
-          console.error('품목 목록 로드 실패:', error);
-          alert('품목 목록을 불러오는데 실패했습니다.');
-        }
-      };
       loadItemList();
     }
   }, [isItemModalOpen]);
+
+  // 품목 검색 핸들러
+  const handleItemSearch = () => {
+    loadItemList();
+  };
 
 
 
@@ -457,13 +471,18 @@ export default function PurchaseRequestPage() {
         {/* 품목 선택 모달 */}
         <Modal
             isOpen={isItemModalOpen}
-            onClose={() => setIsItemModalOpen(false)}
+            onClose={() => {
+              setIsItemModalOpen(false);
+              setItemSearchParams({ itemCode: '', itemName: '' });
+              setSelectedItemCodes([]);
+            }}
             title="품목 선택"
             size="xl"
             footer={
               <ModalFooter
                   onClose={() => {
                     setIsItemModalOpen(false);
+                    setItemSearchParams({ itemCode: '', itemName: '' });
                     setSelectedItemCodes([]);
                   }}
                   onConfirm={handleAddSelectedItems}
@@ -474,10 +493,30 @@ export default function PurchaseRequestPage() {
           <div className="space-y-4">
             {/* 검색 영역 */}
             <div className="grid grid-cols-3 gap-4">
-              <Input label="품목코드" placeholder="품목코드 입력" />
-              <Input label="품목명" placeholder="품목명 입력" />
+              <Input 
+                label="품목코드" 
+                placeholder="품목코드 입력"
+                value={itemSearchParams.itemCode}
+                onChange={(e) => setItemSearchParams(prev => ({ ...prev, itemCode: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleItemSearch();
+                  }
+                }}
+              />
+              <Input 
+                label="품목명" 
+                placeholder="품목명 입력"
+                value={itemSearchParams.itemName}
+                onChange={(e) => setItemSearchParams(prev => ({ ...prev, itemName: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleItemSearch();
+                  }
+                }}
+              />
               <div className="flex items-end">
-                <Button variant="primary">검색</Button>
+                <Button variant="primary" onClick={handleItemSearch}>검색</Button>
               </div>
             </div>
 

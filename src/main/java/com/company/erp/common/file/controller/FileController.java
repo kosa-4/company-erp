@@ -2,6 +2,7 @@ package com.company.erp.common.file.controller;
 
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.file.dto.FileListItemResponse;
+import com.company.erp.common.file.model.AttFileEntity;
 import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
@@ -43,15 +44,33 @@ public class FileController {
             HttpSession session
     ) {
         SessionUser ses = getSessionUser(session);
+        
+        // 파일 정보 조회 (원본 파일명, Content-Type 가져오기)
+        AttFileEntity fileEntity = fileService.getFileInfo(fileNum, ses);
+        
+        // 파일 다운로드
         Resource resource = fileService.download(fileNum, ses);
 
-        String filename = URLEncoder.encode(fileNum, StandardCharsets.UTF_8)
+        // 원본 파일명 인코딩
+        String originName = fileEntity.getOriginName();
+        String encodedFilename = URLEncoder.encode(originName != null ? originName : fileNum, StandardCharsets.UTF_8)
                 .replaceAll("\\+", "%20");
+
+        // Content-Type 설정 (없으면 APPLICATION_OCTET_STREAM)
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (fileEntity.getContentType() != null && !fileEntity.getContentType().isEmpty()) {
+            try {
+                mediaType = MediaType.parseMediaType(fileEntity.getContentType());
+            } catch (Exception e) {
+                // 파싱 실패 시 기본값 사용
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename*=UTF-8''" + filename)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        "attachment; filename*=UTF-8''" + encodedFilename)
+                .contentType(mediaType)
                 .body(resource);
     }
 

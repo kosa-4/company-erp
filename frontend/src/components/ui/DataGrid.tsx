@@ -203,9 +203,12 @@ function DataGrid<T extends object>({
                 {sortedData.map((row, index) => {
                   const canSelect = !isRowSelectable || isRowSelectable(row);
                   
+                  // key 중복 방지: keyField 값 + index 조합
+                  const uniqueKey = `${String(row[keyField])}-${index}`;
+                  
                   return (
                     <tr
-                      key={String(row[keyField])}
+                      key={uniqueKey}
                       className={`
                         transition-colors duration-150
                         ${striped && index % 2 === 1 ? 'bg-stone-50/50' : ''}
