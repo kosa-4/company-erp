@@ -10,11 +10,12 @@ import {
     DatePicker,
     DataGrid,
     Badge,
-    ModalFooter
+    ModalFooter,
+    SearchPanel
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
-import { formatNumber } from '@/lib/utils';
-import { rfqApi, RfqDetailResponse, RfqSaveRequest } from '@/lib/api/rfq';
+import { formatNumber, toLocalDateString } from '@/lib/utils';
+import { rfqApi, RfqSaveRequest, RfqDetailResponse } from '@/lib/api/rfq';
 import { vendorApi, VendorDTO } from '@/lib/api/vendor';
 import { getErrorMessage } from '@/lib/api/error';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ export default function RfqRequestModal({
                 if (response.header && !response.header.reqCloseDate) {
                     const defaultDate = new Date();
                     defaultDate.setDate(defaultDate.getDate() + 7);
-                    response.header.reqCloseDate = defaultDate.toISOString().split('T')[0];
+                    response.header.reqCloseDate = toLocalDateString(defaultDate);
                 }
                 setDetail(response);
             }
@@ -106,7 +107,7 @@ export default function RfqRequestModal({
         if (!detail.header.reqCloseDate) return toast.warning('마감 일시를 입력해주세요.');
 
         // [추가] 마감일 유효성 검사: 현재 날짜 이후여야 함
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = toLocalDateString(new Date());
         const closeDateStr = detail.header.reqCloseDate.split('T')[0];
         if (closeDateStr < todayStr) {
             return toast.warning('마감일은 현재 날짜 이후여야 합니다.');
