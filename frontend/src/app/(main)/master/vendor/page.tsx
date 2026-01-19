@@ -47,7 +47,19 @@ interface AttFile {
   originName: string;
   fileSize: number;
   filePath: string;
-  // 필요한 다른 필드들 추가...
+}
+
+interface Window {
+  daum: {
+    Postcode: new (options: {
+      oncomplete: (data: {
+        zonecode: string;
+        roadAddress: string;
+        jibunAddress: string;
+        buildingName: string;
+      }) => void;
+    }) => { open: () => void };
+  };
 }
 
 
@@ -272,7 +284,7 @@ export default function VendorPage() {
             console.error("파일 업로드 실패:", e);
             alert('업체는 등록됐지만 파일 업로드에 실패했습니다. 다시 시도해주세요.');
             setIsCreateModalOpen(false);
-            setSelectedFiles([]); // 파일 목록 초기화
+            
             fetchVendors();
             return;
           }
@@ -280,6 +292,7 @@ export default function VendorPage() {
 
         alert(result.message || '등록이 완료되었습니다.');
         setIsCreateModalOpen(false);
+        setSelectedFiles([]); // 파일 목록 초기화
         fetchVendors();
       }
     } catch (error) {
