@@ -14,6 +14,7 @@ export interface VendorUserInfoResponse {
   industry: string;
   phone: string;
   zipCode: string;
+  businessType: string;
 }
 
 /**

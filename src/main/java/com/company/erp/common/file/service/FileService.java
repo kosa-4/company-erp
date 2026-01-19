@@ -173,7 +173,7 @@ public class FileService {
 
         // 협력사는 자기 협력사의 파일만 노출, 구매사는 전체
         return list.stream()
-                .filter(f -> canView(f, ses))
+                .filter(f -> canView(f, ses, refType))
                 .map(f -> new FileListItemResponse(
                         f.getFileNum(),
                         f.getOriginName(),
@@ -225,6 +225,9 @@ public class FileService {
         // 구매사(B)는 전체 허용
         if (!"V".equalsIgnoreCase(ses.getComType())) return;
 
+        // 공지사항(NOTICE)은 모든 협력사가 접근 가능
+        if ("NOTICE".equalsIgnoreCase(file.getRefType())) return;
+
         String myVendor = ses.getVendorCd();
         String fileVendor = file.getVendorCd();
 
@@ -234,8 +237,14 @@ public class FileService {
         }
     }
 
-    private boolean canView(AttFileEntity file, SessionUser ses) {
+    private boolean canView(AttFileEntity file, SessionUser ses, String refType) {
+        // 구매사는 전체 파일 조회 가능
         if (!"V".equalsIgnoreCase(ses.getComType())) return true;
+        
+        // 공지사항(NOTICE)은 모든 협력사가 볼 수 있음 (구매사가 업로드한 파일 포함)
+        if ("NOTICE".equalsIgnoreCase(refType)) return true;
+        
+        // 그 외 문서는 협력사는 자신의 vendorCd와 일치하는 파일만 조회 가능
         String myVendor = ses.getVendorCd();
         return !isBlank(myVendor) && myVendor.equals(file.getVendorCd());
     }

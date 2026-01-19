@@ -32,3 +32,11 @@ export function formatCurrency(value: number | string | null | undefined): strin
   if (isNaN(num)) return '-';
   return `₩${num.toLocaleString('ko-KR')}`;
 }
+
+// Local Date 포맷팅 (YYYY-MM-DD)
+export function toLocalDateString(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}

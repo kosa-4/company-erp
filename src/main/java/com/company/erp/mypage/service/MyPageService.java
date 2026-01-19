@@ -78,6 +78,7 @@ public class MyPageService {
             result.put("industry", userInfo.getOrDefault("industry", ""));
             result.put("phone", userInfo.getOrDefault("phone", ""));
             result.put("zipCode", userInfo.getOrDefault("zipCode", ""));
+            result.put("businessType", userInfo.getOrDefault("businessType", ""));
             
             return result;
         } catch (Exception e) {
