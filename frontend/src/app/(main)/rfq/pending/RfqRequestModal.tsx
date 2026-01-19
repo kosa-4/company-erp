@@ -10,11 +10,12 @@ import {
     DatePicker,
     DataGrid,
     Badge,
-    ModalFooter
+    ModalFooter,
+    SearchPanel
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
-import { formatNumber } from '@/lib/utils';
-import { rfqApi, RfqDetailResponse, RfqSaveRequest } from '@/lib/api/rfq';
+import { formatNumber, toLocalDateString } from '@/lib/utils';
+import { rfqApi, RfqSaveRequest, RfqDetailResponse } from '@/lib/api/rfq';
 import { vendorApi, VendorDTO } from '@/lib/api/vendor';
 import { getErrorMessage } from '@/lib/api/error';
 import { toast } from 'sonner';
@@ -53,6 +54,12 @@ export default function RfqRequestModal({
                 setDetail(response);
             } else if (prNum) {
                 const response = await rfqApi.getRfqInitFromPr(prNum);
+                // [추가] 신규 생성 시 마감일 기본값 (+7일) 설정
+                if (response.header && !response.header.reqCloseDate) {
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 7);
+                    response.header.reqCloseDate = toLocalDateString(defaultDate);
+                }
                 setDetail(response);
             }
         } catch (error) {
@@ -99,6 +106,13 @@ export default function RfqRequestModal({
         if (!detail.header.rfqType) return toast.warning('견적 유형을 선택해주세요.');
         if (!detail.header.reqCloseDate) return toast.warning('마감 일시를 입력해주세요.');
 
+        // [추가] 마감일 유효성 검사: 현재 날짜 이후여야 함
+        const todayStr = toLocalDateString(new Date());
+        const closeDateStr = detail.header.reqCloseDate.split('T')[0];
+        if (closeDateStr < todayStr) {
+            return toast.warning('마감일은 현재 날짜 이후여야 합니다.');
+        }
+
         const saveRequest: RfqSaveRequest = {
             rfqNum: rfqNum || undefined,
             prNum: detail.header.prNum,
@@ -118,7 +132,8 @@ export default function RfqRequestModal({
                 unitCd: item.unitCd,
                 rfqQt: item.rfqQt,
                 estUnitPrc: item.estUnitPrc,
-                delyDate: item.delyDate,
+                // [수정] 납기일 포맷팅: 시간 정보 제거하여 LocalDate 정합성 맞춤
+                delyDate: item.delyDate ? item.delyDate.split('T')[0] : undefined,
                 whNm: item.whNm,
                 rmk: item.rmk
             }))
@@ -321,9 +336,11 @@ export default function RfqRequestModal({
                                 <Button variant="danger" onClick={handleDelete} loading={loading}>삭제</Button>
                             )}
                             <Button variant="secondary" onClick={handleSave} loading={loading}>저장</Button>
+                            {/* [수정] 전송 버튼 숨김 처리
                             {rfqNum && (
                                 <Button variant="primary" onClick={handleSend} loading={loading}>협력사 전송</Button>
                             )}
+                            */}
                         </>
                     )}
                 </div>
