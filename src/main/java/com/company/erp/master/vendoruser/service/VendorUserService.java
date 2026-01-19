@@ -91,11 +91,12 @@ public class VendorUserService {
                     updateDto.setUserName(vendorUser.getUserName());
                     updateDto.setEmail(vendorUser.getEmail());
                     updateDto.setPhone(vendorUser.getPhone());
-                    if(dto.getPassword() != null && !dto.getPassword().isEmpty()){
+                    
+                    // 프론트에서는 비밀번호 값을 보내지 않음
+                    // 대기 테이블에 변경된 비밀번호가 존재할 시에만 업데이트
+                    // 비밀번호 변경 미입력 시 대기 테이블에 null로 저장됨
+                    if(vendorUser.getPassword() != null && !vendorUser.getPassword().isEmpty()){
                         updateDto.setPassword(vendorUser.getPassword());
-                    } else{
-                        // 비밀번호 미입력 시 update 제외
-                        updateDto.setPassword("");
                     }
 
                     vendorUserMapper.updateVN_USERByUserId(updateDto);

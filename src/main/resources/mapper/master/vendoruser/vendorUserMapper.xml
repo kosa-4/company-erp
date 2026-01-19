@@ -415,6 +415,18 @@
             <if test="rejectRemark != null and rejectRemark != ''">
                 REJECT_RMK = #{rejectRemark},
             </if>
+            <if test="userId != null and userId != ''">
+                USER_ID = #{userId},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="phone != null and phone != ''">
+                TEL_NO = #{phone},
+            </if>
+            <if test="password != null and password != ''">
+                PASSWORD = #{password},
+            </if>
         </set>
         WHERE
             ASK_USER_NUM = #{askUserNum}

@@ -106,7 +106,7 @@ public class VendorUserPortalService {
         // 3) 비밀 번호 암호화
         String encryptedPassword = null;
         String password = vendorUserRegisterDto.getPassword();
-        if(!"".equals(password) && password != null ){
+        if(password != null  && password.isEmpty()){
             encryptedPassword = passwordEncoder.encode(vendorUserRegisterDto.getPassword());
         }
 

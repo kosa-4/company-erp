@@ -34,7 +34,7 @@ interface Vendor {
   email: string;
   businessCategory?: string;
   industry?: string;
-  establishDate?: string;
+  foundationDate?: string;
   useYn: 'Y' | 'N';
   stopReason?: string;
   remark?: string;
@@ -256,7 +256,7 @@ export default function VendorPage() {
 
   
   /* 승인 */
-  const approveVendor = async () => {
+  const approveVendor = async (targets: Vendor[] = selectedVendors) => {
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/approve`, {
@@ -264,7 +264,7 @@ export default function VendorPage() {
         headers:{
           'Content-Type':'application/json',
         },
-        body:JSON.stringify(selectedVendors),
+        body:JSON.stringify(targets),
       });
       if(!response.ok){
         throw new Error('협력업체 승인에 실패했습니다.');
@@ -279,7 +279,7 @@ export default function VendorPage() {
   };
 
   /* 반려 */
-  const rejectVendor = async () => {
+  const rejectVendor = async (targets: Vendor[] = selectedVendors) => {
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/reject`, {
@@ -287,7 +287,7 @@ export default function VendorPage() {
         headers:{
           'Content-Type':'application/json',
         },
-        body:JSON.stringify(selectedVendors),
+        body:JSON.stringify(targets),
       });
       if(!response.ok){
         throw new Error('협력업체 반려에 실패했습니다.');
@@ -370,8 +370,8 @@ export default function VendorPage() {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="success" onClick={approveVendor}>승인</Button>
-            <Button variant="danger" onClick={rejectVendor}>반려</Button>
+            <Button variant="danger" onClick={() => selectedVendor && rejectVendor([selectedVendor])}>반려</Button>
+            <Button variant="success" onClick={() => selectedVendor && approveVendor([selectedVendor])}>승인</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -433,12 +433,12 @@ export default function VendorPage() {
             {selectedVendor?.status === 'A' && (
               <Button variant="primary">수정</Button>
             )}
-            {(selectedVendor?.status === 'N' || selectedVendor?.status === 'C') && (
+            {/* {(selectedVendor?.status === 'N' || selectedVendor?.status === 'C') && (
               <>
                 <Button variant="danger" onClick={rejectVendor}>반려</Button>
                 <Button variant="success" onClick={approveVendor}>승인</Button>
               </>
-            )}
+            )} */}
           </>
         }
       >
@@ -490,10 +490,8 @@ export default function VendorPage() {
               </div>
 
               {/* 기타 정보 */}
-              <Input label="설립일자" value={selectedVendor.establishDate || '-'} readOnly />
+              <Input label="설립일자" value={selectedVendor.foundationDate || '-'} readOnly />
               <Input label="업종" value={selectedVendor.industry || '-'} readOnly />
-              <Input label="업태" value={selectedVendor.businessCategory || '-'} readOnly />
-              
               <div className="col-span-1">
                 <Input label="사용여부" value={selectedVendor.useYn === 'Y' ? '사용' : '미사용'} readOnly 
                         className={selectedVendor.useYn === 'Y' ? 'text-emerald-600' : 'text-red-500'} />
