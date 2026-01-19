@@ -253,6 +253,7 @@ export interface Notice {
   createdAt: string;
   createdBy: string;
   createdByName: string;
+  modDate?: string;
   viewCnt?: number;
 }
 
