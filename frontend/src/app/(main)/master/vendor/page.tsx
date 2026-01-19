@@ -272,6 +272,7 @@ export default function VendorPage() {
             console.error("파일 업로드 실패:", e);
             alert('업체는 등록됐지만 파일 업로드에 실패했습니다. 다시 시도해주세요.');
             setIsCreateModalOpen(false);
+            setSelectedFiles([]); // 파일 목록 초기화
             fetchVendors();
             return;
           }
@@ -387,7 +388,7 @@ export default function VendorPage() {
     const fileFormData = new FormData();
     selectedFiles.forEach(file => {
       fileFormData.append('file', file);
-      fileFormData.append('vendorCode', vendorCode);
+      fileFormData.append('vendorCode', vendorCode); // 중복으로 예상 -> 추후 확인 후 수정
     });
 
     // 백엔드 주소로 전송 (vendorCode를 경로에 넣지 않음)
