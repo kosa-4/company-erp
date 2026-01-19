@@ -22,7 +22,9 @@ public class VendorListDto {
     private LocalDate createdAt;
     private String zipCode;
     private String tel;
+    private String fax;
     private String remark;
+    private LocalDate foundationDate;
     private boolean editable;
 }
 

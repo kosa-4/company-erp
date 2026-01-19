@@ -87,11 +87,16 @@ export default function VendorUsersPage() {
         email: formData.email,
         phone: formData.phone,
       };
-
-      if (formData.password) {
+      
+      if (editingUser) {
+      // 비밀번호를 입력했을 때만 payload에 추가 (입력 안 하면 필드 자체가 전송 안 됨)
+      if (formData.password && formData.password.trim() !== '') {
         payload.password = formData.password;
       }
-
+    } else {
+      // 신규 등록일 때는 무조건 포함
+      payload.password = formData.password;
+    }
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
