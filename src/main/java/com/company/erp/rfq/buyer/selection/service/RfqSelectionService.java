@@ -60,6 +60,9 @@ public class RfqSelectionService {
         }
 
         // 3. 선정된 협력사의 품목 SELECT_YN 업데이트 (발주대기 목록 조회용)
-        mapper.updateRfqVendorItemSelection(rfqNum, vendorCd, userId);
+        int itemUpdated = mapper.updateRfqVendorItemSelection(rfqNum, vendorCd, userId);
+        if (itemUpdated < 1) {
+            throw new IllegalStateException("선정된 협력사의 품목 정보가 존재하지 않습니다.");
+        }
     }
 }
