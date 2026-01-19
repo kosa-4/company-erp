@@ -98,6 +98,12 @@ export default function PurchaseRequestListPage() {
   const [selectedPr, setSelectedPr] = useState<PurchaseRequest | null>(null);
   const [prDetailItems, setPrDetailItems] = useState<PrDtDTO[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    prName: '',
+    purchaseType: '',
+  });
+  const [saving, setSaving] = useState(false);
 
   // 목록 조회
   const fetchData = async () => {
@@ -162,6 +168,11 @@ export default function PurchaseRequestListPage() {
     console.log('🔍 구매요청 상세 조회 시작 - PR번호:', row.prNo);
     setSelectedPr(row);
     setIsDetailModalOpen(true);
+    setIsEditing(false);
+    setEditFormData({
+      prName: row.prName,
+      purchaseType: row.purchaseType,
+    });
 
     // PR번호로 상세 정보 조회 (DT 항목 목록)
     try {
@@ -177,6 +188,99 @@ export default function PurchaseRequestListPage() {
       setPrDetailItems([]);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  // 구매유형 영문 값을 한글 값으로 변환
+  const convertPurchaseTypeToKorean = (purchaseType: string): string => {
+    const typeMap: Record<string, string> = {
+      '일반': '일반구매',
+      '일반구매': '일반구매',
+      '단가계약': '단가계약',
+      '긴급': '긴급구매',
+      '긴급구매': '긴급구매',
+    };
+    return typeMap[purchaseType] || purchaseType;
+  };
+
+  // 구매유형 한글 값을 영문 값으로 변환 (Select 옵션용)
+  const convertPurchaseTypeToEnglish = (purchaseType: string): string => {
+    const typeMap: Record<string, string> = {
+      '일반구매': '일반',
+      '일반': '일반',
+      '단가계약': '단가계약',
+      '긴급구매': '긴급',
+      '긴급': '긴급',
+    };
+    return typeMap[purchaseType] || purchaseType;
+  };
+
+  // 목록에서 수정 버튼 클릭 핸들러
+  const handleEditFromList = () => {
+    if (selectedRows.length === 0) {
+      alert('수정할 구매요청을 선택해주세요.');
+      return;
+    }
+
+    // 승인된 항목 필터링
+    const editableRows = selectedRows.filter(row => row.status !== 'APPROVED');
+    if (editableRows.length === 0) {
+      alert('수정 가능한 구매요청이 없습니다. (승인된 항목은 수정할 수 없습니다)');
+      return;
+    }
+
+    // 첫 번째 선택된 항목의 상세 화면 열기
+    handleRowClick(editableRows[0]);
+  };
+
+  // 상세 모달 내부 수정 버튼 클릭 핸들러
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (selectedPr) {
+      setEditFormData({
+        prName: selectedPr.prName,
+        purchaseType: selectedPr.purchaseType,
+      });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedPr) return;
+
+    if (!editFormData.prName.trim()) {
+      alert('구매요청명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const pcTypeKorean = convertPurchaseTypeToKorean(editFormData.purchaseType);
+      await prApi.update(selectedPr.prNo, {
+        prSubject: editFormData.prName,
+        pcType: pcTypeKorean,
+      });
+
+      alert('구매요청이 수정되었습니다.');
+      setIsEditing(false);
+
+      // 목록 새로고침
+      await fetchData();
+
+      // 상세 정보도 업데이트
+      setSelectedPr({
+        ...selectedPr,
+        prName: editFormData.prName,
+        purchaseType: editFormData.purchaseType,
+      });
+    } catch (error: any) {
+      console.error('구매요청 수정 실패:', error);
+      alert(error?.data?.error || error?.message || '구매요청 수정에 실패했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -524,6 +628,7 @@ export default function PurchaseRequestListPage() {
               <div className="flex gap-2">
                 <Button 
                   variant="secondary"
+                  onClick={handleEditFromList}
                   disabled={
                     selectedRows.length === 0 || 
                     selectedRows.some(row => row.status === 'APPROVED')
@@ -586,25 +691,44 @@ export default function PurchaseRequestListPage() {
               setIsDetailModalOpen(false);
               setPrDetailItems([]);
               setSelectedPr(null);
+              setIsEditing(false);
             }}
             title="구매요청 상세"
             size="lg"
             footer={
-              <ModalFooter
-                  onClose={() => {
-                    setIsDetailModalOpen(false);
-                    setPrDetailItems([]);
-                    setSelectedPr(null);
-                  }}
-                  cancelText="닫기"
-              />
+              isEditing ? (
+                <ModalFooter
+                    onClose={handleCancelEdit}
+                    onConfirm={handleSaveEdit}
+                    cancelText="취소"
+                    confirmText="저장"
+                    disabled={saving}
+                />
+              ) : (
+                <ModalFooter
+                    onClose={() => {
+                      setIsDetailModalOpen(false);
+                      setPrDetailItems([]);
+                      setSelectedPr(null);
+                      setIsEditing(false);
+                    }}
+                    cancelText="닫기"
+                />
+              )
             }
         >
           {selectedPr && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 pb-4 border-b">
-                  <h3 className="text-lg font-semibold">구매요청 상세</h3>
-                  {getStatusBadge(selectedPr.status)}
+                <div className="flex items-center justify-between pb-4 border-b">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">구매요청 상세</h3>
+                    {getStatusBadge(selectedPr.status)}
+                  </div>
+                  {!isEditing && selectedPr.status !== 'APPROVED' && (
+                    <Button variant="secondary" size="sm" onClick={handleEdit}>
+                      수정
+                    </Button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -613,8 +737,33 @@ export default function PurchaseRequestListPage() {
                     <p className="font-medium">{selectedPr.prNo}</p>
                   </div>
                   <div>
+                    <label className="text-sm text-gray-500">구매요청명</label>
+                    {isEditing ? (
+                      <Input
+                        value={editFormData.prName}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, prName: e.target.value }))}
+                        placeholder="구매요청명 입력"
+                        required
+                      />
+                    ) : (
+                      <p className="font-medium">{selectedPr.prName}</p>
+                    )}
+                  </div>
+                  <div>
                     <label className="text-sm text-gray-500">구매유형</label>
-                    <p className="font-medium">{selectedPr.purchaseType}</p>
+                    {isEditing ? (
+                      <Select
+                        value={convertPurchaseTypeToEnglish(editFormData.purchaseType)}
+                        onChange={(e) => setEditFormData(prev => ({ ...prev, purchaseType: e.target.value }))}
+                        options={[
+                          { value: '일반', label: '일반' },
+                          { value: '단가계약', label: '단가계약' },
+                          { value: '긴급', label: '긴급' },
+                        ]}
+                      />
+                    ) : (
+                      <p className="font-medium">{selectedPr.purchaseType}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">요청자</label>
