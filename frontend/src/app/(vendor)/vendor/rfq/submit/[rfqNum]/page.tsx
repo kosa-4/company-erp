@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { FileText, Save, Send, ArrowLeft, Calculator } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
-import { Card, Button, Input } from '@/components/ui';
-import { rfqApi } from '@/lib/api/rfq';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { FileText, Save, Send, ArrowLeft, Calculator } from "lucide-react";
+import { toast, Toaster } from "sonner";
+import { Card, Button, Input } from "@/components/ui";
+import { rfqApi } from "@/lib/api/rfq";
+import { useRouter } from "next/navigation";
 
 interface QuoteItem {
   lineNo: number;
@@ -21,10 +21,14 @@ interface QuoteItem {
   rmk: string;
 }
 
-export default function VendorQuoteEditPage({ params }: { params: { rfqNum: string } }) {
+export default function VendorQuoteEditPage({
+  params,
+}: {
+  params: Promise<{ rfqNum: string }>;
+}) {
   const router = useRouter();
-  const { rfqNum } = params;
-  
+  const { rfqNum } = React.use(params);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [quoteData, setQuoteData] = useState<any>(null);
@@ -38,7 +42,9 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
       setQuoteData(data);
       setItems(data.items || []);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '견적 데이터 조회에 실패했습니다.');
+      toast.error(
+        error.response?.data?.message || "견적 데이터 조회에 실패했습니다.",
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -51,21 +57,27 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
 
   // 품목 데이터 변경
   const handleItemChange = (lineNo: number, field: string, value: any) => {
-    setItems(prev => prev.map(item => {
-      if (item.lineNo === lineNo) {
-        const updated = { ...item, [field]: value };
-        
-        // 금액 자동 계산
-        if (field === 'quoteUnitPrc' || field === 'quoteQt') {
-          const unitPrc = field === 'quoteUnitPrc' ? parseFloat(value) || 0 : item.quoteUnitPrc;
-          const qt = field === 'quoteQt' ? parseFloat(value) || 0 : item.quoteQt;
-          updated.quoteAmt = unitPrc * qt;
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.lineNo === lineNo) {
+          const updated = { ...item, [field]: value };
+
+          // 금액 자동 계산
+          if (field === "quoteUnitPrc" || field === "quoteQt") {
+            const unitPrc =
+              field === "quoteUnitPrc"
+                ? parseFloat(value) || 0
+                : item.quoteUnitPrc;
+            const qt =
+              field === "quoteQt" ? parseFloat(value) || 0 : item.quoteQt;
+            updated.quoteAmt = unitPrc * qt;
+          }
+
+          return updated;
         }
-        
-        return updated;
-      }
-      return item;
-    }));
+        return item;
+      }),
+    );
   };
 
   // 총액 계산
@@ -78,9 +90,9 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
     try {
       setSaving(true);
       await rfqApi.saveVendorQuote(rfqNum, { items });
-      toast.success('견적이 임시저장되었습니다.');
+      toast.success("견적이 임시저장되었습니다.");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '임시저장에 실패했습니다.');
+      toast.error(error.response?.data?.message || "임시저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -100,17 +112,18 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
       }
     }
 
-    if (!confirm('견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.')) return;
+    if (!confirm("견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다."))
+      return;
 
     try {
       setSaving(true);
       await rfqApi.submitVendorQuote(rfqNum, { items });
-      toast.success('견적이 제출되었습니다.');
+      toast.success("견적이 제출되었습니다.");
       setTimeout(() => {
-        router.push('/vendor/rfq/submit');
+        router.push("/vendor/rfq/submit");
       }, 1500);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '견적 제출에 실패했습니다.');
+      toast.error(error.response?.data?.message || "견적 제출에 실패했습니다.");
       setSaving(false);
     }
   };
@@ -134,7 +147,7 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
   return (
     <div className="space-y-6">
       <Toaster position="top-center" richColors />
-      
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -151,10 +164,12 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
           </div>
           <div>
             <h1 className="text-xl font-semibold text-gray-900">견적서 작성</h1>
-            <p className="text-sm text-gray-500">{quoteData.rfqNum} - {quoteData.rfqSubject}</p>
+            <p className="text-sm text-gray-500">
+              {quoteData.rfqNum} - {quoteData.rfqSubject}
+            </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
@@ -181,7 +196,7 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
           <div>
             <p className="text-gray-400 text-sm">총 견적금액</p>
             <p className="text-2xl font-bold mt-1">
-              {new Intl.NumberFormat('ko-KR').format(calculateTotalAmount())}원
+              {new Intl.NumberFormat("ko-KR").format(calculateTotalAmount())}원
             </p>
           </div>
           <div className="p-3 bg-gray-800 rounded-lg">
@@ -211,21 +226,35 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
             <tbody className="divide-y divide-gray-100">
               {items.map((item) => (
                 <tr key={item.lineNo} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-center text-gray-600">{item.lineNo}</td>
+                  <td className="px-4 py-3 text-center text-gray-600">
+                    {item.lineNo}
+                  </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{item.itemDesc}</div>
+                    <div className="font-medium text-gray-900">
+                      {item.itemDesc}
+                    </div>
                     <div className="text-xs text-gray-500">{item.itemCd}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{item.itemSpec || '-'}</td>
-                  <td className="px-4 py-3 text-center text-gray-600">{item.unitCd}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {item.itemSpec || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-center text-gray-600">
+                    {item.unitCd}
+                  </td>
                   <td className="px-4 py-3 text-right text-gray-600">
-                    {new Intl.NumberFormat('ko-KR').format(item.rfqQt)}
+                    {new Intl.NumberFormat("ko-KR").format(item.rfqQt)}
                   </td>
                   <td className="px-4 py-3">
                     <Input
                       type="number"
-                      value={item.quoteUnitPrc || ''}
-                      onChange={(e) => handleItemChange(item.lineNo, 'quoteUnitPrc', e.target.value)}
+                      value={item.quoteUnitPrc || ""}
+                      onChange={(e) =>
+                        handleItemChange(
+                          item.lineNo,
+                          "quoteUnitPrc",
+                          e.target.value,
+                        )
+                      }
                       className="text-right"
                       placeholder="단가"
                     />
@@ -233,27 +262,37 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
                   <td className="px-4 py-3">
                     <Input
                       type="number"
-                      value={item.quoteQt || ''}
-                      onChange={(e) => handleItemChange(item.lineNo, 'quoteQt', e.target.value)}
+                      value={item.quoteQt || ""}
+                      onChange={(e) =>
+                        handleItemChange(item.lineNo, "quoteQt", e.target.value)
+                      }
                       className="text-right"
                       placeholder="수량"
                     />
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-gray-900">
-                    {new Intl.NumberFormat('ko-KR').format(item.quoteAmt || 0)}
+                    {new Intl.NumberFormat("ko-KR").format(item.quoteAmt || 0)}
                   </td>
                   <td className="px-4 py-3">
                     <Input
                       type="date"
-                      value={item.delyDate || ''}
-                      onChange={(e) => handleItemChange(item.lineNo, 'delyDate', e.target.value)}
+                      value={item.delyDate || ""}
+                      onChange={(e) =>
+                        handleItemChange(
+                          item.lineNo,
+                          "delyDate",
+                          e.target.value,
+                        )
+                      }
                     />
                   </td>
                   <td className="px-4 py-3">
                     <Input
                       type="text"
-                      value={item.rmk || ''}
-                      onChange={(e) => handleItemChange(item.lineNo, 'rmk', e.target.value)}
+                      value={item.rmk || ""}
+                      onChange={(e) =>
+                        handleItemChange(item.lineNo, "rmk", e.target.value)
+                      }
                       placeholder="비고"
                     />
                   </td>
@@ -267,8 +306,8 @@ export default function VendorQuoteEditPage({ params }: { params: { rfqNum: stri
       {/* 안내 메시지 */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          <strong>안내:</strong> 모든 품목의 견적단가와 수량을 입력한 후 제출해주세요. 
-          제출 후에는 수정할 수 없습니다.
+          <strong>안내:</strong> 모든 품목의 견적단가와 수량을 입력한 후
+          제출해주세요. 제출 후에는 수정할 수 없습니다.
         </p>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { toast, Toaster } from 'sonner';
 import { Card, Button, Badge } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { useRouter } from 'next/navigation';
+import VendorQuoteModal from '@/components/vendor/VendorQuoteModal';
 
 export default function VendorRfqSubmitPage() {
   const router = useRouter();
@@ -13,6 +14,8 @@ export default function VendorRfqSubmitPage() {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [selectedRfqNum, setSelectedRfqNum] = useState<string | null>(null);
 
   // RFQ 목록 조회
   const fetchRfqList = async () => {
@@ -77,9 +80,21 @@ export default function VendorRfqSubmitPage() {
     }
   };
 
-  // 견적 작성 페이지로 이동
+  // 견적 작성 모달 열기
   const handleGoToQuote = (rfqNum: string) => {
-    router.push(`/vendor/rfq/submit/${rfqNum}`);
+    setSelectedRfqNum(rfqNum);
+    setIsQuoteModalOpen(true);
+  };
+
+  // 견적 모달 닫기
+  const handleCloseQuoteModal = () => {
+    setIsQuoteModalOpen(false);
+    setSelectedRfqNum(null);
+  };
+
+  // 견적 제출 성공 시
+  const handleQuoteSuccess = () => {
+    fetchRfqList();
   };
 
   const waitingCount = rfqList.filter(r => r.vendorProgressCd === 'RFQS').length;
@@ -322,6 +337,14 @@ export default function VendorRfqSubmitPage() {
           </table>
         </div>
       </Card>
+
+      {/* 견적 작성 모달 */}
+      <VendorQuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={handleCloseQuoteModal}
+        rfqNum={selectedRfqNum}
+        onSuccess={handleQuoteSuccess}
+      />
     </div>
   );
 }
