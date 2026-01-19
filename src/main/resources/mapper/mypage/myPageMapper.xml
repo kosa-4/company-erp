@@ -65,7 +65,8 @@
             COALESCE(V.CEO_USER_NM, '') AS ceoName,
             COALESCE(V.INDUSTRY_TYPE, '') AS industry,
             COALESCE(V.TEL_NO, '') AS phone,
-            COALESCE(V.ZIP_CD, '') AS zipCode
+            COALESCE(V.ZIP_CD, '') AS zipCode,
+            COALESCE(V.REG_TYPE, '') AS businessType
         FROM VN_USER U
         LEFT JOIN VNGL V ON V.VENDOR_CD = U.VENDOR_CD AND V.DEL_FLAG = 'N'
         WHERE U.USER_ID = #{userId}
