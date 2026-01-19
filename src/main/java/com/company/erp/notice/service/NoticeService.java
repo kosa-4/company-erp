@@ -2,6 +2,8 @@ package com.company.erp.notice.service;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.file.dto.FileListItemResponse;
+import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.notice.dto.NoticeDTO;
 import com.company.erp.notice.dto.NoticeDetailResponse;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,9 @@ public class NoticeService {
 
     private final NoticeMapper noticeMapper;
     private final DocNumService docNumService;
+    private final FileService fileService;
+    
+    private static final String REF_TYPE_NOTICE = "NOTICE";
 
     /**
      * 공지사항 등록 화면 초기 데이터 조회
@@ -42,9 +48,10 @@ public class NoticeService {
      * 공지사항 등록
      * @param request 공지사항 등록 요청 데이터
      * @param sessionUser 세션 사용자 정보
+     * @return 생성된 공지사항 번호
      */
     @Transactional
-    public void insertNotice(NoticeRequest request, SessionUser sessionUser) {
+    public String insertNotice(NoticeRequest request, SessionUser sessionUser) {
         // 공지사항 번호 자동 생성
         String noticeNum = docNumService.generateDocNumStr(DocKey.NT);
         
@@ -74,6 +81,8 @@ public class NoticeService {
                 .build();
         
         noticeMapper.insertNotice(noticeDTO);
+        
+        return noticeNum;
     }
 
     /**
@@ -88,12 +97,25 @@ public class NoticeService {
      * 공지사항 상세 조회 (조회수 증가 포함)
      */
     @Transactional
-    public NoticeDetailResponse selectNoticeDetail(String noticeNum) {
+    public NoticeDetailResponse selectNoticeDetail(String noticeNum, SessionUser sessionUser) {
         // 조회수 증가
         noticeMapper.incrementViewCnt(noticeNum);
         
         // 상세 정보 조회
-        return noticeMapper.selectNoticeDetail(noticeNum);
+        NoticeDetailResponse detail = noticeMapper.selectNoticeDetail(noticeNum);
+        
+        if (detail != null) {
+            // 첨부파일 목록 조회
+            try {
+                List<FileListItemResponse> files = fileService.list(REF_TYPE_NOTICE, noticeNum, sessionUser);
+                detail.setFiles(files != null ? files : new ArrayList<>());
+            } catch (Exception e) {
+                // 파일 조회 실패 시 빈 리스트로 설정
+                detail.setFiles(new ArrayList<>());
+            }
+        }
+        
+        return detail;
     }
     
     /**
