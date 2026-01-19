@@ -25,12 +25,6 @@ public class PrController {
     public ResponseEntity<Map<String,Object>> initPurchase(HttpSession httpSession){
         SessionUser user = getSessionUser(httpSession);
         
-        if (user == null) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
-        
         String userId = user.getUserId();
         String deptName = user.getDeptName();
 
@@ -60,12 +54,6 @@ public class PrController {
                                                                   @RequestBody PrRequest prRequest){
 
         SessionUser user = getSessionUser(httpSession);
-        
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
         
         String userId = user.getUserId();
         String deptCd = user.getDeptCd();
@@ -119,11 +107,6 @@ public class PrController {
             HttpSession session) {
         
         SessionUser user = getSessionUser(session);
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
 
         String prSubject = request.get("prSubject");
         String pcType = request.get("pcType");
@@ -178,12 +161,6 @@ public class PrController {
     public ResponseEntity<Map<String,String>> rejectPurchaseRequest(@PathVariable String prNum,
                                                                     HttpSession httpSession){
         SessionUser user = getSessionUser(httpSession);
-        
-        if (user == null) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "로그인 정보가 없습니다.");
-            return ResponseEntity.status(401).body(errorResponse);
-        }
         
         String userId = user.getUserId();
         String deptCd = user.getDeptCd();

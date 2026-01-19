@@ -117,11 +117,6 @@ public class NoticeController {
         try {
             SessionUser user = getSessionUser(session);
             
-            if (user == null) {
-                System.err.println("파일 업로드 실패 - 세션 정보 없음");
-                return ResponseEntity.status(401).build();
-            }
-            
             System.out.println("파일 업로드 시작 - noticeNum: " + noticeNum);
             System.out.println("파일명: " + file.getOriginalFilename());
             System.out.println("파일 크기: " + file.getSize() + " bytes");
