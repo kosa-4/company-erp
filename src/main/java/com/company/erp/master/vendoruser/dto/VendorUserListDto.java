@@ -18,6 +18,7 @@ public class VendorUserListDto {
     private String blockFlag;
     private String password;
     private String reqType;
+    private String role;
 }
 /*
     ASK_USER_NUM	요청번호	VARCHAR2(50)	PRIMARY KEY

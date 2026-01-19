@@ -8,13 +8,21 @@
             NULL AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
             INDUSTRY_TYPE AS industry,
             USE_FLAG AS useYn,
             PROGRESS_CD AS status,
-            REG_DATE AS createdAt
+            REG_DATE AS createdAt,
+            IRS_NO AS businessNo,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            ZIP_CD AS zipCode,
+            ADDR_DT AS addressDetail,
+            FOUNDATION_DATE AS foundationDate,
+            RMK AS remark
         FROM
             VNGL
         <where>
@@ -55,13 +63,21 @@
             ASK_NUM AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
             INDUSTRY_TYPE AS industry,
             NULL AS useYn,
             PROGRESS_CD AS status,
-            REG_DATE AS createdAt
+            REG_DATE AS createdAt,
+            IRS_NO AS businessNo,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            ZIP_CD AS zipCode,
+            ADDR_DT AS addressDetail,
+            FOUNDATION_DATE AS foundationDate,
+            RMK AS remark
         FROM
             VNCH
         <where>
@@ -91,7 +107,7 @@
         </where>
 
         ORDER BY
-            vendorCode ASC
+            createdAt DESC
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->

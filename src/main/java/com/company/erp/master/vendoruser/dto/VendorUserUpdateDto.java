@@ -14,6 +14,10 @@ public class VendorUserUpdateDto {
     private String modifiedBy;
     private String reqType;
     private String rejectRemark;
+    private String password;
+    private String email;
+    private String phone;
+    private String userName;
 
 }
 
