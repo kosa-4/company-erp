@@ -1,7 +1,9 @@
 package com.company.erp.master.category.controller;
 
 import com.company.erp.common.exception.ApiResponse;
+import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.category.dto.CategoryDto;
 import com.company.erp.master.category.dto.CategoryListDto;
 import com.company.erp.master.category.service.CategoryService;
@@ -56,22 +58,20 @@ public class CategoryController {
 
     /* 카테고리 저장 */
     @PostMapping("/new")
-    public ResponseEntity<String> registerCategory(@RequestBody List<CategoryListDto> categoryListDto){
-        try{
-            categoryService.registerCategory(categoryListDto);
-            return ResponseEntity.ok().body("카테고리 등록이 완료되었습니다.");
-        } catch(RuntimeException e){
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e){
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public ApiResponse registerCategory(
+            @RequestBody List<CategoryListDto> categoryListDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser){
+        categoryService.registerCategory(categoryListDto, loginUser);
+        return ApiResponse.ok("카테고리 등록이 완료되었습니다.");
+
     }
 
     // delete
     @DeleteMapping("/{itemCls}")
-    public ApiResponse deleteCategory(@PathVariable("itemCls") String itemCls) {
-        categoryService.deleteCategory(itemCls);
+    public ApiResponse deleteCategory(
+            @PathVariable("itemCls") String itemCls,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser) {
+        categoryService.deleteCategory(itemCls, loginUser);
         return ApiResponse.ok("카테고리가 삭제되었습니다.");
     }
 

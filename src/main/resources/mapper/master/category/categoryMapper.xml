@@ -12,6 +12,8 @@
             PARENT_ITEM_CLS AS parentItemCls
         FROM
             MTCA
+        WHERE
+            DEL_FLAG = 'N'
     </select>
 
     <!--품목 분류 조회-->
@@ -47,6 +49,8 @@
             MTCA
         WHERE
             ITEM_CLS = #{itemCls}
+        AND
+            DEL_FLAG = 'N'
     </select>
 
     <!--자식 카테고리의 마지막 번호 체크-->
@@ -111,10 +115,10 @@
             #{item.parentItemCls},
             #{item.itemLvl},
             #{item.itemClsNm},
-            NOW(),
-            '추후 수정',
-            NULL,
-            NULL,
+            #{item.createdAt},
+            #{item.createdBy},
+            #{item.modifiedAt},
+            #{item.modifiedBy},
             'N',
             'Y'
             )
@@ -122,12 +126,21 @@
     </insert>
 
     <!--카테고리 삭제-->
-    <delete id="deleteCategory" parameterType="String">
-        DELETE FROM
+    <update id="updateCategory" parameterType="com.company.erp.master.category.dto.CategoryUpdateDto">
+        UPDATE
             MTCA
+        <set>
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modifiedBy},
+            <if test="delFlag != null">
+                DEL_FLAG = #{delFlag}
+            </if>
+        </set>
         WHERE
             ITEM_CLS = #{itemCls}
-    </delete>
+        AND
+            DEL_FLAG = 'N'
+    </update>
 
     <!--부모 코드 존재 여부 체크-->
 <!--    <select id="existsParentCategory" parameterType="com.company.erp.master.category.dto.CategoryDto" resultType="boolean">-->

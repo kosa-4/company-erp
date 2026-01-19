@@ -1,6 +1,10 @@
 package com.company.erp.master.vendor.controller;
 
+import com.company.erp.common.docNum.service.DocKey;
+import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.exception.ApiResponse;
+import com.company.erp.common.file.model.AttFileEntity;
+import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
@@ -12,7 +16,9 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SessionIgnore
@@ -22,11 +28,37 @@ public class VendorController {
     @Autowired
     private VendorService vendorService;
 
+    @Autowired
+    private FileService fileService;
+
+    @Autowired
+    private DocNumService docNumService;
+
     /* 조회 */
     @GetMapping
     public ResponseEntity<VendorResponseDto<VendorListDto>> getVendorList(VendorSearchDto vendorSearchDto) {
         VendorResponseDto<VendorListDto> vendors = vendorService.getVendorList(vendorSearchDto);
         return ResponseEntity.ok(vendors);
+    }
+
+    // 2. 첨부파일 조회
+    @GetMapping("{vendorCode}/files")
+    public ApiResponse getFileList(
+            @PathVariable("vendorCode") String vendorCode,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        // 1. 회사 코드로 파일 번호 조회
+        List<String> fileNumList = vendorService.getFileNumByVendorCode(vendorCode);
+
+        // 2. 조회한 파일 정보 리스트
+        List<AttFileEntity> files = new ArrayList<>();
+        
+        // 3. 상세 정보 조회 후 저장
+        for(String fileNum : fileNumList){
+            AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
+            files.add(file);
+        }
+
+        return ApiResponse.ok(files);
     }
 
     /* 저장 */
@@ -47,9 +79,11 @@ public class VendorController {
         String loginId = loginUser.getUserId();
 
         // 5) 저장 함수 실행
-        vendorService.registerVendorInternal(vendorRegisterDto, loginId);
-        return ApiResponse.ok("협력업체 등록이 완료되었습니다");
+        String vendorCode = vendorService.registerVendorInternal(vendorRegisterDto, loginId);
+        return ApiResponse.ok("협력업체 등록이 완료되었습니다", vendorCode);
     }
+    
+
 
     // 2. 협력업체 승인
     @PostMapping("/approve")
@@ -91,6 +125,20 @@ public class VendorController {
         // 5) 반려 함수 실행
         vendorService.rejectVendor(vendorUpdateDtoList, loginId);
         return ApiResponse.ok("반려 처리 되었습니다.");
+    }
+
+    // 3. 첨부 파일 저장
+    @PostMapping("/files/{vendorCode}")
+    public ApiResponse registerFile(
+            @PathVariable("vendorCode") String vendorCode,
+            @RequestParam("file") List<MultipartFile> files,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+
+        for (MultipartFile file : files) {
+            String file_num = docNumService.generateDocNumStr(DocKey.FL);
+            fileService.upload(file, "VN", file_num, vendorCode, loginUser);
+        }
+        return ApiResponse.ok(null);
     }
     
 }
