@@ -122,13 +122,16 @@ export default function RfqProgressPage() {
   };
 
   const handleClose = async () => {
-    if (selectedRfqNums.length === 0) return toast.warning('행을 선택해주세요.');
+    if (selectedRfqNums.length === 0) {
+      return toast.warning('마감할 견적을 선택해주세요.');
+    }
 
     const targetItems = data.filter(d => selectedRfqNums.includes(d.rfqNum));
     const invalidItems = targetItems.filter(d => !['RFQS', 'RFQC'].includes(d.progressCd));
 
     if (invalidItems.length > 0) {
-      return toast.warning('요청중 또는 제출완료 상태인 건만 마감이 가능합니다.');
+      const invalidStatus = invalidItems.map(i => `${i.rfqNum}(${i.progressNm})`).join(', ');
+      return toast.warning(`다음 견적은 마감할 수 없습니다: ${invalidStatus}\n요청중(RFQS) 또는 제출완료(RFQC) 상태만 마감 가능합니다.`);
     }
 
     if (!confirm(`${selectedRfqNums.length}건을 마감하시겠습니까?`)) return;
