@@ -11,7 +11,7 @@ public interface PrMapper {
     void insertPrHd(PrHdDTO prHdDTO);
     void insertPrDt(@Param("prDtList") List<PrDtDTO> prDtDTOList);
 
-    List<PrItemDTO> selectPrItem();
+    List<PrItemDTO> selectPrItem(@Param("itemCode") String itemCode, @Param("itemName") String itemName);
     List<PrItemDTO> selectPrItemInfo(@Param("itemCdList") List<String> itemCodeList);
 
     PrHdDTO selectPrNum(@Param("prNum") String prNum);
@@ -38,5 +38,11 @@ public interface PrMapper {
 
     // PROGRESS_CD의 CODE_NAME 조회 (승인 상태 확인용)
     String selectProgressCdName(@Param("progressCd") String progressCd);
+
+    // 구매요청 헤더 수정 (구매요청명, 구매유형만)
+    int updatePrHd(@Param("prNum") String prNum, 
+                    @Param("prSubject") String prSubject,
+                    @Param("pcType") String pcType,
+                    @Param("modUserId") String modUserId);
 
 }
