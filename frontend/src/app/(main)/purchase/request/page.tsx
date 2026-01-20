@@ -43,6 +43,9 @@ export default function PurchaseRequestPage() {
     itemName: '',
   });
 
+  // 첨부파일 상태
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
   const [formData, setFormData] = useState({
     prNo: '',
     prName: '',
@@ -284,17 +287,57 @@ export default function PurchaseRequestPage() {
           rmk: item.remark || '',
         })),
       };
-        const result = await prApi.save(requestData);
-        alert("구매요청 등록이 완료되었습니다.");
-        // 저장 후 페이지 리로드
-        window.location.reload();
-      } catch (error) {
+      const result = await prApi.save(requestData);
+
+      // 생성된 PR번호
+      const prNum = (result as any).prNum;
+
+      // 첨부파일 업로드 (실패해도 PR 자체는 저장된 상태 유지)
+      if (uploadedFiles.length > 0) {
+        if (!prNum) {
+          alert('구매요청 번호를 받지 못해 파일을 업로드할 수 없습니다.');
+        } else {
+          for (const file of uploadedFiles) {
+            try {
+              await prApi.uploadFile(prNum, file);
+            } catch (e) {
+              console.error('파일 업로드 실패:', e);
+            }
+          }
+        }
+      }
+
+      alert("구매요청 등록이 완료되었습니다.");
+      // 저장 후 페이지 리로드
+      window.location.reload();
+    } catch (error) {
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
       alert(errorMessage);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // 파일 선택 핸들러
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  // 파일 제거 핸들러
+  const handleFileRemove = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleAddItem = () => {
@@ -429,7 +472,14 @@ export default function PurchaseRequestPage() {
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">첨부파일</label>
               <div className="flex gap-2">
-                <input type="file" className="hidden" id="file-upload" />
+                <input
+                  type="file"
+                  className="hidden"
+                  id="file-upload"
+                  multiple
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                />
                 <Button
                     variant="secondary"
                     className="h-[42px]"
@@ -438,6 +488,28 @@ export default function PurchaseRequestPage() {
                   파일 선택
                 </Button>
               </div>
+              {/* 선택된 파일 목록 */}
+              {uploadedFiles.length > 0 && (
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between text-xs text-gray-700 bg-gray-50 rounded px-2 py-1"
+                    >
+                      <span className="truncate mr-2">
+                        {file.name} ({formatFileSize(file.size)})
+                      </span>
+                      <button
+                        type="button"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleFileRemove(index)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4">

@@ -69,6 +69,23 @@ export interface PrDtDTO {
 }
 
 /**
+ * 구매요청 상세 응답 (헤더 + 품목)
+ */
+export interface PrDetailResponse {
+    prNum: string;
+    prSubject: string;
+    rmk: string | null;
+    prAmt: number | null;
+    pcType: string | null;
+    progressCd: string | null;
+    deptCd: string | null;
+    regUserId: string;
+    regDate: string | null;
+    reqUserName: string | null;
+    items: PrDtDTO[];
+}
+
+/**
  * 구매요청 초기 데이터 응답
  */
 export interface PrInitData {
@@ -83,6 +100,7 @@ export interface PrInitData {
 export interface PrListParams {
     prNum?: string;       // PR번호
     prSubject?: string;   // 구매요청명
+    pcType?: string;      // 구매유형 (CODE_NAME: '일반구매', '단가계약', '긴급구매')
     requester?: string;   // 요청자
     deptName?: string;    // 부서명
     progressCd?: string;  // 진행상태코드 (한국어: '임시저장', '승인대기', '승인', '반려' 등)
@@ -131,8 +149,9 @@ export const prApi = {
 
     /**
      * 구매요청 등록
+     * - 응답으로 생성된 PR번호(prNum)를 함께 반환
      */
-    save: (data: PrRequest) => api.post<{ message: string }>('/v1/pr/save', data),
+    save: (data: PrRequest) => api.post<{ message: string; prNum: string }>('/v1/pr/save', data),
 
     /**
      * 구매요청 현황 목록 조회 (헤더만) - 페이징 포함
@@ -142,6 +161,7 @@ export const prApi = {
         const mappedParams: Record<string, string | number> = {};
         if (params?.prNum) mappedParams.prNum = params.prNum;
         if (params?.prSubject) mappedParams.prSubject = params.prSubject;
+        if (params?.pcType) mappedParams.pcType = params.pcType;
         if (params?.requester) mappedParams.requester = params.requester;
         if (params?.deptName) mappedParams.deptName = params.deptName;
         if (params?.progressCd) mappedParams.progressCd = params.progressCd;
@@ -184,9 +204,9 @@ export const prApi = {
     },
 
     /**
-     * 구매요청 상세 품목 목록 조회
+     * 구매요청 상세 조회 (헤더 + 품목 목록)
      */
-    getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/v1/pr/${prNum}/detail`),
+    getDetail: (prNum: string) => api.get<PrDetailResponse>(`/v1/pr/${prNum}/detail`),
 
     /**
      * 구매요청 헤더 수정 (구매요청명, 구매유형) 또는 헤더+품목 수정
@@ -197,4 +217,26 @@ export const prApi = {
         unitPrc: number;
     }> }) =>
         api.put<{ message: string }>(`/v1/pr/${prNum}/update`, data),
+
+    /**
+     * 구매요청 첨부파일 업로드
+     * - 공지사항 업로드 방식과 동일하게, Multipart로 파일을 전송
+     */
+    uploadFile: async (prNum: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`/api/v1/pr/${prNum}/files`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || '파일 업로드에 실패했습니다.');
+        }
+
+        return response.json();
+    },
 };
