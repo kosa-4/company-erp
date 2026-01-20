@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle } from 'lucide-react';
+import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { Card, Button, Badge } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { useRouter } from 'next/navigation';
+import VendorQuoteModal from '@/components/vendor/VendorQuoteModal';
 
 export default function VendorRfqSubmitPage() {
   const router = useRouter();
@@ -13,16 +14,29 @@ export default function VendorRfqSubmitPage() {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [selectedRfqNum, setSelectedRfqNum] = useState<string | null>(null);
 
   // RFQ 목록 조회
   const fetchRfqList = async () => {
     try {
       setLoading(true);
+      // DONE(결과확인) 탭일 경우 RFQC(제출완료) 목록을 조회한 후 프론트에서 필터링하거나
+      // 전체 제출 목록을 조회하여 표시. 여기서는 RFQC로 요청.
+      const apiStatus = filterStatus === 'DONE' ? 'RFQC' : filterStatus;
+      
       const data = await rfqApi.getVendorRfqList({
         searchText: searchText || undefined,
-        progressCd: filterStatus || undefined,
+        progressCd: apiStatus || undefined,
       });
-      setRfqList(data);
+      
+      // DONE 탭일 경우 선정 완료(J)된 항목만 필터링 (선택사항)
+      // 사용자 경험상 '결과확인'을 눌렀을때 결과가 나온것만 보는게 좋을 수 있음
+      if (filterStatus === 'DONE') {
+        setRfqList(data.filter((item: any) => item.progressCd === 'J'));
+      } else {
+        setRfqList(data);
+      }
     } catch (error: any) {
       toast.error('견적 목록 조회에 실패했습니다.');
       console.error(error);
@@ -33,7 +47,7 @@ export default function VendorRfqSubmitPage() {
 
   useEffect(() => {
     fetchRfqList();
-  }, []);
+  }, [filterStatus]);
 
   // 검색
   const handleSearch = () => {
@@ -66,19 +80,25 @@ export default function VendorRfqSubmitPage() {
     }
   };
 
-  // 견적 작성 페이지로 이동
+  // 견적 작성 모달 열기
   const handleGoToQuote = (rfqNum: string) => {
-    router.push(`/vendor/rfq/submit/${rfqNum}`);
+    setSelectedRfqNum(rfqNum);
+    setIsQuoteModalOpen(true);
   };
 
-  const filteredRfqList = rfqList.filter(rfq =>
-    (searchText === '' || 
-     rfq.rfqNum.toLowerCase().includes(searchText.toLowerCase()) ||
-     rfq.rfqSubject.toLowerCase().includes(searchText.toLowerCase())) &&
-    (filterStatus === '' || rfq.vendorProgressCd === filterStatus)
-  );
+  // 견적 모달 닫기
+  const handleCloseQuoteModal = () => {
+    setIsQuoteModalOpen(false);
+    setSelectedRfqNum(null);
+  };
+
+  // 견적 제출 성공 시
+  const handleQuoteSuccess = () => {
+    fetchRfqList();
+  };
 
   const waitingCount = rfqList.filter(r => r.vendorProgressCd === 'RFQS').length;
+
 
   // 상태별 배지 색상
   const getStatusBadgeVariant = (status: string) => {
@@ -133,38 +153,38 @@ export default function VendorRfqSubmitPage() {
           <div className="flex items-center gap-2">
             <Button 
               variant={filterStatus === '' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus(''); fetchRfqList(); }}
+              onClick={() => setFilterStatus('')}
               size="sm"
             >
               전체
             </Button>
             <Button 
               variant={filterStatus === 'RFQS' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQS'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQS')}
               size="sm"
             >
               요청
             </Button>
             <Button 
               variant={filterStatus === 'RFQJ' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQJ'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQJ')}
               size="sm"
             >
               접수
             </Button>
             <Button 
               variant={filterStatus === 'RFQT' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQT'); fetchRfqList(); }}
+              onClick={() => setFilterStatus('RFQT')}
               size="sm"
             >
               임시저장
             </Button>
             <Button 
-              variant={filterStatus === 'RFQC' ? 'primary' : 'outline'} 
-              onClick={() => { setFilterStatus('RFQC'); fetchRfqList(); }}
+              variant={filterStatus === 'DONE' ? 'primary' : 'outline'} 
+              onClick={() => setFilterStatus('DONE')}
               size="sm"
             >
-              제출완료
+              결과확인
             </Button>
           </div>
           <Button variant="primary" onClick={handleSearch}>
@@ -184,7 +204,7 @@ export default function VendorRfqSubmitPage() {
                 <th className="px-6 py-3 font-medium">견적유형</th>
                 <th className="px-6 py-3 font-medium">마감일</th>
                 <th className="px-6 py-3 font-medium text-center">상태</th>
-                <th className="px-6 py-3 font-medium text-center">액션</th>
+                <th className="px-6 py-3 font-medium text-center">액션/결과</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -194,7 +214,7 @@ export default function VendorRfqSubmitPage() {
                     로딩 중...
                   </td>
                 </tr>
-              ) : filteredRfqList.length === 0 ? (
+              ) : rfqList.length === 0 ? (
                 <tr>
                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
@@ -204,7 +224,18 @@ export default function VendorRfqSubmitPage() {
                   </td>
                 </tr>
               ) : (
-                filteredRfqList.map((rfq) => (
+                rfqList.map((rfq) => {
+                  // 결과 상태 계산
+                  let resultStatus = null;
+                  if (rfq.progressCd === 'J') { // RFQHD가 선정 완료 상태일 때
+                    if (rfq.selectYn === 'Y') {
+                      resultStatus = 'WIN';
+                    } else {
+                      resultStatus = 'LOSE';
+                    }
+                  }
+
+                  return (
                   <tr key={rfq.rfqNum} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{rfq.rfqNum}</td>
                     <td className="px-6 py-4 text-gray-600">{rfq.rfqSubject}</td>
@@ -266,15 +297,26 @@ export default function VendorRfqSubmitPage() {
                             </Button>
                           </>
                         )}
-                        {rfq.vendorProgressCd === 'RFQC' && (
+                        {rfq.vendorProgressCd === 'RFQC' && resultStatus === null && (
                           <Button
                             variant="ghost"
                             size="sm"
                             disabled
                             className="h-8 text-xs text-gray-400"
                           >
-                            제출완료
+                            심사중
                           </Button>
+                        )}
+                        {resultStatus === 'WIN' && (
+                          <Badge variant="green" className="h-8 px-3">
+                            <Trophy className="w-3.5 h-3.5 mr-1" />
+                            낙찰
+                          </Badge>
+                        )}
+                        {resultStatus === 'LOSE' && (
+                          <Badge variant="red" className="h-8 px-3">
+                            탈락
+                          </Badge>
                         )}
                         {rfq.vendorProgressCd === 'F' && (
                           <Button
@@ -289,12 +331,20 @@ export default function VendorRfqSubmitPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              }))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {/* 견적 작성 모달 */}
+      <VendorQuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={handleCloseQuoteModal}
+        rfqNum={selectedRfqNum}
+        onSuccess={handleQuoteSuccess}
+      />
     </div>
   );
 }

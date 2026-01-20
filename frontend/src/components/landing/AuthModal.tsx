@@ -107,13 +107,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       });
       console.log('Signup response:', formData);
       if (!response.ok) {
-        const errorMsg = await response.text();
-        throw new Error(errorMsg);
+        let errorMessage = '회원가입에 실패했습니다.';
+        try {
+         const errorData = await response.json();
+         errorMessage = errorData.message || errorMessage;
+       } catch {
+         // JSON 파싱 실패 시 기본 메시지 사용
+       }
+       throw new Error(errorMessage);
       }
 
       alert('회원가입이 완료되었습니다.');
       onSwitchMode('login');
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
     }
   };

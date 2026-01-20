@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class SignUpService {
@@ -112,7 +113,7 @@ public class SignUpService {
 
         vendorUserRegisterDto.setAskUserNum(signUpDto.getAskUserNo());
         vendorUserRegisterDto.setVendorCode(signUpDto.getVendorCode());
-        vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+        vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
         vendorUserRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
         vendorUserRegisterDto.setUserId(signUpDto.getUserId());
         vendorUserRegisterDto.setUserName(signUpDto.getUserName());

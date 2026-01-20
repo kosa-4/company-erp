@@ -39,12 +39,6 @@
             <if test="useYn != null and useYn != ''">
                 AND USE_FLAG = #{useYn}
             </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
-            </if>
             <if test="industry != null and industry != ''">
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
@@ -90,15 +84,6 @@
             </if>
             <if test="businessType != null and businessType != ''">
                 AND REG_TYPE = #{businessType}
-            </if>
-            <if test="useYn != null and useYn != ''">
-                AND USE_FLAG = #{useYn}
-            </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
             </if>
             <if test="industry != null and industry != ''">
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')

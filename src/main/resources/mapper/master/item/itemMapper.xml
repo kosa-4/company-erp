@@ -24,18 +24,12 @@
             <if test="useYn != null and useYn != ''">
                 AND i.USE_FLAG = #{useYn}
             </if>
-            <if test="startDate != null">
-                AND i.REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND i.REG_DATE <![CDATA[<=]]> #{endDate}
-            </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
             </if>
         </where>
         ORDER BY
-            i.ITEM_CD ASC
+            i.REG_DATE DESC
         LIMIT #{pageSize}
         OFFSET #{offset} <!--알아서 get으로 호출-->
     </select>

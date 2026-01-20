@@ -2,7 +2,7 @@ package com.company.erp.master.vendor.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorUpdateDto {
@@ -12,7 +12,7 @@ public class VendorUpdateDto {
     private String status;
     private String signUserId;
 
-    private LocalDate modifiedAt;
+    private LocalDateTime modifiedAt;
     private String modifiedBy;
 
     // 반려 시

@@ -177,6 +177,7 @@ export default function VendorUserPage() {
               <tr>
                 <th className="p-3"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
                 <th className="p-3">상태</th>
+                <th className="p-3">협력사코드</th>
                 <th className="p-3">협력사명</th>
                 <th className="p-3">담당자ID</th>
                 <th className="p-3">담당자명</th>
@@ -193,6 +194,7 @@ export default function VendorUserPage() {
                     <input type="checkbox" checked={selectedRows.some(r => r.userId === user.userId && r.askUserNum === user.askUserNum)} onChange={() => toggleRow(user)} />
                   </td>
                   <td className="p-3 text-center">{getStatusBadge(user.status)}</td>
+                  <td className="p-3 text-center text-gray-600 font-mono">{user.vendorCode}</td>
                   <td className="p-3 font-medium">{user.vendorName}</td>
                   <td className="p-3 text-center text-blue-600">{user.userId}</td>
                   <td className="p-3 text-center">{user.userName}</td>

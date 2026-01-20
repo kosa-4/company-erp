@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -45,7 +46,7 @@ public class CategoryService {
 
         for(CategoryListDto dto: categoryListDto){
 
-            dto.setCreatedAt(LocalDate.now());
+            dto.setCreatedAt(LocalDateTime.now());
             dto.setCreatedBy(loginUser.getUserId());
             // 1-1. 분류 체크
             switch (dto.getItemLvl()){

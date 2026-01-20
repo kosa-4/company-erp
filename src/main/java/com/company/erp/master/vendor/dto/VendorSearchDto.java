@@ -2,7 +2,7 @@ package com.company.erp.master.vendor.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorSearchDto {
@@ -13,8 +13,8 @@ public class VendorSearchDto {
     private String businessType;
     private String industry; // 업종
     private String useYn;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
 
     // 페이징
     private int page = 1;

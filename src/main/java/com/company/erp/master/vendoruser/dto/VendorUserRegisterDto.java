@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorUserRegisterDto {
@@ -17,9 +17,9 @@ public class VendorUserRegisterDto {
 
     private String askUserNum;
     private String vendorCode;
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private String createdBy;
-    private LocalDate modifiedAt;
+    private LocalDateTime modifiedAt;
     private String modifiedBy;
     @NotBlank(message = "필수 입력 사항입니다.")
     private String userId;
@@ -38,7 +38,7 @@ public class VendorUserRegisterDto {
     @Size(min = 8, message = "비밀번호는 8자리 이상입니다.")
     private String password;
     private String comType;
-    private LocalDate signDate;
+    private LocalDateTime signDate;
     private String role;
     private String reqType;
     private String delFlag;

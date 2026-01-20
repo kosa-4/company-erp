@@ -47,7 +47,6 @@ const vendorNavigationItems: NavItem[] = [
     icon: FileText,
     children: [
       { name: '견적현황', href: '/vendor/rfq/submit' },
-      { name: '견적결과', href: '/vendor/rfq/result' },
     ],
   },
   {

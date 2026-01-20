@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class ItemService {
@@ -55,7 +56,7 @@ public class ItemService {
         itemDetailDto.setItemCode(itemCode);
         // 2-2. 값 입력
         itemDetailDto.setStatus("A");
-        itemDetailDto.setCreatedAt(LocalDate.now());
+        itemDetailDto.setCreatedAt(LocalDateTime.now());
         itemDetailDto.setCreatedBy(loginUser.getUserId());
 
         // 2-3. 품목 마스터 등록

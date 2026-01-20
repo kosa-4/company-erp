@@ -2,13 +2,13 @@ package com.company.erp.master.category.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class CategoryUpdateDto {
     private String itemCls;
     private String modifiedBy;
-    private LocalDate modifiedAt;
+    private LocalDateTime modifiedAt;
     private String delFlag;
 
 }
