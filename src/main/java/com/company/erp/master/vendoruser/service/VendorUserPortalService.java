@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -66,7 +67,7 @@ public class VendorUserPortalService {
         // 3. 변수 설정
         String vendorCode = vendorUserMapper.selectVendorCodeByLoginId(loginId);
         vendorUserRegisterDto.setVendorCode(vendorCode); // 추후 session id로 검색해서 가져올 예정
-        vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+        vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
         vendorUserRegisterDto.setCreatedBy(vendorUserRegisterDto.getUserId());
         vendorUserRegisterDto.setStatus("N");
         vendorUserRegisterDto.setReqType("I");
@@ -121,7 +122,7 @@ public class VendorUserPortalService {
                 String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
                 vendorUserRegisterDto.setAskUserNum(askUserNum);
                 vendorUserRegisterDto.setVendorCode(vendorUser.getVendorCode());
-                vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+                vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
                 vendorUserRegisterDto.setCreatedBy(loginId);
                 vendorUserRegisterDto.setStatus("C");
                 vendorUserRegisterDto.setReqType("U");
@@ -137,7 +138,7 @@ public class VendorUserPortalService {
                 // 4-2-1) 업데이트 dto 생성
                 VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
                 updateDto.setAskUserNum(vendorUser.getAskUserNum());
-                updateDto.setModifiedAt(LocalDate.now());
+                updateDto.setModifiedAt(LocalDateTime.now());
                 updateDto.setModifiedBy(loginId);
                 updateDto.setStatus("C");
                 updateDto.setReqType("U");
@@ -206,7 +207,7 @@ public class VendorUserPortalService {
                 
                 String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
                 vendorUserRegisterDto.setAskUserNum(askUserNum);
-                vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+                vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
                 vendorUserRegisterDto.setCreatedBy(loginId);
                 vendorUserRegisterDto.setStatus("C");
                 vendorUserRegisterDto.setReqType("D");
@@ -219,7 +220,7 @@ public class VendorUserPortalService {
                 // 1) 업데이트 dto 생성
                 VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
                 updateDto.setAskUserNum(vendorUser.getAskUserNum());
-                updateDto.setModifiedAt(LocalDate.now());
+                updateDto.setModifiedAt(LocalDateTime.now());
                 updateDto.setModifiedBy(loginId);
 
                 // 2) 마스터 테이블 등록 이력 조회

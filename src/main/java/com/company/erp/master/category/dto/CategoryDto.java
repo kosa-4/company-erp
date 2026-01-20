@@ -3,6 +3,7 @@ package com.company.erp.master.category.dto;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class CategoryDto {
@@ -10,9 +11,9 @@ public class CategoryDto {
     private String parentItemCls;
     private int itemLvl;
     private String itemClsNm;
-    private LocalDate regDate;
+    private LocalDateTime regDate;
     private String regUserId;
-    private LocalDate modDate;
+    private LocalDateTime modDate;
     private String modUserId;
     private String delFlag;
     private String useFlag;

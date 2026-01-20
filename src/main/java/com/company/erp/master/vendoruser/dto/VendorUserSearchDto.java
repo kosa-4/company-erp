@@ -3,6 +3,7 @@ package com.company.erp.master.vendoruser.dto;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorUserSearchDto {
@@ -13,7 +14,7 @@ public class VendorUserSearchDto {
     private String phone;
     private String email;
     private String status;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private String blockFlag;
 }

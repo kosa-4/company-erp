@@ -108,18 +108,18 @@ export default function VendorPage() {
 
       if(!response.ok){
         // 1) 오류 처리
-        throw new Error('협력업체 조회에 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.message || '협력업체 조회에 실패했습니다.');
       }
       // 2-3. 데이터 파싱
       const data = await response.json();
-      console.log("조회된 데이터:", data);
       // 2-4. 상태 업데이트
       setVendors(data.vendors);
       
-    } catch(error){
+    } catch(error: any){
       // 1) 오류 처리
       console.error("데이터 조회 중 오류 발생:", error);
-      alert("데이터 로드에 실패하였습니다.")
+      alert(error.message || "데이터 로드에 실패하였습니다.")
     } finally{
       // 2-5. 검색 로딩 표시
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -264,7 +264,10 @@ export default function VendorPage() {
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error('협력업체 저장에 실패했습니다.');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || '협력업체 저장에 실패했습니다.');
+      }
       const result = await res.json(); // { success: true, message: "...", data: "VN..." }
 
       if (!result.success) {
@@ -295,8 +298,8 @@ export default function VendorPage() {
         setSelectedFiles([]); // 파일 목록 초기화
         fetchVendors();
       }
-    } catch (error) {
-      alert('저장 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      alert(error.message || '저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -328,9 +331,10 @@ export default function VendorPage() {
   }).open();
 };
 
-  
+  // console.log("선택 회사 ", selectedVendor);
   /* 승인 */
   const approveVendor = async (targets: Vendor[] = selectedVendors) => {
+    
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/approve`, {
@@ -341,13 +345,20 @@ export default function VendorPage() {
         body:JSON.stringify(targets),
       });
       if(!response.ok){
-        throw new Error('협력업체 승인에 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.message || '협력업체 승인에 실패했습니다.');
       } 
 
       // 2. 승인 성공 알림
       alert('선택한 협력업체가 승인되었습니다.');
-    } catch(error){
+
+      // 3. 성공했을 때만 목록 최신화 및 선택 초기화
+      fetchVendors(); // 목록 최신화
+      setSelectedVendors([]); // 승인이 끝났으니 체크박스 선택 해제
+
+    } catch(error: any){
       // 3. 오류 처리
+      alert(error.message)
       console.error("협력업체 승인 중 오류 발생:", error);
     }; 
   };
@@ -369,6 +380,11 @@ export default function VendorPage() {
 
       // 2. 승인 성공 알림
       alert('선택한 협력업체가 반려되었습니다.');
+
+      // 3. 성공했을 때만 목록 최신화 및 선택 초기화
+      fetchVendors(); // 목록 최신화
+      setSelectedVendors([]); // 승인이 끝났으니 체크박스 선택 해제
+
     } catch(error){
       // 3. 오류 처리
       console.error("협력업체 반려 중 오류 발생:", error);
@@ -419,6 +435,10 @@ export default function VendorPage() {
 const fetchVendorFiles = async (vendorCode: string) => {
   try {
     const response = await fetch(`/api/v1/vendors/${vendorCode}/files`);
+    if(!response.ok){
+      const errorData = await response.json();
+      throw new Error(errorData.message || `입력 실패 ${response.status}`)
+    }
     if (response.ok) {
       const result = await response.json(); // ApiResponse 객체
       // console.log("백엔드 파일 응답:", result); // 여기서 구조를 꼭 확인해보세요!
@@ -431,7 +451,8 @@ const fetchVendorFiles = async (vendorCode: string) => {
         setAttachedFiles(result);
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    alert(error.message);
     console.error("파일 목록 로드 실패:", error);
   }
 };
@@ -495,16 +516,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
             { value: 'N', label: '미사용' },
           ]}
         />
-        <DatePicker
-          label="등록일자 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="등록일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
-        />
+        
         <Select
           label="사업형태"
           value={searchParams.businessType}
@@ -549,32 +561,60 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
           emptyMessage="등록된 협력업체가 없습니다."
           selectedRows={selectedVendors}
           onSelectionChange={(selectedRows) => {
-            // 만약 selectedRows가 방금 클릭한 한 개의 객체만 담긴 배열이라면
-          const clickedRow = selectedRows[selectedRows.length - 1]; // 가장 최근에 클릭된 행
-          if (!clickedRow) {
-              // 만약 아무것도 없는 배열이 들어오면 전부 해제된 것이니 초기화
+            // 1. 가장 마지막에 인터랙션(클릭)이 일어난 행 찾기
+            // selectedRows는 현재 체크된 전체 목록입니다.
+            const lastSelectedRow = selectedRows[selectedRows.length - 1];
+            
+            if (!lastSelectedRow && selectedVendors.length === 0) {
+              setSelectedVendor(null);
               setSelectedVendors([]);
               return;
-          }
-
-          const targetKey = clickedRow.vendorCode; // 비교할 고유 키값
-
-          setSelectedVendors((prev) => {
-            // 2. '객체'가 아니라 '고유 키(vendorCode)'로 찾습니다. (이게 핵심!)
-            const isExist = prev.some((v) => v.vendorCode === targetKey);
-
-            if (isExist) {
-              // 이미 있다면 -> 무조건 제거 (토글 OFF)
-              return prev.filter((v) => v.vendorCode !== targetKey);
-            } else {
-              // 없다면 -> 상태 체크 후 추가 (토글 ON)
-              if (clickedRow.status === "A" || !clickedRow.askNum) {
-                alert("승인 가능한 상태가 아닙니다.");
-                return prev;
-              }
-              return [...prev, clickedRow];
             }
-          });
+
+            // 2. 현재 클릭한 행이 이미 선택되어 있었는지 확인 (해제 로직인지 판단)
+            const isUnselecting = selectedVendors.some(v => 
+              // 기존 선택 목록에 존재하는데, 이번에 클릭된 행이라면 '해제' 과정임
+              selectedRows.length < selectedVendors.length && !selectedRows.some(sr => sr.vendorCode === v.vendorCode)
+            );
+
+            // 실제 클릭된 행을 더 정확히 찾기 (추가/삭제된 놈 찾기)
+            const targetRow = selectedRows.length > selectedVendors.length 
+              ? selectedRows.find(sr => !selectedVendors.some(v => v.vendorCode === sr.vendorCode)) // 추가된 경우
+              : selectedVendors.find(v => !selectedRows.some(sr => sr.vendorCode === v.vendorCode)); // 삭제된 경우
+
+            if (!targetRow) return;
+
+            // 3. '해제'하는 경우라면 상태 체크 없이 바로 반영
+            const isAdding = selectedRows.length > selectedVendors.length;
+
+            if (!isAdding) {
+              // 해제 로직
+              setSelectedVendors(selectedRows);
+              setSelectedVendor(selectedRows.length > 0 ? selectedRows[selectedRows.length - 1] : null);
+              return;
+            }
+
+            // 4. '추가(체크)'하는 경우에만 상태 체크 수행
+            if (targetRow.status === "A") {
+              alert("이미 승인된 업체입니다.");
+              return; // 상태 변화 없이 종료 (체크 안 됨)
+            }
+
+            if (targetRow.status === "R") {
+              alert("반려된 상태의 업체입니다. 사유를 확인해 주세요.");
+              setSelectedVendor(targetRow); // 상세 정보는 보여줌
+              return; // 체크는 안 되게 종료
+            }
+
+            if (!targetRow.askNum) {
+              alert("신청 번호가 존재하지 않아 승인 처리가 불가능합니다.");
+              return;
+            }
+
+            // 5. 모든 조건 통과 시 상태 업데이트
+            setSelectedVendors(selectedRows);
+            setSelectedVendor(targetRow);
+            fetchVendorFiles(targetRow.vendorCode);
           }}
         />
       </Card>

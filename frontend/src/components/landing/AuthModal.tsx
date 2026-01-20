@@ -107,14 +107,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       });
       console.log('Signup response:', formData);
       if (!response.ok) {
-        const errorMsg = await response.text();
-        throw new Error(errorMsg);
+        const errorData = await response.json();
+        throw new Error(errorData.message);
       }
 
       alert('회원가입이 완료되었습니다.');
       onSwitchMode('login');
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+      alert(err.message);
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
