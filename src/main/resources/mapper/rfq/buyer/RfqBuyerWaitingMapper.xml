@@ -40,11 +40,8 @@
         <if test="prSubject != null and prSubject != ''">
             AND ph.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
         </if>
-        <if test="fromDate != null">
-            AND DATE(ph.REG_DATE) >= #{fromDate}
-        </if>
-        <if test="toDate != null">
-            AND DATE(ph.REG_DATE) &lt;= #{toDate}
+        <if test="reqDate != null">
+            AND DATE(ph.REG_DATE) = #{reqDate}
         </if>
         <if test="reqDeptCd != null and reqDeptCd != ''">
             AND ph.DEPT_CD = #{reqDeptCd}
