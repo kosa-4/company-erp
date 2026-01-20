@@ -184,14 +184,14 @@ export default function VendorPage() {
     {
       key: 'status',
       header: '상태',
-      width: 100,
+      width: 80,
       align: 'center',
       render: (value) => getStatusBadge(value as Vendor['status']),
     },
     {
       key: 'vendorCode',
       header: '협력사코드',
-      width: 140,
+      width: 100,
       align: 'center',
       render: (value) => (
         <span className="text-blue-600 hover:underline cursor-pointer font-medium">
@@ -202,18 +202,13 @@ export default function VendorPage() {
     {
       key: 'vendorName',
       header: '협력사명',
+      width: 120,
       align: 'left',
-    },
-    {
-      key: 'createdAt',
-      header: '등록일자',
-      width: 110,
-      align: 'center',
     },
     {
       key: 'useYn',
       header: '사용여부',
-      width: 80,
+      width: 100,
       align: 'center',
       render: (value) => (
         <span className={value === 'Y' ? 'text-emerald-600' : 'text-red-500'}>
@@ -224,7 +219,7 @@ export default function VendorPage() {
     {
       key: 'businessType',
       header: '사업형태',
-      width: 80,
+      width: 100,
       align: 'center',
       render: (value) => value === 'CORP' ? '법인' : '개인',
     },
@@ -243,10 +238,23 @@ export default function VendorPage() {
     {
       key: 'address',
       header: '주소',
+      width: 80,
       align: 'left',
       render: (value) => (
         <span className="truncate block max-w-[200px]" title={String(value)}>
           {String(value)}
+        </span>
+      ),
+    },
+    {
+      key: 'createdAt', // 서버에서 내려주는 키값이 createdAt 인지 확인하세요
+      header: '등록일자',
+      width: 100,
+      align: 'center',
+      render: (value) => (
+        // 데이터가 "2026-01-20T15:30:00" 형태라면 앞의 10자리만 추출
+        <span className="text-gray-600 text-sm">
+          {value ? String(value).substring(0, 10) : '-'}
         </span>
       ),
     },
@@ -273,52 +281,46 @@ export default function VendorPage() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let message = '협력업체 저장에 실패했습니다.';
-
-        try {
-          // JSON 응답인 경우 메시지 추출
-          const errorData = JSON.parse(errorText);
-          message = errorData.message || message; 
-        } catch {
-          // JSON이 아닐 시 => 정상적인 응답이 아닐 시
-          if (errorText && errorText.length < 100) message = errorText; 
-        }  
-        throw new Error(message);
-      }
-
       const result = await response.json(); // { success: true, message: "...", data: "VN..." }
 
-      if (result.success) {
-        const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
+      // 1. 에러 통합 처리
+      if (!response.ok || !result.success) {
+      // result.errors => valid 메세지
+      const errorMsg =(Object.values(result.data)[0] as string)
 
-        // 파일이 있을 때만 파일 업로드 실행
-        if (selectedFiles.length > 0 && vendorCode) {
-          try {
-         await uploadFiles(vendorCode);
-          } catch (e) {
-            console.error("파일 업로드 실패:", e);
-            alert('업체는 등록됐지만 파일 업로드에 실패했습니다. 다시 시도해주세요.');
-            setIsCreateModalOpen(false);
-            
-            fetchVendors();
-            return;
-          }
-        }
-
-        alert(result.message || '등록이 완료되었습니다.');
-        setIsCreateModalOpen(false);
-        setSelectedFiles([]); // 파일 목록 초기화
-        fetchVendors();
-      } else{
-        alert(result.message || '저장에 실패했습니다.');
-        return;
+      throw new Error(errorMsg);
+    }
+      
+    const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
+    
+    // 2. 파일이 존재 시에만 파일 업로드 실행
+    if (selectedFiles.length > 0 && vendorCode) {
+      try {
+          //  1) 회사 코드로 파일 조회
+          await uploadFiles(vendorCode);
+        } catch (e) {
+          // 2) 파일 업로드 실패 시
+          console.error("파일 업로드 실패:", e);
+          alert('업체는 등록됐지만 파일 업로드에 실패했습니다. 다시 시도해주세요.');
+          finalizeRegistration();
+          return;
       }
+    } // if end
+
+    // 3. 파일 등록까지 성공 시
+    alert(result.message || '등록이 완료되었습니다.');
+    finalizeRegistration();
+
     } catch (error: any) {
       alert(error.message || '저장 중 오류가 발생했습니다.');
     }
   };
+
+  const finalizeRegistration = () => {
+  setIsCreateModalOpen(false);
+  setSelectedFiles([]);
+  fetchVendors();
+};
 
   const handleAddressSearch = () => {
   if (!window.daum?.Postcode) {
@@ -350,6 +352,21 @@ export default function VendorPage() {
 
   /* 승인 */
   const approveVendor = async (targets: Vendor[] = selectedVendors) => {
+    if (targets.length === 0) return alert("승인할 업체를 선택해주세요.");
+
+    // 1. 상태 검증: 승인 대상은 무조건 '신규(N)' 또는 '변경(C)'이어야 함
+    // 하나라도 승인(A)이나 반려(R)가 섞여 있는지 체크
+    const invalidVendor = targets.find(v => v.status === 'A' || v.status === 'R');
+
+    if (invalidVendor) {
+      const statusName = invalidVendor?.status === 'A' ? '이미 승인된' : '반려된';
+      
+      alert(`[${invalidVendor?.vendorName}] 업체는 ${statusName} 상태이므로 승인할 수 없습니다. \n승인 가능한(신규/변경) 업체만 선택해주세요.`);
+      return;
+    }
+    
+    // 2. 승인 / 반려 상태가 없을 시
+    if (!confirm(`${targets.length}건을 승인하시겠습니까?`)) return;
     
     try{
       // 1. API 요청
@@ -381,6 +398,22 @@ export default function VendorPage() {
 
   /* 반려 */
   const rejectVendor = async (targets: Vendor[] = selectedVendors) => {
+    if (targets.length === 0) return alert("반려할 업체를 선택해주세요.");
+
+    // 1. 상태 검증: 이미 승인(A)되었거나 이미 반려(R)된 업체가 섞여 있는지 체크
+    const invalidVendor = targets.find(v => v.status === 'A' || v.status === 'R');
+
+    if (invalidVendor) {
+      const statusName = invalidVendor.status === 'A' ? '이미 승인된' : '이미 반려된';
+      alert(
+        `[${invalidVendor.vendorName}] 업체는 ${statusName} 상태이므로 반려할 수 없습니다.\n` +
+        `반려 가능한(신규/변경) 업체만 선택해주세요.`
+      );
+      return;
+    }
+
+    // 2. 모든 검증 통과 시 진행
+    if (!confirm(`${targets.length}건을 반려하시겠습니까?`)) return;
     try{
       // 1. API 요청
       const response = await fetch(`/api/v1/vendors/reject`, {
@@ -604,48 +637,15 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
           emptyMessage="등록된 협력업체가 없습니다."
           selectedRows={selectedVendors}
           onSelectionChange={(selectedRows) => {
-            // 1. 가장 마지막에 인터랙션(클릭)이 일어난 행 찾기
-            // selectedRows는 현재 체크된 전체 목록입니다.
-            const lastSelectedRow = selectedRows[selectedRows.length - 1];
-            
-            if (!lastSelectedRow && selectedVendors.length === 0) {
-              setSelectedVendor(null);
-              setSelectedVendors([]);
-              return;
-            }
-
-            // 2. 추가/삭제된 행 계산
-            const addedRows = selectedRows.filter(sr => !selectedVendors.some(v => v.vendorCode === sr.vendorCode));
-            const removedRows = selectedVendors.filter(v => !selectedRows.some(sr => sr.vendorCode === v.vendorCode));
-
-            const targetRow = addedRows[0] ?? removedRows[0];
-            if (!targetRow) return;
-
-            // 3. 해제 로직 (isAdding이 false일 때)
-            if (selectedRows.length < selectedVendors.length) {
-              setSelectedVendors(selectedRows);
-              setSelectedVendor(selectedRows.length > 0 ? selectedRows[selectedRows.length - 1] : null);
-              return;
-            }
-
-            // 4. 추가 로직 및 유효성 검사 (switch 문 활용)
-            const invalidRow = addedRows.find(r => r.status === "A" || r.status === "R" || !r.askNum);
-            if (invalidRow) {
-              switch (invalidRow.status) {
-                case 'A': alert("이미 승인된 업체입니다."); break;
-                case 'R': 
-                  alert("반려된 상태의 업체입니다. 사유를 확인해 주세요."); 
-                  setSelectedVendor(invalidRow); 
-                  break;
-                default: alert("신청 번호가 존재하지 않아 승인 처리가 불가능합니다."); break;
-              }
-              return; 
-            }
-
-            // 5. 최종 업데이트
+            // 체크는 자유롭게 허용
             setSelectedVendors(selectedRows);
-            setSelectedVendor(targetRow);
-            fetchVendorFiles(targetRow.vendorCode);
+            
+            // 클릭한 행 상세정보만 우측이나 모달에 보여주기 위해 설정
+            if (selectedRows.length > 0) {
+              const target = selectedRows[selectedRows.length - 1];
+              setSelectedVendor(target);
+              fetchVendorFiles(target.vendorCode);
+            }
           }}
         />
       </Card>
@@ -679,15 +679,13 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 <h3 className="text-xl font-bold text-gray-800">{selectedVendor.vendorName}</h3>
                 {getStatusBadge(selectedVendor.status)}
               </div>
-              <div className="text-sm text-gray-500">
-                등록일: {selectedVendor.createdAt} | 등록자: {selectedVendor.createdBy}
-              </div>
+
             </div>
 
             <div className="grid grid-cols-3 gap-x-6 gap-y-4">
               {/* 기본 정보 */}
               <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-gray-50" />
-              <Input label="협력사명(국문)" value={selectedVendor.vendorName} readOnly />
+              <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
               <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly />
               
               <Select
@@ -795,7 +793,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         <form ref={saveForm} onSubmit={(e) => e.preventDefault()}>
           <div className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <Input name="vendorCode" label="협력사코드" value="자동채번" readOnly />
+              <Input name="vendorCode" label="협력사코드" value="-" readOnly />
               <Input name="vendorName" label="협력사명" placeholder="협력사명 입력" required />
               <Input name="vendorEngName" label="협력사명(영문)" placeholder="영문 협력사명 입력" />
               <Select

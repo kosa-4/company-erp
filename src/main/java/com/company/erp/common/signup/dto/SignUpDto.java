@@ -20,24 +20,26 @@ public class SignUpDto {
 
     // 파라미터에 @Valid 붙여줘야 함
     // vendor 정보
-    @NotBlank(message = "회사명은 필수입니다.")
+    @NotBlank(message = "회사명은 필수 입력 사항입니다.")
     private String vendorName;
     private String vendorNameEn;
 
-    @NotBlank(message = "필수 입력 사항입니다")
+    @NotBlank(message = "사업 형태는 필수 입력 사항입니다.")
     private String businessType;
 
-    @NotBlank(message = "필수 입력 사항입니다")
+    @NotBlank(message = "사업자 번호는 필수 입력 사항입니다.")
+    @Pattern(regexp = "^\\d{3}-\\d{2}-\\d{5}$", message = "사업자 번호 형식이 올바르지 않습니다.")
     private String businessNo;
 
-    @NotBlank(message = "필수 입력 사항입니다")
+    @NotBlank(message = "대표명은 필수 입력 사항입니다.")
     private String ceoName;
 
     @NotBlank(message = "필수 입력 사항입니다")
     private String industry; // 업종
 
-    @NotBlank(message = "필수 입력 사항입니다")
+    @NotBlank(message = "우편 번호는 필수 입력 사항입니다.")
     private String zipCode;
+    @NotBlank(message = "주소는 필수 입력 사항입니다.")
     private String address;
     private String addressDetail;
 
@@ -48,6 +50,8 @@ public class SignUpDto {
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "팩스번호 형식이 올바르지 않습니다.")
     private String fax;
 
+    @NotBlank(message = "이메일은 필수 입력 사항입니다.")
+    @Email(message = "이메일 형식이 아닙니다.")
     private String vendorEmail;
 
     private LocalDate foundationDate;

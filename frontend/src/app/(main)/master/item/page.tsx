@@ -59,8 +59,7 @@ export default function ItemPage() {
     itemCode: '',
     itemName: '',
     useYn: '',
-    startDate: '',
-    endDate: '',
+    date: '',
     manufacturerName: '',
     page: "1",
   });
@@ -136,8 +135,7 @@ export default function ItemPage() {
       itemCode: '',
       itemName: '',
       useYn: '',
-      startDate: '',
-      endDate: '',
+      date: '',
       manufacturerName: '',
       page: '',
     });
@@ -155,7 +153,7 @@ export default function ItemPage() {
     {
       key: 'itemCode',
       header: '품목코드',
-      width: 140,
+      width: 80,
       align: 'center',
       render: (value) => (
         <span className="text-blue-600 hover:underline cursor-pointer font-medium">
@@ -166,37 +164,44 @@ export default function ItemPage() {
     {
       key: 'itemName',
       header: '품목명',
+      width: 80, 
       align: 'left',
     },
     {
       key: 'itemType',
       header: '품목종류',
-      width: 100,
-      align: 'center',
+      width: 50,
+      align: 'left',
     },
     {
       key: 'spec',
       header: '규격',
-      width: 200,
+      width: 50,
       align: 'left',
     },
     {
       key: 'unit',
       header: '단위',
-      width: 60,
-      align: 'center',
-    },
-    {
-      key: 'manufacturerCode',
-      header: '제조사코드',
-      width: 100,
-      align: 'center',
+      width: 10,
+      align: 'left',
     },
     {
       key: 'manufacturerName',
       header: '제조사명',
-      width: 120,
+      width: 10,
       align: 'left',
+    },
+    {
+      key: 'createdAt', // 서버에서 내려주는 키값이 createdAt 인지 확인하세요
+      header: '등록일자',
+      width: 50,
+      align: 'center',
+      render: (value) => (
+        // 데이터가 "2026-01-20T15:30:00" 형태라면 앞의 10자리만 추출
+        <span className="text-gray-600 text-sm">
+          {value ? String(value).substring(0, 10) : '-'}
+        </span>
+      ),
     },
     
   ];
@@ -446,16 +451,24 @@ export default function ItemPage() {
             { value: 'N', label: '미사용' },
           ]}
         />
-        <DatePicker
-          label="등록일자 시작"
+        {/* <DatePicker
+          label="등록일자"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
+        /> */}
         <DatePicker
-          label="등록일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+          label="등록일자"
+          value={searchParams.date}
+          // (e) => e.target.value 가 아니라, 들어오는 값(date)을 그대로 넣어줍니다.
+          onChange={(e) => {
+            const date = e.target.value;
+
+            setSearchParams(prev => ({ 
+            ...prev, 
+            date: date
+          }))}}
         />
+
         <Input
           label="제조사"
           placeholder="제조사명 입력"
@@ -518,7 +531,7 @@ export default function ItemPage() {
                   {/* <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/> */}
                   <Input name='manufacturerName' label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
                   <Input name='modelNo' label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt || ""} readOnly />
+                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt ? selectedItem.createdAt.substring(0, 10) : ""} readOnly />
                   <Input name='createdBy' label="등록자" value={selectedItem.createdBy} readOnly />
                 </div>
                 <Textarea name='remark' label="비고" defaultValue={selectedItem.remark || ''} rows={3}/>
@@ -548,7 +561,7 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               
-              <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
+              <Input name='itemCode' label="품목코드" value="-" readOnly />
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
               <Input 

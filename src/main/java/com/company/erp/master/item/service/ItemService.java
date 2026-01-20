@@ -22,11 +22,20 @@ public class ItemService {
 
     /* 조회 */
     public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto) {
-        // 1. 총 품목 수 계산
+
+        // 1. 날짜 형식 변환
+        if(searchDto.getDate() != null){
+            LocalDateTime start = searchDto.getDate().atStartOfDay();
+            LocalDateTime end = searchDto.getDate().atTime(23, 59, 59);
+            searchDto.setStartDate(start);
+            searchDto.setEndDate(end);
+        }
+        // 2. 총 품목 수 계산
         int totalCount = itemMapper.countItemList(searchDto);
-        // 2. 총 페이지 계산
+        // 3. 총 페이지 계산
         int totalPage = (int)Math.ceil((double) totalCount / searchDto.getPageSize());
-        // 3. Dto 반환
+
+        // 4. Dto 반환
         return new ItemResponseDto<ItemDetailDto>(
                 itemMapper.selectItemList(searchDto),
                 searchDto.getPage(),
