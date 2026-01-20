@@ -41,9 +41,9 @@ public class VendorQuoteResponse {
         private String itemSpec;
         private String unitCd;
         private BigDecimal rfqQt; // 요청수량
-        private BigDecimal quoteUnitPrc; // 견적단가
+        private String quoteUnitPrc; // 견적단가
         private BigDecimal quoteQt; // 견적수량
-        private BigDecimal quoteAmt; // 견적금액
+        private String quoteAmt; // 견적금액
         private LocalDate delyDate; // 납기가능일
         private String rmk; // 비고
     }

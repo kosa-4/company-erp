@@ -1,9 +1,11 @@
 package com.company.erp.rfq.buyer.selection.service;
 
+import com.company.erp.common.util.AesCryptoUtil;
 import com.company.erp.rfq.buyer.selection.dto.request.RfqSelectionRequest;
 import com.company.erp.rfq.buyer.selection.dto.response.RfqSelectionResponse;
 import com.company.erp.rfq.buyer.selection.mapper.RfqSelectionMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +21,27 @@ public class RfqSelectionService {
 
     private final RfqSelectionMapper mapper;
 
+    @Value("${app.crypto.key}")
+    private String cryptoKey;
+
     /**
      * 선정 대상 조회 (M, G, J 상태)
      */
     @Transactional(readOnly = true)
     public List<RfqSelectionResponse> getSelectionList(Map<String, Object> params) {
-        return mapper.selectRfqSelectionList(params);
+        List<RfqSelectionResponse> list = mapper.selectRfqSelectionList(params);
+
+        // 개찰(G) 또는 선정(J) 상태일 때만 금액 복호화
+        for (RfqSelectionResponse res : list) {
+            String status = res.getProgressCd();
+            if ("G".equals(status) || "J".equals(status)) {
+                res.setTotalAmt(AesCryptoUtil.decrypt(res.getTotalAmt(), cryptoKey));
+            } else {
+                res.setTotalAmt("***"); // 마감(M) 상태 등에서는 마스킹 처리
+            }
+        }
+
+        return list;
     }
 
     /**

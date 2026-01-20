@@ -16,7 +16,7 @@ public class RfqSelectedDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate rfqDate; // RFQ_DATE
 
-    private BigDecimal rfqAmount; // RFQ_AMT
+    private String rfqAmount; // RFQ_AMT
     private String purchaseType; // PC_TYPE (구매유형)
     private String vendorCode; // VENDOR_CD
     private String vendorName; // VNGL.VENDOR_NM

@@ -1,10 +1,12 @@
 package com.company.erp.rfq.buyer.result.service;
 
+import com.company.erp.common.util.AesCryptoUtil;
 import com.company.erp.rfq.buyer.result.dto.response.RfqResultItem;
 import com.company.erp.rfq.buyer.result.dto.response.RfqSelectionResultDetailResponse;
 import com.company.erp.rfq.buyer.result.dto.response.RfqSelectionResultResponse;
 import com.company.erp.rfq.buyer.result.mapper.RfqResultMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +21,18 @@ public class RfqResultService {
 
     private final RfqResultMapper mapper;
 
+    @Value("${app.crypto.key}")
+    private String cryptoKey;
+
     /**
      * 선정 결과 목록 조회
      */
     public List<RfqSelectionResultResponse> getRfqResultList(Map<String, Object> params) {
-        return mapper.selectRfqResultList(params);
+        List<RfqSelectionResultResponse> list = mapper.selectRfqResultList(params);
+        for (RfqSelectionResultResponse res : list) {
+            res.setTotalAmt(AesCryptoUtil.decrypt(res.getTotalAmt(), cryptoKey));
+        }
+        return list;
     }
 
     /**
@@ -37,9 +46,14 @@ public class RfqResultService {
         if (header == null) {
             throw new NoSuchElementException("해당 견적 결과가 존재하지 않거나 선정되지 않았습니다.");
         }
+        header.setTotalAmt(AesCryptoUtil.decrypt(header.getTotalAmt(), cryptoKey));
 
         // 품목 정보 조회
         List<RfqResultItem> items = mapper.selectRfqResultItems(rfqNum);
+        for (RfqResultItem item : items) {
+            item.setUnitPrice(AesCryptoUtil.decrypt(item.getUnitPrice(), cryptoKey));
+            item.setAmt(AesCryptoUtil.decrypt(item.getAmt(), cryptoKey));
+        }
 
         response.setHeader(header);
         response.setItems(items);

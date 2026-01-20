@@ -10,8 +10,8 @@ public class RfqResultItem {
     private String spec; // 규격
     private String unit; // 단위
     private BigDecimal qty; // 수량
-    private BigDecimal unitPrice; // 견적단가
-    private BigDecimal amt; // 견적금액
+    private String unitPrice; // 견적단가
+    private String amt; // 견적금액
     private String dlvyDate; // 납기가능일
     private String rmk; // 비고
 }
