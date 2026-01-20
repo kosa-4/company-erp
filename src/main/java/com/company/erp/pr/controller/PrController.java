@@ -114,6 +114,7 @@ public class PrController {
         String prSubject = (String) request.get("prSubject");
         String pcType = (String) request.get("pcType");
 
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> prDtList = (List<Map<String, Object>>) request.get("prDtList");
 
         if (prSubject == null || prSubject.trim().isEmpty()) {
