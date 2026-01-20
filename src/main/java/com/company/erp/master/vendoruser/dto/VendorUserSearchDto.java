@@ -2,7 +2,6 @@ package com.company.erp.master.vendoruser.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data

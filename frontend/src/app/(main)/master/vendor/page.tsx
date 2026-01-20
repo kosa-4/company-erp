@@ -106,10 +106,19 @@ export default function VendorPage() {
       new URLSearchParams(initPageParam as any)
     );
 
-      if(!response.ok){
-        // 1) 오류 처리
-        const errorData = await response.json();
-        throw new Error(errorData.message || '협력업체 조회에 실패했습니다.');
+      if (!response.ok) {
+        const errorText = await response.text();
+        let message = '협력업체 조회에 실패했습니다.';
+
+        try {
+          // JSON 응답인 경우 메시지 추출
+          const errorData = JSON.parse(errorText);
+          message = errorData.message || message; 
+        } catch {
+          // JSON이 아닐 시 => 정상적인 응답이 아닐 시
+          if (errorText && errorText.length < 100) message = errorText; 
+        }  
+        throw new Error(message);
       }
       // 2-3. 데이터 파싱
       const data = await response.json();
@@ -258,26 +267,31 @@ export default function VendorPage() {
     const data = Object.fromEntries(formData.entries());
 
       try {
-      const res = await fetch("/api/v1/vendors/new", {
+      const response = await fetch("/api/v1/vendors/new", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || '협력업체 저장에 실패했습니다.');
-      }
-      const result = await res.json(); // { success: true, message: "...", data: "VN..." }
+      if (!response.ok) {
+        const errorText = await response.text();
+        let message = '협력업체 저장에 실패했습니다.';
 
-      if (!result.success) {
-        alert(result.message || '저장에 실패했습니다.');
-        return;
+        try {
+          // JSON 응답인 경우 메시지 추출
+          const errorData = JSON.parse(errorText);
+          message = errorData.message || message; 
+        } catch {
+          // JSON이 아닐 시 => 정상적인 응답이 아닐 시
+          if (errorText && errorText.length < 100) message = errorText; 
+        }  
+        throw new Error(message);
       }
+
+      const result = await response.json(); // { success: true, message: "...", data: "VN..." }
 
       if (result.success) {
         const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
-        // console.log("생성된 업체 코드:", vendorCode);
 
         // 파일이 있을 때만 파일 업로드 실행
         if (selectedFiles.length > 0 && vendorCode) {
@@ -297,6 +311,9 @@ export default function VendorPage() {
         setIsCreateModalOpen(false);
         setSelectedFiles([]); // 파일 목록 초기화
         fetchVendors();
+      } else{
+        alert(result.message || '저장에 실패했습니다.');
+        return;
       }
     } catch (error: any) {
       alert(error.message || '저장 중 오류가 발생했습니다.');
@@ -331,7 +348,6 @@ export default function VendorPage() {
   }).open();
 };
 
-  // console.log("선택 회사 ", selectedVendor);
   /* 승인 */
   const approveVendor = async (targets: Vendor[] = selectedVendors) => {
     
@@ -421,12 +437,26 @@ export default function VendorPage() {
     });
 
     // 백엔드 주소로 전송 (vendorCode를 경로에 넣지 않음)
-    const res = await fetch(`/api/v1/vendors/files/${vendorCode}`, {
+    const response = await fetch(`/api/v1/vendors/files/${vendorCode}`, {
       method: 'POST',
       body: fileFormData,
     });
     
-    if (!res.ok) throw new Error('파일 업로드 실패');
+    // if (!res.ok) throw new Error('파일 업로드 실패');
+    if (!response.ok) {
+        const errorText = await response.text();
+        let message = '파일 업로드에 실패했습니다.';
+
+        try {
+          // JSON 응답인 경우 메시지 추출
+          const errorData = JSON.parse(errorText);
+          message = errorData.message || message; 
+        } catch {
+          // JSON이 아닐 시 => 정상적인 응답이 아닐 시
+          if (errorText && errorText.length < 100) message = errorText; 
+        }  
+        throw new Error(message);
+      }
   };
 
   const [attachedFiles, setAttachedFiles] = useState<AttFile[]>([]);
@@ -461,7 +491,20 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
     try {
       // 백엔드의 다운로드 API 호출
       const response = await fetch(`/api/v1/vendors/files/download/${fileNo}`);
-      if (!response.ok) throw new Error('다운로드 실패');
+      if (!response.ok) {
+        const errorText = await response.text();
+        let message = '파일 다운로드에 실패했습니다.';
+
+        try {
+          // JSON 응답인 경우 메시지 추출
+          const errorData = JSON.parse(errorText);
+          message = errorData.message || message; 
+        } catch {
+          // JSON이 아닐 시 => 정상적인 응답이 아닐 시
+          if (errorText && errorText.length < 100) message = errorText; 
+        }  
+        throw new Error(message);
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -571,47 +614,35 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
               return;
             }
 
-            // 2. 현재 클릭한 행이 이미 선택되어 있었는지 확인 (해제 로직인지 판단)
-            const isUnselecting = selectedVendors.some(v => 
-              // 기존 선택 목록에 존재하는데, 이번에 클릭된 행이라면 '해제' 과정임
-              selectedRows.length < selectedVendors.length && !selectedRows.some(sr => sr.vendorCode === v.vendorCode)
-            );
+            // 2. 추가/삭제된 행 계산
+            const addedRows = selectedRows.filter(sr => !selectedVendors.some(v => v.vendorCode === sr.vendorCode));
+            const removedRows = selectedVendors.filter(v => !selectedRows.some(sr => sr.vendorCode === v.vendorCode));
 
-            // 실제 클릭된 행을 더 정확히 찾기 (추가/삭제된 놈 찾기)
-            const targetRow = selectedRows.length > selectedVendors.length 
-              ? selectedRows.find(sr => !selectedVendors.some(v => v.vendorCode === sr.vendorCode)) // 추가된 경우
-              : selectedVendors.find(v => !selectedRows.some(sr => sr.vendorCode === v.vendorCode)); // 삭제된 경우
-
+            const targetRow = addedRows[0] ?? removedRows[0];
             if (!targetRow) return;
 
-            // 3. '해제'하는 경우라면 상태 체크 없이 바로 반영
-            const isAdding = selectedRows.length > selectedVendors.length;
-
-            if (!isAdding) {
-              // 해제 로직
+            // 3. 해제 로직 (isAdding이 false일 때)
+            if (selectedRows.length < selectedVendors.length) {
               setSelectedVendors(selectedRows);
               setSelectedVendor(selectedRows.length > 0 ? selectedRows[selectedRows.length - 1] : null);
               return;
             }
 
-            // 4. '추가(체크)'하는 경우에만 상태 체크 수행
-            if (targetRow.status === "A") {
-              alert("이미 승인된 업체입니다.");
-              return; // 상태 변화 없이 종료 (체크 안 됨)
+            // 4. 추가 로직 및 유효성 검사 (switch 문 활용)
+            const invalidRow = addedRows.find(r => r.status === "A" || r.status === "R" || !r.askNum);
+            if (invalidRow) {
+              switch (invalidRow.status) {
+                case 'A': alert("이미 승인된 업체입니다."); break;
+                case 'R': 
+                  alert("반려된 상태의 업체입니다. 사유를 확인해 주세요."); 
+                  setSelectedVendor(invalidRow); 
+                  break;
+                default: alert("신청 번호가 존재하지 않아 승인 처리가 불가능합니다."); break;
+              }
+              return; 
             }
 
-            if (targetRow.status === "R") {
-              alert("반려된 상태의 업체입니다. 사유를 확인해 주세요.");
-              setSelectedVendor(targetRow); // 상세 정보는 보여줌
-              return; // 체크는 안 되게 종료
-            }
-
-            if (!targetRow.askNum) {
-              alert("신청 번호가 존재하지 않아 승인 처리가 불가능합니다.");
-              return;
-            }
-
-            // 5. 모든 조건 통과 시 상태 업데이트
+            // 5. 최종 업데이트
             setSelectedVendors(selectedRows);
             setSelectedVendor(targetRow);
             fetchVendorFiles(targetRow.vendorCode);

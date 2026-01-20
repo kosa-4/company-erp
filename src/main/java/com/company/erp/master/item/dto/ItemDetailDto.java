@@ -2,9 +2,7 @@ package com.company.erp.master.item.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
