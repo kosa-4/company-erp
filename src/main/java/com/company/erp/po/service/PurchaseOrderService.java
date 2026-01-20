@@ -188,6 +188,9 @@ public class PurchaseOrderService {
         String currentUserId = getCurrentUserId();
         String currentDeptCd = getCurrentUserDeptCd();
 
+        // 발주담당자 설정 (세션의 현재 사용자)
+        dto.setPurchaseManager(currentUserId);
+
         // 헤더 등록 (regUserId, ctrlDeptCd 별도 전달)
         purchaseOrderMapper.insertHeader(dto, currentUserId, currentDeptCd);
 

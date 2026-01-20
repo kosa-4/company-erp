@@ -238,6 +238,13 @@ export default function OrderPendingPage() {
       return;
     }
     
+    // 발주일자가 오늘 이후인지 검증
+    const today = new Date().toISOString().split('T')[0];
+    if (orderForm.poDate < today) {
+      alert('발주일자는 오늘 이후만 선택 가능합니다.');
+      return;
+    }
+    
     const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
     if (!selectedGroup) return;
 
@@ -316,6 +323,13 @@ export default function OrderPendingPage() {
     }
     if (!orderForm.poDate) {
       alert('발주일자를 선택해주세요.');
+      return;
+    }
+    
+    // 발주일자가 오늘 이후인지 검증
+    const today = new Date().toISOString().split('T')[0];
+    if (orderForm.poDate < today) {
+      alert('발주일자는 오늘 이후만 선택 가능합니다.');
       return;
     }
     
@@ -441,14 +455,9 @@ export default function OrderPendingPage() {
           ]}
         />
         <DatePicker
-          label="견적일 시작"
+          label="견적요청일"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
       </SearchPanel>
 

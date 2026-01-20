@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/lib/api/error';
 interface ReceivingTargetItem {
   id: string; // 고유 ID (poNo + itemCode)
   rfqNo: string;
+  prNo: string; // PR번호 추가
   poNo: string;
   poName: string;
   buyer: string;
@@ -33,6 +34,7 @@ interface ReceivingTargetItem {
   remainingQuantity: number; // 잔여수량
   amount: number;
   storageLocation: string;
+  existingWarehouse?: string; // 기존 GR의 저장위치 (있으면 고정)
 }
 
 interface ReceivingFormItem {
@@ -69,6 +71,8 @@ export default function ReceivingTargetPage() {
   const [receivingItems, setReceivingItems] = useState<ReceivingFormItem[]>([]);
   // 현재 작업 중인 PO 번호 (입고 처리는 한 번에 하나의 PO만 가능)
   const [currentPoNo, setCurrentPoNo] = useState<string | null>(null);
+  // 기존 GR의 저장위치 (있으면 고정됨)
+  const [existingWarehouse, setExistingWarehouse] = useState<string | null>(null);
 
   // 데이터 조회
   const fetchData = async () => {
@@ -93,6 +97,12 @@ export default function ReceivingTargetPage() {
       result.forEach((po: PendingPODTO) => {
         if (!po.items || po.items.length === 0) return;
         
+        // 기존 GR 저장위치 확인 (remark에 EXISTING_WH: 형태로 저장됨)
+        let existingWh: string | undefined;
+        if (po.remark && po.remark.startsWith('EXISTING_WH:')) {
+          existingWh = po.remark.replace('EXISTING_WH:', '');
+        }
+        
         po.items.forEach((item) => {
           // 잔여 수량이 0 이하면 목록에 표시하지 않음 (이미 완료된 경우)
           const remainingQty = item.remainingQuantity !== undefined ? item.remainingQuantity : (item.orderQuantity || 0);
@@ -101,6 +111,7 @@ export default function ReceivingTargetPage() {
           flatItems.push({
             id: `${po.poNo}_${item.itemCode}`,
             rfqNo: po.rfqNo || '',
+            prNo: (po as any).prNo || '', // PR번호 추가
             poNo: po.poNo || '',
             poName: po.poName || '',
             poDate: po.poDate || '',
@@ -114,7 +125,8 @@ export default function ReceivingTargetPage() {
             orderQuantity: item.orderQuantity || 0,
             remainingQuantity: remainingQty,
             amount: Number(item.amount) || 0,
-            storageLocation: item.storageLocation || '본사 창고',
+            storageLocation: existingWh || item.storageLocation || '본사 창고',
+            existingWarehouse: existingWh, // 기존 GR 저장위치 고정
           });
         });
       });
@@ -191,6 +203,10 @@ export default function ReceivingTargetPage() {
 
     setCurrentPoNo(firstPoNo);
     
+    // 기존 GR 저장위치 확인 (첫 번째 아이템에서)
+    const existingWh = selectedItemsList[0].existingWarehouse;
+    setExistingWarehouse(existingWh || null);
+    
     // 입고 폼 초기화
     setGrDate(new Date().toISOString().split('T')[0]);
     setRemark('');
@@ -204,7 +220,7 @@ export default function ReceivingTargetPage() {
       remainingQuantity: item.remainingQuantity,
       receivedQuantity: item.remainingQuantity, // 기본값: 잔여수량
       receivedAmount: item.unitPrice * item.remainingQuantity,
-      storageLocation: item.storageLocation,
+      storageLocation: existingWh || item.storageLocation, // 기존 저장위치 있으면 고정
     })));
     
     setIsReceivingModalOpen(true);
@@ -328,14 +344,9 @@ export default function ReceivingTargetPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
         />
         <DatePicker
-          label="발주일자 시작"
+          label="발주일자"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="발주일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
       </SearchPanel>
 
@@ -354,10 +365,10 @@ export default function ReceivingTargetPage() {
                   <th className="w-12 px-4 py-3.5 text-center whitespace-nowrap">
                     <span className="sr-only">선택</span>
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주일자</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">품목명</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">규격</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">단위</th>
@@ -365,12 +376,13 @@ export default function ReceivingTargetPage() {
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">단가</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">금액</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">저장위치</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ/PR번호</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={12} className="px-4 py-16 text-center whitespace-nowrap">
+                    <td colSpan={13} className="px-4 py-16 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-3">
                         <svg className="animate-spin w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -382,7 +394,7 @@ export default function ReceivingTargetPage() {
                   </tr>
                 ) : targetItems.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="px-4 py-16 text-center whitespace-nowrap">
+                    <td colSpan={13} className="px-4 py-16 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-3">
                         <svg className="w-14 h-14 text-stone-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -409,10 +421,10 @@ export default function ReceivingTargetPage() {
                           className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.rfqNo}</td>
                       <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.poNo}</td>
-                      <td className="px-4 py-3.5 text-sm text-center text-blue-600 whitespace-nowrap">{item.itemCode}</td>
+                      <td className="px-4 py-3.5 text-sm text-center text-stone-600 whitespace-nowrap">{item.poDate}</td>
                       <td className="px-4 py-3.5 text-sm text-left text-stone-600 truncate max-w-[200px] whitespace-nowrap" title={item.poName}>{item.poName}</td>
+                      <td className="px-4 py-3.5 text-sm text-center text-gray-900 whitespace-nowrap">{item.itemCode}</td>
                       <td className="px-4 py-3.5 text-sm text-left font-medium text-gray-900 whitespace-nowrap">{item.itemName}</td>
                       <td className="px-4 py-3.5 text-sm text-center text-stone-500 whitespace-nowrap">{item.spec || '-'}</td>
                       <td className="px-4 py-3.5 text-sm text-center text-stone-500 whitespace-nowrap">{item.unit}</td>
@@ -420,6 +432,7 @@ export default function ReceivingTargetPage() {
                       <td className="px-4 py-3.5 text-sm text-right text-stone-600 whitespace-nowrap">₩{formatNumber(item.unitPrice)}</td>
                       <td className="px-4 py-3.5 text-sm text-right font-medium text-stone-900 whitespace-nowrap">₩{formatNumber(item.amount)}</td>
                       <td className="px-4 py-3.5 text-sm text-left text-stone-500 whitespace-nowrap">{item.storageLocation}</td>
+                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.rfqNo || item.prNo || '-'}</td>
                     </tr>
                   ))
                 )}
@@ -445,9 +458,19 @@ export default function ReceivingTargetPage() {
         }
       >
         <div className="space-y-6">
+          {/* 기존 GR 안내 메시지 */}
+          {existingWarehouse && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>안내:</strong> 이 발주에 이미 입고 처리된 건이 있습니다. 
+                저장위치가 <strong>'{existingWarehouse}'</strong>(으)로 고정됩니다.
+              </p>
+            </div>
+          )}
+
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
-            <Input label="입고번호" value="" placeholder="저장 시 자동생성" readOnly />
+            <Input label="입고번호" value="" placeholder="" readOnly />
             <DatePicker 
               label="입고일자" 
               value={grDate}
@@ -506,9 +529,11 @@ export default function ReceivingTargetPage() {
                       <td className="p-3 text-right font-medium">₩{formatNumber(item.receivedAmount)}</td>
                       <td className="p-3">
                         <select 
-                          className="px-2 py-1 border rounded text-sm"
+                          className={`px-2 py-1 border rounded text-sm ${existingWarehouse ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                           value={item.storageLocation}
                           onChange={(e) => handleStorageChange(index, e.target.value)}
+                          disabled={!!existingWarehouse}
+                          title={existingWarehouse ? '기존 입고 건이 있어 저장위치가 고정됩니다.' : ''}
                         >
                           <option value="본사 창고">본사 창고</option>
                           <option value="지사 창고">지사 창고</option>

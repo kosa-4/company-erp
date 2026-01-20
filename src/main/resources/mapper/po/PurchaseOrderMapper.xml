@@ -96,7 +96,8 @@
     <!-- 삭제 -->
     <update id="deleteHeader"> UPDATE POHD SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
 
-    <update id="deleteItems"> UPDATE PODT SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
+    <!-- 발주 수정 시 기존 품목 물리적 삭제 (재등록 위해) -->
+    <delete id="deleteItems"> DELETE FROM PODT WHERE PO_NUM = #{poNo} </delete>
 
     <!-- RFQ 선정완료(J) 목록 조회 (긴급/단가계약 PR 포함) -->
     <select id="selectRfqSelectedList" parameterType="map"

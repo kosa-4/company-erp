@@ -272,14 +272,8 @@ export default function VendorQuoteModal({
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
                         {new Intl.NumberFormat('ko-KR').format(item.quoteAmt || 0)}
                       </td>
-                      <td className="px-4 py-3">
-                        <Input
-                          type="date"
-                          value={item.delyDate || ''}
-                          onChange={(e) =>
-                            handleItemChange(item.lineNo, 'delyDate', e.target.value)
-                          }
-                        />
+                      <td className="px-4 py-3 text-center text-gray-600">
+                        {item.delyDate || '-'}
                       </td>
                       <td className="px-4 py-3">
                         <Input

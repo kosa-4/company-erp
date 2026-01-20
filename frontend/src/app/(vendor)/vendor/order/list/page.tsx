@@ -170,11 +170,33 @@ export default function VendorOrderListPage() {
       </div>
 
       {/* Orders Table */}
-      <Card padding={false} className="overflow-hidden">
+      <Card 
+        title="발주서 목록" 
+        padding={false} 
+        className="overflow-hidden"
+        actions={
+          <Button
+            variant="primary"
+            onClick={() => {
+              if (selectedOrder && selectedOrder.checkFlag === 'N') {
+                handleConfirm(selectedOrder.poNo);
+              } else if (!selectedOrder) {
+                alert('수신확인할 발주서를 선택해주세요.');
+              } else {
+                alert('이미 확인된 발주서입니다.');
+              }
+            }}
+            icon={<Check className="w-4 h-4" />}
+          >
+            수신확인
+          </Button>
+        }
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="w-12 px-4 py-3"></th>
                 <th className="px-6 py-3 font-medium">발주번호</th>
                 <th className="px-6 py-3 font-medium">발주명</th>
                 <th className="px-6 py-3 font-medium">발주일자</th>
@@ -186,7 +208,7 @@ export default function VendorOrderListPage() {
             <tbody className="divide-y divide-gray-100">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center">
                       <Package className="w-8 h-8 text-gray-300 mb-2" />
                       <p>수신된 발주서가 없습니다.</p>
@@ -197,10 +219,28 @@ export default function VendorOrderListPage() {
                 filteredOrders.map((order) => (
                   <tr 
                     key={order.poNo} 
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => handleViewDetail(order)}
+                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedOrder?.poNo === order.poNo ? 'bg-teal-50' : ''}`}
+                    onClick={() => setSelectedOrder(order)}
                   >
-                    <td className="px-6 py-4 font-medium text-gray-900">{order.poNo}</td>
+                    <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrder?.poNo === order.poNo}
+                        onChange={() => setSelectedOrder(selectedOrder?.poNo === order.poNo ? null : order)}
+                        className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <span 
+                        className="font-medium text-blue-600 hover:underline cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetail(order);
+                        }}
+                      >
+                        {order.poNo}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-gray-600">{order.poName}</td>
                     <td className="px-6 py-4 text-gray-500">
                       <div className="flex items-center gap-1.5">
@@ -304,18 +344,6 @@ export default function VendorOrderListPage() {
               >
                 닫기
               </Button>
-              {selectedOrder.checkFlag === 'N' && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    handleConfirm(selectedOrder.poNo);
-                    setShowDetail(false);
-                  }}
-                  icon={<Check className="w-4 h-4" />}
-                >
-                  수신확인
-                </Button>
-              )}
             </div>
           </div>
         </div>
