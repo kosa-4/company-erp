@@ -369,6 +369,11 @@ export default function OrderProgressPage() {
     const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
     if (!selectedGroup) return;
 
+    if (selectedGroup.status === 'S') {
+      alert('이미 발주전송된 건입니다');
+      return;
+    }
+
     if (selectedGroup.status !== 'A') {
       alert('승인 상태의 항목만 발주전송할 수 있습니다.');
       return;
