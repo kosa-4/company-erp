@@ -266,6 +266,11 @@
             AND ST.CODE_NAME = #{progressCd}
         </if>
         
+        <!-- 구매유형 검색 -->
+        <if test="pcType != null and pcType != ''">
+            AND PT.CODE_NAME = #{pcType}
+        </if>
+        
         <!-- 요청일자 검색 (서버(DB) 날짜 기준으로 동일한 일자만 조회) -->
         <if test="requestDate != null and requestDate != ''">
             AND DATE(HD.REG_DATE) = #{requestDate}
