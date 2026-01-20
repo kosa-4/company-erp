@@ -76,11 +76,17 @@ public class RfqVendorQuoteService {
             totalAmt = totalAmt.add(quoteAmt);
 
             // 품목 업데이트
-            mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            int updated = mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            if (updated == 0) {
+                throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
+            }
         }
 
         // RFQVN 상태 및 총액 업데이트 (RFQT)
-        mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT", totalAmt, userId);
+        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT", totalAmt, userId);
+        if (updated == 0) {
+            throw new IllegalStateException("견적 상태 업데이트에 실패했습니다.");
+        }
     }
 
     /**
@@ -108,11 +114,17 @@ public class RfqVendorQuoteService {
             totalAmt = totalAmt.add(quoteAmt);
 
             // 품목 업데이트
-            mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            int updated = mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            if (updated == 0) {
+                throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
+            }
         }
 
         // RFQVN 상태 및 총액 업데이트 (RFQC)
-        mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC", totalAmt, userId);
+        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC", totalAmt, userId);
+        if (updated == 0) {
+            throw new IllegalStateException("견적 제출에 실패했습니다.");
+        }
     }
 
     /**

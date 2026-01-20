@@ -35,12 +35,13 @@
     <update id="updateRfqVndtItem"> UPDATE rfqvndt SET QUOTE_UNIT_PRC = #{item.quoteUnitPrc},
         QUOTE_QT = #{item.quoteQt}, QUOTE_AMT = #{item.quoteAmt}, DELY_DATE = #{item.delyDate}, RMK
         = #{item.rmk}, MOD_DATE = NOW(), MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND
-        LINE_NO = #{item.lineNo} AND VENDOR_CD = #{vendorCd} </update>
+        LINE_NO = #{item.lineNo} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
 
     <!-- RFQVN 상태 및 총액 업데이트 -->
     <update id="updateRfqVnStatusAndAmount"> UPDATE rfqvn SET PROGRESS_CD = #{progressCd}, TOTAL_AMT
         = #{totalAmt}, <if test="progressCd == 'RFQC'"> SUBMIT_DATE = NOW(), </if> MOD_DATE = NOW(),
-        MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND VENDOR_CD = #{vendorCd} </update>
+        MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG =
+        'N' </update>
 
     <!-- RFQVN 상태 조회 -->
     <select id="selectRfqVnStatus" resultType="map"> SELECT PROGRESS_CD as progressCd, SELECT_YN as

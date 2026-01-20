@@ -37,4 +37,11 @@ public interface RfqSelectionMapper {
             @Param("vendorCd") String vendorCd,
             @Param("selectRmk") String selectRmk,
             @Param("loginUserId") String loginUserId);
+
+    /**
+     * 선정: 대상 Vendor의 품목 선정 (RFQVNDT.SELECT_YN = Y)
+     */
+    int updateRfqVendorItemSelection(@Param("rfqNum") String rfqNum,
+            @Param("vendorCd") String vendorCd,
+            @Param("loginUserId") String loginUserId);
 }
