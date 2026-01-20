@@ -104,8 +104,8 @@ public final class AesCryptoUtil {
 
     private static void validateKeyLength(byte[] key) {
         int len = key.length;
-        if (!(len == 16 || len == 24 || len == 32)) {
-            throw new IllegalArgumentException("AES 키 길이가 올바르지 않습니다 : " + len);
+        if (len != 32) {
+            throw new IllegalArgumentException("AES-256을 위한 32바이트 키가 필요합니다. 현재 길이: " + len);
         }
     }
 }

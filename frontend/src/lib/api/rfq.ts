@@ -83,7 +83,7 @@ export interface RfqDetailResponse {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
-        totalAmt?: number;
+        totalAmt?: number | string;
         selectYn: string;
     }[];
 }
@@ -105,7 +105,7 @@ export interface RfqProgressGroup {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
-        totalAmt?: number;
+        totalAmt?: number | string;
         selectYn?: string;
     }[];
 }
@@ -126,7 +126,7 @@ export interface RfqSelectionResponse {
     vnProgressNm: string;
     sendDate?: string;
     submitDate?: string;
-    totalAmt?: number;
+    totalAmt?: number | string;
     selectYn?: string;
     rmk?: string;
 }
@@ -158,7 +158,7 @@ export interface RfqSelectionResultResponse {
     rfqTypeNm: string;
     vendorCd: string;
     vendorNm: string;
-    totalAmt: number;
+    totalAmt: number | string;
     ctrlUserId: string;
     ctrlUserNm: string;
     regDate: string;
@@ -171,8 +171,8 @@ export interface RfqResultItem {
     spec: string;
     unit: string;
     qty: number;
-    unitPrice: number;
-    amt: number;
+    unitPrice: number | string;
+    amt: number | string;
     dlvyDate: string;
     rmk: string;
 }

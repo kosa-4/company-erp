@@ -131,12 +131,12 @@ export default function VendorRfqSubmitPage() {
       return;
     }
 
-    // 이미 포기했거나(F), 제출완료(RFQC) 상태면 포기 불가
+    // 접수(RFQJ) 또는 임시저장(RFQT) 상태인 건만 포기 가능
     const targetRfqs = rfqList.filter(r => selectedRfqs.includes(r.rfqNum));
-    const invalidItems = targetRfqs.filter(r => r.vendorProgressCd === 'RFQC' || r.vendorProgressCd === 'F');
+    const invalidItems = targetRfqs.filter(r => r.vendorProgressCd !== 'RFQJ' && r.vendorProgressCd !== 'RFQT');
 
     if (invalidItems.length > 0) {
-      toast.error('이미 제출했거나 포기한 건은 포기 처리할 수 없습니다.');
+      toast.error('포기 처리는 "접수" 또는 "임시저장" 상태인 건만 가능합니다.');
       return;
     }
 

@@ -45,7 +45,9 @@
             <if test="search.searchText != null and search.searchText != ''">
                 AND (h.RFQ_NUM LIKE CONCAT('%', #{search.searchText}, '%') OR h.RFQ_SUBJECT LIKE CONCAT('%', #{search.searchText}, '%'))
             </if>
-            <!-- progressCd 필터링 제거됨: 접수(RFQJ) 상태 등도 모두 조회되도록 함 -->
+            <if test="search.progressCd != null and search.progressCd != ''">
+                AND v.PROGRESS_CD = #{search.progressCd}
+            </if>
             <if test="search.startDate != null and search.startDate != ''">
                 AND h.RFQ_DATE >= #{search.startDate}
             </if>

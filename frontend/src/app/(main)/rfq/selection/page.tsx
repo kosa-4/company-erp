@@ -20,7 +20,7 @@ import { getErrorMessage } from '@/lib/api/error';
 interface RfqSelectionVendor {
   vendorCd: string;
   vendorNm: string;
-  totalAmt: number | null;
+  totalAmt: number | string | null;
   vnProgressCd: string;
   vnProgressNm: string;
   sendDate: string;
@@ -107,6 +107,10 @@ export default function RfqSelectionPage() {
       }, [] as RfqSelectionGroup[]);
 
       setData(grouped);
+      // 검색 시 기존 선택/확장 상태 초기화
+      setExpandedRows([]);
+      setSelectedRfqNums([]);
+      setSelectedVendor(null);
     } catch (error) {
       toast.error('목록 조회 중 오류가 발생했습니다.');
     } finally {
@@ -417,7 +421,7 @@ export default function RfqSelectionPage() {
                                           {row.progressCd === 'M' ? (
                                             <span className="text-stone-400 font-bold tracking-widest text-xs">****</span>
                                           ) : (
-                                            vendor.totalAmt ? `₩${formatNumber(vendor.totalAmt)}` : '-'
+                                            vendor.totalAmt !== null && vendor.totalAmt !== undefined ? `₩${formatNumber(vendor.totalAmt)}` : '-'
                                           )}
                                         </td>
                                         <td className="px-4 py-2 text-sm text-stone-600 text-center font-medium">

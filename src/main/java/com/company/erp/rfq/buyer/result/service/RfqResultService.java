@@ -50,9 +50,11 @@ public class RfqResultService {
 
         // 품목 정보 조회
         List<RfqResultItem> items = mapper.selectRfqResultItems(rfqNum);
-        for (RfqResultItem item : items) {
-            item.setUnitPrice(AesCryptoUtil.decrypt(item.getUnitPrice(), cryptoKey));
-            item.setAmt(AesCryptoUtil.decrypt(item.getAmt(), cryptoKey));
+        if (items != null) {
+            for (RfqResultItem item : items) {
+                item.setUnitPrice(AesCryptoUtil.decrypt(item.getUnitPrice(), cryptoKey));
+                item.setAmt(AesCryptoUtil.decrypt(item.getAmt(), cryptoKey));
+            }
         }
 
         response.setHeader(header);
