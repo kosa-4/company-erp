@@ -474,7 +474,6 @@ export default function RfqRequestModal({
                                     columns={vendorColumns}
                                     data={detail?.vendors || []}
                                     keyField="vendorCd"
-                                    keyField="vendorCd"
                                     loading={loading}
                                     emptyMessage="추가된 협력사가 없습니다."
                                     selectable={isEditable}

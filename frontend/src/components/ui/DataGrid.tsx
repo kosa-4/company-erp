@@ -219,7 +219,7 @@ function DataGrid<T extends object>({
                 {sortedData.map((row, index) => {
                   const canSelect = !isRowSelectable || isRowSelectable(row);
 
-                  const uniqueKey = `${String(row[keyField])}-${index}`;
+                  const uniqueKey = String(row[keyField]);
                   const isExpanded = expandedRows.has(uniqueKey);
 
                   return (

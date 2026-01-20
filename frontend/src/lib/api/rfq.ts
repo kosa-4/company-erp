@@ -279,7 +279,10 @@ export const rfqApi = {
     /**
      * RFQ 삭제 (Soft Delete)
      */
-    deleteRfq: (rfqNum: string) => api.put<{ message: string }>(`/v1/buyer/rfq/${rfqNum}/delete`),
+    /**
+     * RFQ 삭제 (Soft Delete)
+     */
+    deleteRfq: (rfqNum: string) => api.delete<{ message: string }>(`/v1/buyer/rfqs/${rfqNum}`),
 
     /**
      * [신규] RFQ용 승인된 협력사 목록 조회
