@@ -5,11 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   ChevronDown, 
-  User, 
-  Building2, 
-  FileText, 
-  Package, 
-  Home,
   LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface NavItem {
   name: string;
   href: string;
-  icon: React.ElementType;
+  icon: string;
   children?: { name: string; href: string }[];
 }
 
@@ -26,7 +21,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: 'My Page',
     href: '/vendor/mypage',
-    icon: User,
+    icon: '👤',
     children: [
       { name: '프로필', href: '/vendor/mypage/profile' },
       { name: '공지사항', href: '/vendor/mypage/notice' },
@@ -35,7 +30,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '기준정보',
     href: '/vendor/master',
-    icon: Building2,
+    icon: '📋',
     children: [
       { name: '협력업체 변경신청', href: '/vendor/master/info' },
       { name: '담당자관리', href: '/vendor/master/users' },
@@ -44,7 +39,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '견적관리',
     href: '/vendor/rfq',
-    icon: FileText,
+    icon: '📝',
     children: [
       { name: '견적현황', href: '/vendor/rfq/submit' },
     ],
@@ -52,7 +47,7 @@ const vendorNavigationItems: NavItem[] = [
   {
     name: '발주관리',
     href: '/vendor/order',
-    icon: Package,
+    icon: '📦',
     children: [
       { name: '발주서 조회', href: '/vendor/order/list' },
     ],
@@ -71,7 +66,6 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
   const hasChildren = item.children && item.children.length > 0;
   const isChildActive = item.children?.some(child => pathname === child.href) ?? false;
   const shouldExpand = isOpen || isChildActive;
-  const Icon = item.icon;
 
   return (
     <div className="mb-0.5">
@@ -87,7 +81,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
           >
             <div className="flex items-center gap-2.5">
               <span className={`text-base ${isChildActive ? 'text-gray-700' : 'text-gray-500'}`}>
-                <Icon className="w-4 h-4" />
+                {item.icon}
               </span>
               <span className="text-[13px] font-medium">{item.name}</span>
             </div>
@@ -122,7 +116,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
             }`}
         >
           <span className={`text-base ${isActive ? 'text-gray-700' : 'text-gray-500'}`}>
-            <Icon className="w-4 h-4" />
+            {item.icon}
           </span>
           <span className="text-[13px] font-medium">{item.name}</span>
         </Link>
@@ -177,7 +171,7 @@ const VendorSidebar: React.FC = () => {
             }`}
         >
           <span className={`text-base ${pathname === '/vendor' ? 'text-gray-700' : 'text-gray-500'}`}>
-            <Home className="w-4 h-4" />
+            🏠
           </span>
           <span className="text-[13px] font-medium">홈</span>
         </Link>

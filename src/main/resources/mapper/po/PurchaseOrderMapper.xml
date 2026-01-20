@@ -96,29 +96,70 @@
     <!-- 삭제 -->
     <update id="deleteHeader"> UPDATE POHD SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
 
-    <update id="deleteItems"> UPDATE PODT SET DEL_FLAG = 'Y' WHERE PO_NUM = #{poNo} </update>
+    <!-- 발주 수정 시 기존 품목 물리적 삭제 (재등록 위해) -->
+    <delete id="deleteItems"> DELETE FROM PODT WHERE PO_NUM = #{poNo} </delete>
 
-    <!-- RFQ 선정완료(J) 목록 조회 -->
+    <!-- RFQ 선정완료(J) 목록 조회 (긴급/단가계약 PR 포함) -->
     <select id="selectRfqSelectedList" parameterType="map"
-        resultType="com.company.erp.rfq.dto.RfqSelectedDTO"> SELECT h.RFQ_NUM AS rfqNo,
-        h.RFQ_SUBJECT AS rfqName, h.RFQ_DATE AS rfqDate, vn.TOTAL_AMT AS rfqAmount, h.PC_TYPE AS
-        purchaseType, vn.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName, h.CTRL_USER_ID AS
-        ctrlUserId, u.USER_NM AS ctrlUserName, h.PR_NUM AS prNo, h.RMK AS remark FROM RFQHD h LEFT
-        JOIN RFQVN vn ON h.RFQ_NUM = vn.RFQ_NUM AND vn.SELECT_YN = 'Y' LEFT JOIN VNGL v ON
-        vn.VENDOR_CD = v.VENDOR_CD LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID LEFT JOIN POHD
-        po ON h.RFQ_NUM = po.RFQ_NUM WHERE h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' AND po.PO_NUM IS
-        NULL <if test="rfqNo != null and rfqNo != ''"> AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
-        <if
-            test="rfqName != null and rfqName != ''"> AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqName},
-        '%') </if>
-        <if test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE
-        CONCAT('%', #{vendorName}, '%') </if>
-        <if test="purchaseType != null and purchaseType != ''">
-        AND h.PC_TYPE = #{purchaseType} </if>
-        <if test="startDate != null and startDate != ''"> AND
-        h.RFQ_DATE &gt;= #{startDate} </if>
-        <if test="endDate != null and endDate != ''"> AND
-        h.RFQ_DATE &lt;= #{endDate} </if> ORDER BY h.RFQ_DATE DESC </select>
+        resultType="com.company.erp.rfq.dto.RfqSelectedDTO"> 
+        SELECT 
+            h.RFQ_NUM AS rfqNo,
+            h.RFQ_SUBJECT AS rfqName, 
+            h.RFQ_DATE AS rfqDate, 
+            vn.TOTAL_AMT AS rfqAmount, 
+            h.PC_TYPE AS purchaseType, 
+            vn.VENDOR_CD AS vendorCode, 
+            v.VENDOR_NM AS vendorName, 
+            h.CTRL_USER_ID AS ctrlUserId, 
+            u.USER_NM AS ctrlUserName, 
+            h.PR_NUM AS prNo, 
+            h.RMK AS remark 
+        FROM RFQHD h 
+        LEFT JOIN RFQVN vn ON h.RFQ_NUM = vn.RFQ_NUM AND vn.SELECT_YN = 'Y' 
+        LEFT JOIN VNGL v ON vn.VENDOR_CD = v.VENDOR_CD 
+        LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID 
+        LEFT JOIN POHD po ON h.RFQ_NUM = po.RFQ_NUM 
+        WHERE h.PROGRESS_CD = 'J' 
+          AND h.DEL_FLAG = 'N' 
+          AND po.PO_NUM IS NULL 
+        <if test="rfqNo != null and rfqNo != ''"> AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
+        <if test="rfqName != null and rfqName != ''"> AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqName}, '%') </if>
+        <if test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%') </if>
+        <if test="purchaseType != null and purchaseType != ''"> AND h.PC_TYPE = #{purchaseType} </if>
+        <if test="startDate != null and startDate != ''"> AND h.RFQ_DATE &gt;= #{startDate} </if>
+        <if test="endDate != null and endDate != ''"> AND h.RFQ_DATE &lt;= #{endDate} </if>
+        
+        UNION ALL
+        
+        SELECT
+            p.PR_NUM AS rfqNo,
+            p.PR_SUBJECT AS rfqName,
+            p.REG_DATE AS rfqDate,
+            p.PR_AMT AS rfqAmount,
+            p.PC_TYPE AS purchaseType,
+            NULL AS vendorCode,
+            NULL AS vendorName,
+            p.CTRL_USER_ID AS ctrlUserId,
+            u.USER_NM AS ctrlUserName,
+            p.PR_NUM AS prNo,
+            p.RMK AS remark
+        FROM PRHD p
+        LEFT JOIN BY_USER u ON p.CTRL_USER_ID = u.USER_ID
+        LEFT JOIN CODD c ON p.PROGRESS_CD = c.CODE AND c.CODE_GROUP = 'PROGRESS_CD'
+        LEFT JOIN POHD po ON p.PR_NUM = po.PR_NUM AND po.DEL_FLAG = 'N'
+        WHERE c.CODE_NAME = '승인'
+          AND p.PC_TYPE IN ('E', 'C')
+          AND p.DEL_FLAG = 'N'
+          AND po.PO_NUM IS NULL
+        <if test="rfqNo != null and rfqNo != ''"> AND p.PR_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
+        <if test="rfqName != null and rfqName != ''"> AND p.PR_SUBJECT LIKE CONCAT('%', #{rfqName}, '%') </if>
+        <if test="vendorName != null and vendorName != ''"> AND 1=0 </if>
+        <if test="purchaseType != null and purchaseType != ''"> AND p.PC_TYPE = #{purchaseType} </if>
+        <if test="startDate != null and startDate != ''"> AND p.REG_DATE &gt;= #{startDate} </if>
+        <if test="endDate != null and endDate != ''"> AND p.REG_DATE &lt;= #{endDate} </if>
+
+        ORDER BY rfqDate DESC 
+    </select>
 
     <!-- RFQ 선정완료 품목 조회 -->
     <select id="selectRfqSelectedItems" parameterType="String"
@@ -128,5 +169,24 @@
         vd.DELY_DATE AS deliveryDate, d.WH_NM AS storageLocation, d.RMK AS remark FROM RFQDT d LEFT
         JOIN RFQVNDT vd ON d.RFQ_NUM = vd.RFQ_NUM AND d.LINE_NO = vd.LINE_NO AND vd.SELECT_YN = 'Y'
         WHERE d.RFQ_NUM = #{rfqNo} AND d.DEL_FLAG = 'N' </select>
+
+    <!-- PR 품목을 RfqSelectedItemDTO로 조회 (긴급/단가계약용) -->
+    <select id="selectPrItemsAsRfqItems" parameterType="String" resultType="com.company.erp.rfq.dto.RfqSelectedItemDTO">
+        SELECT
+            d.PR_NUM AS rfqNo,
+            d.ITEM_CD AS itemCode,
+            d.ITEM_DESC AS itemName,
+            d.ITEM_SPEC AS specification,
+            d.UNIT_CD AS unit,
+            d.PR_QT AS quantity,
+            d.UNIT_PRC AS unitPrice,
+            d.PR_AMT AS amount,
+            d.DELY_DATE AS deliveryDate,
+            NULL AS storageLocation,
+            d.RMK AS remark
+        FROM PRDT d
+        WHERE d.PR_NUM = #{prNum}
+          AND d.DEL_FLAG = 'N'
+    </select>
 
 </mapper>
