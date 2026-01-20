@@ -10,8 +10,7 @@ import java.time.LocalDate;
 public class RfqWaitingSearchRequest {
     private String prNum;
     private String prSubject;
-    private LocalDate fromDate;
-    private LocalDate toDate;
+    private LocalDate reqDate;
     private String reqDeptCd;
     private String reqUserNm;
 }
