@@ -1,10 +1,12 @@
 package com.company.erp.rfq.vendor.quote.service;
 
+import com.company.erp.common.util.AesCryptoUtil;
 import com.company.erp.rfq.vendor.quote.dto.request.VendorQuoteItemRequest;
 import com.company.erp.rfq.vendor.quote.dto.request.VendorQuoteRequest;
 import com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse;
 import com.company.erp.rfq.vendor.quote.mapper.RfqVendorQuoteMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,9 @@ import java.util.Map;
 public class RfqVendorQuoteService {
 
     private final RfqVendorQuoteMapper mapper;
+
+    @Value("${app.crypto.key}")
+    private String cryptoKey;
 
     /**
      * 견적 데이터 조회 (편집용)
@@ -54,8 +59,20 @@ public class RfqVendorQuoteService {
 
         // 품목 목록 조회
         List<VendorQuoteResponse.QuoteItemInfo> items = mapper.selectQuoteItems(rfqNum, vendorCd);
-        response.setItems(items);
 
+        // 본인 견적이므로 항상 복호화
+        if (items != null) {
+            for (VendorQuoteResponse.QuoteItemInfo item : items) {
+                if (item.getQuoteUnitPrc() != null) {
+                    item.setQuoteUnitPrc(AesCryptoUtil.decrypt(item.getQuoteUnitPrc(), cryptoKey));
+                }
+                if (item.getQuoteAmt() != null) {
+                    item.setQuoteAmt(AesCryptoUtil.decrypt(item.getQuoteAmt(), cryptoKey));
+                }
+            }
+        }
+
+        response.setItems(items);
         return response;
     }
 
@@ -75,15 +92,25 @@ public class RfqVendorQuoteService {
             item.setQuoteAmt(quoteAmt);
             totalAmt = totalAmt.add(quoteAmt);
 
-            // 품목 업데이트
-            int updated = mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            // 품목 업데이트 (암호화)
+            int updated = mapper.updateRfqVndtItem(
+                    rfqNum,
+                    vendorCd,
+                    item.getLineNo(),
+                    AesCryptoUtil.encrypt(item.getQuoteUnitPrc().toString(), cryptoKey),
+                    item.getQuoteQt(),
+                    AesCryptoUtil.encrypt(item.getQuoteAmt().toString(), cryptoKey),
+                    item.getDelyDate(),
+                    item.getRmk(),
+                    userId);
             if (updated == 0) {
                 throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
             }
         }
 
-        // RFQVN 상태 및 총액 업데이트 (RFQT)
-        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT", totalAmt, userId);
+        // RFQVN 상태 및 총액 업데이트 (RFQT) - 총액 암호화
+        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT",
+                AesCryptoUtil.encrypt(totalAmt.toString(), cryptoKey), userId);
         if (updated == 0) {
             throw new IllegalStateException("견적 상태 업데이트에 실패했습니다.");
         }
@@ -113,15 +140,25 @@ public class RfqVendorQuoteService {
             item.setQuoteAmt(quoteAmt);
             totalAmt = totalAmt.add(quoteAmt);
 
-            // 품목 업데이트
-            int updated = mapper.updateRfqVndtItem(rfqNum, vendorCd, item, userId);
+            // 품목 업데이트 (암호화)
+            int updated = mapper.updateRfqVndtItem(
+                    rfqNum,
+                    vendorCd,
+                    item.getLineNo(),
+                    AesCryptoUtil.encrypt(item.getQuoteUnitPrc().toString(), cryptoKey),
+                    item.getQuoteQt(),
+                    AesCryptoUtil.encrypt(item.getQuoteAmt().toString(), cryptoKey),
+                    item.getDelyDate(),
+                    item.getRmk(),
+                    userId);
             if (updated == 0) {
                 throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
             }
         }
 
-        // RFQVN 상태 및 총액 업데이트 (RFQC)
-        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC", totalAmt, userId);
+        // RFQVN 상태 및 총액 업데이트 (RFQC) - 총액 암호화
+        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC",
+                AesCryptoUtil.encrypt(totalAmt.toString(), cryptoKey), userId);
         if (updated == 0) {
             throw new IllegalStateException("견적 제출에 실패했습니다.");
         }

@@ -27,7 +27,7 @@ public class RfqSelectionResponse {
     private String vnProgressNm;
     private LocalDateTime sendDate;
     private LocalDateTime submitDate;
-    private BigDecimal totalAmt;
+    private String totalAmt;
     private String selectYn;
     private String rmk;
 }

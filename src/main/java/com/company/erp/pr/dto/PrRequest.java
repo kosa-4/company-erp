@@ -28,6 +28,7 @@ public class PrRequest {
         private BigDecimal prQt;//수량
         private BigDecimal unitPrc;//단가
         private Date delyDate;//희망납기일
+        private String rmk;//비고 (PRDT.RMK에 저장)
     }
 
 }

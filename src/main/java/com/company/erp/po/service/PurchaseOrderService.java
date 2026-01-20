@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import com.company.erp.common.session.SessionConst;
+import com.company.erp.common.util.AesCryptoUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,9 @@ public class PurchaseOrderService {
     private final DocNumService docNumService;
     private final HttpSession httpSession;
 
+    @Value("${app.crypto.key}")
+    private String cryptoKey;
+
     // ========== 발주대기 조회 (RFQ 선정완료) ==========
     public List<RfqSelectedDTO> getRfqSelectedList(
             String rfqNo, String rfqName, String vendorName,
@@ -46,8 +51,11 @@ public class PurchaseOrderService {
 
         List<RfqSelectedDTO> list = purchaseOrderMapper.selectRfqSelectedList(params);
 
-        // 각 RFQ에 대해 품목 상세 조회하여 추가
+        // 각 RFQ에 대해 품목 상세 조회하여 추가 및 복호화
         for (RfqSelectedDTO rfq : list) {
+            // 헤더 총액 복호화
+            rfq.setRfqAmount(AesCryptoUtil.decrypt(rfq.getRfqAmount(), cryptoKey));
+
             if (rfq.getRfqNo() != null) {
                 List<RfqSelectedItemDTO> items;
                 // 긴급(E) 또는 단가계약(C) 인 경우 PR 아이템 조회 (단, rfqNo는 prNo로 alias 되어있음)
@@ -55,6 +63,14 @@ public class PurchaseOrderService {
                     items = purchaseOrderMapper.selectPrItemsAsRfqItems(rfq.getRfqNo());
                 } else {
                     items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                }
+
+                // 품목별 단가/금액 복호화
+                if (items != null) {
+                    for (RfqSelectedItemDTO item : items) {
+                        item.setUnitPrice(AesCryptoUtil.decrypt(item.getUnitPrice(), cryptoKey));
+                        item.setAmount(AesCryptoUtil.decrypt(item.getAmount(), cryptoKey));
+                    }
                 }
                 rfq.setItems(items);
             }

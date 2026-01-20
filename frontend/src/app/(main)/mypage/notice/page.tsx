@@ -17,10 +17,14 @@ import {
 import { Notice, ColumnDef } from '@/types';
 import { noticeApi, NoticeListResponse, NoticeDetailResponse, FileListItemResponse } from '@/lib/api/notice';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 
 export default function NoticePage() {
+  const { user } = useAuth();
+  const isBuyer = user?.role === 'BUYER' || user?.role === 'ADMIN';
+
   const [notices, setNotices] = useState<Notice[]>([]);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
@@ -151,12 +155,14 @@ export default function NoticePage() {
   };
   
   const handleContentClick = () => {
+    if (!isBuyer) return;
     setIsEditing(true);
     setDeletedFileNums([]);
     setEditUploadedFiles([]);
   };
 
   const handleTitleClick = () => {
+    if (!isBuyer) return;
     setIsEditing(true);
     setDeletedFileNums([]);
     setEditUploadedFiles([]);
@@ -267,6 +273,7 @@ export default function NoticePage() {
   };
   
   const handleDelete = async (noticeNum: string, e?: React.MouseEvent) => {
+    if (!isBuyer) return;
     if (e) {
       e.stopPropagation();
     }
@@ -302,6 +309,7 @@ export default function NoticePage() {
   };
   
   const handleDeleteSelected = async () => {
+    if (!isBuyer) return;
     if (selectedNotices.length === 0) {
       alert('삭제할 공지사항을 선택해주세요.');
       return;
@@ -324,6 +332,7 @@ export default function NoticePage() {
 
   // 선택된 항목 중 첫 번째를 상세 모달로 열기
   const handleEdit = async () => {
+    if (!isBuyer) return;
     if (selectedNotices.length === 0) {
       toast.error('수정할 공지사항을 선택해주세요.');
       return;
@@ -477,7 +486,7 @@ export default function NoticePage() {
     }
   };
 
-  const columns: ColumnDef<Notice>[] = [
+  const baseColumns: ColumnDef<Notice>[] = [
     {
       key: 'checkbox',
       header: (
@@ -515,16 +524,22 @@ export default function NoticePage() {
       header: '공지번호',
       width: 140,
       align: 'center',
+      render: (value, notice) => (
+        <span
+          className="font-medium text-blue-600 hover:underline cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRowClick(notice);
+          }}
+        >
+          {String(value)}
+        </span>
+      ),
     },
     {
       key: 'title',
       header: '공지명',
       align: 'left',
-      render: (value) => (
-        <span className="text-blue-600 hover:underline cursor-pointer font-medium">
-          {String(value)}
-        </span>
-      ),
     },
     {
       key: 'createdAt',
@@ -578,6 +593,10 @@ export default function NoticePage() {
     },
   ];
 
+  const columns: ColumnDef<Notice>[] = isBuyer
+    ? baseColumns
+    : baseColumns.filter(col => col.key !== 'checkbox' && col.key !== 'actions');
+
   return (
     <motion.div 
       className="space-y-6"
@@ -621,29 +640,33 @@ export default function NoticePage() {
         padding={false}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="primary" 
-              onClick={() => setIsCreateModalOpen(true)}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              등록
-            </Button>
-            <Button
-                variant="outline"
-                disabled={selectedNotices.length === 0}
-                onClick={handleEdit}
-            >
-              수정
-            </Button>
+            {isBuyer && (
+              <>
+                <Button
+                  variant="primary" 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  등록
+                </Button>
+                <Button
+                    variant="outline"
+                    disabled={selectedNotices.length === 0}
+                    onClick={handleEdit}
+                >
+                  수정
+                </Button>
 
-            {selectedNotices.length > 0 && (
-              <Button
-                variant="danger"
-                onClick={handleDeleteSelected}
-                icon={<Trash2 className="w-4 h-4" />}
-              >
-                선택 삭제 ({selectedNotices.length})
-              </Button>
+                {selectedNotices.length > 0 && (
+                  <Button
+                    variant="danger"
+                    onClick={handleDeleteSelected}
+                    icon={<Trash2 className="w-4 h-4" />}
+                  >
+                    선택 삭제 ({selectedNotices.length})
+                  </Button>
+                )}
+              </>
             )}
           </div>
         }
@@ -652,7 +675,6 @@ export default function NoticePage() {
           columns={columns}
           data={notices}
           keyField="noticeNo"
-          onRowClick={handleRowClick}
           loading={loading}
           emptyMessage="등록된 공지사항이 없습니다."
         />
@@ -813,9 +835,11 @@ export default function NoticePage() {
                   </div>
                   <div className="flex-1">
                     <h2 
-                      className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={handleTitleClick}
-                      title="클릭하여 수정"
+                      className={`text-lg font-semibold text-gray-900 transition-colors ${
+                        isBuyer ? 'cursor-pointer hover:text-blue-600' : ''
+                      }`}
+                      onClick={isBuyer ? handleTitleClick : undefined}
+                      title={isBuyer ? '클릭하여 수정' : undefined}
                     >
                       {selectedNotice.title}
                     </h2>
@@ -846,9 +870,11 @@ export default function NoticePage() {
                 </div>
 
                 <div 
-                  className="bg-stone-50 rounded-2xl p-6 min-h-[200px] cursor-pointer hover:bg-stone-100 transition-colors"
-                  onClick={handleContentClick}
-                  title="클릭하여 수정"
+                  className={`bg-stone-50 rounded-2xl p-6 min-h-[200px] transition-colors ${
+                    isBuyer ? 'cursor-pointer hover:bg-stone-100' : ''
+                  }`}
+                  onClick={isBuyer ? handleContentClick : undefined}
+                  title={isBuyer ? '클릭하여 수정' : undefined}
                 >
                   <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">{selectedNotice.content}</p>
                 </div>
