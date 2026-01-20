@@ -279,16 +279,13 @@ export const rfqApi = {
     /**
      * RFQ 삭제 (Soft Delete)
      */
-    /**
-     * RFQ 삭제 (Soft Delete)
-     */
     deleteRfq: (rfqNum: string) => api.delete<{ message: string }>(`/v1/buyer/rfqs/${rfqNum}`),
 
     /**
      * [신규] RFQ용 승인된 협력사 목록 조회
      */
     getApprovedVendors: (params: { vendorCode?: string; vendorName?: string }) =>
-        api.get<RfqVendorResponse>('/v1/buyer/rfq/vendors', params),
+        api.get<RfqVendorResponse>('/v1/buyer/rfqs/vendors', params),
 
     /**
      * 선정 결과 목록 조회
