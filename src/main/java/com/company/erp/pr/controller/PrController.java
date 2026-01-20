@@ -96,10 +96,10 @@ public class PrController {
     
     //구매요청 상세 품목 목록 조회
     @GetMapping("/{prNum}/detail")
-    public ResponseEntity<List<PrDtDTO>> getPurchaseDetail(@PathVariable String prNum){
-        List<PrDtDTO> detailItems = prService.selectPrDetail(prNum);
+    public ResponseEntity<PrDetailResponse> getPurchaseDetail(@PathVariable String prNum){
+        PrDetailResponse detail = prService.selectPrDetailWithHeader(prNum);
         
-        return ResponseEntity.ok(detailItems);
+        return ResponseEntity.ok(detail);
     }
 
     //구매요청 헤더 수정 (구매요청명, 구매유형만) 또는 헤더+품목 수정

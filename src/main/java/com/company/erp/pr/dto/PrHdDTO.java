@@ -22,5 +22,5 @@ public class PrHdDTO {
     private String rmk;//비고
     private String pcType;//구매유형
     private String progressCd;//진행상태 코드
-
+    private java.util.Date regDate; // 등록일자
 }
