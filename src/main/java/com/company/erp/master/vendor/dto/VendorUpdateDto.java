@@ -1,7 +1,11 @@
 package com.company.erp.master.vendor.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -14,6 +18,20 @@ public class VendorUpdateDto {
 
     private LocalDateTime modifiedAt;
     private String modifiedBy;
+
+    private String vendorName;
+    private String vendorNameEng;
+    private String businessType; // 사업 형태
+    private String ceoName;
+    private String zipCode;
+    private String address;
+    private String addressDetail;
+    private String tel;
+    private String fax;
+    private String industry; // 업종
+    private String remark;
+
+    private LocalDateTime signDate;
 
     // 반려 시
     private String rejectRemark;

@@ -3,105 +3,151 @@
 
 <mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
     <!--협력사 조회-->
-    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> <!--자동으로 list 반환-->
-        SELECT
-            <!--위 테이블 우선 조회-->
-            NULL AS askNum,
-            VENDOR_CD AS vendorCode,
-            VENDOR_NM AS vendorName,
-            VENDOR_ENG_NM AS vendorNameEng,
-            REG_TYPE AS businessType,
-            CEO_USER_NM AS ceoName,
-            ADDR AS address,
-            INDUSTRY_TYPE AS industry,
-            USE_FLAG AS useYn,
-            PROGRESS_CD AS status,
-            REG_DATE AS createdAt,
-            IRS_NO AS businessNo,
-            TEL_NO AS tel,
-            FAX_NO AS fax,
-            ZIP_CD AS zipCode,
-            ADDR_DT AS addressDetail,
-            FOUNDATION_DATE AS foundationDate,
-            RMK AS remark
-        FROM
-            VNGL
-        <where>
-            DEL_FLAG = 'N'
-            <if test="vendorCode != null and vendorCode != ''">
-                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
-            </if>
-            <if test="vendorName != null and vendorName != ''">
-                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-            </if>
-            <if test="businessType != null and businessType != ''">
-                AND REG_TYPE = #{businessType}
-            </if>
-            <if test="useYn != null and useYn != ''">
-                AND USE_FLAG = #{useYn}
-            </if>
-            <if test="industry != null and industry != ''">
-                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
-            </if>
+<!--    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> &lt;!&ndash;자동으로 list 반환&ndash;&gt;-->
+<!--        SELECT-->
+<!--            &lt;!&ndash;위 테이블 우선 조회&ndash;&gt;-->
+<!--            NULL AS askNum,-->
+<!--            VENDOR_CD AS vendorCode,-->
+<!--            VENDOR_NM AS vendorName,-->
+<!--            VENDOR_ENG_NM AS vendorNameEng,-->
+<!--            REG_TYPE AS businessType,-->
+<!--            CEO_USER_NM AS ceoName,-->
+<!--            ADDR AS address,-->
+<!--            INDUSTRY_TYPE AS industry,-->
+<!--            USE_FLAG AS useYn,-->
+<!--            PROGRESS_CD AS status,-->
+<!--            REG_DATE AS createdAt,-->
+<!--            IRS_NO AS businessNo,-->
+<!--            TEL_NO AS tel,-->
+<!--            FAX_NO AS fax,-->
+<!--            ZIP_CD AS zipCode,-->
+<!--            ADDR_DT AS addressDetail,-->
+<!--            FOUNDATION_DATE AS foundationDate,-->
+<!--            RMK AS remark-->
+<!--        FROM-->
+<!--            VNGL-->
+<!--        <where>-->
+<!--            DEL_FLAG = 'N'-->
+<!--            <if test="vendorCode != null and vendorCode != ''">-->
+<!--                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')-->
+<!--            </if>-->
+<!--            <if test="vendorName != null and vendorName != ''">-->
+<!--                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
+<!--            </if>-->
+<!--            <if test="businessType != null and businessType != ''">-->
+<!--                AND REG_TYPE = #{businessType}-->
+<!--            </if>-->
+<!--            <if test="useYn != null and useYn != ''">-->
+<!--                AND USE_FLAG = #{useYn}-->
+<!--            </if>-->
+<!--            <if test="industry != null and industry != ''">-->
+<!--                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')-->
+<!--            </if>-->
 
-            AND
-                PROGRESS_CD IN ('A')
-            AND
-                VENDOR_CD NOT IN (
-                    SELECT VENDOR_CD FROM VNCH
-                    WHERE PROGRESS_CD IN ('N', 'C', 'R')
-                    AND DEL_FLAG = 'N'
-                )
-        </where>
+<!--            AND-->
+<!--                PROGRESS_CD IN ('A')-->
+<!--            AND-->
+<!--                VENDOR_CD NOT IN (-->
+<!--                    SELECT VENDOR_CD FROM VNCH-->
+<!--                    WHERE PROGRESS_CD IN ('N', 'C', 'R')-->
+<!--                    AND DEL_FLAG = 'N'-->
+<!--                )-->
+<!--        </where>-->
 
-        UNION ALL
+<!--        UNION ALL-->
 
-        SELECT
-            ASK_NUM AS askNum,
-            VENDOR_CD AS vendorCode,
-            VENDOR_NM AS vendorName,
-            VENDOR_ENG_NM AS vendorNameEng,
-            REG_TYPE AS businessType,
-            CEO_USER_NM AS ceoName,
-            ADDR AS address,
-            INDUSTRY_TYPE AS industry,
-            NULL AS useYn,
-            PROGRESS_CD AS status,
-            REG_DATE AS createdAt,
-            IRS_NO AS businessNo,
-            TEL_NO AS tel,
-            FAX_NO AS fax,
-            ZIP_CD AS zipCode,
-            ADDR_DT AS addressDetail,
-            FOUNDATION_DATE AS foundationDate,
-            RMK AS remark
-        FROM
-            VNCH
-        <where>
-            DEL_FLAG = 'N'
-            <if test="vendorCode != null and vendorCode != ''">
-                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
-            </if>
-            <if test="vendorName != null and vendorName != ''">
-                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-            </if>
-            <if test="businessType != null and businessType != ''">
-                AND REG_TYPE = #{businessType}
-            </if>
-            <if test="industry != null and industry != ''">
-                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
-            </if>
-            AND PROGRESS_CD IN ('C', 'N', 'R')
-            AND ASK_NUM IN (
-                    SELECT MAX(ASK_NUM)
-                    FROM VNCH
-                    WHERE DEL_FLAG = 'N'
-                    GROUP BY VENDOR_CD
-                )
-        </where>
+<!--        SELECT-->
+<!--            ASK_NUM AS askNum,-->
+<!--            VENDOR_CD AS vendorCode,-->
+<!--            VENDOR_NM AS vendorName,-->
+<!--            VENDOR_ENG_NM AS vendorNameEng,-->
+<!--            REG_TYPE AS businessType,-->
+<!--            CEO_USER_NM AS ceoName,-->
+<!--            ADDR AS address,-->
+<!--            INDUSTRY_TYPE AS industry,-->
+<!--            NULL AS useYn,-->
+<!--            PROGRESS_CD AS status,-->
+<!--            REG_DATE AS createdAt,-->
+<!--            IRS_NO AS businessNo,-->
+<!--            TEL_NO AS tel,-->
+<!--            FAX_NO AS fax,-->
+<!--            ZIP_CD AS zipCode,-->
+<!--            ADDR_DT AS addressDetail,-->
+<!--            FOUNDATION_DATE AS foundationDate,-->
+<!--            RMK AS remark-->
+<!--        FROM-->
+<!--            VNCH-->
+<!--        <where>-->
+<!--            DEL_FLAG = 'N'-->
+<!--            <if test="vendorCode != null and vendorCode != ''">-->
+<!--                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')-->
+<!--            </if>-->
+<!--            <if test="vendorName != null and vendorName != ''">-->
+<!--                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
+<!--            </if>-->
+<!--            <if test="businessType != null and businessType != ''">-->
+<!--                AND REG_TYPE = #{businessType}-->
+<!--            </if>-->
+<!--            <if test="industry != null and industry != ''">-->
+<!--                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')-->
+<!--            </if>-->
+<!--            AND PROGRESS_CD IN ('C', 'N', 'R')-->
+<!--            AND ASK_NUM IN (-->
+<!--                    SELECT MAX(ASK_NUM)-->
+<!--                    FROM VNCH-->
+<!--                    WHERE DEL_FLAG = 'N'-->
+<!--                    GROUP BY VENDOR_CD-->
+<!--                )-->
+<!--        </where>-->
 
+<!--        ORDER BY-->
+<!--            createdAt DESC-->
+<!--    </select>-->
+    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto">
+        SELECT * FROM (
+            SELECT
+                ASK_NUM AS askNum,
+                VENDOR_CD AS vendorCode,
+                VENDOR_NM AS vendorName,
+                VENDOR_ENG_NM AS vendorNameEng,
+                REG_TYPE AS businessType,
+                CEO_USER_NM AS ceoName,
+                ADDR AS address,
+                INDUSTRY_TYPE AS industry,
+                PROGRESS_CD AS status,
+                REG_DATE AS createdAt,
+                IRS_NO AS businessNo,
+                TEL_NO AS tel,
+                FAX_NO AS fax,
+                ZIP_CD AS zipCode,
+                ADDR_DT AS addressDetail,
+                FOUNDATION_DATE AS foundationDate,
+                RMK AS remark,
+                <!--1. 업체코드별로 묶어서 등록일과 요청 번호를 최신순(DESC)으로 번호를 매김-->
+                ROW_NUMBER() OVER(PARTITION BY VENDOR_CD ORDER BY REG_DATE DESC, ASK_NUM DESC) as rn
+            FROM
+                VNCH
+            <where>
+                DEL_FLAG = 'N'
+                <if test="vendorCode != null and vendorCode != ''">
+                    AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+                </if>
+                <if test="vendorName != null and vendorName != ''">
+                    AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+                </if>
+                <if test="businessType != null and businessType != ''">
+                    AND REG_TYPE = #{businessType}
+                </if>
+                <if test="industry != null and industry != ''">
+                    AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
+                </if>
+            </where>
+            ) T
+        <!--2. 번호 매긴 것 중 무조건 가장 최신 데이터만 가져옴-->
+        WHERE
+            T.rn = 1
         ORDER BY
-            createdAt DESC
+            T.createdAt DESC
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->
@@ -115,7 +161,7 @@
             MOD_USER_ID AS modifiedBy,
             DEL_FLAG AS delFlag,
             VENDOR_NM AS vendorName,
-            VENDOR_ENG_NM AS vendorEngName,
+            VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
             IRS_NO AS businessNo,
             CEO_USER_NM AS ceoName,
@@ -178,7 +224,7 @@
             'N',
             'Y',
             #{vendorName},
-            #{vendorEngName},
+            #{vendorNameEng},
             #{businessType},
             #{businessNo},
             #{ceoName},
@@ -235,7 +281,7 @@
             NULL,
             'N',
             #{vendorName},
-            #{vendorEngName},
+            #{vendorNameEng},
             #{businessType},
             #{businessNo},
             #{ceoName},
@@ -267,8 +313,8 @@
             <if test="vendorName != null and vendorName != ''">
                 VENDOR_NM = #{vendorName},
             </if>
-            <if test="vendorEngName != null and vendorEngName != ''">
-                VENDOR_ENG_NM = #{vendorEngName},
+            <if test="vendorNameEng != null and vendorNameEng != ''">
+                VENDOR_ENG_NM = #{vendorNameEng},
             </if>
             <if test="businessType != null and businessType != ''">
                 REG_TYPE = #{businessType},

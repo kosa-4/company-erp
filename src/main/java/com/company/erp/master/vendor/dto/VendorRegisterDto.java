@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorRegisterDto {
@@ -14,7 +15,7 @@ public class VendorRegisterDto {
     private String vendorCode;
     @NotBlank(message = "회사명은 필수 입력 사항입니다.")
     private String vendorName;
-    private String vendorEngName;
+    private String vendorNameEng;
     @NotBlank(message = "사업 형태는 필수 입력 사항입니다.")
     private String businessType; // 사업 형태
     @NotBlank(message = "사업자 번호는 필수 입력 사항입니다.")
@@ -41,10 +42,10 @@ public class VendorRegisterDto {
 
     private int attFileNum;
 
-    private LocalDate createdAt;
-    private LocalDate modifiedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime modifiedAt;
     private LocalDate foundationDate;
-    private LocalDate signDate;
+    private LocalDateTime signDate;
 }
 
 // VNGL

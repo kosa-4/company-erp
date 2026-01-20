@@ -63,8 +63,8 @@ public class VendorService {
         String vendorCode = docNumService.generateDocNumStr(DocKey.VN);
         vendorRegisterDto.setVendorCode(vendorCode);
         vendorRegisterDto.setCreatedBy(sessionId);
-        vendorRegisterDto.setCreatedAt(LocalDate.now());
-        vendorRegisterDto.setSignDate(LocalDate.now());
+        vendorRegisterDto.setCreatedAt(LocalDateTime.now());
+        vendorRegisterDto.setSignDate(LocalDateTime.now());
 
         // 3. 마스터 테이블에 저장
         vendorMapper.insertVendorVNGL(vendorRegisterDto);
@@ -88,8 +88,8 @@ public class VendorService {
             }
             // 3) 공통값 입력
             vendor.setModifiedBy(loginId);
-            vendor.setModifiedAt(LocalDate.now());
-            vendor.setSignDate(LocalDate.now());
+            vendor.setModifiedAt(LocalDateTime.now());
+            vendor.setSignDate(LocalDateTime.now());
             
             // 4) 상태값 확인
             String status = vendor.getStatus();
@@ -123,14 +123,33 @@ public class VendorService {
     // 3. 구매사에서 반려
     @Transactional
     public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String loginId) {
-        // 1) 단일 dto 반환
-        for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
-            // 2) 입력값 설정
+        // 1) 원본 데이터 반환
+        VendorListDto originalMasterData = vendorMapper.selectVendorVNGLByLoginId(loginId);
+
+        // 2) 단일 dto 반환
+        for(VendorUpdateDto dto : vendorUpdateDtoList) {
+            if(originalMasterData == null) {
+                throw new IllegalStateException("원본 데이터가 없습니다.");
+            }
+
+            dto.setVendorName(originalMasterData.getVendorName());
+            dto.setVendorNameEng(originalMasterData.getVendorNameEng());
+            dto.setBusinessType(originalMasterData.getBusinessType());
+            dto.setCeoName(originalMasterData.getCeoName());
+            dto.setZipCode(originalMasterData.getZipCode());
+            dto.setAddress(originalMasterData.getAddress());
+            dto.setAddressDetail(originalMasterData.getAddressDetail());
+            dto.setTel(originalMasterData.getTel());
+            dto.setFax(originalMasterData.getFax());
+            dto.setIndustry(originalMasterData.getIndustry());
+            dto.setRemark(originalMasterData.getRemark());
+            // 3) 입력값 설정
             dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(loginId);
             dto.setSignUserId(loginId);
             dto.setStatus("R");
+
 
             // 3) 대기 테이블 업데이트
             vendorMapper.updateVNCHByAskNum(dto);

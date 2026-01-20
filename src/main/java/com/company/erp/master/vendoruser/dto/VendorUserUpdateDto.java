@@ -18,6 +18,7 @@ public class VendorUserUpdateDto {
     private String email;
     private String phone;
     private String userName;
+    private String userNameEng;
 
 }
 

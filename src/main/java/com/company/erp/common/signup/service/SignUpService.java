@@ -89,7 +89,7 @@ public class SignUpService {
         vendorRegisterDto.setAskNum(signUpDto.getAskNo());
         vendorRegisterDto.setVendorCode(signUpDto.getVendorCode());
         vendorRegisterDto.setVendorName(signUpDto.getVendorName());
-        vendorRegisterDto.setVendorEngName(signUpDto.getVendorNameEn());
+        vendorRegisterDto.setVendorNameEng(signUpDto.getVendorNameEn());
         vendorRegisterDto.setBusinessType(signUpDto.getBusinessType());
         vendorRegisterDto.setBusinessNo(signUpDto.getBusinessNo());
         vendorRegisterDto.setCeoName(signUpDto.getCeoName());
@@ -102,7 +102,7 @@ public class SignUpService {
         vendorRegisterDto.setIndustry(signUpDto.getIndustry());
         vendorRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
         vendorRegisterDto.setStatus(signUpDto.getStatus());
-        vendorRegisterDto.setCreatedAt(LocalDate.now());
+        vendorRegisterDto.setCreatedAt(LocalDateTime.now());
         vendorRegisterDto.setFoundationDate(signUpDto.getFoundationDate());
 
         return vendorRegisterDto;
