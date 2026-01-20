@@ -76,19 +76,22 @@ public class PrController {
     }
 
 
-    //구매요청현황 목록 조회 (헤더만)
+    //구매요청현황 목록 조회 (헤더만) - 페이징 포함
     @GetMapping("/list")
-    public ResponseEntity<List<PrListResponse>> getPurchaseList(@RequestParam(required = false) String prNum,
+    public ResponseEntity<Map<String, Object>> getPurchaseList(@RequestParam(required = false) String prNum,
                                                                  @RequestParam(required = false) String prSubject,
                                                                  @RequestParam(required = false) String requester,
                                                                  @RequestParam(required = false) String deptName,
                                                                  @RequestParam(required = false) String progressCd,
-                                                                 @RequestParam(required = false) String startDate,
-                                                                 @RequestParam(required = false) String endDate){
+                                                                 @RequestParam(required = false) String requestDate,
+                                                                 @RequestParam(required = false, defaultValue = "1") Integer page,
+                                                                 @RequestParam(required = false, defaultValue = "10") Integer pageSize,
+                                                                 HttpSession session){
 
-        List<PrListResponse> prList = prService.selectPrList(prNum, prSubject, requester, deptName, progressCd, startDate, endDate);
+        SessionUser user = getSessionUser(session);
+        Map<String, Object> result = prService.selectPrList(prNum, prSubject, requester, deptName, progressCd, requestDate, page, pageSize, user);
 
-        return ResponseEntity.ok(prList);
+        return ResponseEntity.ok(result);
     }
     
     //구매요청 상세 품목 목록 조회
@@ -99,17 +102,19 @@ public class PrController {
         return ResponseEntity.ok(detailItems);
     }
 
-    //구매요청 헤더 수정 (구매요청명, 구매유형만)
+    //구매요청 헤더 수정 (구매요청명, 구매유형만) 또는 헤더+품목 수정
     @PutMapping("/{prNum}/update")
     public ResponseEntity<Map<String, String>> updatePurchaseRequest(
             @PathVariable String prNum,
-            @RequestBody Map<String, String> request,
+            @RequestBody Map<String, Object> request,
             HttpSession session) {
         
         SessionUser user = getSessionUser(session);
 
-        String prSubject = request.get("prSubject");
-        String pcType = request.get("pcType");
+        String prSubject = (String) request.get("prSubject");
+        String pcType = (String) request.get("pcType");
+
+        List<Map<String, Object>> prDtList = (List<Map<String, Object>>) request.get("prDtList");
 
         if (prSubject == null || prSubject.trim().isEmpty()) {
             Map<String, String> errorResponse = new HashMap<>();
@@ -117,7 +122,23 @@ public class PrController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
-        prService.updatePr(prNum, prSubject, pcType, user.getUserId());
+        // 품목 목록이 있으면 헤더+품목 수정, 없으면 헤더만 수정
+        if (prDtList != null && !prDtList.isEmpty()) {
+            // 품목 DTO 변환
+            List<PrDtDTO> prDtDTOList = prDtList.stream().map(item -> {
+                PrDtDTO dto = new PrDtDTO();
+                dto.setItemCd((String) item.get("itemCd"));
+                dto.setPrQt(item.get("prQt") != null ? 
+                    new java.math.BigDecimal(item.get("prQt").toString()) : null);
+                dto.setUnitPrc(item.get("unitPrc") != null ? 
+                    new java.math.BigDecimal(item.get("unitPrc").toString()) : null);
+                return dto;
+            }).collect(java.util.stream.Collectors.toList());
+
+            prService.updatePrWithItems(prNum, prSubject, pcType, prDtDTOList, user.getUserId());
+        } else {
+            prService.updatePr(prNum, prSubject, pcType, user.getUserId());
+        }
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "구매요청이 수정되었습니다.");
@@ -172,9 +193,7 @@ public class PrController {
         return ResponseEntity.ok().body(response);
     }
 
-    /**
-     * 세션에서 로그인한 사용자 정보를 가져오는 헬퍼 메서드
-     */
+    //세션에서 로그인한 사용자 정보를 가져오는 메서드
     private SessionUser getSessionUser(HttpSession session) {
         if (session == null) {
             return null;
