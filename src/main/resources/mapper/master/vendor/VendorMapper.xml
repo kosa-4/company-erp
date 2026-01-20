@@ -104,50 +104,61 @@
 <!--            createdAt DESC-->
 <!--    </select>-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto">
-        SELECT * FROM (
+        SELECT
+            CH.ASK_NUM AS askNum,
+            COALESCE(CH.PROGRESS_CD, 'A') AS status,
+            CH.REG_DATE AS createdAt,
+            GL.VENDOR_CD AS vendorCode,
+            GL.VENDOR_NM AS vendorName,
+            GL.VENDOR_ENG_NM AS vendorNameEng,
+            GL.REG_TYPE AS businessType,
+            GL.CEO_USER_NM AS ceoName,
+            GL.ADDR AS address,
+            GL.INDUSTRY_TYPE AS industry,
+            GL.IRS_NO AS businessNo,
+            GL.TEL_NO AS tel,
+            GL.FAX_NO AS fax,
+            GL.ZIP_CD AS zipCode,
+            GL.ADDR_DT AS addressDetail,
+            GL.FOUNDATION_DATE AS foundationDate,
+            GL.RMK AS remark
+        FROM
+            VNGL GL
+        LEFT JOIN(
             SELECT
-                ASK_NUM AS askNum,
-                VENDOR_CD AS vendorCode,
-                VENDOR_NM AS vendorName,
-                VENDOR_ENG_NM AS vendorNameEng,
-                REG_TYPE AS businessType,
-                CEO_USER_NM AS ceoName,
-                ADDR AS address,
-                INDUSTRY_TYPE AS industry,
-                PROGRESS_CD AS status,
-                REG_DATE AS createdAt,
-                IRS_NO AS businessNo,
-                TEL_NO AS tel,
-                FAX_NO AS fax,
-                ZIP_CD AS zipCode,
-                ADDR_DT AS addressDetail,
-                FOUNDATION_DATE AS foundationDate,
-                RMK AS remark,
-                <!--1. 업체코드별로 묶어서 등록일과 요청 번호를 최신순(DESC)으로 번호를 매김-->
-                ROW_NUMBER() OVER(PARTITION BY VENDOR_CD ORDER BY REG_DATE DESC, ASK_NUM DESC) as rn
+                ASK_NUM,
+                PROGRESS_CD,
+                REG_DATE,
+                VENDOR_CD,
+                ROW_NUMBER() OVER (
+                    PARTITION BY VENDOR_CD
+                    ORDER BY REG_DATE DESC, ASK_NUM DESC
+                ) rn
             FROM
                 VNCH
-            <where>
-                DEL_FLAG = 'N'
-                <if test="vendorCode != null and vendorCode != ''">
-                    AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
-                </if>
-                <if test="vendorName != null and vendorName != ''">
-                    AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-                </if>
-                <if test="businessType != null and businessType != ''">
-                    AND REG_TYPE = #{businessType}
-                </if>
-                <if test="industry != null and industry != ''">
-                    AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
-                </if>
-            </where>
-            ) T
-        <!--2. 번호 매긴 것 중 무조건 가장 최신 데이터만 가져옴-->
-        WHERE
-            T.rn = 1
+
+        ) CH
+        ON
+            GL.VENDOR_CD = CH.VENDOR_CD
+        AND
+            CH.rn = 1
+        <where>
+            DEL_FLAG = 'N'
+            <if test="vendorCode != null and vendorCode != ''">
+                AND GL.VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND GL.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND GL.REG_TYPE = #{businessType}
+            </if>
+            <if test="industry != null and industry != ''">
+                AND GL.INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
+            </if>
+        </where>
         ORDER BY
-            T.createdAt DESC
+            CH.REG_DATE DESC
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->

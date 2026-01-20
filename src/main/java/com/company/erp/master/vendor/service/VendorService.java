@@ -124,26 +124,10 @@ public class VendorService {
     @Transactional
     public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String loginId) {
 
-        // 1) 원본 데이터 반환
-        VendorListDto originalMasterData = vendorMapper.selectVendorVNGLByLoginId(loginId);
 
         // 2) 단일 dto 반환
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
-            if(originalMasterData == null) {
-                throw new IllegalStateException("원본 데이터가 없습니다.");
-            }
 
-            dto.setVendorName(originalMasterData.getVendorName());
-            dto.setVendorNameEng(originalMasterData.getVendorNameEng());
-            dto.setBusinessType(originalMasterData.getBusinessType());
-            dto.setCeoName(originalMasterData.getCeoName());
-            dto.setZipCode(originalMasterData.getZipCode());
-            dto.setAddress(originalMasterData.getAddress());
-            dto.setAddressDetail(originalMasterData.getAddressDetail());
-            dto.setTel(originalMasterData.getTel());
-            dto.setFax(originalMasterData.getFax());
-            dto.setIndustry(originalMasterData.getIndustry());
-            dto.setRemark(originalMasterData.getRemark());
             // 3) 입력값 설정
             dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(loginId);
