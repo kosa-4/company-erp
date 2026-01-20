@@ -69,7 +69,17 @@
     </select>
 
     <select id="selectPrNum" parameterType="String" resultType="com.company.erp.pr.dto.PrHdDTO">
-        SELECT PR_NUM, DEL_FLAG, PROGRESS_CD
+        SELECT 
+            PR_NUM, 
+            REG_USER_ID,
+            PR_SUBJECT,
+            DEPT_CD,
+            PR_AMT,
+            RMK,
+            PC_TYPE,
+            DEL_FLAG, 
+            PROGRESS_CD,
+            REG_DATE
         FROM PRHD
         WHERE PR_NUM = #{prNum}
     </select>
@@ -86,6 +96,26 @@
             MOD_DATE = NOW(),
             MOD_USER_ID = #{modUserId}
         WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 구매요청 헤더 총액 업데이트 -->
+    <update id="updatePrHdAmount">
+        UPDATE PRHD
+        SET PR_AMT = #{prAmt},
+            MOD_DATE = NOW()
+        WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 구매요청 품목 수정 (수량, 단가, 금액) - 단일 품목 -->
+    <update id="updatePrDt">
+        UPDATE PRDT
+        SET PR_QT = #{prQt},
+            UNIT_PRC = #{unitPrc},
+            PR_AMT = #{prAmt}
+        WHERE PR_NUM = #{prNum}
+        AND ITEM_CD = #{itemCd}
         AND DEL_FLAG = 'N'
     </update>
 
@@ -164,15 +194,95 @@
         </if>
         
         <!-- 요청일자 검색 -->
-        <if test="startDate != null and startDate != ''">
-            AND DATE(HD.REG_DATE) &gt;= #{startDate}
+        <if test="requestDate != null and requestDate != ''">
+            AND DATE(HD.REG_DATE) = #{requestDate}
         </if>
         
-        <if test="endDate != null and endDate != ''">
-            AND DATE(HD.REG_DATE) &lt;= #{endDate}
+        <!-- 구매팀이 아닌 경우 본인이 작성한 구매요청만 조회 -->
+        <if test="regUserId != null and regUserId != '' and (isBuyerDept == null or isBuyerDept == false)">
+            AND HD.REG_USER_ID = #{regUserId}
+        </if>
+
+        
+        ORDER BY HD.REG_DATE DESC
+        <if test="offset != null and pageSize != null">
+            LIMIT #{pageSize} OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- 구매요청 현황 목록 총 개수 조회 -->
+    <select id="selectPrListCount" resultType="int">
+        SELECT COUNT(*)
+        FROM PRHD HD
+        
+        LEFT JOIN CODD ST
+            ON ST.CODE_GROUP = 'PROGRESS_CD'
+            AND ST.CODE = HD.PROGRESS_CD
+            AND ST.USE_YN = 'Y'
+        
+        LEFT JOIN CODD PT
+            ON PT.CODE_GROUP = 'PC_TYPE'
+            AND PT.CODE = HD.PC_TYPE
+            AND PT.USE_YN = 'Y'
+        
+        LEFT JOIN BY_USER U
+            ON U.USER_ID = HD.REG_USER_ID
+            AND U.DEL_FLAG = 'N'
+        
+        LEFT JOIN vw_dept_active D
+            ON D.DEPT_CD = HD.DEPT_CD
+        
+        WHERE HD.DEL_FLAG = 'N'
+        
+        <!-- PR번호 검색 -->
+        <if test="prNum != null and prNum != ''">
+            AND HD.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
         </if>
         
-        ORDER BY HD.PR_NUM DESC
+        <!-- 구매요청명 검색 -->
+        <if test="prSubject != null and prSubject != ''">
+            AND HD.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
+        </if>
+        
+        <!-- 요청자 검색 -->
+        <if test="requester != null and requester != ''">
+            AND U.USER_NM LIKE CONCAT('%', #{requester}, '%')
+        </if>
+        
+        <!-- 부서 검색 (숫자 제외하고 비교) -->
+        <if test="deptName != null and deptName != ''">
+            AND REGEXP_REPLACE(D.DEPT_NM, '[0-9]', '') LIKE CONCAT('%', REGEXP_REPLACE(#{deptName}, '[0-9]', ''), '%')
+        </if>
+        
+        <!-- 진행상태 검색 -->
+        <if test="progressCd != null and progressCd != ''">
+            AND ST.CODE_NAME = #{progressCd}
+        </if>
+        
+        <!-- 요청일자 검색 -->
+        <if test="requestDate != null and requestDate != ''">
+            AND DATE(HD.REG_DATE) = #{requestDate}
+        </if>
+        
+        <!-- 구매팀이 아닌 경우 본인이 작성한 구매요청만 조회 -->
+        <if test="regUserId != null and regUserId != '' and (isBuyerDept == null or isBuyerDept == false)">
+            AND HD.REG_USER_ID = #{regUserId}
+        </if>
+    </select>
+
+    <!-- 구매팀 여부 확인 (dept_role 테이블에서 BUYER 역할 확인) -->
+    <select id="isBuyerDept" resultType="boolean">
+        SELECT CASE 
+            WHEN EXISTS (
+                SELECT 1
+                FROM dept_role dr
+                WHERE dr.COM_TYPE = 'B'
+                  AND dr.DEPT_CD = #{deptCd}
+                  AND dr.ROLE = 'BUYER'
+                  AND dr.USE_FLAG = 'Y'
+            ) THEN 1
+            ELSE 0
+        END
     </select>
 
     <!-- 구매요청 상세 품목 목록 조회 -->

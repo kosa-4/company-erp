@@ -205,8 +205,7 @@ export default function NoticePage() {
         subject: editFormData.subject,
         content: editFormData.content,
       });
-      console.log('공지사항 내용 수정 완료');
-      
+
       // 2. 삭제된 파일 논리적 삭제 처리
       if (deletedFileNums.length > 0) {
         console.log('삭제할 파일 개수:', deletedFileNums.length);
@@ -323,6 +322,24 @@ export default function NoticePage() {
     }
   };
 
+  // 선택된 항목 중 첫 번째를 상세 모달로 열기
+  const handleEdit = async () => {
+    if (selectedNotices.length === 0) {
+      toast.error('수정할 공지사항을 선택해주세요.');
+      return;
+    }
+    
+    // 선택된 항목 중 첫 번째를 찾아서 상세 모달 열기
+    const firstSelectedNoticeNo = selectedNotices[0];
+    const notice = notices.find(n => n.noticeNo === firstSelectedNoticeNo);
+    
+    if (notice) {
+      await handleRowClick(notice);
+      // 상세 모달이 열리면 수정 모드로 전환
+      setIsEditing(true);
+    }
+  };
+
   // 초기 목록 로드
   useEffect(() => {
     fetchNoticeList();
@@ -333,9 +350,7 @@ export default function NoticePage() {
     const loadInitData = async () => {
       if (isCreateModalOpen) {
         try {
-          console.log('공지사항 초기 데이터 로드 시작');
           const initData = await noticeApi.getInitData();
-          console.log('공지사항 초기 데이터 응답:', initData);
           setRegUserName(initData.regUserName || '');
           setFormData({
             subject: '',
@@ -414,17 +429,12 @@ export default function NoticePage() {
       
       // 공지사항 번호 가져오기
       const noticeNum = (response as any).noticeNum;
-      console.log('공지사항 저장 응답:', response);
-      console.log('생성된 공지사항 번호:', noticeNum);
-      console.log('업로드할 파일 개수:', uploadedFiles.length);
-      
+
       // 파일 업로드 (실패해도 공지사항은 저장됨)
       if (uploadedFiles.length > 0) {
         if (!noticeNum) {
-          console.error('공지사항 번호가 없어 파일을 업로드할 수 없습니다.');
           toast.error('공지사항 번호를 받지 못해 파일을 업로드할 수 없습니다.');
         } else {
-          console.log(`파일 업로드 시작 - 파일 개수: ${uploadedFiles.length}, noticeNum: ${noticeNum}`);
           for (const file of uploadedFiles) {
             try {
               console.log(`파일 업로드 시도: ${file.name}, 크기: ${file.size} bytes`);
@@ -575,33 +585,13 @@ export default function NoticePage() {
       animate={{ opacity: 1 }}
     >
       {/* Page Header - 무채색 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Bell className="w-5 h-5 text-gray-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">공지사항</h1>
-            <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Bell className="w-5 h-5 text-gray-600" />
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="primary" 
-            onClick={() => setIsCreateModalOpen(true)}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            등록
-          </Button>
-          {selectedNotices.length > 0 && (
-            <Button 
-              variant="danger" 
-              onClick={handleDeleteSelected}
-              icon={<Trash2 className="w-4 h-4" />}
-            >
-              선택 삭제 ({selectedNotices.length})
-            </Button>
-          )}
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">공지사항</h1>
+          <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
         </div>
       </div>
 
@@ -629,6 +619,34 @@ export default function NoticePage() {
       <Card 
         title="공지사항 목록"
         padding={false}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary" 
+              onClick={() => setIsCreateModalOpen(true)}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              등록
+            </Button>
+            <Button
+                variant="outline"
+                disabled={selectedNotices.length === 0}
+                onClick={handleEdit}
+            >
+              수정
+            </Button>
+
+            {selectedNotices.length > 0 && (
+              <Button
+                variant="danger"
+                onClick={handleDeleteSelected}
+                icon={<Trash2 className="w-4 h-4" />}
+              >
+                선택 삭제 ({selectedNotices.length})
+              </Button>
+            )}
+          </div>
+        }
       >
         <DataGrid
           columns={columns}
