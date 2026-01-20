@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
-import { Card, Button, Badge } from '@/components/ui';
+import { Card, Button, Badge, Input } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { useRouter } from 'next/navigation';
 import VendorQuoteModal from '@/components/vendor/VendorQuoteModal';
@@ -117,38 +117,49 @@ export default function VendorRfqSubmitPage() {
       <Toaster position="top-center" richColors />
       
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-            <FileText className="w-5 h-5 text-gray-600" />
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
+              <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
-            <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
-          </div>
+          
+          {waitingCount > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+              <span className="text-amber-600 text-sm font-medium">{waitingCount}건 접수대기</span>
+            </div>
+          )}
         </div>
-        
-        {waitingCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
-            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-            <span className="text-amber-600 text-sm font-medium">{waitingCount}건 접수대기</span>
-          </div>
-        )}
+
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="견적번호 또는 견적명으로 검색"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors"
-            />
+      {/* RFQ Table */}
+      <Card 
+        title="견적 목록"
+        padding={false} 
+        className="overflow-hidden"
+      >
+        {/* Search & Filters */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="flex-1">
+              <Input
+                placeholder="견적번호 또는 견적명으로 검색"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                leftIcon={<Search className="w-4 h-4" />}
+              />
+            </div>
+            <Button variant="primary" onClick={handleSearch} icon={<Search className="w-4 h-4" />}>
+              조회
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -187,14 +198,7 @@ export default function VendorRfqSubmitPage() {
               결과확인
             </Button>
           </div>
-          <Button variant="primary" onClick={handleSearch}>
-            검색
-          </Button>
         </div>
-      </div>
-
-      {/* RFQ Table */}
-      <Card padding={false} className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
