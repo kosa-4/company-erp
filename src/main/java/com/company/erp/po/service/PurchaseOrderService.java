@@ -227,7 +227,10 @@ public class PurchaseOrderService {
     // 현재 사용자 ID 가져오기 (세션에서)
     private String getCurrentUserId() {
         SessionUser user = getSessionUser();
-        return user != null ? user.getUserId() : "SYSTEM";
+        if (user == null || user.getUserId() == null) {
+            throw new SecurityException("로그인 정보가 없습니다. 다시 로그인해주세요.");
+        }
+        return user.getUserId();
     }
 
     // 현재 사용자 부서 코드 가져오기 (세션에서)
