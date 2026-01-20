@@ -135,7 +135,12 @@ export default function PurchaseRequestPage() {
     { key: 'unit', header: '단위', width: 60, align: 'center' },
     {
       key: 'quantity',
-      header: '수량',
+      header: (
+        <span>
+          수량
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 100,
       align: 'right',
       render: (value, row) => (
@@ -146,12 +151,18 @@ export default function PurchaseRequestPage() {
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="1"
+              required
           />
       ),
     },
     {
       key: 'unitPrice',
-      header: '단가',
+      header: (
+        <span>
+          단가
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'right',
       render: (value, row) => (
@@ -162,6 +173,7 @@ export default function PurchaseRequestPage() {
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="100"
+              required
           />
       ),
     },
@@ -174,7 +186,12 @@ export default function PurchaseRequestPage() {
     },
     {
       key: 'requestDeliveryDate',
-      header: '희망납기일',
+      header: (
+        <span>
+          희망납기일
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'center',
       render: (value, row) => (
@@ -183,6 +200,7 @@ export default function PurchaseRequestPage() {
               value={value || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'requestDeliveryDate', e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
           />
       ),
     },
@@ -191,12 +209,12 @@ export default function PurchaseRequestPage() {
       header: '비고',
       width: 150,
       align: 'left',
-      render: (value) => (
+      render: (value, row) => (
           <input
               type="text"
               value={value || ''}
-              readOnly
-              className="w-full border border-gray-300 rounded px-2 py-1 bg-gray-50 text-gray-700 cursor-not-allowed"
+              onChange={(e) => handleItemChange(row.lineNo, 'remark', e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
       ),
     },
@@ -229,13 +247,16 @@ export default function PurchaseRequestPage() {
       return;
     }
 
-    // 품목의 수량과 단가 검증 (전체 품목)
+
+    // 품목의 수량, 단가, 희망납기일 검증 (전체 품목)
     const invalidItems = prItems.filter(item =>
-        !item.quantity || item.quantity <= 0 || !item.unitPrice || item.unitPrice <= 0
+      !item.quantity || item.quantity <= 0 ||
+      !item.unitPrice || item.unitPrice <= 0 ||
+      !item.requestDeliveryDate
     );
 
     if (invalidItems.length > 0) {
-      alert('모든 품목의 수량과 단가를 입력해주세요.');
+      alert('모든 품목의 수량, 단가, 희망납기일을 입력해주세요.');
       return;
     }
 
@@ -265,11 +286,9 @@ export default function PurchaseRequestPage() {
       };
         const result = await prApi.save(requestData);
         alert("구매요청 등록이 완료되었습니다.");
-        console.log('구매요청 등록 성공:', result);
         // 저장 후 페이지 리로드
         window.location.reload();
       } catch (error) {
-      console.error('구매요청 등록 실패:', error);
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
       alert(errorMessage);
@@ -321,7 +340,8 @@ export default function PurchaseRequestPage() {
         unitPrice: 0, // 사용자가 입력해야 함
         amount: 0,
         requestDeliveryDate: '',
-        remark: item.rmk || '',
+        // 품목 마스터의 비고는 가져오지 않고, 구매요청에서 직접 입력하도록 기본값만 설정
+        remark: '',
       }));
 
       setPrItems([...prItems, ...newItems]);

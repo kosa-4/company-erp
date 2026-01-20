@@ -83,7 +83,7 @@ public class PrService {
                     .prAmt(dtAmt)
                     .delyDate(reqDt.getDelyDate())
                     .regUserId(userId)
-                    .rmk(item.getRmk())
+                    .rmk(reqDt.getRmk())
                     .build();
 
             prDtDTOList.add(prDtDTO);
@@ -139,7 +139,7 @@ public class PrService {
         boolean isBuyerDept = false;
         String regUserId = null;
         
-        // 구매사(B)인 경우만 권한 체크
+        // 구매사인 경우만 권한 체크
         if ("B".equals(user.getComType()) && user.getDeptCd() != null && !user.getDeptCd().isEmpty()) {
             // dept_role 테이블에서 BUYER 역할 확인
             isBuyerDept = prMapper.isBuyerDept(user.getDeptCd());
@@ -227,7 +227,7 @@ public class PrService {
         int updatedRows = prMapper.approvePr(userId, deptCd, prNum);
         
         if(updatedRows == 0){
-            throw new IllegalStateException("구매요청 승인에 실패했습니다. 승인 코드가 존재하지 않거나 이미 삭제된 구매요청일 수 있습니다.");
+            throw new IllegalStateException("구매요청 승인에 실패했습니다.");
         }
     }
 

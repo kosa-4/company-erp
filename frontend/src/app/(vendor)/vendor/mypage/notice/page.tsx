@@ -80,7 +80,8 @@ export default function VendorNoticePage() {
     });
   };
 
-  const handleRowClick = async (notice: Notice) => {
+  const handleNoticeNoClick = async (notice: Notice, e: React.MouseEvent) => {
+    e.stopPropagation(); // 이벤트 전파 방지
     try {
       setIsDetailModalOpen(true);
       // 상세 조회 API 호출
@@ -203,12 +204,18 @@ export default function VendorNoticePage() {
                 {notices.map((notice) => (
                   <tr 
                     key={notice.noticeNo} 
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => handleRowClick(notice)}
+                    className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-6 py-4 text-center font-medium text-gray-900">{notice.noticeNo}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span 
+                        className="font-medium text-blue-600 hover:underline cursor-pointer"
+                        onClick={(e) => handleNoticeNoClick(notice, e)}
+                      >
+                        {notice.noticeNo}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
-                      <span className="text-gray-900 font-medium hover:text-emerald-600 transition-colors">
+                      <span className="text-gray-900 font-medium">
                         {notice.title}
                       </span>
                     </td>

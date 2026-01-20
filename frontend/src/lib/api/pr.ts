@@ -31,6 +31,7 @@ export interface PrRequest {
         prQt: number;       // 수량
         unitPrc: number;    // 단가
         delyDate: string | null;   // 희망납기일 (YYYY-MM-DD, null 가능)
+        rmk?: string;       // 비고 (PRDT.RMK)
     }[];
 }
 

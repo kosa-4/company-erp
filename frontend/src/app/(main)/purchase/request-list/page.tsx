@@ -363,16 +363,9 @@ export default function PurchaseRequestListPage() {
       });
 
       alert('구매요청이 수정되었습니다.');
-      
-      // 목록 새로고침
-      await fetchData();
 
-      // 모달 닫기 및 상태 초기화
-      setIsDetailModalOpen(false);
-      setIsEditing(false);
-      setPrDetailItems([]);
-      setEditPrItems([]);
-      setSelectedPr(null);
+      // 전체 화면 새로고침으로 목록/상세 모두 최신 상태 반영
+      window.location.reload();
     } catch (error: any) {
       console.error('구매요청 수정 실패:', error);
       alert(error?.data?.error || error?.message || '구매요청 수정에 실패했습니다.');
