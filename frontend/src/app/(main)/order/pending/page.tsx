@@ -630,7 +630,7 @@ export default function OrderPendingPage() {
         <div className="space-y-6">
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
-            <Input label="PO번호" value="" placeholder="저장 시 자동생성" readOnly />
+            <Input label="PO번호" value="" readOnly />
             <Input 
               label="발주명" 
               placeholder="발주명 입력" 
@@ -780,9 +780,9 @@ export default function OrderPendingPage() {
                     </td>
                   </tr>
                 ) : (
-                  vendorList.map((vendor) => (
+                  vendorList.map((vendor, index) => (
                     <tr
-                      key={vendor.vendorCode}
+                      key={`${vendor.vendorCode}-${index}`}
                       className="border-b hover:bg-stone-50 cursor-pointer"
                       onClick={() => {
                         setSelectedVendor(vendor);

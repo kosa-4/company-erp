@@ -53,8 +53,8 @@ public class PurchaseOrderService {
 
         // 각 RFQ에 대해 품목 상세 조회하여 추가 및 복호화
         for (RfqSelectedDTO rfq : list) {
-            // 헤더 총액 복호화
-            rfq.setRfqAmount(AesCryptoUtil.decrypt(rfq.getRfqAmount(), cryptoKey));
+            // 헤더 총액 복호화 (안전 처리)
+            rfq.setRfqAmount(decryptSafe(rfq.getRfqAmount()));
 
             if (rfq.getRfqNo() != null) {
                 List<RfqSelectedItemDTO> items;
@@ -65,11 +65,11 @@ public class PurchaseOrderService {
                     items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
                 }
 
-                // 품목별 단가/금액 복호화
+                // 품목별 단가/금액 복호화 (안전 처리)
                 if (items != null) {
                     for (RfqSelectedItemDTO item : items) {
-                        item.setUnitPrice(AesCryptoUtil.decrypt(item.getUnitPrice(), cryptoKey));
-                        item.setAmount(AesCryptoUtil.decrypt(item.getAmount(), cryptoKey));
+                        item.setUnitPrice(decryptSafe(item.getUnitPrice()));
+                        item.setAmount(decryptSafe(item.getAmount()));
                     }
                 }
                 rfq.setItems(items);
@@ -227,7 +227,10 @@ public class PurchaseOrderService {
     // 현재 사용자 ID 가져오기 (세션에서)
     private String getCurrentUserId() {
         SessionUser user = getSessionUser();
-        return user != null ? user.getUserId() : "SYSTEM";
+        if (user == null || user.getUserId() == null) {
+            throw new SecurityException("로그인 정보가 없습니다. 다시 로그인해주세요.");
+        }
+        return user.getUserId();
     }
 
     // 현재 사용자 부서 코드 가져오기 (세션에서)
@@ -397,6 +400,22 @@ public class PurchaseOrderService {
         validateStatusTransition(existing.getStatus(), nextStatus);
         purchaseOrderMapper.updateStatus(poNo, nextStatus, userId);
         return true;
+    }
+
+    /**
+     * 안전한 복호화 메서드
+     * 복호화 실패 시 원본 데이터가 숫자 형식이면 원본 반환, 아니면 "0" 반환
+     */
+    private String decryptSafe(String value) {
+        try {
+            return AesCryptoUtil.decrypt(value, cryptoKey);
+        } catch (Exception e) {
+            // 복호화 실패 시, 원본이 숫자라면 평문으로 간주하여 반환 (테스트 데이터 호환성)
+            if (value != null && value.matches("-?\\d+(\\.\\d+)?")) {
+                return value;
+            }
+            return "0";
+        }
     }
 
 }
