@@ -10,6 +10,50 @@ import { useAuth } from '@/contexts/AuthContext';
 import { mypageApi } from '@/lib/api/mypage';
 import { vendorMypageApi } from '@/lib/api/vendorMypage';
 
+// 일반 사용자(USER)에게 허용된 메뉴 경로
+const USER_ALLOWED_PATHS = [
+  '/mypage',
+  '/mypage/profile',
+  '/mypage/notice',
+  '/master',
+  '/master/item', // 기준정보 -> 품목현황
+  '/purchase',
+  '/purchase/request', // 구매관리 -> 구매요청
+  '/purchase/request-list' // 구매요청 현황
+];
+
+// 메뉴 필터링 함수
+const getFilteredItems = (items: NavItem[], role?: string): NavItem[] => {
+  // ADMIN이나 BUYER는 모든 메뉴 접근 가능
+  if (role === 'ADMIN' || role === 'BUYER') {
+    return items;
+  }
+
+  // 그 외(USER 등)는 허용된 메뉴만 노출
+  return items.reduce<NavItem[]>((acc, item) => {
+    // 1. 하위 메뉴가 있다면 그것부터 필터링
+    let filteredChildren = item.children;
+    if (item.children) {
+      filteredChildren = item.children.filter(child =>
+        USER_ALLOWED_PATHS.includes(child.href)
+      );
+    }
+
+    // 2. 현재 메뉴가 허용 목록에 있거나, 하위 메뉴 중 살아남은 게 있으면 노출
+    const isSelfAllowed = USER_ALLOWED_PATHS.includes(item.href);
+    const hasVisibleChildren = filteredChildren && filteredChildren.length > 0;
+
+    if (isSelfAllowed || hasVisibleChildren) {
+      // 하위 메뉴가 필터링된 새 객체 생성 (원본 보존)
+      acc.push({
+        ...item,
+        children: filteredChildren
+      });
+    }
+    return acc;
+  }, []);
+};
+
 interface NavItemProps {
   item: NavItem;
   isActive: boolean;
@@ -30,8 +74,8 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
           <button
             onClick={onToggle}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors
-              ${isChildActive 
-                ? 'bg-gray-100 text-gray-900' 
+              ${isChildActive
+                ? 'bg-gray-100 text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50'
               }`}
           >
@@ -43,7 +87,7 @@ const NavItemComponent: React.FC<NavItemProps> = ({ item, isActive, isOpen, onTo
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${shouldExpand ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {shouldExpand && (
             <div className="mt-0.5 ml-4 pl-3 border-l border-gray-100 space-y-0.5">
               {item.children?.map((child) => (
@@ -141,7 +185,7 @@ const Sidebar: React.FC = () => {
         <Link href="/" className="flex items-center gap-2">
           {/* 협력사 스타일 심볼 + 구매사 스타일 폰트 */}
           <div className="w-8 h-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center shadow-sm transform -rotate-3">
-             <span className="text-white font-black text-lg italic">F</span>
+            <span className="text-white font-black text-lg italic">F</span>
           </div>
           <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
             FABRIO
@@ -152,7 +196,7 @@ const Sidebar: React.FC = () => {
       {/* Navigation - 검색바 제거됨 */}
       <nav className="flex-1 px-2 py-3 overflow-y-auto h-[calc(100vh-140px)]">
         <div className="space-y-0.5">
-          {navigationItems.map((item) => (
+          {getFilteredItems(navigationItems, user?.role).map((item) => (
             <NavItemComponent
               key={item.href}
               item={item}
@@ -176,7 +220,7 @@ const Sidebar: React.FC = () => {
             <p className="text-sm font-medium text-gray-900 truncate">{userName || user?.userId || '사용자'}</p>
             <p className="text-xs text-gray-500 truncate">담당자</p>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             title="로그아웃"
