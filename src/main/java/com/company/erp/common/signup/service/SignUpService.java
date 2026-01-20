@@ -98,7 +98,7 @@ public class SignUpService {
         vendorRegisterDto.setAddressDetail(signUpDto.getAddressDetail());
         vendorRegisterDto.setTel(signUpDto.getPhone());
         vendorRegisterDto.setFax(signUpDto.getFax());
-        vendorRegisterDto.setEmail(signUpDto.getVendorEmail());
+        vendorRegisterDto.setEmail(signUpDto.getEmail());
         vendorRegisterDto.setIndustry(signUpDto.getIndustry());
         vendorRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
         vendorRegisterDto.setStatus(signUpDto.getStatus());
@@ -120,7 +120,7 @@ public class SignUpService {
         vendorUserRegisterDto.setStatus(signUpDto.getStatus());
         vendorUserRegisterDto.setPhone(signUpDto.getPhone());
         vendorUserRegisterDto.setFax(signUpDto.getFax());
-        vendorUserRegisterDto.setEmail(signUpDto.getUserEmail());
+        vendorUserRegisterDto.setEmail(signUpDto.getEmail());
         vendorUserRegisterDto.setPassword(signUpDto.getPassword());
         vendorUserRegisterDto.setComType(signUpDto.getComType());
         vendorUserRegisterDto.setReqType(signUpDto.getReqType());

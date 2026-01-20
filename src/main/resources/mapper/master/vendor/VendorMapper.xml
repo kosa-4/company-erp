@@ -5,6 +5,7 @@
     <!--협력사 조회-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> <!--자동으로 list 반환-->
         SELECT
+            <!--위 테이블 우선 조회-->
             NULL AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
@@ -43,12 +44,14 @@
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
 
-            AND PROGRESS_CD IN ('A')
-            AND VENDOR_CD NOT IN (
-                SELECT VENDOR_CD FROM VNCH
-                WHERE PROGRESS_CD IN ('N', 'C')
-                AND DEL_FLAG = 'N'
-            )
+            AND
+                PROGRESS_CD IN ('A')
+            AND
+                VENDOR_CD NOT IN (
+                    SELECT VENDOR_CD FROM VNCH
+                    WHERE PROGRESS_CD IN ('N', 'C', 'R')
+                    AND DEL_FLAG = 'N'
+                )
         </where>
 
         UNION ALL
@@ -89,6 +92,12 @@
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
             AND PROGRESS_CD IN ('C', 'N', 'R')
+            AND ASK_NUM IN (
+                    SELECT MAX(ASK_NUM)
+                    FROM VNCH
+                    WHERE DEL_FLAG = 'N'
+                    GROUP BY VENDOR_CD
+                )
         </where>
 
         ORDER BY

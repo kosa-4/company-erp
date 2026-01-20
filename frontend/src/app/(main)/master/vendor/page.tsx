@@ -184,7 +184,7 @@ export default function VendorPage() {
     {
       key: 'status',
       header: '상태',
-      width: 80,
+      width: 50,
       align: 'center',
       render: (value) => getStatusBadge(value as Vendor['status']),
     },
@@ -205,17 +205,22 @@ export default function VendorPage() {
       width: 120,
       align: 'left',
     },
-    {
-      key: 'useYn',
-      header: '사용여부',
-      width: 100,
-      align: 'center',
-      render: (value) => (
-        <span className={value === 'Y' ? 'text-emerald-600' : 'text-red-500'}>
-          {value === 'Y' ? '사용' : '미사용'}
-        </span>
-      ),
-    },
+    // {
+    //   key: 'useYn',
+    //   header: '사용여부',
+    //   width: 100,
+    //   align: 'center',
+    //   render: (value) => {
+    //     // 값이 존재하고, 대문자로 변환했을 때 정확히 'Y'인 경우만 '사용'
+    //     const isUsed = value && String(value).toUpperCase() === 'Y';
+        
+    //     return (
+    //       <span className={isUsed ? 'text-emerald-600' : 'text-red-500'}>
+    //         {isUsed ? '사용' : '미사용'}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       key: 'businessType',
       header: '사업형태',
@@ -616,8 +621,8 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="danger" onClick={() => selectedVendor && rejectVendor([selectedVendor])}>반려</Button>
-            <Button variant="success" onClick={() => selectedVendor && approveVendor([selectedVendor])}>승인</Button>
+            <Button variant="danger" onClick={() => selectedVendors.length > 0 && rejectVendor(selectedVendors)}>반려</Button>
+            <Button variant="success" onClick={() => selectedVendors.length > 0 && approveVendor(selectedVendors)}>승인</Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -635,17 +640,13 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
           loading={loading}
           selectable
           emptyMessage="등록된 협력업체가 없습니다."
-          selectedRows={selectedVendors}
+          // 1. 체크박스로 선택된 '모든' 업체들이 여기에 담깁니다 (다중 선택 유지)
+          selectedRows={selectedVendors} 
+          
+              // 체크박스 다중 선택 기능 (그대로 유지)
           onSelectionChange={(selectedRows) => {
-            // 체크는 자유롭게 허용
             setSelectedVendors(selectedRows);
-            
-            // 클릭한 행 상세정보만 우측이나 모달에 보여주기 위해 설정
-            if (selectedRows.length > 0) {
-              const target = selectedRows[selectedRows.length - 1];
-              setSelectedVendor(target);
-              fetchVendorFiles(target.vendorCode);
-            }
+            // 여기서 상세정보(selectedVendor)를 건드리면 엉뚱한 데이터가 들어가는 원인이 됨! 절대 삭제!
           }}
         />
       </Card>
@@ -719,10 +720,15 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
               {/* 기타 정보 */}
               <Input label="설립일자" value={selectedVendor.foundationDate || '-'} readOnly />
               <Input label="업종" value={selectedVendor.industry || '-'} readOnly />
-              <div className="col-span-1">
-                <Input label="사용여부" value={selectedVendor.useYn === 'Y' ? '사용' : '미사용'} readOnly 
-                        className={selectedVendor.useYn === 'Y' ? 'text-emerald-600' : 'text-red-500'} />
-              </div>
+              {/* <div className="col-span-1">
+                <Input 
+                  label="사용여부" 
+                  // 데이터가 'Y'일 때만 '사용', 나머지는 '미사용'
+                  value={selectedVendor.useYn?.toUpperCase() === 'Y' ? '사용' : '미사용'} 
+                  readOnly 
+                  className={selectedVendor.useYn?.toUpperCase() === 'Y' ? 'text-emerald-600' : 'text-red-500'} 
+                />
+              </div> */}
               {selectedVendor.status === 'R' && (
                 <div className="col-span-2">
                   <Input label="반려사유" value={selectedVendor.stopReason || '-'} readOnly className="text-red-600" />

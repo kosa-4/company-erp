@@ -77,7 +77,6 @@ public class VendorUserPortalService {
     }
 
     /* 수정 */
-
     @Transactional
     public void updateVendorUser(
             VendorUserRegisterDto vendorUserRegisterDto,

@@ -27,11 +27,9 @@ public class VendorUserController {
 
     /* 조회 */
     @GetMapping
-    public ResponseEntity<?> getVendorUserList(@ModelAttribute VendorUserSearchDto vendorUserSearchDto) {
+    public ResponseEntity<List<VendorUserListDto>> getVendorUserList(@ModelAttribute VendorUserSearchDto vendorUserSearchDto) {
         List<VendorUserListDto> vendorUsers = vendorUserService.getVendorUserList(vendorUserSearchDto);
-        if(vendorUsers == null || vendorUsers.isEmpty()) {
-            return ResponseEntity.ok("검색 결과가 없습니다");
-        }
+
         return ResponseEntity.ok(vendorUsers);
     }
 

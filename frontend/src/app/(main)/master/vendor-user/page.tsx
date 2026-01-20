@@ -103,31 +103,46 @@ export default function VendorUserPage() {
   // 승인/반려 공통 처리 (앞서 만든 배열 전송 로직 유지)
   const handleAction = async (type: 'approve' | 'reject') => {
     if (selectedRows.length === 0) return alert('항목을 선택해주세요.');
+
+    // 1. 상태 검증: 승인(A)이나 반려(R) 상태인 '이미 처리가 끝난' 데이터가 있는지 확인
+    const invalidUser = selectedRows.find(u => u.status === 'A' || u.status === 'R');
+
+    if (invalidUser) {
+      const statusText = invalidUser.status === 'A' ? '이미 승인된' : '이미 반려된';
+      const actionText = type === 'approve' ? '승인' : '반려';
+      
+      // 여기서 return을 하기 때문에 아래 confirm 창은 절대 뜨지 않습니다.
+      return alert(
+        `[작업 불가]\n\n` +
+        `선택하신 [${invalidUser.userName}]님은 ${statusText} 상태입니다.\n` +
+        `이미 처리가 완료된 요청이 섞여 있어 일괄 ${actionText}이 불가능합니다.\n` +
+        `대기 중인(신규/변경) 항목만 다시 선택해주세요.`
+      );
+    }
+
+    // 2. 모든 데이터가 검증을 통과했을 때만 실행
+    const actionLabel = type === 'approve' ? '승인' : '반려';
+    if (!confirm(`선택한 ${selectedRows.length}건을 정말로 ${actionLabel}하시겠습니까?`)) return;
     
-    // 신규(N) 또는 변경(C) 건만 필터링
-    const targets = selectedRows.filter(u => u.status === 'C' || u.status === 'N');
-    if (targets.length === 0) return alert('승인/반려 가능한 상태가 없습니다.');
 
     try {
       const response = await fetch(`/api/v1/vendor-users/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(targets),
+        body: JSON.stringify(selectedRows),
       });
 
       if (response.ok) {
         alert('처리가 완료되었습니다.');
-        // 처리된 항목을 목록에서 제거
-        const processedKeys = new Set(
-          targets.map(t => `${t.userId}::${t.askUserNum}`)
-        );
-        setVendorUsers(prev =>
-          prev.filter(user => !processedKeys.has(`${user.userId}::${user.askUserNum}`))
-        );
+        
+        // [핵심] 수동 필터링 대신 서버 데이터를 다시 호출하여 목록 최신화
+        await fetchVendorUsers(); 
+        
+        // 선택했던 체크박스 초기화
         setSelectedRows([]);
       }
-    } catch (e) {
-      alert('처리 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      alert(e.message);
     }
   };
 
@@ -140,6 +155,8 @@ export default function VendorUserPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <Input label="담당자ID" value={searchParams.userId} onChange={v => setSearchParams(p => ({...p, userId: v}))} />
           <Input label="담당자명" value={searchParams.userName} onChange={v => setSearchParams(p => ({...p, userName: v}))} />
+          <Input label="협력 업체 코드" value={searchParams.vendorCode} onChange={v => setSearchParams(p => ({...p, vendorCode: v}))} />
+          <Input label="협력 업체명" value={searchParams.vendorName} onChange={v => setSearchParams(p => ({...p, vendorName: v}))} />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">BLOCK여부</label>
             <select 
@@ -152,9 +169,6 @@ export default function VendorUserPage() {
               <option value="N">N</option>
             </select>
           </div>
-          <Input label="전화번호" value={searchParams.phone} onChange={v => setSearchParams(p => ({...p, phone: v}))} />
-          <Input label="시작일" type="date" value={searchParams.startDate} onChange={v => setSearchParams(p => ({...p, startDate: v}))} />
-          <Input label="종료일" type="date" value={searchParams.endDate} onChange={v => setSearchParams(p => ({...p, endDate: v}))} />
         </div>
         <div className="flex gap-2 justify-end">
           <button onClick={handleReset} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">초기화</button>

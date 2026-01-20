@@ -40,7 +40,7 @@ interface VendorFormData {
   industry: string;
   userName: string;
   userId: string;
-  userEmail: string;
+  email: string;
   password: string;
   passwordConfirm: string;
 }
@@ -69,7 +69,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     industry: '',
     userName: '',
     userId: '',
-    userEmail: '',
+    email: '',
     password: '',
     passwordConfirm: '',
   });
@@ -97,30 +97,63 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   };
 
   const handleSignup = async () => {
-    try{
+    setIsLoading(true);
+    setError(null);
+
+    try {
       const response = await fetch('/api/v1/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      console.log('Signup response:', formData);
-      if (!response.ok) {
-        let errorMessage = '회원가입에 실패했습니다.';
-        try {
-         const errorData = await response.json();
-         errorMessage = errorData.message || errorMessage;
-       } catch {
-         // JSON 파싱 실패 시 기본 메시지 사용
-       }
-       throw new Error(errorMessage);
+
+      // 1. 백엔드에서 리턴한 "success" 문자열을 받기 위해 text() 사용
+      const resultText = await response.text();
+
+      // 2. 성공 처리: 응답이 "success"인 경우
+      if (response.ok && resultText === "success") {
+        alert('회원가입이 완료되었습니다.');
+        
+        // 데이터 초기화: 선언된 formData 구조 그대로 리셋
+        setFormData({
+          vendorName: '',
+          vendorNameEn: '',
+          businessType: '',
+          businessNo: '',
+          ceoName: '',
+          zipCode: '',
+          address: '',
+          addressDetail: '',
+          phone: '',
+          industry: '',
+          userName: '',
+          userId: '',
+          email: '',
+          password: '',
+          passwordConfirm: '',
+        });
+
+        // 로그인 화면으로 전환
+        onSwitchMode('login');
+        return; // 성공했으므로 여기서 중단
       }
 
-      alert('회원가입이 완료되었습니다.');
-      onSwitchMode('login');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+      // 3. 실패 처리: 400 에러 등 JSON 에러 메시지 파싱
+      try {
+        const errorJson = JSON.parse(resultText);
+        // Validation 에러 메시지 추출
+        const errorMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
+        throw new Error(errorMsg as string || '회원가입에 실패했습니다.');
+      } catch (e: any) {
+        // JSON 파싱 실패 시 원문 텍스트 사용
+        throw new Error(e.name === 'SyntaxError' ? resultText : e.message);
+      }
+
+    } catch (err: any) {
+      setError(err.message);
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -402,8 +435,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       <label className={labelClassName}>이메일 *</label>
                       <input 
                         type="userEmail"
-                        name="userEmail"
-                        value={formData.userEmail}
+                        name="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                         className={inputClassName}
                         placeholder="example@company.com"
