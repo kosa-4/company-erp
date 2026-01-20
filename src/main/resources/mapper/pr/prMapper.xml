@@ -69,7 +69,17 @@
     </select>
 
     <select id="selectPrNum" parameterType="String" resultType="com.company.erp.pr.dto.PrHdDTO">
-        SELECT PR_NUM, DEL_FLAG, PROGRESS_CD
+        SELECT 
+            PR_NUM, 
+            REG_USER_ID,
+            PR_SUBJECT,
+            DEPT_CD,
+            PR_AMT,
+            RMK,
+            PC_TYPE,
+            DEL_FLAG, 
+            PROGRESS_CD,
+            REG_DATE
         FROM PRHD
         WHERE PR_NUM = #{prNum}
     </select>

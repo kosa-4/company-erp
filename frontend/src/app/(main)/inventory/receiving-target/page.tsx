@@ -73,6 +73,12 @@ export default function ReceivingTargetPage() {
   const [currentPoNo, setCurrentPoNo] = useState<string | null>(null);
   // 기존 GR의 저장위치 (있으면 고정됨)
   const [existingWarehouse, setExistingWarehouse] = useState<string | null>(null);
+  
+  // 상세 조회 모달 상태
+  const [isPoDetailOpen, setIsPoDetailOpen] = useState(false);
+  const [isRfqDetailOpen, setIsRfqDetailOpen] = useState(false);
+  const [selectedPoDetail, setSelectedPoDetail] = useState<any>(null);
+  const [selectedRfqDetail, setSelectedRfqDetail] = useState<any>(null);
 
   // 데이터 조회
   const fetchData = async () => {
@@ -242,6 +248,45 @@ export default function ReceivingTargetPage() {
     ));
   };
 
+  // PO 상세 조회
+  const handleViewPoDetail = async (poNo: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/v1/purchase-orders/${poNo}`);
+      if (!response.ok) throw new Error('발주 상세 조회 실패');
+      const detail = await response.json();
+      setSelectedPoDetail(detail);
+      setIsPoDetailOpen(true);
+    } catch (error) {
+      alert('발주 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // RFQ/PR 상세 조회
+  const handleViewRfqDetail = async (rfqNo: string, prNo: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!rfqNo && !prNo) return;
+    
+    try {
+      let detail;
+      if (rfqNo) {
+        // RFQ 상세 조회
+        const response = await fetch(`/api/v1/buyer/rfqs/${rfqNo}`);
+        if (!response.ok) throw new Error('RFQ 상세 조회 실패');
+        detail = await response.json();
+      } else if (prNo) {
+        // PR 상세 조회
+        const response = await fetch(`/api/v1/pr/${prNo}/detail`);
+        if (!response.ok) throw new Error('PR 상세 조회 실패');
+        detail = await response.json();
+      }
+      setSelectedRfqDetail(detail);
+      setIsRfqDetailOpen(true);
+    } catch (error) {
+      alert('문서 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
   // 입고 저장
   const handleSaveReceiving = async () => {
     // Validation
@@ -366,6 +411,7 @@ export default function ReceivingTargetPage() {
                     <span className="sr-only">선택</span>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ/PR번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주일자</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
@@ -376,7 +422,6 @@ export default function ReceivingTargetPage() {
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">단가</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-right whitespace-nowrap">금액</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">저장위치</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ/PR번호</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -421,7 +466,24 @@ export default function ReceivingTargetPage() {
                           className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.poNo}</td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        <span 
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          onClick={(e) => handleViewPoDetail(item.poNo, e)}
+                        >
+                          {item.poNo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        {(item.rfqNo || item.prNo) ? (
+                          <span 
+                            className="font-medium text-blue-600 hover:underline cursor-pointer"
+                            onClick={(e) => handleViewRfqDetail(item.rfqNo, item.prNo, e)}
+                          >
+                            {item.rfqNo || item.prNo}
+                          </span>
+                        ) : '-'}
+                      </td>
                       <td className="px-4 py-3.5 text-sm text-center text-stone-600 whitespace-nowrap">{item.poDate}</td>
                       <td className="px-4 py-3.5 text-sm text-left text-stone-600 truncate max-w-[200px] whitespace-nowrap" title={item.poName}>{item.poName}</td>
                       <td className="px-4 py-3.5 text-sm text-center text-gray-900 whitespace-nowrap">{item.itemCode}</td>
@@ -432,7 +494,6 @@ export default function ReceivingTargetPage() {
                       <td className="px-4 py-3.5 text-sm text-right text-stone-600 whitespace-nowrap">₩{formatNumber(item.unitPrice)}</td>
                       <td className="px-4 py-3.5 text-sm text-right font-medium text-stone-900 whitespace-nowrap">₩{formatNumber(item.amount)}</td>
                       <td className="px-4 py-3.5 text-sm text-left text-stone-500 whitespace-nowrap">{item.storageLocation}</td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.rfqNo || item.prNo || '-'}</td>
                     </tr>
                   ))
                 )}
@@ -546,6 +607,142 @@ export default function ReceivingTargetPage() {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* 발주 상세 모달 */}
+      <Modal
+        isOpen={isPoDetailOpen}
+        onClose={() => setIsPoDetailOpen(false)}
+        title="발주 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsPoDetailOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedPoDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedPoDetail.poNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주명</label>
+                <p className="font-medium">{selectedPoDetail.poName}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주일자</label>
+                <p className="font-medium">{selectedPoDetail.poDate?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">협력업체</label>
+                <p className="font-medium">{selectedPoDetail.vendorName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedPoDetail.items?.map((item: any, index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-right">{formatNumber(item.orderQuantity)}</td>
+                      <td className="p-3 text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 발주금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedPoDetail.totalAmount || 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* RFQ/PR 상세 모달 */}
+      <Modal
+        isOpen={isRfqDetailOpen}
+        onClose={() => setIsRfqDetailOpen(false)}
+        title={selectedRfqDetail?.rfqNum ? "RFQ 상세" : "PR 상세"}
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedRfqDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">{selectedRfqDetail.rfqNum ? 'RFQ번호' : 'PR번호'}</label>
+                <p className="font-medium">{selectedRfqDetail.rfqNum || selectedRfqDetail.prNum}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">{selectedRfqDetail.rfqNum ? '견적명' : '구매요청명'}</label>
+                <p className="font-medium">{selectedRfqDetail.rfqSubject || selectedRfqDetail.prSubject}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">요청일자</label>
+                <p className="font-medium">{(selectedRfqDetail.rfqDate || selectedRfqDetail.regDate)?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">담당자</label>
+                <p className="font-medium">{selectedRfqDetail.ctrlUserName || selectedRfqDetail.reqUserName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRfqDetail.items?.map((item: any, index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode || item.itemCd}</td>
+                      <td className="p-3">{item.itemName || item.itemDesc}</td>
+                      <td className="p-3 text-right">{formatNumber(item.quantity || item.rfqQt || item.prQt)}</td>
+                      <td className="p-3 text-right">₩{formatNumber(Number(item.unitPrice || item.unitPrc || 0))}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.amount || item.rfqAmt || item.prAmt || 0))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedRfqDetail.totalAmount || selectedRfqDetail.rfqAmount || selectedRfqDetail.prAmt || 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

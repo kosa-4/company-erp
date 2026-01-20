@@ -6,7 +6,7 @@
     <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
     <select id="selectPendingPOList" parameterType="map"
         resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
-        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.CTRL_USER_ID AS ctrlUserName,
+        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.PR_NUM AS prNo, h.CTRL_USER_ID AS ctrlUserName,
         v.VENDOR_NM AS vendorName FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE
         h.PROGRESS_CD = 'S' AND h.CHECK_FLAG = 'Y' AND h.DEL_FLAG = 'N' AND NOT EXISTS ( SELECT 1
         FROM GRHD g WHERE g.PO_NUM = h.PO_NUM AND g.PROGRESS_CD = 'GRE' AND g.DEL_FLAG = 'N' ) <if

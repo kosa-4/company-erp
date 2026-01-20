@@ -173,6 +173,43 @@ public class PrService {
     public List<PrDtDTO> selectPrDetail(String prNum){
         return prMapper.selectPrDetail(prNum);
     }
+    
+    //구매요청 상세 조회 (헤더 + 품목)
+    public PrDetailResponse selectPrDetailWithHeader(String prNum){
+        // 헤더 조회
+        PrHdDTO header = prMapper.selectPrNum(prNum);
+        if(header == null){
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        
+        // 품목 목록 조회
+        List<PrDtDTO> items = prMapper.selectPrDetail(prNum);
+        
+        // 요청자명 조회
+        String reqUserName = prMapper.selectUserName(header.getRegUserId());
+        
+        // 날짜 변환
+        String regDateStr = null;
+        if (header.getRegDate() != null) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+            regDateStr = sdf.format(header.getRegDate());
+        }
+        
+        // 응답 DTO 생성
+        return PrDetailResponse.builder()
+                .prNum(header.getPrNum())
+                .prSubject(header.getPrSubject())
+                .rmk(header.getRmk())
+                .prAmt(header.getPrAmt())
+                .pcType(header.getPcType())
+                .progressCd(header.getProgressCd())
+                .deptCd(header.getDeptCd())
+                .regUserId(header.getRegUserId())
+                .regDate(regDateStr)
+                .reqUserName(reqUserName)
+                .items(items)
+                .build();
+    }
 
     //구매요청 승인
     @Transactional
