@@ -49,7 +49,13 @@ public class PurchaseOrderService {
         // 각 RFQ에 대해 품목 상세 조회하여 추가
         for (RfqSelectedDTO rfq : list) {
             if (rfq.getRfqNo() != null) {
-                List<RfqSelectedItemDTO> items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                List<RfqSelectedItemDTO> items;
+                // 긴급(E) 또는 단가계약(C) 인 경우 PR 아이템 조회 (단, rfqNo는 prNo로 alias 되어있음)
+                if ("E".equals(rfq.getPurchaseType()) || "C".equals(rfq.getPurchaseType())) {
+                    items = purchaseOrderMapper.selectPrItemsAsRfqItems(rfq.getRfqNo());
+                } else {
+                    items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                }
                 rfq.setItems(items);
             }
         }

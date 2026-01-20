@@ -60,4 +60,7 @@ public interface PurchaseOrderMapper {
 
         // RFQ 선정완료 품목 조회
         List<RfqSelectedItemDTO> selectRfqSelectedItems(String rfqNo);
+
+        // PR 품목을 RfqSelectedItemDTO로 조회 (긴급/단가계약용)
+        List<RfqSelectedItemDTO> selectPrItemsAsRfqItems(String prNum);
 }
