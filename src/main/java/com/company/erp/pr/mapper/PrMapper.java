@@ -24,6 +24,7 @@ public interface PrMapper {
                                       @Param("requester") String requester,
                                       @Param("deptName") String deptName,
                                       @Param("progressCd") String progressCd,
+                                      @Param("pcType") String pcType,
                                       @Param("requestDate") String requestDate,
                                       @Param("offset") Integer offset,
                                       @Param("pageSize") Integer pageSize,
@@ -36,6 +37,7 @@ public interface PrMapper {
                          @Param("requester") String requester,
                          @Param("deptName") String deptName,
                          @Param("progressCd") String progressCd,
+                         @Param("pcType") String pcType,
                          @Param("requestDate") String requestDate,
                          @Param("regUserId") String regUserId,
                          @Param("isBuyerDept") Boolean isBuyerDept);
