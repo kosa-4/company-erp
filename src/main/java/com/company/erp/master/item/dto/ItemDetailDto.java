@@ -2,28 +2,27 @@ package com.company.erp.master.item.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class ItemDetailDto{
     private String itemCode; // 품목 코드
-    private LocalDate createdAt; // 등록 일자
+    private LocalDateTime createdAt; // 등록 일자
     private String createdBy; // 등록자
-    private LocalDate modifiedAt; // 수정 일자
+    private LocalDateTime modifiedAt; // 수정 일자
     private String modifiedBy; // 수정자
     private String useYn; // 사용 여부
     private String stopReason; // 중지 사유
     @NotBlank(message = "필수 입력 사항입니다.")
     private String itemName; // 품목명
     private String itemNameEn; // 품목 영문명
-    @NotBlank(message = "필수 입력 사항입니다.")
     private String spec; // 규격
     private String manufacturerName; // 제조사 명
     private String modelNo ; // 제조 모델 번호
     private String status; // 상태
     private String remark; // 비고
+    @NotBlank(message = "필수 입력 사항입니다.")
     private String unit; // 단위
     private String itemType; // 품목 종류
     private String categoryL; // 대분류

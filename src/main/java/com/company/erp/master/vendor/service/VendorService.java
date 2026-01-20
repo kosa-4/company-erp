@@ -2,6 +2,7 @@ package com.company.erp.master.vendor.service;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.file.exception.FileException;
 import com.company.erp.master.vendor.dto.*;
 import com.company.erp.master.vendor.mapper.VendorMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -38,10 +41,10 @@ public class VendorService {
     // 2. 회사 코드로 파일 번호 조회
     public List<String> getFileNumByVendorCode(String vendorCode) {
         List<String> fileNumList = vendorMapper.selectFileNumByVendorCode(vendorCode);
-        if(fileNumList.isEmpty()){
-            throw new NoSuchElementException("검색 결과가 없습니다.");
-        }
-        return fileNumList;
+//        if(fileNumList.isEmpty()){
+//            throw new FileException("검색 결과가 없습니다.");
+//        }
+        return (fileNumList != null) ?  fileNumList : new ArrayList<>();
     }
 
     /* 저장 */
@@ -106,7 +109,7 @@ public class VendorService {
 
             // 6) 대기 테이블 업데이트
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
-            vendorUpdateDto.setModifiedAt(LocalDate.now());
+            vendorUpdateDto.setModifiedAt(LocalDateTime.now());
             vendorUpdateDto.setModifiedBy(loginId);
             vendorUpdateDto.setAskNum(askNum); // where 용
             vendorUpdateDto.setDelFlag("N");
@@ -124,7 +127,7 @@ public class VendorService {
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
             // 2) 입력값 설정
-            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(loginId);
             dto.setSignUserId(loginId);
             dto.setStatus("R");

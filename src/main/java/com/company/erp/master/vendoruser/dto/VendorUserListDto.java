@@ -2,7 +2,7 @@ package com.company.erp.master.vendoruser.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorUserListDto {
@@ -14,7 +14,7 @@ public class VendorUserListDto {
     private String phone;
     private String email;
     private String status;
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private String blockFlag;
     private String password;
     private String reqType;

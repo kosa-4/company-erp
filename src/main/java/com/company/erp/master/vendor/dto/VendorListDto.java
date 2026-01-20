@@ -3,6 +3,7 @@ package com.company.erp.master.vendor.dto;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorListDto {
@@ -19,7 +20,7 @@ public class VendorListDto {
     private String useYn;
     private String status;
     private String createdBy;
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private String zipCode;
     private String tel;
     private String fax;

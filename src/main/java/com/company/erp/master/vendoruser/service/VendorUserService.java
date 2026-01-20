@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,7 +34,7 @@ public class VendorUserService {
         for(VendorUserRegisterDto dto : vendorUserRegisterDtoList){
             // 2) 사용자 존재 여부 확인
             String askUserNum = dto.getAskUserNum();
-            LocalDate now = LocalDate.now();
+            LocalDateTime now = LocalDateTime.now();
             VendorUserListDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
 
             if(vendorUser == null){
@@ -63,9 +64,9 @@ public class VendorUserService {
                     } else{
                         dto.setCreatedAt(now);
                         dto.setCreatedBy(loginId);
-                        dto.setModifiedAt(LocalDate.now());
+                        dto.setModifiedAt(LocalDateTime.now());
                         dto.setModifiedBy(loginId);
-                        dto.setSignDate(LocalDate.now());
+                        dto.setSignDate(LocalDateTime.now());
                         dto.setPassword(vendorUser.getPassword());
                         dto.setRole("VENDOR");
 
@@ -114,7 +115,7 @@ public class VendorUserService {
             String loginId,
             String askUserNum,
             VendorUserListDto vendorUser,
-            LocalDate now,
+            LocalDateTime now,
             String status
             ){
 
@@ -145,7 +146,7 @@ public class VendorUserService {
             if(!"C".equals(status) && !"N".equals(status)){
                 throw new IllegalStateException("반려 가능한 상태가 아닙니다.");
             }
-            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(String.valueOf(loginId));
             dto.setStatus("R");
 

@@ -20,6 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 //@CrossOrigin(origins = "http://localhost:3000")
 @SessionIgnore
 @RestController
@@ -35,7 +38,6 @@ public class ItemController {
     // ModelAttribute - get에서 사용 (url 파라미터 자동으로 mapping)
     public ResponseEntity<ItemResponseDto<ItemDetailDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
         try{
-//            System.out.println(searchDto);
             // 검색 조건이 많을수록 dto가 유리
             ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto);
 
@@ -44,6 +46,10 @@ public class ItemController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+
+//        ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto); => 추후 수정
+//
+//        return ApiResponse.ok(items);
     }
 
     // 상세 품목 조회
