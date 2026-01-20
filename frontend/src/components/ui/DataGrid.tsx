@@ -16,6 +16,8 @@ interface DataGridProps<T> {
   striped?: boolean;
   compact?: boolean;
   isRowSelectable?: (row: T) => boolean;  // 행별 선택 가능 여부
+  expandedRowRender?: (row: T) => React.ReactNode; // 행 확장 렌더링
+  expandable?: boolean; // 확장 가능 여부
 }
 
 function DataGrid<T extends object>({
@@ -31,9 +33,22 @@ function DataGrid<T extends object>({
   striped = false,
   compact = false,
   isRowSelectable,
+  expandedRowRender,
+  expandable = false,
 }: DataGridProps<T>) {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRowExpansion = (rowKey: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(rowKey)) {
+      newExpandedRows.delete(rowKey);
+    } else {
+      newExpandedRows.add(rowKey);
+    }
+    setExpandedRows(newExpandedRows);
+  };
 
   const handleSort = (key: string) => {
     if (sortColumn === key) {
@@ -47,7 +62,7 @@ function DataGrid<T extends object>({
   const handleSelectAll = (checked: boolean) => {
     if (onSelectionChange) {
       // 선택 가능한 행만 필터링
-      const selectableRows = isRowSelectable 
+      const selectableRows = isRowSelectable
         ? data.filter(row => isRowSelectable(row))
         : data;
       onSelectionChange(checked ? [...selectableRows] : []);
@@ -59,7 +74,7 @@ function DataGrid<T extends object>({
     if (isRowSelectable && !isRowSelectable(row)) {
       return;
     }
-    
+
     if (onSelectionChange) {
       if (checked) {
         onSelectionChange([...selectedRows, row]);
@@ -74,10 +89,10 @@ function DataGrid<T extends object>({
   };
 
   // 선택 가능한 행만 필터링하여 계산
-  const selectableData = isRowSelectable 
+  const selectableData = isRowSelectable
     ? data.filter(row => isRowSelectable(row))
     : data;
-  
+
   const allSelected = selectableData.length > 0 && selectedRows.length === selectableData.length;
   const someSelected = selectedRows.length > 0 && selectedRows.length < selectableData.length;
 
@@ -123,6 +138,7 @@ function DataGrid<T extends object>({
         <table className="w-full">
           <thead>
             <tr className="bg-stone-50 border-b border-stone-200">
+              {expandable && <th className="w-10 px-4 py-3.5"></th>}
               {selectable && (
                 <th className="w-12 px-4 py-3.5">
                   <input
@@ -202,49 +218,77 @@ function DataGrid<T extends object>({
               <>
                 {sortedData.map((row, index) => {
                   const canSelect = !isRowSelectable || isRowSelectable(row);
-                  
-                  // key 중복 방지: keyField 값 + index 조합
+
                   const uniqueKey = `${String(row[keyField])}-${index}`;
-                  
+                  const isExpanded = expandedRows.has(uniqueKey);
+
                   return (
-                    <tr
-                      key={uniqueKey}
-                      className={`
-                        transition-colors duration-150
-                        ${striped && index % 2 === 1 ? 'bg-stone-50/50' : ''}
-                        ${isRowSelected(row) ? 'bg-teal-50' : ''}
-                        ${onRowClick ? 'cursor-pointer hover:bg-teal-50/70' : 'hover:bg-stone-50'}
-                      `}
-                      onClick={() => onRowClick && onRowClick(row)}
-                    >
-                      {selectable && (
-                        <td className="w-12 px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isRowSelected(row)}
-                            disabled={!canSelect}
-                            onChange={(e) => handleSelectRow(row, e.target.checked)}
+                    <React.Fragment key={uniqueKey}>
+                      <tr
+                        className={`
+                          transition-colors duration-150
+                          ${striped && index % 2 === 1 ? 'bg-stone-50/50' : ''}
+                          ${isRowSelected(row) ? 'bg-teal-50' : ''}
+                          ${onRowClick ? 'cursor-pointer hover:bg-teal-50/70' : 'hover:bg-stone-50'}
+                        `}
+                        onClick={() => onRowClick && onRowClick(row)}
+                      >
+                        {expandable && (
+                          <td className="px-4 py-3.5 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRowExpansion(uniqueKey);
+                              }}
+                              className="p-1 hover:bg-stone-200 rounded text-stone-500 transition-colors"
+                            >
+                              <svg
+                                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'transform rotate-180' : ''}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </td>
+                        )}
+                        {selectable && (
+                          <td className="w-12 px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isRowSelected(row)}
+                              disabled={!canSelect}
+                              onChange={(e) => handleSelectRow(row, e.target.checked)}
+                              className={`
+                                w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500
+                                ${!canSelect ? 'cursor-not-allowed opacity-50' : ''}
+                              `}
+                              title={!canSelect ? '승인된 구매요청은 선택할 수 없습니다' : ''}
+                            />
+                          </td>
+                        )}
+                        {columns.map((column) => (
+                          <td
+                            key={column.key.toString()}
                             className={`
-                              w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500
-                              ${!canSelect ? 'cursor-not-allowed opacity-50' : ''}
+                              px-4 ${compact ? 'py-2.5' : 'py-3.5'}
+                              text-sm text-stone-700
+                              ${getAlignClass(column.align)}
                             `}
-                            title={!canSelect ? '승인된 구매요청은 선택할 수 없습니다' : ''}
-                          />
-                        </td>
+                          >
+                            {getCellValue(row, column)}
+                          </td>
+                        ))}
+                      </tr>
+                      {isExpanded && expandedRowRender && (
+                        <tr className="bg-stone-50/50">
+                          <td colSpan={columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0)} className="px-4 py-4 border-t border-stone-100 shadow-inner">
+                            {expandedRowRender(row)}
+                          </td>
+                        </tr>
                       )}
-                      {columns.map((column) => (
-                        <td
-                          key={column.key.toString()}
-                          className={`
-                            px-4 ${compact ? 'py-2.5' : 'py-3.5'}
-                            text-sm text-stone-700
-                            ${getAlignClass(column.align)}
-                          `}
-                        >
-                          {getCellValue(row, column)}
-                        </td>
-                      ))}
-                    </tr>
+                    </React.Fragment>
                   );
                 })}
               </>

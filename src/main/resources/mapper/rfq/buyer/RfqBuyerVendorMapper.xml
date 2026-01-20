@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.rfq.buyer.vendor.mapper.RfqBuyerVendorMapper">
+
+    <select id="selectApprovedVendors" resultType="com.company.erp.rfq.buyer.vendor.dto.RfqVendorDTO">
+        SELECT
+            VENDOR_CD    AS vendorCode,
+            VENDOR_NM    AS vendorName,
+            CEO_USER_NM       AS ceoName,
+            ADDR      AS address,
+            INDUSTRY_TYPE     AS industry,
+            PROGRESS_CD  AS status
+        FROM VNGL
+        WHERE DEL_FLAG = 'N'
+          AND PROGRESS_CD = 'A'  -- 승인(Approved) 상태인 업체만 조회
+        <if test="vendorCode != null and vendorCode != ''">
+            AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+        </if>
+        <if test="vendorName != null and vendorName != ''">
+            AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
+        </if>
+        ORDER BY REG_DATE DESC
+    </select>
+
+</mapper>

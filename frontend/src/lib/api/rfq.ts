@@ -29,11 +29,20 @@ export interface PrGroup {
     items: PrItemRow[];
 }
 
+// Vendor 관련 타입 재사용 또는 새로 정의 (여기선 편의상 import 대신 직접 정의하거나 any 사용 최소화)
+export interface RfqVendorResponse {
+    vendors: {
+        vendorCode: string;
+        vendorName: string;
+        ceoName: string;
+        industry: string;
+    }[];
+}
+
 export interface RfqWaitingSearchRequest {
     prNum?: string;
     prSubject?: string;
-    fromDate?: string;
-    toDate?: string;
+    reqDate?: string;
     reqDeptCd?: string;
     reqUserNm?: string;
 }
@@ -270,8 +279,13 @@ export const rfqApi = {
     /**
      * RFQ 삭제 (Soft Delete)
      */
-    deleteRfq: (rfqNum: string) =>
-        api.delete<void>(`/v1/buyer/rfqs/${rfqNum}`),
+    deleteRfq: (rfqNum: string) => api.put<{ message: string }>(`/v1/buyer/rfq/${rfqNum}/delete`),
+
+    /**
+     * [신규] RFQ용 승인된 협력사 목록 조회
+     */
+    getApprovedVendors: (params: { vendorCode?: string; vendorName?: string }) =>
+        api.get<RfqVendorResponse>('/v1/buyer/rfq/vendors', params),
 
     /**
      * 선정 결과 목록 조회
@@ -286,7 +300,7 @@ export const rfqApi = {
         api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
 
     // ========== 협력사 API ==========
-    
+
     /**
      * 협력사 RFQ 목록 조회
      */

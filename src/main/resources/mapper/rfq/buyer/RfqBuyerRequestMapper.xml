@@ -5,14 +5,28 @@
 
     <!-- 1. 조회: Header -->
     <select id="selectRfqHeader"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header"> SELECT
-        h.RFQ_NUM AS rfqNum, h.RFQ_SUBJECT AS rfqSubject, h.RFQ_DATE AS rfqDate, h.PROGRESS_CD AS
-        progressCd, c1.CODE_NAME AS progressNm, h.RFQ_TYPE AS rfqType, c2.CODE_NAME AS rfqTypeNm,
-        h.REQ_CLOSE_DATE AS reqCloseDate, h.RMK AS rmk, h.CTRL_USER_ID AS ctrlUserId, u.USER_NM AS
-        ctrlUserNm, h.PR_NUM AS prNum, h.PC_TYPE AS pcType FROM RFQHD h LEFT JOIN CODD c1 ON
-        c1.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c1.CODE AND c1.USE_YN = 'Y' LEFT JOIN CODD
-        c2 ON c2.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c2.CODE AND c2.USE_YN = 'Y' LEFT JOIN
-        BY_USER u ON h.CTRL_USER_ID = u.USER_ID WHERE h.RFQ_NUM = #{rfqNum} AND h.DEL_FLAG = 'N' </select>
+        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+        SELECT
+               h.RFQ_NUM        AS rfqNum,
+               h.RFQ_SUBJECT    AS rfqSubject,
+               h.RFQ_DATE       AS rfqDate,
+               h.PROGRESS_CD    AS progressCd,
+               c1.CODE_NAME     AS progressNm,
+               h.RFQ_TYPE       AS rfqType,
+               c2.CODE_NAME     AS rfqTypeNm,
+               h.REQ_CLOSE_DATE AS reqCloseDate,
+               h.RMK            AS rmk,
+               h.CTRL_USER_ID   AS ctrlUserId,
+               u.USER_NM        AS ctrlUserNm,
+               h.PR_NUM         AS prNum,
+               h.PC_TYPE        AS pcType
+        FROM RFQHD h
+                 LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c1.CODE AND c1.USE_YN = 'Y'
+                 LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c2.CODE AND c2.USE_YN = 'Y'
+                 LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
+        WHERE h.RFQ_NUM = #{rfqNum}
+          AND h.DEL_FLAG = 'N'
+    </select>
 
     <!-- 2. 조회: Items -->
     <select id="selectRfqItems"
@@ -40,11 +54,24 @@
 
     <!-- [신규] PR 기반 초기화 데이터 조회: Items -->
     <select id="selectRfqInitItems"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item"> SELECT
-        pd.LINE_NO AS lineNo, pd.ITEM_CD AS itemCd, pd.ITEM_DESC AS itemDesc, pd.ITEM_SPEC AS
-        itemSpec, pd.UNIT_CD AS unitCd, pd.PR_QT AS rfqQt, pd.UNIT_PRC AS estUnitPrc, pd.PR_AMT AS
-        estAmt, pd.DELY_DATE AS delyDate, NULL AS whNm, pd.RMK AS rmk FROM PRDT pd WHERE pd.PR_NUM =
-        #{prNum} AND pd.DEL_FLAG = 'N' ORDER BY pd.LINE_NO </select>
+        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
+        SELECT
+               ROW_NUMBER() OVER (ORDER BY pd.ITEM_CD) AS lineNo,
+               pd.ITEM_CD   AS itemCd,
+               pd.ITEM_DESC AS itemDesc,
+               pd.ITEM_SPEC AS itemSpec,
+               pd.UNIT_CD   AS unitCd,
+               pd.PR_QT     AS rfqQt,
+               pd.UNIT_PRC  AS estUnitPrc,
+               pd.PR_AMT    AS estAmt,
+               pd.DELY_DATE AS delyDate,
+               NULL         AS whNm,
+               pd.RMK       AS rmk
+        FROM PRDT pd
+        WHERE pd.PR_NUM = #{prNum}
+          AND pd.DEL_FLAG = 'N'
+        ORDER BY pd.REG_DATE
+    </select>
 
 
     <!-- [복구] 프로젝트 공통 방식(Map)에 따라 조회 -->
@@ -56,11 +83,14 @@
         #{prNum} AND DEL_FLAG = 'N' </select>
 
     <!-- 5. 생성: Header 신규 생성 -->
-    <insert id="insertRfqHeader"> INSERT INTO RFQHD ( RFQ_NUM, RFQ_SUBJECT, RFQ_DATE, PR_NUM,
-        PROGRESS_CD, RFQ_TYPE, REQ_CLOSE_DATE, RMK, CTRL_USER_ID, PC_TYPE, DEL_FLAG, REG_DATE,
-        REG_USER_ID ) VALUES ( #{req.rfqNum}, #{req.rfqSubject}, NULL, #{prNum}, 'T',
-        #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType}, 'N', NOW(),
-        #{loginUserId} ) </insert>
+    <insert id="insertRfqHeader">
+        INSERT INTO RFQHD (RFQ_NUM, RFQ_SUBJECT, RFQ_DATE, PR_NUM,
+                           PROGRESS_CD, RFQ_TYPE, REQ_CLOSE_DATE, RMK, CTRL_USER_ID, PC_TYPE, DEL_FLAG, REG_DATE,
+                           REG_USER_ID)
+        VALUES (#{req.rfqNum}, #{req.rfqSubject}, NOW(), #{prNum}, 'T',
+                #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType}, 'N', NOW(),
+                #{loginUserId})
+    </insert>
 
     <!-- 6. 저장: Header 수정 (2중 방어 - 상태 + Owner 체크) -->
     <update id="updateRfqHeader"> UPDATE RFQHD SET RFQ_SUBJECT = #{req.rfqSubject}, RFQ_TYPE =

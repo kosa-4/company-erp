@@ -16,7 +16,7 @@ import {
 import { ColumnDef } from '@/types';
 import { formatNumber, toLocalDateString } from '@/lib/utils';
 import { rfqApi, RfqSaveRequest, RfqDetailResponse } from '@/lib/api/rfq';
-import { vendorApi, VendorDTO } from '@/lib/api/vendor';
+// import { vendorApi, VendorDTO } from '@/lib/api/vendor'; // 기존 vendorApi 제거
 import { getErrorMessage } from '@/lib/api/error';
 import { toast } from 'sonner';
 
@@ -38,10 +38,11 @@ export default function RfqRequestModal({
     const [loading, setLoading] = useState(false);
     const [detail, setDetail] = useState<RfqDetailResponse | null>(null);
 
-    // 협력사 추가 모달 상태
+    // 협력사 추가/삭제 모달 상태
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
-    const [vendorList, setVendorList] = useState<VendorDTO[]>([]);
-    const [selectedVendorCodes, setSelectedVendorCodes] = useState<string[]>([]);
+    const [vendorList, setVendorList] = useState<any[]>([]); // 타입 유연하게 처리
+    const [selectedVendorCodes, setSelectedVendorCodes] = useState<string[]>([]); // 모달 내 선택 (추가용)
+    const [selectedDetailVendors, setSelectedDetailVendors] = useState<any[]>([]); // 상세 화면 그리드 내 선택 (삭제용)
     const [vendorSearch, setVendorSearch] = useState({ vendorCode: '', vendorName: '' });
 
     // 데이터 조회
@@ -78,13 +79,15 @@ export default function RfqRequestModal({
             setIsVendorModalOpen(false);
             setVendorList([]);
             setSelectedVendorCodes([]);
+            setSelectedDetailVendors([]);
         }
     }, [isOpen, fetchDetail]);
 
     // 협력사 목록 조회 (모달 열릴 때)
     const fetchVendorList = useCallback(async () => {
         try {
-            const response = await vendorApi.getVendorList(vendorSearch);
+            // [수정] 승인된 협력사만 조회하는 신규 API 사용
+            const response = await rfqApi.getApprovedVendors(vendorSearch);
             setVendorList(response.vendors || []);
         } catch (error) {
             console.error(error);
@@ -232,6 +235,27 @@ export default function RfqRequestModal({
         });
         setIsVendorModalOpen(false);
         setSelectedVendorCodes([]);
+    };
+
+    // 협력사 삭제 처리 (화면 목록에서만 제거)
+    const handleRemoveVendors = () => {
+        if (!detail || selectedDetailVendors.length === 0) {
+            toast.warning('삭제할 협력사를 선택해주세요.');
+            return;
+        }
+
+        if (!confirm(`선택한 ${selectedDetailVendors.length}개 협력사를 목록에서 삭제하시겠습니까?\n(저장 시 반영됩니다)`)) {
+            return;
+        }
+
+        const deleteVendorCds = selectedDetailVendors.map(v => v.vendorCd);
+        const newVendors = (detail.vendors || []).filter(v => !deleteVendorCds.includes(v.vendorCd));
+
+        setDetail({
+            ...detail,
+            vendors: newVendors
+        });
+        setSelectedDetailVendors([]);
     };
 
     const isEditable = !rfqNum || detail?.header.progressCd === 'T';
@@ -426,13 +450,23 @@ export default function RfqRequestModal({
                             className="xl:col-span-1"
                             padding={false}
                             actions={isEditable && (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => setIsVendorModalOpen(true)}
-                                >
-                                    추가
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={handleRemoveVendors}
+                                        disabled={selectedDetailVendors.length === 0}
+                                    >
+                                        삭제
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setIsVendorModalOpen(true)}
+                                    >
+                                        추가
+                                    </Button>
+                                </div>
                             )}
                         >
                             <div className="overflow-x-auto">
@@ -440,8 +474,12 @@ export default function RfqRequestModal({
                                     columns={vendorColumns}
                                     data={detail?.vendors || []}
                                     keyField="vendorCd"
+                                    keyField="vendorCd"
                                     loading={loading}
                                     emptyMessage="추가된 협력사가 없습니다."
+                                    selectable={isEditable}
+                                    selectedRows={selectedDetailVendors}
+                                    onSelectionChange={setSelectedDetailVendors}
                                 />
                             </div>
                         </Card>
