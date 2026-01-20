@@ -13,11 +13,18 @@ import com.company.erp.master.vendor.mapper.VendorMapper;
 import com.company.erp.master.vendor.service.VendorService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.apache.tomcat.util.buf.UriUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -128,7 +135,7 @@ public class VendorController {
         return ApiResponse.ok("반려 처리 되었습니다.");
     }
 
-    // 3. 첨부 파일 저장
+    // 4. 첨부 파일 저장
     @PostMapping("/files/{vendorCode}")
     public ApiResponse registerFile(
             @PathVariable("vendorCode") String vendorCode,
@@ -141,5 +148,29 @@ public class VendorController {
         }
         return ApiResponse.ok(null);
     }
-    
+    // 5. 첨부 파일 다운로드
+    @GetMapping("/files/download/{fileNum}")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable("fileNum") String fileNum,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser
+    ){  
+        // 1. 파일 다운로드 준비 (경로 지정)
+        Resource resource = fileService.download(fileNum, loginUser);
+
+        // 2. 메타 데이터 준비 (파일명)
+        AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
+        String encordedFileName = UriUtils.encode(file.getOriginName(),  StandardCharsets.UTF_8);
+        
+        // 3. 클라이언트 컴퓨터로 전송
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                // 이진 데이터임을 전달
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition
+                                .attachment() // 다운로드 팝업으로 실행 명령
+                                .filename(file.getOriginName(), StandardCharsets.UTF_8) // 파일명 전달
+                                .build()
+                                .toString())
+                .body(resource); // 다운로드할 파일과 경로 전달
+    }
 }
