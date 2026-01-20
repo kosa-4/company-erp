@@ -85,8 +85,20 @@ export interface PrListParams {
     requester?: string;   // 요청자
     deptName?: string;    // 부서명
     progressCd?: string;  // 진행상태코드 (한국어: '임시저장', '승인대기', '승인', '반려' 등)
-    startDate?: string;   // 요청일자 시작 (YYYY-MM-DD)
-    endDate?: string;     // 요청일자 종료 (YYYY-MM-DD)
+    requestDate?: string;   // 요청일자 (YYYY-MM-DD)
+    page?: number;       // 페이지 번호 (기본값: 1)
+    pageSize?: number;   // 페이지 크기 (기본값: 10)
+}
+
+/**
+ * 구매요청 현황 목록 응답 (페이징 포함)
+ */
+export interface PrListResponseWithPaging {
+    items: PrListResponse[];
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
 }
 
 export const prApi = {
@@ -122,26 +134,27 @@ export const prApi = {
     save: (data: PrRequest) => api.post<{ message: string }>('/v1/pr/save', data),
 
     /**
-     * 구매요청 현황 목록 조회 (헤더만)
+     * 구매요청 현황 목록 조회 (헤더만) - 페이징 포함
      */
     getList: (params?: PrListParams) => {
         // 프론트엔드 파라미터명을 백엔드 파라미터명으로 매핑
-        const mappedParams: Record<string, string> = {};
+        const mappedParams: Record<string, string | number> = {};
         if (params?.prNum) mappedParams.prNum = params.prNum;
         if (params?.prSubject) mappedParams.prSubject = params.prSubject;
         if (params?.requester) mappedParams.requester = params.requester;
         if (params?.deptName) mappedParams.deptName = params.deptName;
         if (params?.progressCd) mappedParams.progressCd = params.progressCd;
-        if (params?.startDate) mappedParams.startDate = params.startDate;
-        if (params?.endDate) mappedParams.endDate = params.endDate;
+        if (params?.requestDate) mappedParams.requestDate = params.requestDate;
+        if (params?.page) mappedParams.page = params.page;
+        if (params?.pageSize) mappedParams.pageSize = params.pageSize;
 
-        return api.get<PrListResponse[]>('/v1/pr/list', mappedParams);
+        return api.get<PrListResponseWithPaging>('/v1/pr/list', mappedParams);
     },
 
 
 
     /**
-     * 구매요청 삭제 (논리적 삭제: DEL_FLAG='Y')
+     * 구매요청 삭제
      */
     delete: (prNum: string) => {
         const endpoint = `/pr/${prNum}/delete`;
@@ -175,8 +188,12 @@ export const prApi = {
     getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/v1/pr/${prNum}/detail`),
 
     /**
-     * 구매요청 헤더 수정 (구매요청명, 구매유형만)
+     * 구매요청 헤더 수정 (구매요청명, 구매유형) 또는 헤더+품목 수정
      */
-    update: (prNum: string, data: { prSubject: string; pcType: string }) =>
+    update: (prNum: string, data: { prSubject: string; pcType: string; prDtList?: Array<{
+        itemCd: string;
+        prQt: number;
+        unitPrc: number;
+    }> }) =>
         api.put<{ message: string }>(`/v1/pr/${prNum}/update`, data),
 };
