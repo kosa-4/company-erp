@@ -102,4 +102,10 @@ public interface GoodsReceiptMapper {
          * 특정 PO의 품목별 입고된 총 수량 조회
          */
         Integer getReceivedQuantity(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
+
+        /**
+         * 발주번호로 기존 GR 정보 조회 (중복채번 방지용)
+         * - 기존 GR이 있으면 해당 GR번호와 저장위치 반환
+         */
+        Map<String, Object> selectExistingGrByPoNo(@Param("poNo") String poNo);
 }
