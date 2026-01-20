@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy } from 'lucide-react';
+import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy, Edit } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
-import { Card, Button, Badge } from '@/components/ui';
+import { Card, Button, Badge, Input, SearchPanel, DatePicker, Select } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { useRouter } from 'next/navigation';
 import VendorQuoteModal from '@/components/vendor/VendorQuoteModal';
@@ -12,7 +12,13 @@ export default function VendorRfqSubmitPage() {
   const router = useRouter();
   const [rfqList, setRfqList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
+  const [searchParams, setSearchParams] = useState({
+    rfqNo: '',
+    rfqName: '',
+    startDate: '',
+    endDate: '',
+    submitStatus: '',
+  });
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [selectedRfqNum, setSelectedRfqNum] = useState<string | null>(null);
@@ -25,9 +31,15 @@ export default function VendorRfqSubmitPage() {
       // 전체 제출 목록을 조회하여 표시. 여기서는 RFQC로 요청.
       const apiStatus = filterStatus === 'DONE' ? 'RFQC' : filterStatus;
       
+      // 검색 파라미터 구성
+      const searchText = searchParams.rfqNo || searchParams.rfqName || undefined;
+      const progressCd = searchParams.submitStatus || apiStatus || undefined;
+      
       const data = await rfqApi.getVendorRfqList({
-        searchText: searchText || undefined,
-        progressCd: apiStatus || undefined,
+        searchText: searchText,
+        progressCd: progressCd,
+        startDate: searchParams.startDate || undefined,
+        endDate: searchParams.endDate || undefined,
       });
       
       // DONE 탭일 경우 선정 완료(J)된 항목만 필터링 (선택사항)
@@ -52,6 +64,17 @@ export default function VendorRfqSubmitPage() {
   // 검색
   const handleSearch = () => {
     fetchRfqList();
+  };
+
+  // 검색 초기화
+  const handleReset = () => {
+    setSearchParams({
+      rfqNo: '',
+      rfqName: '',
+      startDate: '',
+      endDate: '',
+      submitStatus: '',
+    });
   };
 
   // RFQ 접수
@@ -117,39 +140,73 @@ export default function VendorRfqSubmitPage() {
       <Toaster position="top-center" richColors />
       
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-            <FileText className="w-5 h-5 text-gray-600" />
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
+              <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
-            <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
-          </div>
+          
+          {waitingCount > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+              <span className="text-amber-600 text-sm font-medium">{waitingCount}건 접수대기</span>
+            </div>
+          )}
         </div>
-        
-        {waitingCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
-            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-            <span className="text-amber-600 text-sm font-medium">{waitingCount}건 접수대기</span>
-          </div>
-        )}
+
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="견적번호 또는 견적명으로 검색"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors"
-            />
-          </div>
+      {/* Search Panel */}
+      <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
+        <Input
+          label="RFQ번호"
+          placeholder="RFQ번호 입력"
+          value={searchParams.rfqNo}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
+        />
+        <DatePicker
+          label="견적일자 시작"
+          value={searchParams.startDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
+        />
+        <DatePicker
+          label="견적일자 종료"
+          value={searchParams.endDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+        />
+        <Input
+          label="견적명"
+          placeholder="견적명 입력"
+          value={searchParams.rfqName}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+        />
+        <Select
+          label="제출상태"
+          value={searchParams.submitStatus}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, submitStatus: e.target.value }))}
+          options={[
+            { value: '', label: '전체' },
+            { value: 'RFQS', label: '요청' },
+            { value: 'RFQJ', label: '접수' },
+            { value: 'RFQT', label: '임시저장' },
+            { value: 'RFQC', label: '제출완료' },
+            { value: 'F', label: '포기' },
+          ]}
+        />
+      </SearchPanel>
+
+      {/* RFQ Table */}
+      <Card 
+        title="견적 목록"
+        padding={false} 
+        className="overflow-hidden"
+        actions={
           <div className="flex items-center gap-2">
             <Button 
               variant={filterStatus === '' ? 'primary' : 'outline'} 
@@ -157,13 +214,6 @@ export default function VendorRfqSubmitPage() {
               size="sm"
             >
               전체
-            </Button>
-            <Button 
-              variant={filterStatus === 'RFQS' ? 'primary' : 'outline'} 
-              onClick={() => setFilterStatus('RFQS')}
-              size="sm"
-            >
-              요청
             </Button>
             <Button 
               variant={filterStatus === 'RFQJ' ? 'primary' : 'outline'} 
@@ -180,6 +230,13 @@ export default function VendorRfqSubmitPage() {
               임시저장
             </Button>
             <Button 
+              variant={filterStatus === 'RFQC' ? 'primary' : 'outline'} 
+              onClick={() => setFilterStatus('RFQC')}
+              size="sm"
+            >
+              제출
+            </Button>
+            <Button 
               variant={filterStatus === 'DONE' ? 'primary' : 'outline'} 
               onClick={() => setFilterStatus('DONE')}
               size="sm"
@@ -187,14 +244,8 @@ export default function VendorRfqSubmitPage() {
               결과확인
             </Button>
           </div>
-          <Button variant="primary" onClick={handleSearch}>
-            검색
-          </Button>
-        </div>
-      </div>
-
-      {/* RFQ Table */}
-      <Card padding={false} className="overflow-hidden">
+        }
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
@@ -283,8 +334,8 @@ export default function VendorRfqSubmitPage() {
                               onClick={() => handleGoToQuote(rfq.rfqNum)}
                               className="h-8 text-xs gap-1.5"
                             >
-                              <Send className="w-3.5 h-3.5" />
-                              견적작성
+                              <Edit className="w-3.5 h-3.5" />
+                              견적 작성 및 수정
                             </Button>
                             <Button
                               variant="ghost"
