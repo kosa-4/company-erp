@@ -2,6 +2,7 @@ package com.company.erp.pr.service;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.pr.dto.*;
 import com.company.erp.pr.mapper.PrMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,8 @@ public class PrService {
 
         String reqUserName = prMapper.selectUserName(userId);
 
-        initData.put("reqUserNm",reqUserName);//세션 userid 이용해 사용자 테이블에서 갖고 올 예정
-        initData.put("deptNm",deptName);//세션 userid 이용해 사용자 테이블에서 부서코드 -> 부서명 갖고 올 예정
+        initData.put("reqUserNm",reqUserName);
+        initData.put("deptNm",deptName);
         initData.put("prAmt", BigDecimal.ZERO);
 
         return initData;
@@ -34,7 +35,7 @@ public class PrService {
 
     //구매요청 등록
     @Transactional()
-    public void insertPr(String userId, String deptCd, PrRequest prRequest){
+    public String insertPr(String userId, String deptCd, PrRequest prRequest){
         String prNum = docNumService.generateDocNumStr(DocKey.PR);//채번
 
         PrRequest.PrHd prHd = prRequest.getPrHd();
@@ -82,7 +83,7 @@ public class PrService {
                     .prAmt(dtAmt)
                     .delyDate(reqDt.getDelyDate())
                     .regUserId(userId)
-                    .rmk(item.getRmk())
+                    .rmk(reqDt.getRmk())
                     .build();
 
             prDtDTOList.add(prDtDTO);
@@ -102,14 +103,17 @@ public class PrService {
 
         prMapper.insertPrHd(prHdDTO);
         prMapper.insertPrDt(prDtDTOList);
+
+        // 생성된 PR 번호 반환 (첨부파일 연계를 위해 사용)
+        return prNum;
     }
 
 
 
 
     //구매요청에서의 품목 조회
-    public List<PrItemDTO> selectPrItem(){
-        List<PrItemDTO> prItems = prMapper.selectPrItem();
+    public List<PrItemDTO> selectPrItem(String itemCode, String itemName){
+        List<PrItemDTO> prItems = prMapper.selectPrItem(itemCode, itemName);
 
         return prItems;
     }
@@ -125,15 +129,89 @@ public class PrService {
 
 
     //구매요청현황 목록 조회 (헤더만)
-    public List<PrListResponse> selectPrList(String prNum, String prSubject, String requester,
-                                             String deptNm, String progressCd, String startDate, String endDate){
-        //페이징 처리 필요
-        return prMapper.selectPrList(prNum, prSubject, requester, deptNm, progressCd, startDate, endDate);
+    public Map<String, Object> selectPrList(String prNum, String prSubject, String requester,
+                                             String deptNm, String progressCd, String pcType, String requestDate,
+                                             Integer page, Integer pageSize, SessionUser user){
+        // 페이징 파라미터 기본값 설정
+        if (page == null || page < 1) page = 1;
+        if (pageSize == null || pageSize < 1) pageSize = 10;
+        
+        int offset = (page - 1) * pageSize;
+        
+        // 구매팀 여부 확인
+        boolean isBuyerDept = false;
+        String regUserId = null;
+        
+        // 구매사인 경우만 권한 체크
+        if ("B".equals(user.getComType()) && user.getDeptCd() != null && !user.getDeptCd().isEmpty()) {
+            // dept_role 테이블에서 BUYER 역할 확인
+            isBuyerDept = prMapper.isBuyerDept(user.getDeptCd());
+            
+            // 구매팀이 아니면 본인이 작성한 구매요청만 조회
+            if (!isBuyerDept) {
+                regUserId = user.getUserId();
+            }
+        }
+        
+        // 목록 조회
+        List<PrListResponse> list = prMapper.selectPrList(prNum, prSubject, requester, deptNm, progressCd, pcType, requestDate, offset, pageSize, regUserId, isBuyerDept);
+        
+        // 총 개수 조회
+        int totalCount = prMapper.selectPrListCount(prNum, prSubject, requester, deptNm, progressCd, pcType, requestDate, regUserId, isBuyerDept);
+        
+        // 총 페이지 수 계산
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", list);
+        result.put("totalCount", totalCount);
+        result.put("totalPages", totalPages);
+        result.put("currentPage", page);
+        result.put("pageSize", pageSize);
+        
+        return result;
     }
     
     //구매요청 상세 품목 목록 조회
     public List<PrDtDTO> selectPrDetail(String prNum){
         return prMapper.selectPrDetail(prNum);
+    }
+    
+    //구매요청 상세 조회 (헤더 + 품목)
+    public PrDetailResponse selectPrDetailWithHeader(String prNum){
+        // 헤더 조회
+        PrHdDTO header = prMapper.selectPrNum(prNum);
+        if(header == null){
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        
+        // 품목 목록 조회
+        List<PrDtDTO> items = prMapper.selectPrDetail(prNum);
+        
+        // 요청자명 조회
+        String reqUserName = prMapper.selectUserName(header.getRegUserId());
+        
+        // 날짜 변환
+        String regDateStr = null;
+        if (header.getRegDate() != null) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+            regDateStr = sdf.format(header.getRegDate());
+        }
+        
+        // 응답 DTO 생성
+        return PrDetailResponse.builder()
+                .prNum(header.getPrNum())
+                .prSubject(header.getPrSubject())
+                .rmk(header.getRmk())
+                .prAmt(header.getPrAmt())
+                .pcType(header.getPcType())
+                .progressCd(header.getProgressCd())
+                .deptCd(header.getDeptCd())
+                .regUserId(header.getRegUserId())
+                .regDate(regDateStr)
+                .reqUserName(reqUserName)
+                .items(items)
+                .build();
     }
 
     //구매요청 승인
@@ -152,7 +230,7 @@ public class PrService {
         int updatedRows = prMapper.approvePr(userId, deptCd, prNum);
         
         if(updatedRows == 0){
-            throw new IllegalStateException("구매요청 승인에 실패했습니다. 승인 코드가 존재하지 않거나 이미 삭제된 구매요청일 수 있습니다.");
+            throw new IllegalStateException("구매요청 승인에 실패했습니다.");
         }
     }
 
@@ -214,8 +292,84 @@ public class PrService {
         }
     }
 
-    //구매요청 수정
+    //구매요청 헤더 수정 (구매요청명, 구매유형만)
+    @Transactional
+    public void updatePr(String prNum, String prSubject, String pcType, String userId) {
+        // 구매요청 존재 여부 확인
+        PrHdDTO prHd = prMapper.selectPrNum(prNum);
+        if (prHd == null) {
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        if ("Y".equals(prHd.getDelFlag())) {
+            throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
+        }
 
+        // 승인 상태인 구매요청은 수정 불가
+        String progressCd = prHd.getProgressCd();
+        if (progressCd != null && isApprovedStatus(progressCd)) {
+            throw new IllegalStateException("승인된 구매요청은 수정할 수 없습니다.");
+        }
 
+        // 구매유형을 한글에서 코드로 변환하여 저장
+        int updatedRows = prMapper.updatePrHd(prNum, prSubject, pcType, userId);
+        if (updatedRows == 0) {
+            throw new IllegalStateException("구매요청 수정에 실패했습니다.");
+        }
+    }
+
+    //구매요청 헤더 + 품목 수정
+    @Transactional
+    public void updatePrWithItems(String prNum, String prSubject, String pcType, List<PrDtDTO> prDtList, String userId) {
+        // 구매요청 존재 여부 확인
+        PrHdDTO prHd = prMapper.selectPrNum(prNum);
+        if (prHd == null) {
+            throw new IllegalArgumentException("해당하는 구매요청이 존재하지 않습니다.");
+        }
+        if ("Y".equals(prHd.getDelFlag())) {
+            throw new IllegalArgumentException("이미 삭제된 구매요청입니다.");
+        }
+
+        // 승인 상태인 구매요청은 수정 불가
+        String progressCd = prHd.getProgressCd();
+        if (progressCd != null && isApprovedStatus(progressCd)) {
+            throw new IllegalStateException("승인된 구매요청은 수정할 수 없습니다.");
+        }
+
+        // 헤더 수정
+        int headerUpdatedRows = prMapper.updatePrHd(prNum, prSubject, pcType, userId);
+        if (headerUpdatedRows == 0) {
+            throw new IllegalStateException("구매요청 수정에 실패했습니다.");
+        }
+
+        // 품목 수정
+        if (prDtList != null && !prDtList.isEmpty()) {
+            // 총액 계산 및 품목 금액 설정
+            BigDecimal totalAmt = BigDecimal.ZERO;
+            for (PrDtDTO dt : prDtList) {
+                BigDecimal qt = dt.getPrQt() != null ? dt.getPrQt() : BigDecimal.ZERO;
+                BigDecimal unitPrc = dt.getUnitPrc() != null ? dt.getUnitPrc() : BigDecimal.ZERO;
+                BigDecimal dtAmt = qt.multiply(unitPrc);
+                dt.setPrAmt(dtAmt);
+                dt.setPrNum(prNum);
+                totalAmt = totalAmt.add(dtAmt);
+                
+                // 각 품목을 개별 업데이트
+                int itemUpdatedRows = prMapper.updatePrDt(
+                    prNum,
+                    dt.getItemCd(),
+                    qt,
+                    unitPrc,
+                    dtAmt
+                );
+                
+                if (itemUpdatedRows == 0) {
+                    throw new IllegalStateException("품목 수정에 실패했습니다: " + dt.getItemCd());
+                }
+            }
+
+            // 헤더 총액 업데이트
+            prMapper.updatePrHdAmount(prNum, totalAmt);
+        }
+    }
 
 }

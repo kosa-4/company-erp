@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class SignUpService {
@@ -67,8 +68,11 @@ public class SignUpService {
         // 2-5. 비밀번호 암호화
         String encryptedPassword = passwordEncoder.encode(signUpDto.getPassword());
         signUpDto.setPassword(encryptedPassword);
+        
+        // 2-6. 요청 타입 설정
+        signUpDto.setReqType("I");
     
-        // 2-6. dto 전환
+        // 2-7. dto 전환
         VendorRegisterDto vendorRegisterDto = convertToVendorRegisterDto(signUpDto);
         VendorUserRegisterDto vendorUserRegisterDto = convertToVendorUserRegisterDto(signUpDto);
 
@@ -109,7 +113,7 @@ public class SignUpService {
 
         vendorUserRegisterDto.setAskUserNum(signUpDto.getAskUserNo());
         vendorUserRegisterDto.setVendorCode(signUpDto.getVendorCode());
-        vendorUserRegisterDto.setCreatedAt(LocalDate.now());
+        vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
         vendorUserRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
         vendorUserRegisterDto.setUserId(signUpDto.getUserId());
         vendorUserRegisterDto.setUserName(signUpDto.getUserName());
@@ -119,6 +123,7 @@ public class SignUpService {
         vendorUserRegisterDto.setEmail(signUpDto.getUserEmail());
         vendorUserRegisterDto.setPassword(signUpDto.getPassword());
         vendorUserRegisterDto.setComType(signUpDto.getComType());
+        vendorUserRegisterDto.setReqType(signUpDto.getReqType());
 
         return vendorUserRegisterDto;
     }

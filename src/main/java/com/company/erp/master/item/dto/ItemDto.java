@@ -2,16 +2,14 @@ package com.company.erp.master.item.dto;
 
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 public class ItemDto {
     private String itemCode; // 품목 코드
-    private LocalDate createdAt; // 등록 일자
+    private LocalDateTime createdAt; // 등록 일자
     private String createdBy; // 등록자
-    private LocalDate modifiedAt; // 수정 일자
+    private LocalDateTime modifiedAt; // 수정 일자
     private String modifiedBy; // 수정자
     private String deleteYn; // 삭제 여부
     private String useYn; // 사용 여부

@@ -14,6 +14,7 @@ interface VendorUser {
   status: 'C' | 'A' | 'R' | 'N';
   createdAt: string;
   blockFlag: 'Y' | 'N'; // isBlocked에서 변경
+  reqtype?: 'I' | 'D' | 'U'; // 등록/삭제/수정 요청 타입
 }
 
 export default function VendorUserPage() {
@@ -116,8 +117,14 @@ export default function VendorUserPage() {
 
       if (response.ok) {
         alert('처리가 완료되었습니다.');
+        // 처리된 항목을 목록에서 제거
+        const processedKeys = new Set(
+          targets.map(t => `${t.userId}::${t.askUserNum}`)
+        );
+        setVendorUsers(prev =>
+          prev.filter(user => !processedKeys.has(`${user.userId}::${user.askUserNum}`))
+        );
         setSelectedRows([]);
-        fetchVendorUsers();
       }
     } catch (e) {
       alert('처리 중 오류가 발생했습니다.');
@@ -170,6 +177,7 @@ export default function VendorUserPage() {
               <tr>
                 <th className="p-3"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
                 <th className="p-3">상태</th>
+                <th className="p-3">협력사코드</th>
                 <th className="p-3">협력사명</th>
                 <th className="p-3">담당자ID</th>
                 <th className="p-3">담당자명</th>
@@ -186,6 +194,7 @@ export default function VendorUserPage() {
                     <input type="checkbox" checked={selectedRows.some(r => r.userId === user.userId && r.askUserNum === user.askUserNum)} onChange={() => toggleRow(user)} />
                   </td>
                   <td className="p-3 text-center">{getStatusBadge(user.status)}</td>
+                  <td className="p-3 text-center text-gray-600 font-mono">{user.vendorCode}</td>
                   <td className="p-3 font-medium">{user.vendorName}</td>
                   <td className="p-3 text-center text-blue-600">{user.userId}</td>
                   <td className="p-3 text-center">{user.userName}</td>

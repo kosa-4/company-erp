@@ -24,6 +24,9 @@ public interface VendorMapper {
     // 4. 로그인한 id로 마스터 테이블 단일 조회
     VendorListDto selectVendorVNGLByLoginId(String loginId);
 
+    // 5. 회사 코드로 파일 번호 조회
+    List<String> selectFileNumByVendorCode (String vendorCode);
+
     /* 저장 */
     // 1. 마스터 테이블 저장
     void insertVendorVNGL(VendorRegisterDto vendorRegisterDto);

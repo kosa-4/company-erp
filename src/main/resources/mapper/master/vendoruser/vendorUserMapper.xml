@@ -23,7 +23,8 @@
             U.status,
             U.createdAt,
             U.blockFlag,
-            U.delFlag
+            U.delFlag,
+            U.reqType
         FROM (
             <!--테이블 결합-->
             SELECT
@@ -36,7 +37,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 'N' AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                REQ_TYPE AS reqType
             FROM
                 VNCH_US
             WHERE
@@ -55,7 +57,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 BLOCK_FLAG AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                NULL AS reqType
             FROM
                 VN_USER
             WHERE
@@ -64,7 +67,8 @@
                     SELECT USER_ID FROM VNCH_US
                     WHERE PROGRESS_CD IN ('C', 'N', 'R')
                     AND DEL_FLAG = 'N'
-            )
+                )
+            AND DEL_FLAG = 'N'
         ) U
 
         <where>
@@ -105,7 +109,8 @@
             U.status,
             U.createdAt,
             U.blockFlag,
-            U.delFlag
+            U.delFlag,
+            U.reqType
         FROM (
             <!--테이블 결합-->
             SELECT
@@ -118,7 +123,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 'N' AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                REQ_TYPE AS reqType
             FROM
                 VNCH_US
             WHERE
@@ -138,7 +144,8 @@
                 PROGRESS_CD AS status,
                 REG_DATE AS createdAt,
                 BLOCK_FLAG AS blockFlag,
-                DEL_FLAG AS delFlag
+                DEL_FLAG AS delFlag,
+                NULL AS reqType
             FROM
                 VN_USER
             WHERE
@@ -208,6 +215,67 @@
         ) U
         LIMIT 1
     </select>
+
+    <!--협력사 사용자 마스터 테이블 단일 조회-->
+    <select id="countVendorUsersByUserId" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            USER_ID = #{userId}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--협력사 유저 과거 존재 이력 조회-->
+    <select id="countVendorUserHistoryByUserId" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            USER_ID = #{userId}
+    </select>
+
+    <!--협력사 사용자 관리자 수 조회-->
+    <select id="countVendorUsers" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            ROLE = 'VENDOR'
+        AND
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+    
+    <!--승인 대기 조회-->
+    <select id="countWaitRequest" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VNCH_US
+        WHERE
+            USER_ID = #{userId}
+        AND
+            PROGRESS_CD NOT IN ('A', 'R')
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--진행중인 프로세스 조회-->
+    <select id="countActiveProcess" parameterType="String" resultType="int">
+        SELECT
+        (SELECT COUNT(*) FROM PRHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'A')) +
+        (SELECT COUNT(*) FROM RFQHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'RFQS', 'G', 'J')) +
+        (SELECT COUNT(*) FROM POHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('T', 'D', 'A', 'S', 'C')) +
+        (SELECT COUNT(*) FROM GRHD WHERE CTRL_USER_ID = #{userId} AND PROGRESS_CD IN ('GRN', 'GRP'))
+    </select>
+
+
     <!--저장-->
     <!--마스터 테이블 협력사 유저 정보 저장-->
     <insert id="insertUserVN_USER" parameterType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
@@ -292,7 +360,7 @@
             #{userId},
             #{userName},
             #{status},
-            'I',
+            #{reqType},
             #{phone},
             #{fax},
             #{email},
@@ -300,6 +368,36 @@
             'V'
         )
     </insert>
+
+    <!--마스터 테이블 협력사 유저 정보 업데이트-->
+    <update id="updateVN_USERByUserId" parameterType="com.company.erp.master.vendoruser.dto.VendorUserUpdateDto">
+        UPDATE
+            VN_USER
+        <set>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            <if test="delFlag != null and delFlag != ''">
+                DEL_FLAG = #{delFlag},
+            </if>
+            <if test="status != null and status != ''">
+                PROGRESS_CD = #{status},
+            </if>
+            <if test="userName != null and userName != ''">
+                USER_NM = #{userName},
+            </if>
+            <if test="password != null and password != ''">
+                PASSWORD = #{password},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="phone != null and phone != ''">
+                TEL_NUM = #{phone},
+            </if>
+        </set>
+        WHERE
+            USER_ID = #{userId}
+    </update>
 
     <!--대기 테이블 협력사 유저 정보 업데이트-->
     <update id="updateVNCH_USByAskUserNum" parameterType="com.company.erp.master.vendoruser.dto.VendorUserUpdateDto">
@@ -317,40 +415,65 @@
             <if test="rejectRemark != null and rejectRemark != ''">
                 REJECT_RMK = #{rejectRemark},
             </if>
+            <if test="userId != null and userId != ''">
+                USER_ID = #{userId},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="phone != null and phone != ''">
+                TEL_NO = #{phone},
+            </if>
+            <if test="password != null and password != ''">
+                PASSWORD = #{password},
+            </if>
         </set>
         WHERE
             ASK_USER_NUM = #{askUserNum}
         AND
-            PROGRESS_CD IN ('C', 'N')
+            PROGRESS_CD IN ('C', 'N', 'R')
     </update>
 
     <!--아이디 중복 체크-->
     <select id="existsUserId" parameterType="String" resultType="boolean">
-
-        SELECT(
-            SELECT COUNT(*) FROM VN_USER WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
+        SELECT EXISTS(
             <!--마스터 테이블 존재 여부 확인-->
-        ) + (
-            SELECT COUNT(*) FROM VNCH_US WHERE USER_ID = #{userId} AND PROGRESS_CD != 'R'
-        <!--대기 테이블 존재 여부 확인 (반려 제외) -->
-        ) > 0
+            SELECT 1 FROM VN_USER WHERE USER_ID = #{userId} AND DEL_FLAG = 'N'
+            UNION ALL
+            <!--대기 테이블 존재 여부 확인 -->
+            SELECT 1 FROM (
+                SELECT
+                    DEL_FLAG
+                FROM
+                    VNCH_US
+                WHERE
+                    USER_ID = #{userId}
+                ORDER BY
+                    ASK_USER_NUM DESC
+                LIMIT 1
+            ) AS CH
+            WHERE CH.DEL_FLAG = 'N'
+            <!--과거 내역까지 조회되는 문제 발생 => 최신값 하나만 조회하여 delflag 확인-->
+        ) <!--1 => 데이터 존재 여부만 확인-->
     </select>
 
     <!--협력사 유저 단일 조회-->
-    <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserRegisterDto">
+    <select id="selectVendorUserByAskUserNum" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
         SELECT
-        ASK_USER_NUM AS askUserNum,
-        VENDOR_CD AS vendorCode,
-        REG_DATE AS createdAt,
-        REG_USER_ID AS createdBy,
-        MOD_DATE AS modifiedAt,
-        MOD_USER_ID AS modifiedBy,
-        USER_NM AS userName,
-        TEL_NO AS phone,
-        FAX_NO AS fax,
-        EMAIL AS email,
-        PROGRESS_CD AS status,
-        PASSWORD AS password
+            ASK_USER_NUM AS askUserNum,
+            VENDOR_CD AS vendorCode,
+            REG_DATE AS createdAt,
+            REG_USER_ID AS createdBy,
+            MOD_DATE AS modifiedAt,
+            MOD_USER_ID AS modifiedBy,
+            USER_NM AS userName,
+            TEL_NO AS phone,
+            FAX_NO AS fax,
+            EMAIL AS email,
+            PROGRESS_CD AS status,
+            PASSWORD AS password,
+            REQ_TYPE as reqType,
+            USER_ID AS userId
         FROM
             VNCH_US
         WHERE
@@ -359,6 +482,29 @@
             PROGRESS_CD IN ('N', 'C')
         AND
             DEL_FLAG = 'N'
+    </select>
+
+    <select id="selectVendorUserVNCH_USByUserId" parameterType="String" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
+        SELECT
+            CH.PROGRESS_CD AS status,
+            CH.PASSWORD AS password,
+            CH.ASK_USER_NUM as askUserNum,
+            CH.USER_ID AS userId,
+            M.ROLE AS role,
+            M.VENDOR_CD AS vendorCode
+        FROM
+            VNCH_US CH
+        LEFT JOIN
+            VN_USER M
+        ON
+            CH.USER_ID = M.USER_ID
+        WHERE
+            CH.USER_ID = #{userId}
+        AND
+            CH.DEL_FLAG = 'N'
+        ORDER BY
+            CH.ASK_USER_NUM DESC
+        LIMIT 1
     </select>
 
 </mapper>

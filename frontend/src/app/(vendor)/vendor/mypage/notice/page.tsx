@@ -5,7 +5,9 @@ import {
   Megaphone, 
   Calendar,
   X,
-  Search
+  Search,
+  FileText,
+  Download
 } from 'lucide-react';
 import { 
   Card, 
@@ -13,7 +15,7 @@ import {
   Input, 
   Badge 
 } from '@/components/ui';
-import { noticeApi, NoticeListResponse, NoticeDetailResponse } from '@/lib/api/notice';
+import { noticeApi, NoticeListResponse, NoticeDetailResponse, FileListItemResponse } from '@/lib/api/notice';
 import { Notice } from '@/types';
 
 
@@ -28,6 +30,7 @@ export default function VendorNoticePage() {
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<FileListItemResponse[]>([]);
 
   // 공지사항 목록 조회
   const fetchNoticeList = async () => {
@@ -77,7 +80,8 @@ export default function VendorNoticePage() {
     });
   };
 
-  const handleRowClick = async (notice: Notice) => {
+  const handleNoticeNoClick = async (notice: Notice, e: React.MouseEvent) => {
+    e.stopPropagation(); // 이벤트 전파 방지
     try {
       setIsDetailModalOpen(true);
       // 상세 조회 API 호출
@@ -93,14 +97,28 @@ export default function VendorNoticePage() {
         createdAt: detail.regDate,
         createdBy: detail.regUserId,
         createdByName: detail.regUserName,
+        modDate: detail.modDate,
+        viewCnt: detail.viewCnt || 0,
       };
       
       setSelectedNotice(noticeDetail);
+      // 첨부파일 목록 설정
+      setAttachedFiles(detail.files || []);
     } catch (error: any) {
       console.error('공지사항 상세 조회 실패:', error);
       alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
       setIsDetailModalOpen(false);
+      setAttachedFiles([]);
     }
+  };
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   return (
@@ -186,12 +204,18 @@ export default function VendorNoticePage() {
                 {notices.map((notice) => (
                   <tr 
                     key={notice.noticeNo} 
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => handleRowClick(notice)}
+                    className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-6 py-4 text-center font-medium text-gray-900">{notice.noticeNo}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span 
+                        className="font-medium text-blue-600 hover:underline cursor-pointer"
+                        onClick={(e) => handleNoticeNoClick(notice, e)}
+                      >
+                        {notice.noticeNo}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
-                      <span className="text-gray-900 font-medium hover:text-emerald-600 transition-colors">
+                      <span className="text-gray-900 font-medium">
                         {notice.title}
                       </span>
                     </td>
@@ -214,14 +238,20 @@ export default function VendorNoticePage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gray-50/50">
               <div>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                    <Badge variant="outline" className="text-xs font-normal text-gray-500 border-gray-300">
                       {selectedNotice.noticeNo}
                    </Badge>
                    <span className="text-xs text-gray-400">|</span>
                    <span className="text-xs text-gray-500">{selectedNotice.createdByName}</span>
                    <span className="text-xs text-gray-400">|</span>
-                   <span className="text-xs text-gray-500">{selectedNotice.createdAt}</span>
+                   <span className="text-xs text-gray-500">등록일: {selectedNotice.createdAt}</span>
+                   {selectedNotice.modDate && (
+                     <>
+                       <span className="text-xs text-gray-400">|</span>
+                       <span className="text-xs text-gray-500">수정일: {selectedNotice.modDate}</span>
+                     </>
+                   )}
                 </div>
                 <h2 className="text-lg font-bold text-gray-900 leading-tight">
                   {selectedNotice.title}
@@ -246,10 +276,40 @@ export default function VendorNoticePage() {
               <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {selectedNotice.content}
               </div>
+
+              {/* 첨부파일 목록 */}
+              {attachedFiles.length > 0 && (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
+                  <div className="space-y-2">
+                    {attachedFiles.map((file) => (
+                      <div
+                        key={file.fileNum}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        onClick={() => noticeApi.downloadFile(file.fileNum)}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{file.originName}</p>
+                            <p className="text-xs text-gray-500">
+                              {file.fileSize ? formatFileSize(file.fileSize) : '0 Bytes'}
+                            </p>
+                          </div>
+                        </div>
+                        <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>
+              <Button variant="secondary" onClick={() => {
+                setIsDetailModalOpen(false);
+                setAttachedFiles([]);
+              }}>
                 닫기
               </Button>
             </div>

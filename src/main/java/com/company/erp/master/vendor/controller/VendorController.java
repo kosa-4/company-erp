@@ -1,6 +1,10 @@
 package com.company.erp.master.vendor.controller;
 
+import com.company.erp.common.docNum.service.DocKey;
+import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.exception.ApiResponse;
+import com.company.erp.common.file.model.AttFileEntity;
+import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
@@ -9,10 +13,20 @@ import com.company.erp.master.vendor.mapper.VendorMapper;
 import com.company.erp.master.vendor.service.VendorService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.apache.tomcat.util.buf.UriUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @SessionIgnore
@@ -22,11 +36,37 @@ public class VendorController {
     @Autowired
     private VendorService vendorService;
 
+    @Autowired
+    private FileService fileService;
+
+    @Autowired
+    private DocNumService docNumService;
+
     /* 조회 */
     @GetMapping
     public ResponseEntity<VendorResponseDto<VendorListDto>> getVendorList(VendorSearchDto vendorSearchDto) {
         VendorResponseDto<VendorListDto> vendors = vendorService.getVendorList(vendorSearchDto);
         return ResponseEntity.ok(vendors);
+    }
+
+    // 2. 첨부파일 조회
+    @GetMapping("{vendorCode}/files")
+    public ApiResponse getFileList(
+            @PathVariable("vendorCode") String vendorCode,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        // 1. 회사 코드로 파일 번호 조회
+        List<String> fileNumList = vendorService.getFileNumByVendorCode(vendorCode);
+
+        // 2. 조회한 파일 정보 리스트
+        List<AttFileEntity> files = new ArrayList<>();
+        
+        // 3. 상세 정보 조회 후 저장
+        for(String fileNum : fileNumList){
+            AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
+            files.add(file);
+        }
+
+        return ApiResponse.ok(files);
     }
 
     /* 저장 */
@@ -47,9 +87,11 @@ public class VendorController {
         String loginId = loginUser.getUserId();
 
         // 5) 저장 함수 실행
-        vendorService.registerVendorInternal(vendorRegisterDto, loginId);
-        return ApiResponse.ok("협력업체 등록이 완료되었습니다");
+        String vendorCode = vendorService.registerVendorInternal(vendorRegisterDto, loginId);
+        return ApiResponse.ok("협력업체 등록이 완료되었습니다", vendorCode);
     }
+    
+
 
     // 2. 협력업체 승인
     @PostMapping("/approve")
@@ -92,5 +134,43 @@ public class VendorController {
         vendorService.rejectVendor(vendorUpdateDtoList, loginId);
         return ApiResponse.ok("반려 처리 되었습니다.");
     }
-    
+
+    // 4. 첨부 파일 저장
+    @PostMapping("/files/{vendorCode}")
+    public ApiResponse registerFile(
+            @PathVariable("vendorCode") String vendorCode,
+            @RequestParam("file") List<MultipartFile> files,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+
+        for (MultipartFile file : files) {
+            String file_num = docNumService.generateDocNumStr(DocKey.FL);
+            fileService.upload(file, "VN", file_num, vendorCode, loginUser);
+        }
+        return ApiResponse.ok(null);
+    }
+    // 5. 첨부 파일 다운로드
+    @GetMapping("/files/download/{fileNum}")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable("fileNum") String fileNum,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser
+    ){  
+        // 1. 파일 다운로드 준비 (경로 지정)
+        Resource resource = fileService.download(fileNum, loginUser);
+
+        // 2. 메타 데이터 준비 (파일명)
+        AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
+        String encordedFileName = UriUtils.encode(file.getOriginName(),  StandardCharsets.UTF_8);
+        
+        // 3. 클라이언트 컴퓨터로 전송
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                // 이진 데이터임을 전달
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition
+                                .attachment() // 다운로드 팝업으로 실행 명령
+                                .filename(file.getOriginName(), StandardCharsets.UTF_8) // 파일명 전달
+                                .build()
+                                .toString())
+                .body(resource); // 다운로드할 파일과 경로 전달
+    }
 }

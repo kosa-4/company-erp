@@ -6,15 +6,20 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class VendorUserRegisterDto {
+    // --- validation group ---
+    public interface OnCreate{}
+    public interface OnUpdate{}
+    // ------------------------
+
     private String askUserNum;
     private String vendorCode;
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private String createdBy;
-    private LocalDate modifiedAt;
+    private LocalDateTime modifiedAt;
     private String modifiedBy;
     @NotBlank(message = "필수 입력 사항입니다.")
     private String userId;
@@ -26,14 +31,17 @@ public class VendorUserRegisterDto {
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "전화번호 형식이 올바르지 않습니다.")
     private String phone;
     private String fax;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(groups = OnCreate.class, message = "필수 입력 사항입니다.")
     @Email(message = "이메일 형식이 올바르지 않습니다")
     private String email;
     @NotBlank(message = "필수 입력 사항입니다.")
     @Size(min = 8, message = "비밀번호는 8자리 이상입니다.")
     private String password;
     private String comType;
-    private LocalDate signDate;
+    private LocalDateTime signDate;
+    private String role;
+    private String reqType;
+    private String delFlag;
 }
 // VN_USER //
 /*

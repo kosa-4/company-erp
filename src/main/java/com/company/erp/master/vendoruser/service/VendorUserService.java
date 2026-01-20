@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,7 +34,8 @@ public class VendorUserService {
         for(VendorUserRegisterDto dto : vendorUserRegisterDtoList){
             // 2) 사용자 존재 여부 확인
             String askUserNum = dto.getAskUserNum();
-            VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
+            LocalDateTime now = LocalDateTime.now();
+            VendorUserListDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
 
             if(vendorUser == null){
                 throw new IllegalStateException("해당 사용자가 존재하지 않습니다.");
@@ -42,30 +44,87 @@ public class VendorUserService {
             // 3) 상태값 확인
             String status = vendorUser.getStatus();
             if(!"C".equals(status) && !"N".equals(status)){
-                throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
+                throw new IllegalStateException("선택 가능한 상태가 아닙니다.");
             }
 
-            // 4) 입력값 설정
-            dto.setCreatedAt(LocalDate.now());
-            dto.setCreatedBy(loginId);
-            dto.setModifiedAt(LocalDate.now());
-            dto.setModifiedBy(loginId);
-            dto.setSignDate(LocalDate.now());
-            dto.setPassword(vendorUser.getPassword());
+            // 5) 요청 타입에 따라 분기
+            String req = vendorUser.getReqType();
+            VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+            switch(req){
 
-            // 5) 마스터 테이블 추가
-            vendorUserMapper.insertUserVN_USER(dto);
-            
-            // 6) 대기 테이블 업데이트
-            VendorUserUpdateDto vendorUserUpdateDto = new VendorUserUpdateDto();
-            vendorUserUpdateDto.setModifiedAt(LocalDate.now());
-            vendorUserUpdateDto.setModifiedBy(loginId);
-            vendorUserUpdateDto.setAskUserNum(askUserNum);
-            vendorUserUpdateDto.setDelFlag("N");
-            vendorUserUpdateDto.setStatus("A");
+                case "I": // 5-1. 등록
 
-            vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserUpdateDto);
+                    // 재가입 여부 확인
+                    int historyCount = vendorUserMapper.countVendorUserHistoryByUserId(vendorUser.getUserId());
+                    if(historyCount > 0){
+
+                        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+                        vendorUserMapper.updateVN_USERByUserId(updateDto);
+                    } else{
+                        dto.setCreatedAt(now);
+                        dto.setCreatedBy(loginId);
+                        dto.setModifiedAt(LocalDateTime.now());
+                        dto.setModifiedBy(loginId);
+                        dto.setSignDate(LocalDateTime.now());
+                        dto.setPassword(vendorUser.getPassword());
+                        dto.setRole("VENDOR");
+
+                        vendorUserMapper.insertUserVN_USER(dto);
+                    }
+                    // 6) 대기 테이블 업데이트
+
+                        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    break;
+                case "D": // 5-2. 삭제
+                    // 1) 마스터 / 대기 테이블 업데이트
+                    setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "R");
+
+                    vendorUserMapper.updateVN_USERByUserId(updateDto);
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    break;
+                case "U": // 5-3. 수정
+                    // 1) 마스터 테이블 업데이트
+                    setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+                    updateDto.setUserName(vendorUser.getUserName());
+                    updateDto.setEmail(vendorUser.getEmail());
+                    updateDto.setPhone(vendorUser.getPhone());
+                    
+                    // 프론트에서는 비밀번호 값을 보내지 않음
+                    // 대기 테이블에 변경된 비밀번호가 존재할 시에만 업데이트
+                    // 비밀번호 변경 미입력 시 대기 테이블에 null로 저장됨
+                    if(vendorUser.getPassword() != null && !vendorUser.getPassword().isEmpty()){
+                        updateDto.setPassword(vendorUser.getPassword());
+                    }
+
+                    vendorUserMapper.updateVN_USERByUserId(updateDto);
+
+                    // 2) 대기 테이블 업데이트
+                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    break;
+            }
         }
+    }
+
+    // updateDto 공통 필드 세팅
+    private void setCommonFieldsUpdateDto(
+            VendorUserUpdateDto dto,
+            String loginId,
+            String askUserNum,
+            VendorUserListDto vendorUser,
+            LocalDateTime now,
+            String status
+            ){
+
+        dto.setModifiedAt(now);
+        dto.setModifiedBy(loginId);
+        dto.setAskUserNum(askUserNum);
+        dto.setStatus(status);
+        dto.setUserId(vendorUser.getUserId());
+        dto.setDelFlag("N");
     }
 
     // 2. 구매사에서 반려
@@ -75,7 +134,7 @@ public class VendorUserService {
         for(VendorUserUpdateDto dto : vendorUserUpdateDtoList){
             // 1) 사용자 존재 여부 확인
             String askUserNum = dto.getAskUserNum();
-            VendorUserRegisterDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
+            VendorUserListDto vendorUser = vendorUserMapper.selectVendorUserByAskUserNum(askUserNum);
 
             if(vendorUser == null){
                throw new IllegalStateException("해당 사용자가 존재하지 않습니다.");
@@ -87,15 +146,15 @@ public class VendorUserService {
             if(!"C".equals(status) && !"N".equals(status)){
                 throw new IllegalStateException("반려 가능한 상태가 아닙니다.");
             }
-
-            // 3) 입력값 설정
-            dto.setModifiedAt(LocalDate.now());
+            dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(String.valueOf(loginId));
             dto.setStatus("R");
-            
-            // 4) 대기 테이블 업데이트
+
+            if(vendorUser.getReqType().equals("D")){
+                dto.setDelFlag("N");
+            }
             vendorUserMapper.updateVNCH_USByAskUserNum(dto);
+
         }
     }
-    
 }

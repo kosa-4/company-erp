@@ -7,22 +7,12 @@
         SELECT
             i.ITEM_CD AS itemCode,
             i.ITEM_NM AS itemName,
-            id.ITEM_CLS AS itemType,
+            (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
-            COALESCE(pr.UNIT_PRC, 0) AS unitPrice,
             i.MAKER_NM AS manufacturerName
         FROM
             MTGL i
-        LEFT JOIN
-            PRDT pr
-        ON
-            i.ITEM_CD = pr.ITEM_CD
-        LEFT JOIN
-            MTGC id
-        ON
-            i.ITEM_CD = id.ITEM_CD
-
         <where>
             i.DEL_FLAG = 'N'
             <if test="itemCode != null and itemCode != ''">
@@ -34,18 +24,12 @@
             <if test="useYn != null and useYn != ''">
                 AND i.USE_FLAG = #{useYn}
             </if>
-            <if test="startDate != null">
-                AND i.REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND i.REG_DATE <![CDATA[<=]]> #{endDate}
-            </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
             </if>
         </where>
         ORDER BY
-            i.ITEM_CD ASC
+            i.REG_DATE DESC
         LIMIT #{pageSize}
         OFFSET #{offset} <!--알아서 get으로 호출-->
     </select>
@@ -99,7 +83,7 @@
             i.ITEM_CD AS itemCode,
             i.ITEM_NM AS itemName,
             i.ITEM_NM_ENG AS itemNameEn,
-            id.ITEM_CLS AS itemType,
+            (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
             i.MAKER_NM AS manufacturerName,
@@ -111,14 +95,6 @@
             i.RMK AS remark
         FROM
             MTGL i
-        LEFT JOIN
-            PRDT pr
-        ON
-            i.ITEM_CD = pr.ITEM_CD
-        LEFT JOIN
-            MTGC id
-        ON
-            i.ITEM_CD = id.ITEM_CD
         WHERE
             i.ITEM_CD = #{code}
     </select>
@@ -140,26 +116,24 @@
                 ITEM_SPEC,
                 MAKER_NM,
                 MODEL_NO,
-                DEPT_CD ,
                 PROGRESS_CD,
                 RMK,
                 UNIT_CD
             )
             VALUES(
                 #{itemCode},
-                now(),
-                "임시 추후 수정",
-                null,
-                null,
+                #{createdAt},
+                #{createdBy},
+                #{modifiedAt},
+                #{modifiedBy},
                 'N',
                 'Y',
-                null,
+                #{stopReason},
                 #{itemName},
                 #{itemNameEn},
                 #{spec},
                 #{manufacturerName},
                 #{modelNo},
-                #{departmentCode},
                 #{status},
                 #{remark},
                 #{unit}

@@ -75,7 +75,7 @@ export interface PendingPOListParams {
 
 // 백엔드 API 경로: /v1/goods-receipts (주의: /api/v1/ 형식이 아님)
 // client.ts가 자동으로 /api/v1을 붙이므로 경로 조정
-const GR_BASE = '/goods-receipts';
+const GR_BASE = '/v1/goods-receipts';
 
 export const goodsReceiptApi = {
   // 입고대상조회: 입고 가능한 PO 목록

@@ -99,9 +99,9 @@ export default function ItemPage() {
       setItems(data.items);
       setTotalPage(data.totalPage);
 
-    } catch(error){
+    } catch(error: any){
       console.error("데이터 가져오는 중 오류 발생", error);
-      alert("데이터 로드에 실패하였습니다.");
+      alert(error.message || "데이터 로드에 실패하였습니다.");
     } finally{
 
       // 2-5. 검색 로딩 표시      
@@ -257,11 +257,24 @@ export default function ItemPage() {
       });
 
       if(!response.ok){
-        throw new Error(`입력 실패 ${response.status}`)
+        const errorData = await response.json();
+        throw new Error(errorData.message || `입력 실패 ${response.status}`)
       };
       alert('저장되었습니다.');
-    } catch(error){
+
+      // 1. 카테고리 관련 상태 초기화
+      setSelectedPath([]); 
+      setSelectedCate(undefined);
+
+      // 2. 입력 폼 초기화 (인풋 초기화)
+      saveForm.current.reset();
+
+      // 3. UI 상태 정리 (모달 닫고 리스트 새로고침)
+      setIsCreateModalOpen(false);
+      fetchItems();
+    } catch(error: any){
       console.error("데이터 입력 중 오류 발생:", error);
+      alert(error.message || "데이터 로드에 실패하였습니다.");
     }
   };
 
@@ -468,7 +481,7 @@ export default function ItemPage() {
         {/* items 요소 출력 */}        
         <DataGrid
           columns={columns}
-          data={items}
+          data={items || []}
           keyField="itemCode"
           onRowClick={handleRowClick}
           loading={loading}
@@ -524,8 +537,8 @@ export default function ItemPage() {
           <ModalFooter
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={() => {
-              saveItem();              
-              setIsCreateModalOpen(false);
+              saveItem();            
+
             }}
             confirmText="저장"
           />
@@ -542,7 +555,7 @@ export default function ItemPage() {
               name='itemType' 
               label="품목 분류" 
               placeholder="품목 분류 입력" 
-              value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
+              defaultValue={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
               onClick={() => {
                 setIsCateModalOpen(true)
                 fetchCategories();
@@ -582,21 +595,7 @@ export default function ItemPage() {
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
               <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
             </div>
-            {/* <div className="flex gap-6">
-              <label className="text-sm font-medium text-gray-700">사용여부</label>
-                <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="useYn" value="Y" defaultChecked className="text-blue-600"/>
-                      <span className="text-sm">사용</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="useYn" value="N" className="text-blue-600" disabled/>
-                      <span className="text-sm">미사용</span>
-                    </label>
-                </div>
-            </div>*/}
-              
-            <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} />
+            <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} readOnly/>
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>

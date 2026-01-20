@@ -8,13 +8,21 @@
             NULL AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
             INDUSTRY_TYPE AS industry,
             USE_FLAG AS useYn,
             PROGRESS_CD AS status,
-            REG_DATE AS createdAt
+            REG_DATE AS createdAt,
+            IRS_NO AS businessNo,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            ZIP_CD AS zipCode,
+            ADDR_DT AS addressDetail,
+            FOUNDATION_DATE AS foundationDate,
+            RMK AS remark
         FROM
             VNGL
         <where>
@@ -30,12 +38,6 @@
             </if>
             <if test="useYn != null and useYn != ''">
                 AND USE_FLAG = #{useYn}
-            </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
             </if>
             <if test="industry != null and industry != ''">
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
@@ -55,13 +57,21 @@
             ASK_NUM AS askNum,
             VENDOR_CD AS vendorCode,
             VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
             REG_TYPE AS businessType,
             CEO_USER_NM AS ceoName,
             ADDR AS address,
             INDUSTRY_TYPE AS industry,
             NULL AS useYn,
             PROGRESS_CD AS status,
-            REG_DATE AS createdAt
+            REG_DATE AS createdAt,
+            IRS_NO AS businessNo,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            ZIP_CD AS zipCode,
+            ADDR_DT AS addressDetail,
+            FOUNDATION_DATE AS foundationDate,
+            RMK AS remark
         FROM
             VNCH
         <where>
@@ -75,15 +85,6 @@
             <if test="businessType != null and businessType != ''">
                 AND REG_TYPE = #{businessType}
             </if>
-            <if test="useYn != null and useYn != ''">
-                AND USE_FLAG = #{useYn}
-            </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
-            </if>
             <if test="industry != null and industry != ''">
                 AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
             </if>
@@ -91,7 +92,7 @@
         </where>
 
         ORDER BY
-            vendorCode ASC
+            createdAt DESC
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->
@@ -387,5 +388,18 @@
         ) > 0
     </select>
 
+    <!--회사 코드로 파일 조회-->
+    <select id="selectFileNumByVendorCode" parameterType="String" resultType="String">
+        SELECT
+            FILE_NUM
+        FROM
+            ATT_FILE
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+        ORDER BY
+            REG_DATE DESC
+    </select>
 
 </mapper>

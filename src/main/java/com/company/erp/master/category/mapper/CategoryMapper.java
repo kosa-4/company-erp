@@ -2,6 +2,7 @@ package com.company.erp.master.category.mapper;
 
 import com.company.erp.master.category.dto.CategoryDto;
 import com.company.erp.master.category.dto.CategoryListDto;
+import com.company.erp.master.category.dto.CategoryUpdateDto;
 
 import java.util.List;
 
@@ -25,6 +26,6 @@ public interface CategoryMapper {
     void insertCategory(List<CategoryListDto> categoryListDto);
 
     /* 삭제 */
-    void deleteCategory(String itemCls);
+    void updateCategory(CategoryUpdateDto categoryUpdateDto);
     //boolean existsParentCategory(String parentCls);
 }

@@ -38,6 +38,13 @@ export default function PurchaseRequestPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [itemList, setItemList] = useState<PrItemDTO[]>([]); // 품목 선택 모달용
   const [selectedItemCodes, setSelectedItemCodes] = useState<string[]>([]); // 품목 선택 모달에서 선택된 품목코드
+  const [itemSearchParams, setItemSearchParams] = useState({
+    itemCode: '',
+    itemName: '',
+  });
+
+  // 첨부파일 상태
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState({
     prNo: '',
@@ -72,21 +79,31 @@ export default function PurchaseRequestPage() {
     loadInitData();
   }, []);
 
+  // 품목 목록 로드 함수
+  const loadItemList = async () => {
+    try {
+      const items = await prApi.getItemList({
+        itemCode: itemSearchParams.itemCode || undefined,
+        itemName: itemSearchParams.itemName || undefined,
+      });
+      setItemList(items);
+    } catch (error) {
+      console.error('품목 목록 로드 실패:', error);
+      alert('품목 목록을 불러오는데 실패했습니다.');
+    }
+  };
+
   // 품목 목록 로드 (품목 선택 모달 열 때)
   useEffect(() => {
     if (isItemModalOpen) {
-      const loadItemList = async () => {
-        try {
-          const items = await prApi.getItemList();
-          setItemList(items);
-        } catch (error) {
-          console.error('품목 목록 로드 실패:', error);
-          alert('품목 목록을 불러오는데 실패했습니다.');
-        }
-      };
       loadItemList();
     }
   }, [isItemModalOpen]);
+
+  // 품목 검색 핸들러
+  const handleItemSearch = () => {
+    loadItemList();
+  };
 
 
 
@@ -121,7 +138,12 @@ export default function PurchaseRequestPage() {
     { key: 'unit', header: '단위', width: 60, align: 'center' },
     {
       key: 'quantity',
-      header: '수량',
+      header: (
+        <span>
+          수량
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 100,
       align: 'right',
       render: (value, row) => (
@@ -132,12 +154,18 @@ export default function PurchaseRequestPage() {
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="1"
+              required
           />
       ),
     },
     {
       key: 'unitPrice',
-      header: '단가',
+      header: (
+        <span>
+          단가
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'right',
       render: (value, row) => (
@@ -148,6 +176,7 @@ export default function PurchaseRequestPage() {
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="100"
+              required
           />
       ),
     },
@@ -160,7 +189,12 @@ export default function PurchaseRequestPage() {
     },
     {
       key: 'requestDeliveryDate',
-      header: '희망납기일',
+      header: (
+        <span>
+          희망납기일
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'center',
       render: (value, row) => (
@@ -169,6 +203,7 @@ export default function PurchaseRequestPage() {
               value={value || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'requestDeliveryDate', e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
           />
       ),
     },
@@ -177,12 +212,12 @@ export default function PurchaseRequestPage() {
       header: '비고',
       width: 150,
       align: 'left',
-      render: (value) => (
+      render: (value, row) => (
           <input
               type="text"
               value={value || ''}
-              readOnly
-              className="w-full border border-gray-300 rounded px-2 py-1 bg-gray-50 text-gray-700 cursor-not-allowed"
+              onChange={(e) => handleItemChange(row.lineNo, 'remark', e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
       ),
     },
@@ -215,13 +250,16 @@ export default function PurchaseRequestPage() {
       return;
     }
 
-    // 품목의 수량과 단가 검증 (전체 품목)
+
+    // 품목의 수량, 단가, 희망납기일 검증 (전체 품목)
     const invalidItems = prItems.filter(item =>
-        !item.quantity || item.quantity <= 0 || !item.unitPrice || item.unitPrice <= 0
+      !item.quantity || item.quantity <= 0 ||
+      !item.unitPrice || item.unitPrice <= 0 ||
+      !item.requestDeliveryDate
     );
 
     if (invalidItems.length > 0) {
-      alert('모든 품목의 수량과 단가를 입력해주세요.');
+      alert('모든 품목의 수량, 단가, 희망납기일을 입력해주세요.');
       return;
     }
 
@@ -249,19 +287,57 @@ export default function PurchaseRequestPage() {
           rmk: item.remark || '',
         })),
       };
-        const result = await prApi.save(requestData);
-        alert("구매요청 등록이 완료되었습니다.");
-        console.log('구매요청 등록 성공:', result);
-        // 저장 후 페이지 리로드
-        window.location.reload();
-      } catch (error) {
-      console.error('구매요청 등록 실패:', error);
+      const result = await prApi.save(requestData);
+
+      // 생성된 PR번호
+      const prNum = (result as any).prNum;
+
+      // 첨부파일 업로드 (실패해도 PR 자체는 저장된 상태 유지)
+      if (uploadedFiles.length > 0) {
+        if (!prNum) {
+          alert('구매요청 번호를 받지 못해 파일을 업로드할 수 없습니다.');
+        } else {
+          for (const file of uploadedFiles) {
+            try {
+              await prApi.uploadFile(prNum, file);
+            } catch (e) {
+              console.error('파일 업로드 실패:', e);
+            }
+          }
+        }
+      }
+
+      alert("구매요청 등록이 완료되었습니다.");
+      // 저장 후 페이지 리로드
+      window.location.reload();
+    } catch (error) {
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
       alert(errorMessage);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // 파일 선택 핸들러
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  // 파일 제거 핸들러
+  const handleFileRemove = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleAddItem = () => {
@@ -307,7 +383,8 @@ export default function PurchaseRequestPage() {
         unitPrice: 0, // 사용자가 입력해야 함
         amount: 0,
         requestDeliveryDate: '',
-        remark: item.rmk || '',
+        // 품목 마스터의 비고는 가져오지 않고, 구매요청에서 직접 입력하도록 기본값만 설정
+        remark: '',
       }));
 
       setPrItems([...prItems, ...newItems]);
@@ -395,7 +472,14 @@ export default function PurchaseRequestPage() {
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">첨부파일</label>
               <div className="flex gap-2">
-                <input type="file" className="hidden" id="file-upload" />
+                <input
+                  type="file"
+                  className="hidden"
+                  id="file-upload"
+                  multiple
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                />
                 <Button
                     variant="secondary"
                     className="h-[42px]"
@@ -404,6 +488,28 @@ export default function PurchaseRequestPage() {
                   파일 선택
                 </Button>
               </div>
+              {/* 선택된 파일 목록 */}
+              {uploadedFiles.length > 0 && (
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between text-xs text-gray-700 bg-gray-50 rounded px-2 py-1"
+                    >
+                      <span className="truncate mr-2">
+                        {file.name} ({formatFileSize(file.size)})
+                      </span>
+                      <button
+                        type="button"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleFileRemove(index)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4">
@@ -457,13 +563,18 @@ export default function PurchaseRequestPage() {
         {/* 품목 선택 모달 */}
         <Modal
             isOpen={isItemModalOpen}
-            onClose={() => setIsItemModalOpen(false)}
+            onClose={() => {
+              setIsItemModalOpen(false);
+              setItemSearchParams({ itemCode: '', itemName: '' });
+              setSelectedItemCodes([]);
+            }}
             title="품목 선택"
             size="xl"
             footer={
               <ModalFooter
                   onClose={() => {
                     setIsItemModalOpen(false);
+                    setItemSearchParams({ itemCode: '', itemName: '' });
                     setSelectedItemCodes([]);
                   }}
                   onConfirm={handleAddSelectedItems}
@@ -474,10 +585,30 @@ export default function PurchaseRequestPage() {
           <div className="space-y-4">
             {/* 검색 영역 */}
             <div className="grid grid-cols-3 gap-4">
-              <Input label="품목코드" placeholder="품목코드 입력" />
-              <Input label="품목명" placeholder="품목명 입력" />
+              <Input 
+                label="품목코드" 
+                placeholder="품목코드 입력"
+                value={itemSearchParams.itemCode}
+                onChange={(e) => setItemSearchParams(prev => ({ ...prev, itemCode: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleItemSearch();
+                  }
+                }}
+              />
+              <Input 
+                label="품목명" 
+                placeholder="품목명 입력"
+                value={itemSearchParams.itemName}
+                onChange={(e) => setItemSearchParams(prev => ({ ...prev, itemName: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleItemSearch();
+                  }
+                }}
+              />
               <div className="flex items-end">
-                <Button variant="primary">검색</Button>
+                <Button variant="primary" onClick={handleItemSearch}>검색</Button>
               </div>
             </div>
 

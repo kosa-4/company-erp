@@ -59,6 +59,12 @@ export default function ReceivingListPage() {
   const [adjustUnitPrice, setAdjustUnitPrice] = useState(0);
   const [adjustItemCode, setAdjustItemCode] = useState('');
   const [targetItem, setTargetItem] = useState<ReceivingRecord | null>(null);
+  
+  // 상세 팝업용 상태
+  const [isGrDetailModalOpen, setIsGrDetailModalOpen] = useState(false);
+  const [isPoDetailModalOpen, setIsPoDetailModalOpen] = useState(false);
+  const [selectedGrDetail, setSelectedGrDetail] = useState<GoodsReceiptDTO | null>(null);
+  const [selectedPoDetail, setSelectedPoDetail] = useState<any>(null);
 
   // 데이터 조회
   const fetchData = async () => {
@@ -152,6 +158,30 @@ export default function ReceivingListPage() {
     };
     const { variant, label } = config[status] || { variant: 'gray', label: status };
     return <Badge variant={variant}>{label}</Badge>;
+  };
+
+  // 입고 상세 조회
+  const handleViewGrDetail = async (grNo: string) => {
+    try {
+      const detail = await goodsReceiptApi.getDetail(grNo);
+      setSelectedGrDetail(detail);
+      setIsGrDetailModalOpen(true);
+    } catch (error) {
+      alert('입고 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 발주 상세 조회
+  const handleViewPoDetail = async (poNo: string) => {
+    try {
+      const response = await fetch(`/api/v1/purchase-orders/${poNo}`);
+      if (!response.ok) throw new Error('발주 상세 조회 실패');
+      const detail = await response.json();
+      setSelectedPoDetail(detail);
+      setIsPoDetailModalOpen(true);
+    } catch (error) {
+      alert('발주 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
   };
 
   // 입고조정 버튼 클릭
@@ -272,14 +302,9 @@ export default function ReceivingListPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
         />
         <DatePicker
-          label="입고일자 시작"
+          label="입고일자"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="입고일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
         <Select
           label="입고상태"
@@ -366,9 +391,29 @@ export default function ReceivingListPage() {
                           className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.grNo}</td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.poNo}</td>
-                      <td className="px-4 py-3.5 text-sm text-center text-blue-600 whitespace-nowrap">{item.itemCode}</td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        <span 
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewGrDetail(item.grNo);
+                          }}
+                        >
+                          {item.grNo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        <span 
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewPoDetail(item.poNo);
+                          }}
+                        >
+                          {item.poNo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center text-gray-900 whitespace-nowrap">{item.itemCode}</td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">{getStatusBadge(item.status)}</td>
                       <td className="px-4 py-3.5 text-sm text-left font-medium text-gray-900 whitespace-nowrap">{item.itemName}</td>
                       <td className="px-4 py-3.5 text-sm text-center text-stone-600 whitespace-nowrap">{item.receiver}</td>
@@ -459,6 +504,142 @@ export default function ReceivingListPage() {
             <div className="text-sm text-gray-500">
               * 조정 시 입고 금액은 (조정 수량 × 단가)로 자동 계산됩니다.<br/>
               * '입고 취소' 버튼을 누르면 해당 품목의 입고 내역이 취소됩니다.
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 입고 상세 모달 */}
+      <Modal
+        isOpen={isGrDetailModalOpen}
+        onClose={() => setIsGrDetailModalOpen(false)}
+        title="입고 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsGrDetailModalOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedGrDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">입고번호</label>
+                <p className="font-medium">{selectedGrDetail.grNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedGrDetail.poNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">입고일자</label>
+                <p className="font-medium">{selectedGrDetail.grDate?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">협력업체</label>
+                <p className="font-medium">{selectedGrDetail.vendorName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">저장위치</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedGrDetail.items?.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemDesc}</td>
+                      <td className="p-3 text-right">{formatNumber(item.grQuantity)}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.grAmount))}</td>
+                      <td className="p-3">{item.warehouseCode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 입고금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedGrDetail.totalAmount || 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 발주 상세 모달 */}
+      <Modal
+        isOpen={isPoDetailModalOpen}
+        onClose={() => setIsPoDetailModalOpen(false)}
+        title="발주 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsPoDetailModalOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedPoDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedPoDetail.poNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주명</label>
+                <p className="font-medium">{selectedPoDetail.poName}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주일자</label>
+                <p className="font-medium">{selectedPoDetail.poDate?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">협력업체</label>
+                <p className="font-medium">{selectedPoDetail.vendorName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedPoDetail.items?.map((item: any, index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-right">{formatNumber(item.orderQuantity)}</td>
+                      <td className="p-3 text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 발주금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedPoDetail.totalAmount || 0))}
+                </span>
+              </div>
             </div>
           </div>
         )}

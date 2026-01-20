@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
 import { 
   PageHeader, 
   Card, 
@@ -10,10 +11,13 @@ import {
   SearchPanel,
   Modal,
   DatePicker,
-  Textarea
+  Textarea,
+  ModalFooter
 } from '@/components/ui';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi, RfqSelectedDTO, RfqSelectedItemDTO } from '@/lib/api/purchaseOrder';
+import { rfqApi } from '@/lib/api/rfq';
+import { vendorApi } from '@/lib/api/vendor';
 import { PurchaseOrderDTO, PurchaseOrderItemDTO as POItemDTO } from '@/types/purchaseOrder';
 import { getErrorMessage } from '@/lib/api/error';
 
@@ -30,6 +34,7 @@ interface RfqGroup {
   itemCount: number;
   totalAmount: number;
   items: RfqSelectedItemDTO[];
+  prNo?: string;
 }
 
 export default function OrderPendingPage() {
@@ -47,6 +52,12 @@ export default function OrderPendingPage() {
   const [loading, setLoading] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   
+  // 협력사 검색 모달 상태
+  const [isVendorSearchOpen, setIsVendorSearchOpen] = useState(false);
+  const [vendorList, setVendorList] = useState<any[]>([]);
+  const [vendorSearch, setVendorSearch] = useState({ vendorCode: '', vendorName: '' });
+  const [selectedVendor, setSelectedVendor] = useState<{vendorCode: string, vendorName: string} | null>(null);
+
   // 발주 작성 폼 상태
   const [orderForm, setOrderForm] = useState({
     poName: '',
@@ -104,6 +115,7 @@ export default function OrderPendingPage() {
           itemCount: rfq.items?.length || 0,
           totalAmount,
           items: rfq.items || [],
+          prNo: rfq.prNo,
         };
       });
 
@@ -150,7 +162,41 @@ export default function OrderPendingPage() {
   // RFQ 선택
   const handleSelectRfq = (rfqNo: string) => {
     setSelectedRfqNo(selectedRfqNo === rfqNo ? null : rfqNo);
+    setSelectedVendor(null); // 선택 변경 시 수동 선택 협력사 초기화
   };
+
+  // 협력사 목록 조회
+  const fetchVendorList = async () => {
+    try {
+      // 선택된 그룹의 구매유형 확인
+      const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+      const isUrgentOrUnit = selectedGroup && ['E', 'C'].includes(selectedGroup.purchaseType);
+      
+      let response;
+      if (isUrgentOrUnit) {
+        // 긴급/단가계약인 경우: 일반 협력사 목록 조회
+        response = await vendorApi.getVendorList({
+          vendorCode: vendorSearch.vendorCode || undefined,
+          vendorName: vendorSearch.vendorName || undefined,
+          useYn: 'Y', // 사용 중인 협력사만 조회
+        });
+      } else {
+        // 일반인 경우: RFQ용 승인된 협력사 목록 조회
+        response = await rfqApi.getApprovedVendors(vendorSearch);
+      }
+      
+      setVendorList(response.vendors || []);
+    } catch (error) {
+      console.error(error);
+      alert('협력사 목록을 불러오는데 실패했습니다.');
+    }
+  };
+
+  useEffect(() => {
+    if (isVendorSearchOpen) {
+      fetchVendorList();
+    }
+  }, [isVendorSearchOpen, selectedRfqNo]);
 
   const handleCreateOrder = () => {
     if (!selectedRfqNo) {
@@ -192,11 +238,23 @@ export default function OrderPendingPage() {
       return;
     }
     
-    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
-    if (!selectedGroup?.vendorCode) {
-      alert('협력업체 정보가 없습니다.');
+    // 발주일자가 오늘 이후인지 검증
+    const today = new Date().toISOString().split('T')[0];
+    if (orderForm.poDate < today) {
+      alert('발주일자는 오늘 이후만 선택 가능합니다.');
       return;
     }
+    
+    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+    if (!selectedGroup) return;
+
+    // 협력사 정보 확인 (기존 or 수동 선택)
+    const finalVendorCode = selectedGroup.vendorCode || selectedVendor?.vendorCode;
+    if (!finalVendorCode) {
+      alert('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
+      return;
+    }
+
     if (orderForm.items.length === 0) {
       alert('발주 품목이 없습니다.');
       return;
@@ -216,12 +274,17 @@ export default function OrderPendingPage() {
 
     try {
       setLoading(true);
+      
+      // 긴급(E)/단가계약(C)인 경우 rfqNo는 사실 prNo이므로, 실제 발주 생성 시에는 rfqNo는 null로, prNo는 정확히 전달
+      const isUrgentOrUnit = ['E', 'C'].includes(selectedGroup.purchaseType);
+      
       const purchaseOrderData: PurchaseOrderDTO = {
         poName: orderForm.poName,
         poDate: orderForm.poDate,
-        vendorCode: selectedGroup.vendorCode,
+        vendorCode: finalVendorCode,
         purchaseType: selectedGroup.purchaseType,
-        rfqNo: selectedGroup.rfqNo, // RFQ 번호 추가
+        rfqNo: isUrgentOrUnit ? undefined : selectedGroup.rfqNo,
+        prNo: selectedGroup.prNo, 
         remark: orderForm.remark,
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
@@ -238,6 +301,7 @@ export default function OrderPendingPage() {
       await purchaseOrderApi.create(purchaseOrderData);
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
+      setSelectedVendor(null);
       const moveToProgress = window.confirm('성공적으로 저장되었습니다. 발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
@@ -262,11 +326,22 @@ export default function OrderPendingPage() {
       return;
     }
     
-    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
-    if (!selectedGroup?.vendorCode) {
-      alert('협력업체 정보가 없습니다.');
+    // 발주일자가 오늘 이후인지 검증
+    const today = new Date().toISOString().split('T')[0];
+    if (orderForm.poDate < today) {
+      alert('발주일자는 오늘 이후만 선택 가능합니다.');
       return;
     }
+    
+    const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+    if (!selectedGroup) return;
+
+    const finalVendorCode = selectedGroup.vendorCode || selectedVendor?.vendorCode;
+    if (!finalVendorCode) {
+      alert('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
+      return;
+    }
+
     if (orderForm.items.length === 0) {
       alert('발주 품목이 없습니다.');
       return;
@@ -285,12 +360,16 @@ export default function OrderPendingPage() {
 
     try {
       setLoading(true);
+      
+      const isUrgentOrUnit = ['E', 'C'].includes(selectedGroup.purchaseType);
+
       const purchaseOrderData: PurchaseOrderDTO = {
         poName: orderForm.poName,
         poDate: orderForm.poDate,
-        vendorCode: selectedGroup.vendorCode,
+        vendorCode: finalVendorCode,
         purchaseType: selectedGroup.purchaseType,
-        rfqNo: selectedGroup.rfqNo, // RFQ 번호 추가
+        rfqNo: isUrgentOrUnit ? undefined : selectedGroup.rfqNo,
+        prNo: selectedGroup.prNo,
         status: '확정',
         remark: orderForm.remark,
         items: orderForm.items.map(item => ({
@@ -312,6 +391,7 @@ export default function OrderPendingPage() {
       }
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
+      setSelectedVendor(null);
       const moveToProgress = window.confirm('성공적으로 확정되었습니다. 발주진행현황으로 이동하시겠습니까?');
       if (moveToProgress) {
         window.location.href = '/order/progress';
@@ -327,6 +407,10 @@ export default function OrderPendingPage() {
 
   // 총 발주금액 계산
   const totalOrderAmount = orderForm.items.reduce((sum, item) => sum + item.amount, 0);
+
+  // 현재 선택된 그룹의 Vendor Code가 있는지 확인
+  const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
+  const hasVendor = !!selectedGroup?.vendorCode;
 
   return (
     <div>
@@ -371,14 +455,9 @@ export default function OrderPendingPage() {
           ]}
         />
         <DatePicker
-          label="견적일 시작"
+          label="견적요청일"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
       </SearchPanel>
 
@@ -469,7 +548,9 @@ export default function OrderPendingPage() {
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.purchaseTypeDisplay}</td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.buyer}</td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqDate}</td>
-                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.vendorName}</td>
+                        <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
+                           {group.vendorName || <span className="text-stone-400 text-xs">(미지정)</span>}
+                        </td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             {group.itemCount}개
@@ -549,7 +630,7 @@ export default function OrderPendingPage() {
         <div className="space-y-6">
           {/* 기본 정보 */}
           <div className="grid grid-cols-3 gap-4">
-            <Input label="PO번호" value="" placeholder="저장 시 자동생성" readOnly />
+            <Input label="PO번호" value="" readOnly />
             <Input 
               label="발주명" 
               placeholder="발주명 입력" 
@@ -566,11 +647,35 @@ export default function OrderPendingPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input 
-              label="협력사" 
-              value={rfqGroups.find(g => g.rfqNo === selectedRfqNo)?.vendorName || ''} 
-              readOnly 
-            />
+            {hasVendor ? (
+                <Input 
+                  label="협력사" 
+                  value={selectedGroup?.vendorName || ''} 
+                  readOnly 
+                />
+            ) : (
+                <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                        협력사 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                        <input
+                            className="flex h-10 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={selectedVendor?.vendorName || ''}
+                            readOnly
+                            placeholder="협력사를 선택하세요"
+                        />
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => setIsVendorSearchOpen(true)}
+                            className="px-3"
+                            aria-label="협력사 검색"
+                        >
+                            <Search className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
             <Input 
               label="총 발주금액" 
               value={`₩${formatNumber(totalOrderAmount)}`} 
@@ -622,6 +727,89 @@ export default function OrderPendingPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 협력사 검색 모달 */}
+      <Modal
+        isOpen={isVendorSearchOpen}
+        onClose={() => setIsVendorSearchOpen(false)}
+        title="협력사 선택"
+        size="lg"
+        footer={
+          <ModalFooter
+            onClose={() => setIsVendorSearchOpen(false)}
+            onConfirm={() => setIsVendorSearchOpen(false)} // 선택 시 자동 닫힘이므로 confirm은 닫기만 함
+            confirmText="확인"
+          />
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <Input
+              label="업체코드"
+              value={vendorSearch.vendorCode}
+              onChange={(e) => setVendorSearch({ ...vendorSearch, vendorCode: e.target.value })}
+            />
+            <Input
+              label="업체명"
+              value={vendorSearch.vendorName}
+              onChange={(e) => setVendorSearch({ ...vendorSearch, vendorName: e.target.value })}
+            />
+            <div className="flex items-end">
+              <Button variant="primary" onClick={fetchVendorList}>검색</Button>
+            </div>
+          </div>
+          
+          <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+            <table className="w-full">
+              <thead className="bg-stone-50 sticky top-0">
+                <tr className="border-b">
+                  <th className="p-3 text-left text-sm font-semibold text-stone-600">업체코드</th>
+                  <th className="p-3 text-left text-sm font-semibold text-stone-600">업체명</th>
+                  <th className="p-3 text-left text-sm font-semibold text-stone-600">대표자</th>
+                  <th className="p-3 text-center text-sm font-semibold text-stone-600">선택</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendorList.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-stone-500">
+                      조회된 협력사가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  vendorList.map((vendor, index) => (
+                    <tr
+                      key={`${vendor.vendorCode}-${index}`}
+                      className="border-b hover:bg-stone-50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedVendor(vendor);
+                        setIsVendorSearchOpen(false);
+                      }}
+                    >
+                      <td className="p-3 text-sm">{vendor.vendorCode}</td>
+                      <td className="p-3 text-sm font-medium">{vendor.vendorName}</td>
+                      <td className="p-3 text-sm">{vendor.ceoName}</td>
+                      <td className="p-3 text-center">
+                        <Button 
+                            size="sm" 
+                            variant="secondary"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedVendor(vendor);
+                                setIsVendorSearchOpen(false);
+                            }}
+                        >
+                            선택
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </Modal>

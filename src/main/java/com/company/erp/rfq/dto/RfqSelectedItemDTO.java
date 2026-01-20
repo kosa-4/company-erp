@@ -15,8 +15,8 @@ public class RfqSelectedItemDTO {
     private String specification; // ITEM_SPEC
     private String unit; // UNIT_CD
     private BigDecimal quantity; // RFQ_QT
-    private BigDecimal unitPrice; // UNIT_PRC
-    private BigDecimal amount; // RFQ_AMT
+    private String unitPrice; // UNIT_PRC
+    private String amount; // RFQ_AMT
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate deliveryDate; // DELY_DATE

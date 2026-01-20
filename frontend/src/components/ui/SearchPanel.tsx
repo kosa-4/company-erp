@@ -11,6 +11,7 @@ interface SearchPanelProps {
   loading?: boolean;
   collapsible?: boolean;
   defaultExpanded?: boolean;
+  showSearchButton?: boolean;
 }
 
 // 미니멀한 SearchPanel 디자인
@@ -21,6 +22,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
   loading = false,
   collapsible = true,
   defaultExpanded = true,
+  showSearchButton = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -60,9 +62,11 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                 초기화
               </Button>
             )}
-            <Button variant="primary" onClick={onSearch} loading={loading} icon={<Search className="w-4 h-4" />}>
-              조회
-            </Button>
+            {showSearchButton && (
+              <Button variant="primary" onClick={onSearch} loading={loading} icon={<Search className="w-4 h-4" />}>
+                조회
+              </Button>
+            )}
           </div>
         </div>
       )}

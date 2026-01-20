@@ -11,7 +11,6 @@ export default function VendorUsersPage() {
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // 1. DTO 필드명 일치화 (userName, userId, email, phone)
   const [formData, setFormData] = useState({
     userName: '',
     userId: '',
@@ -24,7 +23,6 @@ export default function VendorUsersPage() {
     fetchUserList();
   }, []);
 
-  // 2. 함수명 및 API 경로 확인 (보내주신 로직 유지)
   const fetchUserList = async () => {
     try {
       setLoading(true);
@@ -32,8 +30,6 @@ export default function VendorUsersPage() {
       if (response.ok) {
         const data = await response.json();
         setUsers(Array.isArray(data) ? data : []);
-      } else {
-        console.error('사용자 목록 로드 실패:', response.status);
       }
     } catch (error) {
       console.error('네트워크 오류:', error);
@@ -44,13 +40,18 @@ export default function VendorUsersPage() {
 
   const handleOpenModal = (user?: any) => {
     if (user) {
+      if (user.status === 'N' || user.status === 'C') {
+        alert('승인 및 변경 요청 상태일 시 수정이 불가능합니다.');
+        return;
+      }
+
       setEditingUser(user);
       setFormData({
         userName: user.userName || '',
         userId: user.userId || '',
-        email: user.email || '', // userEmail이 아닌 email로 통일
+        email: user.email || '',
         phone: user.phone || '',
-        password: '', // 수정 시에는 비밀번호 초기화하지 않음
+        password: '',
       });
     } else {
       setEditingUser(null);
@@ -70,57 +71,89 @@ export default function VendorUsersPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (!editingUser && !formData.password)) {
+    const isPasswordRequired = !editingUser;
+    if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (isPasswordRequired && !formData.password)) {
       alert('필수 정보를 모두 입력해주세요.');
       return;
     }
 
     try {
       const method = editingUser ? 'PUT' : 'POST';
-      // 보내주신 API 경로인 /add를 유지하되 수정/등록 분기
-      const url = editingUser ? `/api/v1/vendor-portal/users/${editingUser.userId}` : "/api/v1/vendor-portal/users/add";
+      const url = editingUser ? `/api/v1/vendor-portal/users/update` : "/api/v1/vendor-portal/users/add";
 
+      const payload: any = {
+        userName: formData.userName,
+        userId: formData.userId,
+        email: formData.email,
+        phone: formData.phone,
+      };
+      
+      if (editingUser) {
+      // 비밀번호를 입력했을 때만 payload에 추가 (입력 안 하면 필드 자체가 전송 안 됨)
+      if (formData.password && formData.password.trim() !== '') {
+        payload.password = formData.password;
+      }
+    } else {
+      // 신규 등록일 때는 무조건 포함
+      payload.password = formData.password;
+    }
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          editingUser
-            ? { userName: formData.userName, userId: formData.userId, email: formData.email, phone: formData.phone }
-            : formData
-        ),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         alert(editingUser ? '수정 요청이 완료되었습니다.' : '신규 등록 요청이 완료되었습니다.');
         handleCloseModal();
         fetchUserList();
-      } else {
-        const err = await response.json();
-        alert(err.message || '요청 처리 중 오류가 발생했습니다.');
       }
     } catch (error) {
       alert('서버와 통신할 수 없습니다.');
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  /**
+   * 삭제 함수: 이전의 방식(데이터 전체 전송)으로 복구
+   */
+  const handleDelete = async (user: any) => {
+    if (user.status === 'N' || user.status === 'C') {
+      alert('승인 및 변경 요청 상태일 시 삭제가 불가능합니다.');
+      return;
+    }
+
     if (confirm('해당 사용자를 삭제하시겠습니까?')) {
       try {
-        const response = await fetch(`/api/v1/vendor-portal/users/${userId}`, { method: 'DELETE' });
+        const response = await fetch(`/api/v1/vendor-portal/users/delete`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.userId,
+            userName: user.userName,
+            email: user.email,
+            phone: user.phone,
+            status: user.status,
+            vendorCode: user.vendorCode
+          })
+        });
+
         if (response.ok) {
-          alert('삭제되었습니다.');
+          alert('삭제 요청 되었습니다.');
           fetchUserList();
+        } else {
+          const err = await response.json();
+          alert(err.message || '삭제 중 오류가 발생했습니다.');
         }
       } catch (error) {
-        alert('삭제 중 오류가 발생했습니다.');
+        alert('서버와 통신할 수 없습니다.');
       }
     }
   };
 
-  // 3. 상태 배지 렌더링 함수
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case 'N': return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px]">대기</Badge>;
+      case 'C': return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[10px]">변경 요청</Badge>;
       case 'R': return <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px]">반려됨</Badge>;
       case 'A': return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">승인완료</Badge>;
       default: return null;
@@ -135,7 +168,7 @@ export default function VendorUsersPage() {
 
   return (
     <div className="space-y-6 p-4">
-      {/* Page Header */}
+      {/* Header & Search 생략... 동일함 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -151,7 +184,6 @@ export default function VendorUsersPage() {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -165,62 +197,82 @@ export default function VendorUsersPage() {
         </div>
       </div>
 
-      {/* Users Grid */}
       {loading ? (
         <div className="text-center py-20 text-gray-500">데이터를 불러오는 중입니다...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredUsers.map((user) => (
-            <Card 
-              key={user.userId} 
-              className={`p-5 hover:border-gray-400 transition-all shadow-sm ${user.status === 'R' ? 'bg-red-50/30 border-red-100' : ''}`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${
-                    user.status === 'R' ? 'bg-red-100 border-red-200' : 'bg-indigo-50 border-indigo-100'
-                  }`}>
-                    <span className={`font-semibold text-lg ${user.status === 'R' ? 'text-red-600' : 'text-indigo-600'}`}>
-                      {user.userName?.charAt(0)}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className={`font-semibold ${user.status === 'R' ? 'text-red-900' : 'text-gray-900'}`}>{user.userName}</h3>
-                      {renderStatusBadge(user.status)}
+          {filteredUsers.map((user) => {
+            const isPending = user.status === 'N' || user.status === 'C';
+            
+            return (
+              <Card 
+                key={user.userId} 
+                className={`p-5 hover:border-gray-400 transition-all shadow-sm ${user.status === 'R' ? 'bg-red-50/30 border-red-100' : ''}`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${
+                      user.status === 'R' ? 'bg-red-100 border-red-200' : 'bg-indigo-50 border-indigo-100'
+                    }`}>
+                      <span className={`font-semibold text-lg ${user.status === 'R' ? 'text-red-600' : 'text-indigo-600'}`}>
+                        {user.userName?.charAt(0)}
+                      </span>
                     </div>
-                    <p className="text-xs text-gray-400">{user.userId}</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-semibold ${user.status === 'R' ? 'text-red-900' : 'text-gray-900'}`}>{user.userName}</h3>
+                        {renderStatusBadge(user.status)}
+                      </div>
+                      <p className="text-xs text-gray-400">{user.userId}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleOpenModal(user)} 
+                      className={`h-8 w-8 p-0 ${isPending ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    >
+                      <Edit2 className={`w-3.5 h-3.5 ${isPending ? 'text-gray-300' : 'text-gray-500'}`} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDelete(user)} 
+                      className={`h-8 w-8 p-0 ${isPending ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-600'}`}
+                    >
+                      <Trash2 className={`w-3.5 h-3.5 ${isPending ? 'text-gray-300' : ''}`} />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => handleOpenModal(user)} className="h-8 w-8 p-0">
-                    <Edit2 className="w-3.5 h-3.5 text-gray-500" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(user.userId)} className="h-8 w-8 p-0 hover:text-red-600">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
 
-              {user.status === 'R' && (
-                <div className="mb-3 px-2 py-1.5 bg-red-100/50 rounded text-[11px] text-red-700 flex items-center gap-1.5">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>정보를 수정하여 다시 등록 신청해주세요.</span>
-                </div>
-              )}
+                {isPending && (
+                  <div className="mb-3 px-2 py-1.5 bg-yellow-50 rounded text-[11px] text-yellow-600 flex items-center gap-1.5 border border-yellow-100">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>현재 승인 대기 중으로 정보 수정이 제한됩니다.</span>
+                  </div>
+                )}
 
-              <div className="space-y-2 pt-3 border-t border-gray-50">
-                <div className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Mail className="w-3.5 h-3.5 text-gray-400" />
-                  <span>{user.email}</span>
+                {user.status === 'R' && (
+                  <div className="mb-3 px-2 py-1.5 bg-red-100/50 rounded text-[11px] text-red-700 flex items-center gap-1.5">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>정보를 수정하여 다시 등록 신청해주세요.</span>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-3 border-t border-gray-50">
+                  <div className="flex items-center gap-2.5 text-sm text-gray-600">
+                    <Mail className="w-3.5 h-3.5 text-gray-400" />
+                    <span>{user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm text-gray-600">
+                    <Phone className="w-3.5 h-3.5 text-gray-400" />
+                    <span>{user.phone}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Phone className="w-3.5 h-3.5 text-gray-400" />
-                  <span>{user.phone}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -242,15 +294,26 @@ export default function VendorUsersPage() {
                 <label className="text-xs font-medium text-gray-500">아이디 *</label>
                 <Input name="userId" value={formData.userId} onChange={handleChange} disabled={!!editingUser} placeholder="아이디 입력" />
               </div>
-              {!editingUser && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-500">초기 비밀번호 *</label>
-                  <div className="relative">
-                    <Input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="비밀번호 입력" />
-                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                  </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-500">
+                  {editingUser ? '비밀번호 변경 (변경 시에만 입력)' : '초기 비밀번호 *'}
+                </label>
+                <div className="relative">
+                  <Input 
+                    type="password" 
+                    name="password" 
+                    value={formData.password} 
+                    onChange={handleChange} 
+                    placeholder={editingUser ? "새 비밀번호 입력" : "비밀번호 입력"} 
+                  />
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 </div>
-              )}
+                {editingUser && (
+                  <p className="text-[10px] text-gray-400 ml-1">정보만 수정하시려면 비밀번호란을 비워두세요.</p>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-gray-500">이메일 *</label>
                 <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="example@email.com" />

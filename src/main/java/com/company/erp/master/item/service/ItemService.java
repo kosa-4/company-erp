@@ -3,11 +3,15 @@ package com.company.erp.master.item.service;
 import com.company.erp.common.docNum.dto.DocNumDTO;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.item.dto.*;
 import com.company.erp.master.item.mapper.ItemMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class ItemService {
@@ -39,25 +43,26 @@ public class ItemService {
 
     /* 저장 */
     @Transactional
-    public void registerItem(ItemDetailDto itemDetailDto) {
+    public void registerItem(ItemDetailDto itemDetailDto, SessionUser loginUser) {
         // 1. 중복 체크
         boolean existsItem = itemMapper.existsByNameAndSpec(itemDetailDto);
         if(existsItem){
-            throw new RuntimeException("동일한 이름과 규격의 품목이 존재합니다.");
+            throw new IllegalStateException("동일한 이름과 규격의 품목이 존재합니다.");
         }
 
         // 2. 중복 아닐 시
         // 2-1. 체번 계산
         String itemCode = docNumService.generateDocNumStr(DocKey.IT);
         itemDetailDto.setItemCode(itemCode);
-        // 2-2. enum 입력
-        itemDetailDto.setStatus(ItemStatus.REGISTERED.getValue());
-        itemDetailDto.setUseYn(ItemUse.YES.getValue());
-        itemDetailDto.setDeleteYn(ItemDelete.NO.getValue());
+        // 2-2. 값 입력
+        itemDetailDto.setStatus("A");
+        itemDetailDto.setCreatedAt(LocalDateTime.now());
+        itemDetailDto.setCreatedBy(loginUser.getUserId());
+
         // 2-3. 품목 마스터 등록
         itemMapper.insertItemMTGL(itemDetailDto);
         // 2-4. 품목 카테고리 등록
-        itemMapper.insertItemMTGC(itemDetailDto);
+//        itemMapper.insertItemMTGC(itemDetailDto);
     }
 
     /* 수정 */
