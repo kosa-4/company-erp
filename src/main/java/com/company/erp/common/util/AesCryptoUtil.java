@@ -26,7 +26,7 @@ public final class AesCryptoUtil {
      * 문자열 암호화
      * 
      * @param plain     평문
-     * @param keyBase64 Base64 인코딩된 AES 키 (16/24/32 bytes)
+     * @param keyBase64 Base64 인코딩된 AES 키 (32 bytes)
      * @return Base64( iv + cipherTextWithTag )
      */
     public static String encrypt(String plain, String keyBase64) {
@@ -64,7 +64,7 @@ public final class AesCryptoUtil {
      * 문자열 복호화
      * 
      * @param encrypted Base64( iv + cipherTextWithTag )
-     * @param keyBase64 Base64 인코딩된 AES 키
+     * @param keyBase64 Base64 인코딩된 AES 키 (32 bytes)
      * @return 복호화된 평문
      */
     public static String decrypt(String encrypted, String keyBase64) {
