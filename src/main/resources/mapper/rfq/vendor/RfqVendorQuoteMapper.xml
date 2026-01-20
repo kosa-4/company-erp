@@ -15,8 +15,8 @@
     <select id="selectQuoteItems"
         resultType="com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse$QuoteItemInfo">
         SELECT d.LINE_NO as lineNo, d.ITEM_CD as itemCd, d.ITEM_DESC as itemDesc, d.ITEM_SPEC as
-        itemSpec, d.UNIT_CD as unitCd, d.RFQ_QT as rfqQt, COALESCE(vd.QUOTE_UNIT_PRC, 0) as
-        quoteUnitPrc, COALESCE(vd.QUOTE_QT, d.RFQ_QT) as quoteQt, COALESCE(vd.QUOTE_AMT, 0) as
+        itemSpec, d.UNIT_CD as unitCd, d.RFQ_QT as rfqQt, vd.QUOTE_UNIT_PRC as
+        quoteUnitPrc, COALESCE(vd.QUOTE_QT, d.RFQ_QT) as quoteQt, vd.QUOTE_AMT as
         quoteAmt, vd.DELY_DATE as delyDate, vd.RMK as rmk FROM rfqdt d LEFT JOIN rfqvndt vd ON
         d.RFQ_NUM = vd.RFQ_NUM AND d.LINE_NO = vd.LINE_NO AND vd.VENDOR_CD = #{vendorCd} AND
         vd.DEL_FLAG = 'N' WHERE d.RFQ_NUM = #{rfqNum} AND d.DEL_FLAG = 'N' ORDER BY d.LINE_NO </select>
@@ -28,14 +28,14 @@
     <!-- RFQDT에서 RFQVNDT로 초기 복사 -->
     <insert id="insertRfqVndtFromRfqdt"> INSERT INTO rfqvndt ( RFQ_NUM, LINE_NO, VENDOR_CD,
         REG_DATE, REG_USER_ID, DEL_FLAG, QUOTE_UNIT_PRC, QUOTE_QT, QUOTE_AMT, DELY_DATE, SELECT_YN,
-        RMK ) SELECT RFQ_NUM, LINE_NO, #{vendorCd}, NOW(), #{userId}, 'N', 0, RFQ_QT, 0, NULL, 'N',
+        RMK ) SELECT RFQ_NUM, LINE_NO, #{vendorCd}, NOW(), #{userId}, 'N', NULL, RFQ_QT, NULL, NULL, 'N',
         NULL FROM rfqdt WHERE RFQ_NUM = #{rfqNum} AND DEL_FLAG = 'N' </insert>
 
     <!-- RFQVNDT 품목 업데이트 -->
-    <update id="updateRfqVndtItem"> UPDATE rfqvndt SET QUOTE_UNIT_PRC = #{item.quoteUnitPrc},
-        QUOTE_QT = #{item.quoteQt}, QUOTE_AMT = #{item.quoteAmt}, DELY_DATE = #{item.delyDate}, RMK
-        = #{item.rmk}, MOD_DATE = NOW(), MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND
-        LINE_NO = #{item.lineNo} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
+    <update id="updateRfqVndtItem"> UPDATE rfqvndt SET QUOTE_UNIT_PRC = #{quoteUnitPrc},
+        QUOTE_QT = #{quoteQt}, QUOTE_AMT = #{quoteAmt}, DELY_DATE = #{delyDate}, RMK
+        = #{rmk}, MOD_DATE = NOW(), MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND
+        LINE_NO = #{lineNo} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
 
     <!-- RFQVN 상태 및 총액 업데이트 -->
     <update id="updateRfqVnStatusAndAmount"> UPDATE rfqvn SET PROGRESS_CD = #{progressCd}, TOTAL_AMT

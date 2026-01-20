@@ -5,6 +5,7 @@ import { FileText, Save, Send, ArrowLeft, Calculator } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { Card, Button, Input } from "@/components/ui";
 import { rfqApi } from "@/lib/api/rfq";
+import { getErrorMessage } from "@/lib/api/error";
 import { useRouter } from "next/navigation";
 
 interface QuoteItem {
@@ -43,7 +44,7 @@ export default function VendorQuoteEditPage({
       setItems(data.items || []);
     } catch (error: any) {
       toast.error(
-        error.response?.data?.message || "견적 데이터 조회에 실패했습니다.",
+        getErrorMessage(error) || "견적 데이터 조회에 실패했습니다.",
       );
       console.error(error);
     } finally {
@@ -92,7 +93,7 @@ export default function VendorQuoteEditPage({
       await rfqApi.saveVendorQuote(rfqNum, { items });
       toast.success("견적이 임시저장되었습니다.");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "임시저장에 실패했습니다.");
+      toast.error(getErrorMessage(error) || "임시저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -123,7 +124,7 @@ export default function VendorQuoteEditPage({
         router.push("/vendor/rfq/submit");
       }, 1500);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "견적 제출에 실패했습니다.");
+      toast.error(getErrorMessage(error) || "견적 제출에 실패했습니다.");
       setSaving(false);
     }
   };

@@ -12,7 +12,7 @@ public class RfqSelectionResultResponse {
     private String rfqTypeNm; // 견적유형명
     private String vendorCd; // 협력사코드
     private String vendorNm; // 협력사명
-    private BigDecimal totalAmt; // 총 견적금액
+    private String totalAmt; // 총 견적금액
     private String ctrlUserId; // 구매담당자 ID
     private String ctrlUserNm; // 구매담당자명
     private LocalDateTime regDate; // 등록일

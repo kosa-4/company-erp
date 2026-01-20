@@ -5,6 +5,7 @@ import { Save, Send, X, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal, Card, Button, Input } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
+import { formatNumber } from '@/lib/utils';
 
 interface QuoteItem {
   lineNo: number;
@@ -13,9 +14,9 @@ interface QuoteItem {
   itemSpec: string;
   unitCd: string;
   rfqQt: number;
-  quoteUnitPrc: number;
+  quoteUnitPrc: number | string;
   quoteQt: number;
-  quoteAmt: number;
+  quoteAmt: number | string;
   delyDate: string;
   rmk: string;
 }
@@ -41,7 +42,7 @@ export default function VendorQuoteModal({
   // 견적 데이터 조회
   const fetchQuoteData = async () => {
     if (!rfqNum) return;
-    
+
     try {
       setLoading(true);
       const data = await rfqApi.getVendorQuote(rfqNum);
@@ -76,7 +77,7 @@ export default function VendorQuoteModal({
             const unitPrc =
               field === 'quoteUnitPrc'
                 ? parseFloat(value) || 0
-                : item.quoteUnitPrc;
+                : (typeof item.quoteUnitPrc === 'string' ? parseFloat(item.quoteUnitPrc) : item.quoteUnitPrc) || 0;
             const qt =
               field === 'quoteQt' ? parseFloat(value) || 0 : item.quoteQt;
             updated.quoteAmt = unitPrc * qt;
@@ -91,7 +92,10 @@ export default function VendorQuoteModal({
 
   // 총액 계산
   const calculateTotalAmount = () => {
-    return items.reduce((sum, item) => sum + (item.quoteAmt || 0), 0);
+    return items.reduce((sum, item) => {
+      const amt = typeof item.quoteAmt === 'string' ? parseFloat(item.quoteAmt) : item.quoteAmt;
+      return sum + (amt || 0);
+    }, 0);
   };
 
   // 임시저장
@@ -116,7 +120,8 @@ export default function VendorQuoteModal({
 
     // 필수 항목 검증
     for (const item of items) {
-      if (!item.quoteUnitPrc || item.quoteUnitPrc <= 0) {
+      const unitPrc = typeof item.quoteUnitPrc === 'string' ? parseFloat(item.quoteUnitPrc) : item.quoteUnitPrc;
+      if (!unitPrc || unitPrc <= 0) {
         toast.error(`라인 ${item.lineNo}: 견적단가를 입력해주세요.`);
         return;
       }
@@ -153,7 +158,7 @@ export default function VendorQuoteModal({
           <div className="text-sm text-gray-600">
             <strong>총 견적금액:</strong>{' '}
             <span className="text-lg font-bold text-gray-900 ml-2">
-              {new Intl.NumberFormat('ko-KR').format(calculateTotalAmount())}원
+              {formatNumber(calculateTotalAmount())}원
             </span>
           </div>
           <div className="flex gap-2">
@@ -270,7 +275,7 @@ export default function VendorQuoteModal({
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
-                        {new Intl.NumberFormat('ko-KR').format(item.quoteAmt || 0)}
+                        {formatNumber(item.quoteAmt)}
                       </td>
                       <td className="px-4 py-3 text-center text-gray-600">
                         {item.delyDate || '-'}

@@ -62,7 +62,7 @@ public class RfqDetailResponse {
         private String progressNm; // 진행상태명 (RFQT -> '접수' 매핑 포함)
         private LocalDateTime sendDate; // 전송일
         private LocalDateTime submitDate; // 제출일
-        private BigDecimal totalAmt; // 총 견적금액
+        private String totalAmt; // 총 견적금액 (암호화 데이터)
         private String selectYn; // 선정여부 (Y/N)
     }
 }
