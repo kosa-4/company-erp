@@ -33,13 +33,26 @@ interface PurchaseRequest {
 
 // 백엔드 응답을 프론트엔드 형식으로 변환
 const transformPrListResponse = (response: PrListResponse[]): PurchaseRequest[] => {
-  // regDate가 Date 객체 또는 문자열일 수 있으므로 처리
+  // regDate를 KST 기준 YYYY-MM-DD로 변환
   const formatDate = (date: string | Date | null | undefined): string => {
     if (!date) return '';
-    if (typeof date === 'string') {
-      return date.split('T')[0];
+
+    try {
+      const d =
+        typeof date === 'string'
+          ? new Date(date)
+          : new Date(date);
+
+      if (Number.isNaN(d.getTime())) return '';
+
+      // 브라우저 로컬 타임존(KST 환경 기준)에서 연-월-일만 추출
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
     }
-    return new Date(date).toISOString().split('T')[0];
   };
 
   return response.map((item, index) => {
@@ -95,6 +108,7 @@ export default function PurchaseRequestListPage() {
     endDate: '',
     requester: '',
     department: '',
+    purchaseType: '',
     status: '',
   });
   const [loading, setLoading] = useState(false);
@@ -125,6 +139,7 @@ export default function PurchaseRequestListPage() {
       const params = {
         prNum: searchParams.prNo || undefined,
         prSubject: searchParams.prName || undefined,
+        pcType: searchParams.purchaseType || undefined,
         requester: searchParams.requester || undefined,
         deptName: searchParams.department || undefined,
         progressCd: searchParams.status || undefined,
@@ -181,6 +196,7 @@ export default function PurchaseRequestListPage() {
       endDate: '',
       requester: '',
       department: '',
+      purchaseType: '',
       status: '',
     });
   };
@@ -199,7 +215,8 @@ export default function PurchaseRequestListPage() {
       if (!prItemsMap.has(prNo)) {
         try {
           setLoadingDetail(true);
-          const detailList = await prApi.getDetail(prNo);
+          const detail = await prApi.getDetail(prNo);
+          const detailList = detail.items || [];
           setPrItemsMap(prev => new Map(prev).set(prNo, detailList));
         } catch (error) {
           alert('구매요청 품목 정보를 불러오는데 실패했습니다.');
@@ -225,10 +242,11 @@ export default function PurchaseRequestListPage() {
       purchaseType: row.purchaseType,
     });
 
-    // PR번호로 상세 정보 조회 (DT 항목 목록)
+    // PR번호로 상세 정보 조회 (헤더 + DT 항목 목록)
     try {
       setLoadingDetail(true);
-      const detailList = await prApi.getDetail(row.prNo);
+      const detail = await prApi.getDetail(row.prNo);
+      const detailList = detail.items || [];
       setPrDetailItems(detailList);
       setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
     } catch (error: any) {
@@ -292,7 +310,8 @@ export default function PurchaseRequestListPage() {
     // 품목 목록 조회
     try {
       setLoadingDetail(true);
-      const detailList = await prApi.getDetail(firstRow.prNo);
+      const detail = await prApi.getDetail(firstRow.prNo);
+      const detailList = detail.items || [];
       setPrDetailItems(detailList);
       setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
     } catch (error: any) {
@@ -673,6 +692,18 @@ export default function PurchaseRequestListPage() {
               label="요청일자"
               value={searchParams.startDate}
               onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
+          />
+
+          <Select
+              label="구매유형"
+              value={searchParams.purchaseType}
+              onChange={(e) => setSearchParams(prev => ({ ...prev, purchaseType: e.target.value }))}
+              options={[
+                { value: '', label: '전체' },
+                { value: '일반구매', label: '일반' },
+                { value: '단가계약', label: '단가계약' },
+                { value: '긴급구매', label: '긴급' },
+              ]}
           />
 
           <Input

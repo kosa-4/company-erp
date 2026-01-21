@@ -1,5 +1,7 @@
 package com.company.erp.pr.controller;
 
+import com.company.erp.common.file.dto.FileUploadResponse;
+import com.company.erp.common.file.service.FileService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.pr.dto.*;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +22,9 @@ import java.util.Map;
 public class PrController {
 
     private final PrService prService;
+    private final FileService fileService;
+
+    private static final String REF_TYPE_PR = "PR";
 
     //구매요청화면 초기 데이터 조회
     @GetMapping("/init")
@@ -37,7 +43,7 @@ public class PrController {
     @GetMapping("/item-info/list")
     public ResponseEntity<List<PrItemDTO>> getPrItemInfo(@RequestParam(required = false) List<String> itemCodes){
 
-        //빈 경우(예외 처리 다시 할 예정)
+        //빈 경우
         if(itemCodes == null || itemCodes.isEmpty()){
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -58,10 +64,27 @@ public class PrController {
         String userId = user.getUserId();
         String deptCd = user.getDeptCd();
 
-        prService.insertPr(userId,deptCd,prRequest);
+        String prNum = prService.insertPr(userId,deptCd,prRequest);
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "구매요청 등록 완료");
+        response.put("prNum", prNum);
+        return ResponseEntity.ok(response);
+    }
+
+    //구매요청 파일 업로드
+    @PostMapping("/{prNum}/files")
+    public ResponseEntity<FileUploadResponse> uploadPrFile(
+            @PathVariable String prNum,
+            @RequestParam("file") MultipartFile file,
+            HttpSession session
+    ) {
+        SessionUser user = getSessionUser(session);
+
+        // vendorCd는 null로 저장
+        String vendorCd = null;
+
+        FileUploadResponse response = fileService.upload(file, REF_TYPE_PR, prNum, vendorCd, user);
         return ResponseEntity.ok(response);
     }
 
@@ -83,13 +106,14 @@ public class PrController {
                                                                  @RequestParam(required = false) String requester,
                                                                  @RequestParam(required = false) String deptName,
                                                                  @RequestParam(required = false) String progressCd,
+                                                                 @RequestParam(required = false) String pcType,
                                                                  @RequestParam(required = false) String requestDate,
                                                                  @RequestParam(required = false, defaultValue = "1") Integer page,
                                                                  @RequestParam(required = false, defaultValue = "10") Integer pageSize,
                                                                  HttpSession session){
 
         SessionUser user = getSessionUser(session);
-        Map<String, Object> result = prService.selectPrList(prNum, prSubject, requester, deptName, progressCd, requestDate, page, pageSize, user);
+        Map<String, Object> result = prService.selectPrList(prNum, prSubject, requester, deptName, progressCd, pcType, requestDate, page, pageSize, user);
 
         return ResponseEntity.ok(result);
     }

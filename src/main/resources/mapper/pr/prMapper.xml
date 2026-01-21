@@ -193,11 +193,18 @@
             AND ST.CODE_NAME = #{progressCd}
         </if>
         
-        <!-- 요청일자 검색 -->
+        <!-- 구매유형 검색 -->
+        <if test="pcType != null and pcType != ''">
+            AND PT.CODE_NAME = #{pcType}
+        </if>
+
+        
+        <!-- 요청일자 검색  -->
         <if test="requestDate != null and requestDate != ''">
             AND DATE(HD.REG_DATE) = #{requestDate}
         </if>
-        
+
+
         <!-- 구매팀이 아닌 경우 본인이 작성한 구매요청만 조회 -->
         <if test="regUserId != null and regUserId != '' and (isBuyerDept == null or isBuyerDept == false)">
             AND HD.REG_USER_ID = #{regUserId}
@@ -259,7 +266,12 @@
             AND ST.CODE_NAME = #{progressCd}
         </if>
         
-        <!-- 요청일자 검색 -->
+        <!-- 구매유형 검색 -->
+        <if test="pcType != null and pcType != ''">
+            AND PT.CODE_NAME = #{pcType}
+        </if>
+        
+        <!-- 요청일자 검색 (서버(DB) 날짜 기준으로 동일한 일자만 조회) -->
         <if test="requestDate != null and requestDate != ''">
             AND DATE(HD.REG_DATE) = #{requestDate}
         </if>

@@ -35,7 +35,7 @@ public class PrService {
 
     //구매요청 등록
     @Transactional()
-    public void insertPr(String userId, String deptCd, PrRequest prRequest){
+    public String insertPr(String userId, String deptCd, PrRequest prRequest){
         String prNum = docNumService.generateDocNumStr(DocKey.PR);//채번
 
         PrRequest.PrHd prHd = prRequest.getPrHd();
@@ -103,6 +103,9 @@ public class PrService {
 
         prMapper.insertPrHd(prHdDTO);
         prMapper.insertPrDt(prDtDTOList);
+
+        // 생성된 PR 번호 반환 (첨부파일 연계를 위해 사용)
+        return prNum;
     }
 
 
@@ -127,7 +130,7 @@ public class PrService {
 
     //구매요청현황 목록 조회 (헤더만)
     public Map<String, Object> selectPrList(String prNum, String prSubject, String requester,
-                                             String deptNm, String progressCd, String requestDate,
+                                             String deptNm, String progressCd, String pcType, String requestDate,
                                              Integer page, Integer pageSize, SessionUser user){
         // 페이징 파라미터 기본값 설정
         if (page == null || page < 1) page = 1;
@@ -151,10 +154,10 @@ public class PrService {
         }
         
         // 목록 조회
-        List<PrListResponse> list = prMapper.selectPrList(prNum, prSubject, requester, deptNm, progressCd, requestDate, offset, pageSize, regUserId, isBuyerDept);
+        List<PrListResponse> list = prMapper.selectPrList(prNum, prSubject, requester, deptNm, progressCd, pcType, requestDate, offset, pageSize, regUserId, isBuyerDept);
         
         // 총 개수 조회
-        int totalCount = prMapper.selectPrListCount(prNum, prSubject, requester, deptNm, progressCd, requestDate, regUserId, isBuyerDept);
+        int totalCount = prMapper.selectPrListCount(prNum, prSubject, requester, deptNm, progressCd, pcType, requestDate, regUserId, isBuyerDept);
         
         // 총 페이지 수 계산
         int totalPages = (int) Math.ceil((double) totalCount / pageSize);
