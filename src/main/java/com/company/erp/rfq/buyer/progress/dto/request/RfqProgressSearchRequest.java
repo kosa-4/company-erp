@@ -13,4 +13,5 @@ public class RfqProgressSearchRequest {
     private String progressCd; // 헤더 상태 코드
     private String rfqType; // 견적 유형
     private String ctrlUserNm; // 구매 담당자명
+    private String regDate;
 }

@@ -304,7 +304,7 @@ export const rfqApi = {
     /**
      * 협력사 RFQ 목록 조회
      */
-    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; startDate?: string; endDate?: string }) =>
+    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; reqCloseDate?: string }) =>
         api.get<any[]>('/v1/vendor/rfqs', { ...params }),
 
     /**

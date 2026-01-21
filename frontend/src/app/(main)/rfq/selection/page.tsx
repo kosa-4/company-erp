@@ -34,6 +34,7 @@ interface RfqSelectionGroup {
   rfqTypeNm: string;
   ctrlUserNm: string;
   regDate: string;
+  selectDate: string;
   progressCd: string;
   progressNm: string;
   vendors: RfqSelectionVendor[];
@@ -56,6 +57,8 @@ export default function RfqSelectionPage() {
     rfqType: '',
     status: '',
     buyer: '',
+    regDate: '',
+    selectDate: '',
   });
 
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
@@ -68,12 +71,13 @@ export default function RfqSelectionPage() {
       const response = await rfqApi.getSelectionList({
         rfqNum: searchParams.rfqNo,
         rfqSubject: searchParams.rfqName,
-        fromDate: searchParams.startDate,
-        toDate: searchParams.endDate,
+        regDate: searchParams.regDate,
+        selectDate: searchParams.selectDate,
         rfqType: searchParams.rfqType,
         progressCd: searchParams.status,
         ctrlUserNm: searchParams.buyer
       });
+      console.log('selectionList sample:', response?.[1]);
 
       // 데이터 그룹화 (RFQ 번호 기준)
       const grouped = response.reduce((acc, curr) => {
@@ -84,6 +88,8 @@ export default function RfqSelectionPage() {
           totalAmt: curr.totalAmt || 0,
           vnProgressCd: curr.vnProgressCd,
           vnProgressNm: curr.vnProgressNm,
+          regDate: curr.regDate?.substring(0,10) || '-',
+          selectDate: curr.selectDate?.substring(0,10) || '-',
           sendDate: curr.sendDate?.substring(0, 10) || '-',
           submitDate: curr.submitDate?.substring(0, 10) || '-',
           selectYn: curr.selectYn || 'N',
@@ -98,6 +104,7 @@ export default function RfqSelectionPage() {
             rfqTypeNm: curr.rfqTypeNm,
             ctrlUserNm: curr.ctrlUserNm,
             regDate: curr.regDate?.substring(0, 10) || '-',
+            selectDate: curr.selectDate?.substring(0, 10) || '-',
             progressCd: curr.progressCd,
             progressNm: curr.progressNm,
             vendors: [vendor]
@@ -131,6 +138,8 @@ export default function RfqSelectionPage() {
       rfqType: '',
       status: '',
       buyer: '',
+      regDate: '',
+      selectDate: '',
     });
   };
 
@@ -245,21 +254,21 @@ export default function RfqSelectionPage() {
           value={searchParams.rfqNo}
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
         />
-        <DatePicker
-          label="견적일자 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
-        />
         <Input
-          label="견적명"
-          placeholder="견적명 입력"
-          value={searchParams.rfqName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+            label="견적명"
+            placeholder="견적명 입력"
+            value={searchParams.rfqName}
+            onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+        />
+        <DatePicker
+          label="선정일"
+          value={searchParams.selectDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, selectDate: e.target.value }))}
+        />
+        <DatePicker
+          label="등록일"
+          value={searchParams.regDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, regDate: e.target.value }))}
         />
         <Select
           label="견적유형"
@@ -319,6 +328,7 @@ export default function RfqSelectionPage() {
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">견적유형</th>
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">구매담당자</th>
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">등록일</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">선정일</th>
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">상태</th>
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">참여업체</th>
               </tr>
@@ -370,6 +380,7 @@ export default function RfqSelectionPage() {
                         <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.rfqTypeNm}</td>
                         <td className="px-4 py-3 text-sm text-stone-600 text-center">{row.ctrlUserNm}</td>
                         <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.regDate}</td>
+                        <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.selectDate}</td>
                         <td className="px-4 py-3 text-center">{getStatusBadge(row.progressCd, row.progressNm)}</td>
                         <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
                           {totalVendors}개 업체
@@ -383,8 +394,8 @@ export default function RfqSelectionPage() {
                                 <thead className="bg-stone-100/50">
                                   <tr>
                                     <th className="w-12 px-4 py-2"></th>
-                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-left w-1/4">협력사명</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">코드</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">협력사명</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">상태</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">총 견적금액</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">제출일</th>
@@ -410,8 +421,8 @@ export default function RfqSelectionPage() {
                                             onClick={e => e.stopPropagation()}
                                           />
                                         </td>
-                                        <td className="px-4 py-2 text-sm text-stone-700 font-medium">{vendor.vendorNm}</td>
                                         <td className="px-4 py-2 text-sm text-stone-500 text-center">{vendor.vendorCd}</td>
+                                        <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">{vendor.vendorNm}</td>
                                         <td className="px-4 py-2 text-center text-xs">
                                           <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
                                             {vendor.vnProgressNm}
