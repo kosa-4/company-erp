@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, Check, Eye, Calendar, Search, X, FileText, ArrowRight } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { Card, Button, Input, Badge } from '@/components/ui';
 
 interface OrderItem {

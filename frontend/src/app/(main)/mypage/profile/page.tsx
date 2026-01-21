@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Building2, Lock, Phone, Mail, Save, X, Shield, Briefcase } from 'lucide-react';
 import { Card, Input, Button } from '@/components/ui';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { mypageApi } from '@/lib/api/mypage';
 
 interface ProfileForm {
