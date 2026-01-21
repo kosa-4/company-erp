@@ -69,23 +69,6 @@ export interface PrDtDTO {
 }
 
 /**
- * 구매요청 상세 응답 DTO (헤더 + 품목)
- */
-export interface PrDetailResponse {
-    prNum: string;
-    prSubject: string;
-    rmk: string;
-    prAmt: number;
-    pcType: string;
-    progressCd: string;
-    deptCd: string;
-    regUserId: string;
-    regDate: string;
-    reqUserName: string;
-    items: PrDtDTO[];
-}
-
-/**
  * 구매요청 초기 데이터 응답
  */
 export interface PrInitData {
@@ -203,7 +186,7 @@ export const prApi = {
     /**
      * 구매요청 상세 품목 목록 조회
      */
-    getDetail: (prNum: string) => api.get<PrDetailResponse>(`/v1/pr/${prNum}/detail`),
+    getDetail: (prNum: string) => api.get<PrDtDTO[]>(`/v1/pr/${prNum}/detail`),
 
     /**
      * 구매요청 헤더 수정 (구매요청명, 구매유형) 또는 헤더+품목 수정
