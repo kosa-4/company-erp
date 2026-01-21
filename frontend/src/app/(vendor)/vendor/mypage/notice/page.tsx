@@ -58,7 +58,6 @@ export default function VendorNoticePage() {
       setNotices(transformedNotices);
     } catch (error: any) {
       console.error('공지사항 목록 조회 실패:', error);
-      console.error('공지사항 목록 조회 실패:', error);
       toast.error(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);

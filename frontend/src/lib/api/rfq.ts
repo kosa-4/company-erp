@@ -120,6 +120,7 @@ export interface RfqSelectionResponse {
     ctrlUserId: string;
     ctrlUserNm: string;
     regDate: string;
+    selectDate?: string;
     vendorCd: string;
     vendorNm: string;
     vnProgressCd: string;
@@ -136,6 +137,7 @@ export interface RfqSelectionSearchRequest {
     rfqSubject?: string;
     fromDate?: string;
     toDate?: string;
+    selectDate?: string;
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;

@@ -113,7 +113,7 @@ export default function RfqProgressPage() {
             }
             toast.success('전송되었습니다.');
             setSelectedRfqNums([]);
-            fetchData();
+            await fetchData();
           } catch (error) {
             toast.error(getErrorMessage(error));
           } finally {
@@ -148,7 +148,7 @@ export default function RfqProgressPage() {
             }
             toast.success('마감 처리되었습니다.');
             setSelectedRfqNums([]);
-            fetchData();
+            await fetchData();
           } catch (error) {
             toast.error(getErrorMessage(error));
           } finally {

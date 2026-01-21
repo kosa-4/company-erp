@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PageHeader,
   Card,
@@ -48,6 +48,9 @@ export default function PurchaseRequestPage() {
 
   // 첨부파일 상태
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+  // 타이머 ID 관리 (중복 네비게이션 방지)
+  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     prNo: '',
@@ -80,6 +83,16 @@ export default function PurchaseRequestPage() {
     };
 
     loadInitData();
+  }, []);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
+    };
   }, []);
 
   // 품목 목록 로드 함수
@@ -313,11 +326,22 @@ export default function PurchaseRequestPage() {
       toast.success("구매요청 등록이 완료되었습니다.", {
         action: {
           label: '목록으로 이동',
-          onClick: () => router.push('/purchase/request-list')
+          onClick: () => {
+            // 액션 클릭 시 타이머 취소 후 즉시 이동
+            if (navigationTimerRef.current) {
+              clearTimeout(navigationTimerRef.current);
+              navigationTimerRef.current = null;
+            }
+            router.push('/purchase/request-list');
+          }
         }
       });
-      // 성공 후 목록 페이지로 이동 처리 (잠시 후 이동)
-      setTimeout(() => router.push('/purchase/request-list'), 1000);
+      
+      // 성공 후 1초 뒤 자동 이동 (액션 클릭 시 취소됨)
+      navigationTimerRef.current = setTimeout(() => {
+        router.push('/purchase/request-list');
+        navigationTimerRef.current = null;
+      }, 1000);
       
     } catch (error) {
       // 에러 객체에서 메시지 추출

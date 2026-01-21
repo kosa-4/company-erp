@@ -71,7 +71,8 @@ export default function RfqSelectionPage() {
       const response = await rfqApi.getSelectionList({
         rfqNum: searchParams.rfqNo,
         rfqSubject: searchParams.rfqName,
-        fromDate: searchParams.regDate, // regDate를 fromDate로 매핑 (검색 조건에 toDate가 없으므로 단일 날짜 검색으로 가정하거나 범위 시작으로 사용)
+        fromDate: searchParams.regDate,
+        selectDate: searchParams.selectDate,
         rfqType: searchParams.rfqType,
         progressCd: searchParams.status,
         ctrlUserNm: searchParams.buyer
@@ -100,7 +101,7 @@ export default function RfqSelectionPage() {
             rfqTypeNm: curr.rfqTypeNm,
             ctrlUserNm: curr.ctrlUserNm,
             regDate: curr.regDate?.substring(0, 10) || '-',
-            selectDate: '-', // RfqSelectionResponse에 selectDate 필드가 없으므로 기본값 설정
+            selectDate: curr.selectDate?.substring(0, 10) || '-',
             progressCd: curr.progressCd,
             progressNm: curr.progressNm,
             vendors: [vendor]
@@ -187,7 +188,7 @@ export default function RfqSelectionPage() {
             setLoading(true);
             await Promise.all(selectedRfqNums.map(num => rfqApi.openRfq(num)));
             toast.success('개찰 처리가 완료되었습니다.');
-            handleSearch();
+            await handleSearch();
             setSelectedRfqNums([]);
           } catch (error) {
             toast.error('개찰 처리 중 오류가 발생했습니다.');
@@ -230,7 +231,7 @@ export default function RfqSelectionPage() {
       await rfqApi.selectVendor(selectedVendor.rfqNo, selectedVendor.vendorCd, selectionReason);
       toast.success('협력업체 선정이 완료되었습니다.');
       setIsReasonModalOpen(false);
-      handleSearch();
+      await handleSearch();
       setSelectedVendor(null);
       setSelectedRfqNums([]);
     } catch (error) {
