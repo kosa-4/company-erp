@@ -4,33 +4,77 @@
 <mapper namespace="com.company.erp.rfq.buyer.selection.mapper.RfqSelectionMapper">
 
     <select id="selectRfqSelectionList"
-        resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqSelectionResponse"> SELECT
-        h.RFQ_NUM AS rfqNum, h.RFQ_SUBJECT AS rfqSubject, h.RFQ_TYPE AS rfqType, c2.CODE_NAME AS
-        rfqTypeNm, h.PROGRESS_CD AS progressCd, c1.CODE_NAME AS progressNm, h.CTRL_USER_ID AS
-        ctrlUserId, u.USER_NM AS ctrlUserNm, h.REG_DATE AS regDate, v.VENDOR_CD AS vendorCd,
-        vn.VENDOR_NM AS vendorNm, v.PROGRESS_CD AS vnProgressCd, c3.CODE_NAME AS vnProgressNm,
-        v.SEND_DATE AS sendDate, v.SUBMIT_DATE AS submitDate, v.TOTAL_AMT AS totalAmt, v.SELECT_YN
-        AS selectYn, v.SELECT_RMK AS rmk FROM RFQHD h INNER JOIN RFQVN v ON h.RFQ_NUM = v.RFQ_NUM
-        AND v.DEL_FLAG = 'N' INNER JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD LEFT JOIN CODD c1 ON
-        c1.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c1.CODE AND c1.USE_YN = 'Y' LEFT JOIN CODD
-        c2 ON c2.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c2.CODE AND c2.USE_YN = 'Y' LEFT JOIN CODD
-        c3 ON c3.CODE_GROUP = 'PROGRESS_CD' AND v.PROGRESS_CD = c3.CODE AND c3.USE_YN = 'Y' LEFT
-        JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID WHERE h.DEL_FLAG = 'N' AND h.PROGRESS_CD IN
-        ('M', 'G', 'J') <if test="rfqNum != null and rfqNum != ''"> AND h.RFQ_NUM LIKE CONCAT('%',
-        #{rfqNum}, '%') </if>
-        <if test="rfqSubject != null and rfqSubject != ''"> AND h.RFQ_SUBJECT
-        LIKE CONCAT('%', #{rfqSubject}, '%') </if>
+        resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqSelectionResponse">
+        SELECT
+               h.RFQ_NUM AS rfqNum,
+               h.RFQ_SUBJECT AS rfqSubject,
+               h.RFQ_TYPE AS rfqType,
+               c2.CODE_NAME AS rfqTypeNm,
+               h.PROGRESS_CD AS progressCd,
+               c1.CODE_NAME AS progressNm,
+               h.CTRL_USER_ID AS ctrlUserId,
+               u.USER_NM AS ctrlUserNm,
+               h.REG_DATE AS regDate,
+               v.VENDOR_CD AS vendorCd,
+               vn.VENDOR_NM AS vendorNm,
+               v.PROGRESS_CD AS vnProgressCd,
+               c3.CODE_NAME AS vnProgressNm,
+               v.SEND_DATE AS sendDate,
+               v.SUBMIT_DATE AS submitDate,
+               v.TOTAL_AMT AS totalAmt,
+               v.SELECT_YN AS selectYn,
+               v.SELECT_RMK AS rmk,
+               h.SELECT_DATE AS selectDate
+        FROM RFQHD h
+        JOIN RFQVN v
+            ON h.RFQ_NUM = v.RFQ_NUM
+            AND v.DEL_FLAG = 'N'
+        JOIN VNGL vn
+            ON v.VENDOR_CD = vn.VENDOR_CD
+        LEFT JOIN CODD c1
+            ON c1.CODE_GROUP = 'PROGRESS_CD'
+            AND h.PROGRESS_CD = c1.CODE
+            AND c1.USE_YN = 'Y'
+        LEFT JOIN CODD c2
+            ON c2.CODE_GROUP = 'REQ_TYPE'
+            AND h.RFQ_TYPE = c2.CODE
+            AND c2.USE_YN = 'Y'
+        LEFT JOIN CODD c3
+            ON c3.CODE_GROUP = 'PROGRESS_CD'
+            AND v.PROGRESS_CD = c3.CODE
+            AND c3.USE_YN = 'Y'
+        LEFT JOIN BY_USER u
+            ON h.CTRL_USER_ID = u.USER_ID
+        WHERE h.DEL_FLAG = 'N' AND h.PROGRESS_CD IN ('M', 'G', 'J')
+        <if test="rfqNum != null and rfqNum != ''">
+          AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNum}, '%')
+        </if>
+        <if test="rfqSubject != null and rfqSubject != ''">
+          AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqSubject}, '%')
+        </if>
         <if test="fromDate != null and fromDate != ''">
-        AND h.REG_DATE &gt;= #{fromDate} </if>
-        <if test="toDate != null and toDate != ''"> AND
-        h.REG_DATE &lt;= #{toDate} </if>
-        <if test="rfqType != null and rfqType != ''"> AND h.RFQ_TYPE
-        = #{rfqType} </if>
-        <if test="progressCd != null and progressCd != ''"> AND h.PROGRESS_CD =
-        #{progressCd} </if>
-        <if test="ctrlUserNm != null and ctrlUserNm != ''"> AND u.USER_NM LIKE
-        CONCAT('%', #{ctrlUserNm}, '%') </if> ORDER BY h.REG_DATE DESC, h.RFQ_NUM DESC, v.VENDOR_CD
-        ASC </select>
+            AND h.REG_DATE &gt;= #{fromDate}
+        </if>
+        <if test="regDate != null and regDate != ''">
+            AND h.REG_DATE &gt;= CONCAT(#{regDate}, ' 00:00:00')
+            AND h.REG_DATE &lt;= CONCAT(#{regDate}, ' 23:59:59')
+        </if>
+        <if test="selectDate != null and selectDate != ''">
+            AND h.SELECT_DATE &gt;= CONCAT(#{selectDate}, ' 00:00:00')
+            AND h.SELECT_DATE &lt;= CONCAT(#{selectDate}, ' 23:59:59')
+        </if>
+        <if test="rfqType != null and rfqType != ''">
+          AND h.RFQ_TYPE = #{rfqType}
+        </if>
+        <if test="progressCd != null and progressCd != ''">AND h.PROGRESS_CD =
+            #{progressCd}
+        </if>
+        <if test="ctrlUserNm != null and ctrlUserNm != ''">AND u.USER_NM LIKE
+            CONCAT('%', #{ctrlUserNm}, '%')
+        </if>
+        ORDER BY h.REG_DATE DESC, h.RFQ_NUM DESC, v.VENDOR_CD
+        ASC
+        </select>
 
     <update id="updateRfqStatusToOpened"> UPDATE RFQHD SET PROGRESS_CD = 'G', MOD_DATE = NOW(),
         MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD = 'M' AND DEL_FLAG =
@@ -44,7 +88,7 @@
         #{rfqNum} AND DEL_FLAG = 'N' </update>
 
     <update id="updateRfqVendorSelection"> UPDATE RFQVN SET SELECT_YN = 'Y', PROGRESS_CD = 'J',
-        SELECT_RMK = #{selectRmk}, MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM =
+        SELECT_RMK = #{selectRmk}, MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId}, SELECT_DATE = NOW() WHERE RFQ_NUM =
         #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
 
     <update id="updateRfqVendorItemSelection"> UPDATE RFQVNDT SET SELECT_YN = 'Y', MOD_DATE = NOW(),

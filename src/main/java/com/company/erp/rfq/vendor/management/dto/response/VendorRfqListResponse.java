@@ -18,8 +18,8 @@ public class VendorRfqListResponse {
 
     private String rfqNum; // 견적번호
     private String rfqSubject; // 견적명
-    private LocalDateTime rfqDate; // 견적일자
-    private LocalDateTime reqCloseDate; // 마감일
+    private String rfqDate; // 견적일자
+    private String reqCloseDate; // 마감일
     private String progressCd; // RFQ 전체 상태 (RFQHD)
     private String progressName; // RFQ 전체 상태명
     private String vendorProgressCd; // 협력사별 상태 (RFQVN)

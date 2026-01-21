@@ -144,8 +144,7 @@ export interface RfqSelectionSearchRequest {
 export interface RfqProgressSearchRequest {
     rfqNum?: string;
     rfqSubject?: string;
-    fromDate?: string;
-    toDate?: string;
+    regDate?: string;
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
@@ -304,7 +303,7 @@ export const rfqApi = {
     /**
      * 협력사 RFQ 목록 조회
      */
-    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; startDate?: string; endDate?: string }) =>
+    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; reqCloseDate?: string }) =>
         api.get<any[]>('/v1/vendor/rfqs', { ...params }),
 
     /**
