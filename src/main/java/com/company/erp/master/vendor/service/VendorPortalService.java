@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Service
 public class VendorPortalService {
@@ -52,7 +53,7 @@ public class VendorPortalService {
 
         // 1-2. 수정자 id 및 날짜 입력
         vendorRegisterDto.setCreatedBy(loginId);
-        vendorRegisterDto.setCreatedAt(LocalDate.now());
+        vendorRegisterDto.setCreatedAt(LocalDateTime.now());
 
         // 1-3. 상태 설정
         vendorRegisterDto.setStatus("C");
