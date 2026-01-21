@@ -180,14 +180,9 @@ export default function RfqProgressPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNum: e.target.value }))}
         />
         <DatePicker
-          label="견적일자 시작"
-          value={searchParams.fromDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, fromDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일자 종료"
-          value={searchParams.toDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, toDate: e.target.value }))}
+          label="등록일자"
+          value={searchParams.regDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, regDate: e.target.value }))}
         />
         <Input
           label="견적명"
@@ -215,6 +210,8 @@ export default function RfqProgressPage() {
             { value: 'RFQS', label: '요청중' },
             { value: 'RFQC', label: '제출완료' },
             { value: 'M', label: '마감' },
+            { value: 'G', label: '개찰' },
+            { value: 'J', label: '선정' },
           ]}
         />
         <Input
@@ -320,7 +317,7 @@ export default function RfqProgressPage() {
                               <table className="w-full">
                                 <thead className="bg-stone-100/50">
                                   <tr>
-                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-left w-1/4">협력사명</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">협력사명</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">코드</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">상태</th>
                                     <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">전송일</th>
@@ -330,7 +327,7 @@ export default function RfqProgressPage() {
                                 <tbody className="divide-y divide-stone-100">
                                   {row.vendors.map(vendor => (
                                     <tr key={vendor.vendorCd} className="hover:bg-stone-50/50">
-                                      <td className="px-4 py-2 text-sm text-stone-700 font-medium">{vendor.vendorNm}</td>
+                                      <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">{vendor.vendorNm}</td>
                                       <td className="px-4 py-2 text-sm text-stone-500 text-center">{vendor.vendorCd}</td>
                                       <td className="px-4 py-2 text-center text-xs">
                                         {/* 협력사 상태: RFQS(요청전/발송), RFQT(접수), RFQC(제출완료) 등 */}
