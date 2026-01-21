@@ -42,13 +42,21 @@ public class FileService {
      */
     @Transactional
     public FileUploadResponse upload(MultipartFile file, String refType, String refNo, String vendorCd, SessionUser ses) {
+
+        // 회원가입(OV) 업로드만 ses = null 허용
+        boolean isSignupUpload = "OV".equalsIgnoreCase(refType);
+
         // 기본 검증
-        if (ses == null) throw new FileException("세션 정보가 없습니다.");
         if (file == null || file.isEmpty()) throw new FileException("업로드할 파일이 비어있습니다.");
         if (isBlank(refType) || isBlank(refNo)) throw new FileException("참조문서유형/참조문서번호는 필수입니다.");
-
-        // 권한/대상 검증: 협력사는 vendorCd가 필수, 세션 vendorCd와 일치해야 함
-        assertUploadVendor(ses, vendorCd);
+        if (ses == null) {
+            if (!isSignupUpload) throw new FileException("세션 정보가 없습니다.");
+            // 가입 첨부는 세션이 없으니 vendorCd를 파라미터로 강제해서 저장
+            if (isBlank(vendorCd)) throw new FileException("OV 업로드는 vendorCd가 필수입니다.");
+        } else {
+            // 기존 정책 유지(권한/대상 검증): 협력사(V)는 vendorCd 필수 + 세션 vendorCd와 일치
+            assertUploadVendor(ses, vendorCd);
+        }
 
         // 용량 체크
         long max = props.getMaxSizeBytes();
@@ -92,7 +100,8 @@ public class FileService {
         entity.setRefType(refType);
         entity.setRefNo(refNo);
 
-        entity.setRegUserId(ses.getUserId());
+        entity.setRegUserId(ses != null ? ses.getUserId() : "ANON");
+//        entity.setRegUserId(ses.getUserId());
         entity.setDelFlag("N");
 
         entity.setOriginName(originName);
