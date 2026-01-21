@@ -18,10 +18,11 @@ public class VendorUpdateDto {
 
     private LocalDateTime modifiedAt;
     private String modifiedBy;
-
+    private String vendorCode;
     private String vendorName;
     private String vendorNameEng;
     private String businessType; // 사업 형태
+    private String businessNo;
     private String ceoName;
     private String zipCode;
     private String address;
@@ -30,7 +31,7 @@ public class VendorUpdateDto {
     private String fax;
     private String industry; // 업종
     private String remark;
-
+    private String email;
     private LocalDateTime signDate;
 
     // 반려 시

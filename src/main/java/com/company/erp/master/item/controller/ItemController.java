@@ -37,10 +37,13 @@ public class ItemController {
     @GetMapping
     // ModelAttribute - get에서 사용 (url 파라미터 자동으로 mapping)
     public ResponseEntity<ItemResponseDto<ItemDetailDto>> getItemList(
-            @ModelAttribute ItemSearchDto searchDto){
+            @ModelAttribute ItemSearchDto searchDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+
+        String loginId = loginUser.getUserId();
         try{
             // 검색 조건이 많을수록 dto가 유리
-            ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto);
+            ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto, loginId);
 
             return ResponseEntity.ok().body(items);
         } catch (Exception e) {

@@ -53,63 +53,21 @@ public class VendorUserService {
             switch(req){
 
                 case "I": // 5-1. 등록
-
-                    // 재가입 여부 확인
-                    int historyCount = vendorUserMapper.countVendorUserHistoryByUserId(vendorUser.getUserId());
-                    if(historyCount > 0){
-
-                        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
-
-                        vendorUserMapper.updateVN_USERByUserId(updateDto);
-                    } else{
-                        dto.setCreatedAt(now);
-                        dto.setCreatedBy(loginId);
-                        dto.setModifiedAt(LocalDateTime.now());
-                        dto.setModifiedBy(loginId);
-                        dto.setSignDate(LocalDateTime.now());
-                        dto.setPassword(vendorUser.getPassword());
-                        dto.setRole("VENDOR");
-
-                        vendorUserMapper.insertUserVN_USER(dto);
-                    }
-                    // 6) 대기 테이블 업데이트
-
-                        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
-
-                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    processInsert(vendorUser, loginId, now, dto);
                     break;
+
                 case "D": // 5-2. 삭제
-                    // 1) 마스터 / 대기 테이블 업데이트
-                    setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "R");
-
-                    vendorUserMapper.updateVN_USERByUserId(updateDto);
-                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    deleteProcess(vendorUser, loginId, now);
                     break;
+
                 case "U": // 5-3. 수정
-                    // 1) 마스터 테이블 업데이트
-                    setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
-
-                    updateDto.setUserName(vendorUser.getUserName());
-                    updateDto.setEmail(vendorUser.getEmail());
-                    updateDto.setPhone(vendorUser.getPhone());
-                    
-                    // 프론트에서는 비밀번호 값을 보내지 않음
-                    // 대기 테이블에 변경된 비밀번호가 존재할 시에만 업데이트
-                    // 비밀번호 변경 미입력 시 대기 테이블에 null로 저장됨
-                    if(vendorUser.getPassword() != null && !vendorUser.getPassword().isEmpty()){
-                        updateDto.setPassword(vendorUser.getPassword());
-                    }
-
-                    vendorUserMapper.updateVN_USERByUserId(updateDto);
-
-                    // 2) 대기 테이블 업데이트
-                    vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+                    updateProcess(vendorUser, loginId, now);
                     break;
             }
         }
     }
 
-    // updateDto 공통 필드 세팅
+    // 1-1. updateDto 공통 필드 세팅
     private void setCommonFieldsUpdateDto(
             VendorUserUpdateDto dto,
             String loginId,
@@ -125,6 +83,83 @@ public class VendorUserService {
         dto.setStatus(status);
         dto.setUserId(vendorUser.getUserId());
         dto.setDelFlag("N");
+    }
+
+    // 1-2. insert
+    private void processInsert(
+            VendorUserListDto vendorUser,
+            String loginId,
+            LocalDateTime now,
+            VendorUserRegisterDto dto
+    ){
+        VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+        // 재가입 여부 확인
+        int historyCount = vendorUserMapper.countVendorUserHistoryByUserId(vendorUser.getUserId());
+        String askUserNum = vendorUser.getAskUserNum();
+        if(historyCount > 0){
+            setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+            vendorUserMapper.updateVN_USERByUserId(updateDto);
+        } else{
+            dto.setCreatedAt(now);
+            dto.setCreatedBy(loginId);
+            dto.setSignDate(now);
+            dto.setPassword(vendorUser.getPassword());
+            dto.setRole("VENDOR");
+//            int vendorRoleCount = vendorUserMapper.countVendorRoleByVendorCode(vendorUser.getVendorCode());
+//            String role = vendorRoleCount > 0 ? "USER" : "VENDOR";
+//            dto.setRole(role);
+
+            vendorUserMapper.insertUserVN_USER(dto);
+        }
+        // 6) 대기 테이블 업데이트
+
+        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+        vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+    }
+
+    // 1-3. delete
+    private void deleteProcess(
+            VendorUserListDto vendorUser,
+            String loginId,
+            LocalDateTime now
+    ){
+        VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+        String askUserNum = vendorUser.getAskUserNum();
+        // 1) 마스터 / 대기 테이블 업데이트
+        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "R");
+
+        vendorUserMapper.updateVN_USERByUserId(updateDto);
+        vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
+    }
+
+    // 1-4. update
+    private void updateProcess(
+            VendorUserListDto vendorUser,
+            String loginId,
+            LocalDateTime now
+    ){
+        VendorUserUpdateDto updateDto = new VendorUserUpdateDto();
+        String askUserNum = vendorUser.getAskUserNum();
+        // 1) 마스터 테이블 업데이트
+        setCommonFieldsUpdateDto(updateDto,loginId,askUserNum,vendorUser,now, "A");
+
+        updateDto.setUserName(vendorUser.getUserName());
+        updateDto.setEmail(vendorUser.getEmail());
+        updateDto.setPhone(vendorUser.getPhone());
+
+        // 프론트에서는 비밀번호 값을 보내지 않음
+        // 대기 테이블에 변경된 비밀번호가 존재할 시에만 업데이트
+        // 비밀번호 변경 미입력 시 대기 테이블에 null로 저장됨
+        if(vendorUser.getPassword() != null && !vendorUser.getPassword().isEmpty()){
+            updateDto.setPassword(vendorUser.getPassword());
+        }
+
+        vendorUserMapper.updateVN_USERByUserId(updateDto);
+
+        // 2) 대기 테이블 업데이트
+        vendorUserMapper.updateVNCH_USByAskUserNum(updateDto);
     }
 
     // 2. 구매사에서 반려

@@ -19,7 +19,6 @@ public class VendorUserUpdateDto {
     private String phone;
     private String userName;
     private String userNameEng;
-
 }
 
 // VNCH_US //

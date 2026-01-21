@@ -21,7 +21,7 @@ public class ItemService {
     DocNumService docNumService;
 
     /* 조회 */
-    public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto) {
+    public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto, String loginId) {
 
         // 1. 날짜 형식 변환
         if(searchDto.getDate() != null){
@@ -34,7 +34,6 @@ public class ItemService {
         int totalCount = itemMapper.countItemList(searchDto);
         // 3. 총 페이지 계산
         int totalPage = (int)Math.ceil((double) totalCount / searchDto.getPageSize());
-
         // 4. Dto 반환
         return new ItemResponseDto<ItemDetailDto>(
                 itemMapper.selectItemList(searchDto),

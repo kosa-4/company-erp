@@ -50,7 +50,7 @@ public class SignUpService {
         // 2. 변수 설정
 
         // 2-1. 요청 코드 생성
-        String askNum = docNumService.generateDocNumStr(DocKey.RQ);
+        String askNum = docNumService.generateDocNumStr(DocKey.OV);
         signUpDto.setAskNo(askNum);
         signUpDto.setAskUserNo(askNum);
 

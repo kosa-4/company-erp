@@ -3,111 +3,12 @@
 
 <mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
     <!--협력사 조회-->
-<!--    <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto"> &lt;!&ndash;자동으로 list 반환&ndash;&gt;-->
-<!--        SELECT-->
-<!--            &lt;!&ndash;위 테이블 우선 조회&ndash;&gt;-->
-<!--            NULL AS askNum,-->
-<!--            VENDOR_CD AS vendorCode,-->
-<!--            VENDOR_NM AS vendorName,-->
-<!--            VENDOR_ENG_NM AS vendorNameEng,-->
-<!--            REG_TYPE AS businessType,-->
-<!--            CEO_USER_NM AS ceoName,-->
-<!--            ADDR AS address,-->
-<!--            INDUSTRY_TYPE AS industry,-->
-<!--            USE_FLAG AS useYn,-->
-<!--            PROGRESS_CD AS status,-->
-<!--            REG_DATE AS createdAt,-->
-<!--            IRS_NO AS businessNo,-->
-<!--            TEL_NO AS tel,-->
-<!--            FAX_NO AS fax,-->
-<!--            ZIP_CD AS zipCode,-->
-<!--            ADDR_DT AS addressDetail,-->
-<!--            FOUNDATION_DATE AS foundationDate,-->
-<!--            RMK AS remark-->
-<!--        FROM-->
-<!--            VNGL-->
-<!--        <where>-->
-<!--            DEL_FLAG = 'N'-->
-<!--            <if test="vendorCode != null and vendorCode != ''">-->
-<!--                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')-->
-<!--            </if>-->
-<!--            <if test="vendorName != null and vendorName != ''">-->
-<!--                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
-<!--            </if>-->
-<!--            <if test="businessType != null and businessType != ''">-->
-<!--                AND REG_TYPE = #{businessType}-->
-<!--            </if>-->
-<!--            <if test="useYn != null and useYn != ''">-->
-<!--                AND USE_FLAG = #{useYn}-->
-<!--            </if>-->
-<!--            <if test="industry != null and industry != ''">-->
-<!--                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')-->
-<!--            </if>-->
-
-<!--            AND-->
-<!--                PROGRESS_CD IN ('A')-->
-<!--            AND-->
-<!--                VENDOR_CD NOT IN (-->
-<!--                    SELECT VENDOR_CD FROM VNCH-->
-<!--                    WHERE PROGRESS_CD IN ('N', 'C', 'R')-->
-<!--                    AND DEL_FLAG = 'N'-->
-<!--                )-->
-<!--        </where>-->
-
-<!--        UNION ALL-->
-
-<!--        SELECT-->
-<!--            ASK_NUM AS askNum,-->
-<!--            VENDOR_CD AS vendorCode,-->
-<!--            VENDOR_NM AS vendorName,-->
-<!--            VENDOR_ENG_NM AS vendorNameEng,-->
-<!--            REG_TYPE AS businessType,-->
-<!--            CEO_USER_NM AS ceoName,-->
-<!--            ADDR AS address,-->
-<!--            INDUSTRY_TYPE AS industry,-->
-<!--            NULL AS useYn,-->
-<!--            PROGRESS_CD AS status,-->
-<!--            REG_DATE AS createdAt,-->
-<!--            IRS_NO AS businessNo,-->
-<!--            TEL_NO AS tel,-->
-<!--            FAX_NO AS fax,-->
-<!--            ZIP_CD AS zipCode,-->
-<!--            ADDR_DT AS addressDetail,-->
-<!--            FOUNDATION_DATE AS foundationDate,-->
-<!--            RMK AS remark-->
-<!--        FROM-->
-<!--            VNCH-->
-<!--        <where>-->
-<!--            DEL_FLAG = 'N'-->
-<!--            <if test="vendorCode != null and vendorCode != ''">-->
-<!--                AND VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')-->
-<!--            </if>-->
-<!--            <if test="vendorName != null and vendorName != ''">-->
-<!--                AND VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
-<!--            </if>-->
-<!--            <if test="businessType != null and businessType != ''">-->
-<!--                AND REG_TYPE = #{businessType}-->
-<!--            </if>-->
-<!--            <if test="industry != null and industry != ''">-->
-<!--                AND INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')-->
-<!--            </if>-->
-<!--            AND PROGRESS_CD IN ('C', 'N', 'R')-->
-<!--            AND ASK_NUM IN (-->
-<!--                    SELECT MAX(ASK_NUM)-->
-<!--                    FROM VNCH-->
-<!--                    WHERE DEL_FLAG = 'N'-->
-<!--                    GROUP BY VENDOR_CD-->
-<!--                )-->
-<!--        </where>-->
-
-<!--        ORDER BY-->
-<!--            createdAt DESC-->
-<!--    </select>-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto">
         SELECT
             CH.ASK_NUM AS askNum,
             COALESCE(CH.PROGRESS_CD, 'A') AS status,
             CH.REG_DATE AS createdAt,
+            CH.REJECT_RMK AS rejectReason,
             GL.VENDOR_CD AS vendorCode,
             GL.VENDOR_NM AS vendorName,
             GL.VENDOR_ENG_NM AS vendorNameEng,
@@ -130,6 +31,7 @@
                 PROGRESS_CD,
                 REG_DATE,
                 VENDOR_CD,
+                REJECT_RMK,
                 ROW_NUMBER() OVER (
                     PARTITION BY VENDOR_CD
                     ORDER BY REG_DATE DESC, ASK_NUM DESC
@@ -382,66 +284,96 @@
             ASK_NUM=#{askNum}
     </update>
 
+    <!--대기 상태 여부 확인-->
+    <select id="countPending" parameterType="String" resultType="int">
+        <!--해당 사용자(VENDOR)의 VNCH 이력 중 최신 1건이 상태('C','N')인 경우 1 반환 아니면 0-->
+        SELECT COUNT(*) FROM (
+            SELECT
+                V.PROGRESS_CD AS status,
+                ROW_NUMBER() OVER (
+                PARTITION BY V.VENDOR_CD
+                ORDER BY V.REG_DATE DESC, V.ASK_NUM DESC
+                ) AS rn
+            FROM
+                VNCH V
+            INNER JOIN
+                VN_USER U
+            ON
+                V.VENDOR_CD = U.VENDOR_CD
+            WHERE
+                U.USER_ID = #{loginId}
+            AND
+                V.DEL_FLAG = 'N'
+            ) T
+        WHERE T.rn =  1
+        AND T.status IN ('C', 'N')
+    </select>
+
     <!--로그인한 id로 대기 테이블 조회-->
     <select id="selectVendorVNCHByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
-
-        SELECT
-            V.VENDOR_CD AS vendorCode,
-            VENDOR_NM AS vendorName,
-            VENDOR_ENG_NM AS vendorNameEng,
-            REG_TYPE AS businessType,
-            IRS_NO AS businessNo,
-            CEO_USER_NM AS ceoName,
-            INDUSTRY_TYPE AS industry,
-            ZIP_CD AS zipCode,
-            ADDR AS address,
-            ADDR_DT AS addressDetail,
-            TEL_NO AS tel,
-            V.PROGRESS_CD AS status,
-            RMK AS remark
+        SELECT * FROM (
+            SELECT
+                V.VENDOR_CD AS vendorCode,
+                V.VENDOR_NM AS vendorName,
+                V.VENDOR_ENG_NM AS vendorNameEng,
+                V.REG_TYPE AS businessType,
+                V.IRS_NO AS businessNo,
+                V.CEO_USER_NM AS ceoName,
+                V.INDUSTRY_TYPE AS industry,
+                V.ZIP_CD AS zipCode,
+                V.ADDR AS address,
+                V.ADDR_DT AS addressDetail,
+                V.TEL_NO AS tel,
+                V.PROGRESS_CD AS status,
+                V.RMK AS remark,
+                ROW_NUMBER() OVER (
+                    PARTITION BY V.VENDOR_CD
+                    ORDER BY V.REG_DATE DESC, V.ASK_NUM DESC
+                ) AS rn
             FROM
-            VNCH V
-        INNER JOIN
-            VN_USER U <!--이미 로그인 했다는건 승인 상태라는 의미-->
-        ON
-            V.VENDOR_CD = U.VENDOR_CD
-        WHERE
-            U.USER_ID = #{loginId}
-        AND
-            V.PROGRESS_CD IN ('C', 'N')
-
+                VNCH V
+            INNER JOIN
+                VN_USER U
+            ON
+                V.VENDOR_CD = U.VENDOR_CD
+            WHERE
+                U.USER_ID = #{loginId}
+            AND
+                V.DEL_FLAG = 'N'
+            ) T
+        WHERE T.rn = 1
+        AND T.status IN ('C', 'N')
     </select>
 
     <!--로그인한 id로 마스터 테이블 조회-->
     <select id="selectVendorVNGLByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
 
         SELECT
-            V.VENDOR_CD AS vendorCode,
-            VENDOR_NM AS vendorName,
-            VENDOR_ENG_NM AS vendorNameEng,
-            REG_TYPE AS businessType,
-            IRS_NO AS businessNo,
-            CEO_USER_NM AS ceoName,
-            INDUSTRY_TYPE AS industry,
-            ZIP_CD AS zipCode,
-            ADDR AS address,
-            ADDR_DT AS addressDetail,
-            TEL_NO AS tel,
-            V.PROGRESS_CD AS status,
-            RMK AS remark
+        V.VENDOR_CD AS vendorCode,
+        VENDOR_NM AS vendorName,
+        VENDOR_ENG_NM AS vendorNameEng,
+        REG_TYPE AS businessType,
+        IRS_NO AS businessNo,
+        CEO_USER_NM AS ceoName,
+        INDUSTRY_TYPE AS industry,
+        ZIP_CD AS zipCode,
+        ADDR AS address,
+        ADDR_DT AS addressDetail,
+        TEL_NO AS tel,
+        V.PROGRESS_CD AS status,
+        RMK AS remark
         FROM
-            VNGL V
+        VNGL V
         INNER JOIN
-            VN_USER U
+        VN_USER U
         ON
-            V.VENDOR_CD = U.VENDOR_CD
+        V.VENDOR_CD = U.VENDOR_CD
         WHERE
-            U.USER_ID = #{loginId}
+        U.USER_ID = #{loginId}
         AND
-            V.PROGRESS_CD = 'A'
+        V.PROGRESS_CD = 'A'
 
     </select>
-    
     <!--사업자 번호 중복 체크-->
     <select id="existsByBusinessNo" parameterType="String" resultType="boolean">
         <!--둘 중 하나라도 0보다 크면 TRUE 반환-->
@@ -452,6 +384,30 @@
             SELECT COUNT(*) FROM VNCH WHERE IRS_NO = #{businessNo} AND PROGRESS_CD != 'R'
         <!--대기 테이블 존재 여부 확인 (반려 제외) -->
         ) > 0
+    </select>
+
+    <!--회사 코드로 정보 마스터 테이블 조회-->
+    <select id="selectVendorByVendorCode" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
+        SELECT
+        VENDOR_CD AS vendorCode,
+        VENDOR_NM AS vendorName,
+        VENDOR_ENG_NM AS vendorNameEng,
+        REG_TYPE AS businessType,
+        IRS_NO AS businessNo,
+        CEO_USER_NM AS ceoName,
+        INDUSTRY_TYPE AS industry,
+        ZIP_CD AS zipCode,
+        ADDR AS address,
+        ADDR_DT AS addressDetail,
+        TEL_NO AS tel,
+        PROGRESS_CD AS status,
+        RMK AS remark
+        FROM
+        VNCH
+        WHERE
+        VENDOR_CD = #{vendorCode}
+        ORDER BY REG_DATE DESC, ASK_NUM DESC
+        LIMIT 1
     </select>
 
     <!--회사 코드로 파일 조회-->
@@ -467,5 +423,43 @@
         ORDER BY
             REG_DATE DESC
     </select>
+
+    <!--협력사 정보 업데이트-->
+    <update id="updateVendor" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
+        UPDATE
+            VNGL
+        <set>
+            <if test="vendorName != null and vendorName != ''">
+                VENDOR_NM = #{vendorName},
+            </if>
+            <if test="vendorNameEng != null and vendorNameEng != ''">
+                VENDOR_ENG_NM = #{vendorNameEng},
+            </if>
+            <if test="ceoName != null and ceoName != ''">
+                CEO_USER_NM = #{ceoName},
+            </if>
+            <if test="tel != null and tel != ''">
+                TEL_NO = #{tel},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="zipCode != null and zipCode != ''">
+                ZIP_CD = #{zipCode},
+            </if>
+            <if test="address != null and address != ''">
+                ADDR = #{address},
+            </if>
+            <if test="remark != null and remark != ''">
+                RMK = #{remark},
+            </if>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy}
+        </set>
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </update>
 
 </mapper>

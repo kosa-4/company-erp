@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation';
 import { register } from 'module';
 import { Router } from 'lucide-react';
 import { Category } from './TreeItem';
+import { Can } from '@/auth/Can';
+import { User } from '@/types';
 
 interface ItemDetail{
   itemCode: string,
@@ -39,6 +41,7 @@ interface ItemDetail{
   createdAt: string,
   createdBy: string,
   remark: string,
+  editable: boolean
 }
 
 
@@ -48,7 +51,7 @@ export default function ItemPage() {
 
   // 1. 상태 정의
   // 1-1. 품목 목록 출력용 상태 변수
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<ItemDetail[]>([]);
   const [page, setPage] = useState("1");
   const [totalPage, setTotalPage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -148,7 +151,7 @@ export default function ItemPage() {
   }, [searchParams]); 
 
   // 5. 컬럼 정의
-  const columns: ColumnDef<Item>[] = [ // response 키와 일치 필요
+  const columns: ColumnDef<ItemDetail>[] = [ // response 키와 일치 필요
     
     {
       key: 'itemCode',
@@ -209,7 +212,7 @@ export default function ItemPage() {
   /* 품목 상세 정보 */
 
   // 1. 행 클릭 시 실행
-  const handleRowClick = async (item: Item) => {
+  const handleRowClick = async (item: ItemDetail) => {
   // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
   // onRowClick?: (row: T) => void; 함수에 담아 실행
     try{
@@ -416,6 +419,9 @@ export default function ItemPage() {
     setSelectedPath(reversePath);
   }
 
+  // 권한
+
+
   return (
     <div>
       <PageHeader 
@@ -481,14 +487,15 @@ export default function ItemPage() {
         title="품목 목록"
         padding={false}
         actions={
-          <Button variant="primary" onClick={() =>  {
-              setIsCreateModalOpen(true); 
-            }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            등록
-          </Button>
+            <Can roles={['ADMIN','BUYER']}>
+              <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                등록
+              </Button>
+            </Can>
+          
         }
       >
         {/* items 요소 출력 */}        
@@ -511,12 +518,15 @@ export default function ItemPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            <Button variant="primary" onClick={updateItem}>수정</Button>
+            <Can roles={['ADMIN', 'BUYER']}>
+              <Button variant="primary" onClick={updateItem}>수정</Button>
+            </Can>
           </>
         }
       >
         
         {selectedItem && (
+
           <form ref={saveForm}>
             <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">               

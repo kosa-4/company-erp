@@ -20,7 +20,11 @@ public interface VendorUserMapper {
     int countVendorUsersByUserId(String userId);
     // 4. 협력사 사용자 과거 이력 조회
     int countVendorUserHistoryByUserId(String userId);
-    
+    // 5. 사용자 권한 조회
+    String selectRoleByUserId(String loginId);
+    // 6. vendor 권한 여부 조회
+    int countVendorRoleByVendorCode(String vendorCode);
+
     /* 저장 */
     // 1. 마스터 테이블 저장
     void insertUserVN_USER(VendorUserRegisterDto vendorUserRegisterDto);

@@ -27,6 +27,7 @@ public class VendorListDto {
     private String remark;
     private LocalDate foundationDate;
     private boolean editable;
+    private String rejectReason;
 }
 
 /*

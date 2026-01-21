@@ -29,7 +29,7 @@ interface Vendor {
   zipCode: string;
   address: string;
   addressDetail?: string;
-  phone?: string;
+  tel?: string;
   fax?: string;
   email: string;
   businessCategory?: string;
@@ -40,6 +40,7 @@ interface Vendor {
   remark?: string;
   createdAt: string;
   createdBy: string;
+  rejectReason: string;
 }
 
 interface AttFile {
@@ -161,14 +162,80 @@ export default function VendorPage() {
   };
 
   const latestVendorCodeRef = useRef<string | null>(null);
+  const [originalVendor, setOriginalVendor] = useState<Vendor | null>(null);
 
-  const handleRowClick = (vendor: Vendor) => {
-    setSelectedVendor(vendor);
-    latestVendorCodeRef.current = vendor.vendorCode;
-    setAttachedFiles([]); // 이전 데이터 초기화
-    fetchVendorFiles(vendor.vendorCode); // 파일 목록 조회 호출
-    setIsDetailModalOpen(true);
-  };
+  const handleRowClick = async (vendor: Vendor) => {
+  // 1. 클릭한 행 데이터(VNCH 데이터가 포함된 목록 데이터)를 즉시 세팅
+  // SQL에서 COALESCE로 가져온 '수정 후' 값이 여기에 담겨 있습니다.
+  setSelectedVendor(vendor); 
+  setOriginalVendor(null); // 초기화
+  setAttachedFiles([]);
+  latestVendorCodeRef.current = vendor.vendorCode;
+
+  // 2. 상태가 'C'(변경 대기)일 때만 마스터 테이블(VNGL)의 '수정 전' 데이터를 가져옴
+  if (vendor.status === 'C') {
+    try {
+      // 마스터 데이터를 가져오는 전용 경로
+      const response = await fetch(`/api/v1/vendors/${vendor.vendorCode}`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // 백엔드에서 온 순수 마스터(VNGL) 데이터만 세팅
+        setOriginalVendor(result.data); 
+      }
+    } catch (error) {
+      console.error("마스터 데이터 로드 실패:", error);
+    }
+  }
+
+  // 3. 파일 목록 및 모달 오픈
+  fetchVendorFiles(vendor.vendorCode);
+  setIsDetailModalOpen(true);
+};
+
+  const renderDiffField = (label: string, currentValue: any, originalValue: any, isTextArea = false) => {
+  // 1. 값 비교를 위해 공백 제거 및 문자열화
+  const curr = String(currentValue ?? '').trim();
+  const orig = String(originalValue ?? '').trim();
+
+  // 2. 변경 여부 판단 (원본이 있고 값이 다를 때만 강조)
+  const isChanged = originalVendor && curr !== orig;
+
+  return (
+    <div className={isTextArea ? "col-span-3" : ""}>
+      <div className="flex flex-col gap-1">
+        {/* [메인 박스] 여기에는 반드시 '수정 후' 데이터(selectedVendor)가 나와야 함 */}
+        {isTextArea ? (
+          <Textarea 
+            label={label} 
+            value={currentValue || ''} // selectedVendor의 값이 여기 들어감
+            readOnly 
+            rows={3}
+            className={isChanged ? "border-amber-500 bg-amber-50 ring-1 ring-amber-500/30" : "bg-gray-50"} 
+          />
+        ) : (
+          <Input 
+            label={label} 
+            value={currentValue || '-'} // selectedVendor의 값이 여기 들어감
+            readOnly 
+            className={isChanged ? "border-amber-500 bg-amber-50 ring-1 ring-amber-500/30" : "bg-gray-50"} 
+          />
+        )}
+        
+        {/* [하단 표시] 변경되었을 때만 '수정 전' 마스터 데이터를 아래에 표시 */}
+        {isChanged && (
+          <div className="flex items-start gap-1 px-1 mt-0.5 bg-red-50 py-1 rounded">
+            <span className="text-[11px] text-red-600 font-bold shrink-0">[수정 전(기존)]</span>
+            <span className="text-[11px] text-gray-500 line-through break-all font-medium">
+              {originalValue || '(데이터 없음)'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
@@ -402,11 +469,18 @@ export default function VendorPage() {
   };
 
   /* 반려 */
-  const rejectVendor = async (targets: Vendor[] = selectedVendors) => {
-    if (targets.length === 0) return alert("반려할 업체를 선택해주세요.");
+  // 1. 반려 사유 입력 모달 상태
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
-    // 1. 상태 검증: 이미 승인(A)되었거나 이미 반려(R)된 업체가 섞여 있는지 체크
-    const invalidVendor = targets.find(v => v.status === 'A' || v.status === 'R');
+  const handleRejectClick = () => {
+    // 1. 선택된 업체가 있는지 확인
+    if (selectedVendors.length === 0) {
+      return alert("반려할 업체를 선택해주세요.");
+    }
+
+    // 2. 상태 검증: 승인(A) 또는 반려(R)인 업체가 포함되어 있는지 확인
+    const invalidVendor = selectedVendors.find(v => v.status === 'A' || v.status === 'R');
 
     if (invalidVendor) {
       const statusName = invalidVendor.status === 'A' ? '이미 승인된' : '이미 반려된';
@@ -417,34 +491,57 @@ export default function VendorPage() {
       return;
     }
 
-    // 2. 모든 검증 통과 시 진행
-    if (!confirm(`${targets.length}건을 반려하시겠습니까?`)) return;
-    try{
-      // 1. API 요청
-      const response = await fetch(`/api/v1/vendors/reject`, {
-        method: 'POST',
-        headers:{
-          'Content-Type':'application/json',
-        },
-        body:JSON.stringify(targets),
-      });
-      if(!response.ok){
-        throw new Error('협력업체 반려에 실패했습니다.');
-      } 
-
-      // 2. 승인 성공 알림
-      alert('선택한 협력업체가 반려되었습니다.');
-
-      // 3. 성공했을 때만 목록 최신화 및 선택 초기화
-      fetchVendors(); // 목록 최신화
-      setSelectedVendors([]); // 승인이 끝났으니 체크박스 선택 해제
-
-    } catch(error){
-      // 3. 오류 처리
-      console.error("협력업체 반려 중 오류 발생:", error);
-      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
-    }; 
+    // 3. 검증 통과 시: 입력 사유 초기화 후 모달 열기
+    setRejectReason('');
+    setIsRejectModalOpen(true);
+  };
+  
+  /* 반려 확정 실행 함수 */
+const rejectVendor = async (reason: string, targets: Vendor[] = selectedVendors) => {
+  // 1. 사유 입력 여부 최종 체크
+  if (!reason.trim()) {
+    return alert("반려 사유를 입력해주세요.");
   }
+  const updatedTargets = selectedVendors.map(v => ({
+    ...v,
+    rejectRemark: rejectReason, // 변수에 담긴 텍스트를 그대로 전달
+    status: 'R'
+  }));
+
+  // 2. 진행 확인
+  if (!confirm(`선택한 ${targets.length}건을 정말 반려하시겠습니까?`)) return;
+
+  try {
+    // 1. API 요청 (사유와 대상 목록을 같이 전송)
+    const response = await fetch(`/api/v1/vendors/reject`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // 서버에서 받기 편하도록 사유와 대상을 하나의 객체로 묶음
+      body: JSON.stringify(updatedTargets),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '협력업체 반려에 실패했습니다.');
+    }
+
+    // 2. 처리 성공 시 알림 및 상태 초기화
+    alert('선택한 협력업체가 반려되었습니다.');
+
+    // 3. 후속 작업
+    setIsRejectModalOpen(false); // 반려 모달 닫기
+    setRejectReason('');        // 입력값 초기화
+    setSelectedVendors([]);     // 체크박스 선택 해제
+    fetchVendors();            // 목록 최신화
+
+  } catch (error: any) {
+    // 4. 오류 처리
+    console.error("협력업체 반려 중 오류 발생:", error);
+    alert(error.message || '네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+  }
+};
 
   /* 파일 첨부 */
  
@@ -557,6 +654,72 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       alert("파일 다운로드 중 오류가 발생했습니다.");
     }
   };
+  /* 수정 */
+  // 체크 후 수정 버튼 클릭
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editVendorData, setEditVendorData] = useState<Vendor | null>(null);
+  const handleEditVendor = () => {
+    // 1. 한 건 선택 여부 체크
+    if (selectedVendors.length !== 1) {
+      return alert("수정은 한 건만 선택해야 합니다.");
+    }
+
+    const vendor = selectedVendors[0];
+
+    // 2. 상태 체크: 승인(A) 또는 반려(R) 상태일 때만 수정 가능
+    // (승인된 업체의 정보를 변경하거나, 반려된 업체를 다시 보완해서 보낼 때)
+    if (vendor.status !== 'A' && vendor.status !== 'R') {
+      return alert("승인(A) 또는 반려(R) 상태인 업체만 수정할 수 있습니다.");
+    }
+
+    // 3. 데이터 세팅 및 모달 오픈
+    setEditVendorData({ ...vendor }); // 원본 데이터 복사
+    setIsEditModalOpen(true);
+  };
+  /* 협력사 정보 수정 요청 (변경/재신청) */
+  const updateVendor = async () => {
+    // 1. 수정 데이터 존재 여부 확인
+    if (!editVendorData) return;
+
+    // 2. 필수값 체크 (예: 업체명, 대표자명 등)
+    if (!editVendorData.vendorName.trim()) return alert("협력사명은 필수입니다.");
+    
+    if (!confirm("수정된 내용으로 승인(변경) 요청을 하시겠습니까?")) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/v1/vendors/update", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editVendorData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || '수정 요청에 실패했습니다.');
+      }
+
+      // 3. 파일이 새로 추가된 경우 (수정 시에도 파일 업로드 로직 재사용)
+      if (selectedFiles.length > 0) {
+        await uploadFiles(editVendorData.vendorCode);
+      }
+
+      alert(result.message || '변경 요청이 완료되었습니다.');
+      
+      // 4. 후속 작업
+      setIsEditModalOpen(false); // 수정 모달 닫기
+      setSelectedFiles([]);      // 선택 파일 초기화
+      setSelectedVendors([]);    // 목록 선택 해제
+      fetchVendors();           // 목록 최신화
+
+    } catch (error: any) {
+      console.error("수정 중 오류 발생:", error);
+      alert(error.message || '저장 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -621,8 +784,11 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="danger" onClick={() => selectedVendors.length > 0 && rejectVendor(selectedVendors)}>반려</Button>
+            <Button variant="danger" onClick={() => selectedVendors.length > 0 && handleRejectClick()}>반려</Button>
             <Button variant="success" onClick={() => selectedVendors.length > 0 && approveVendor(selectedVendors)}>승인</Button>
+            <Button variant="secondary" onClick={handleEditVendor} disabled={selectedVendors.length !== 1}>
+              수정
+            </Button>
             <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -655,130 +821,202 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title="협력업체 상세 정보"
+        title={selectedVendor?.status === 'C' ? "정보 변경 대조 확인" : "협력업체 상세 정보"}
         size="xl"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            {selectedVendor?.status === 'A' && (
-              <Button variant="primary">수정</Button>
-            )}
-            {/* {(selectedVendor?.status === 'N' || selectedVendor?.status === 'C') && (
-              <>
-                <Button variant="danger" onClick={rejectVendor}>반려</Button>
-                <Button variant="success" onClick={approveVendor}>승인</Button>
-              </>
-            )} */}
-          </>
-        }
+        footer={<Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>}
       >
         {selectedVendor && (
           <div className="space-y-6">
-            {/* 상단 헤더: 업체명 및 상태 */}
+            {/* 헤더 부분 */}
             <div className="flex items-center justify-between pb-4 border-b">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-gray-800">{selectedVendor.vendorName}</h3>
                 {getStatusBadge(selectedVendor.status)}
               </div>
-
             </div>
-
-            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
-              {/* 기본 정보 */}
-              <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-gray-50" />
-              <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
-              <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly />
-              
-              <Select
-                disabled
-                label="사업형태"
-                value={selectedVendor.businessType}
-                options={[
-                  { value: 'CORP', label: '법인' },
-                  { value: 'INDIVIDUAL', label: '개인' },
-                ]}
-              />
-              <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
-              <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
-
-              {/* 연락처 정보 */}
-              <Input label="전화번호" value={selectedVendor.phone || '-'} readOnly />
-              <Input label="팩스번호" value={selectedVendor.fax || '-'} readOnly />
-              <Input label="이메일" value={selectedVendor.email} readOnly />
-
-              {/* 주소 정보 (전체 너비 사용) */}
-              <div className="col-span-1">
-                <Input label="우편번호" value={selectedVendor.zipCode} readOnly />
-              </div>
-              <div className="col-span-2">
-                <Input label="주소" value={selectedVendor.address} readOnly />
-              </div>
-              <div className="col-span-3">
-                <Input label="상세주소" value={selectedVendor.addressDetail || '-'} readOnly />
-              </div>
-
-              {/* 기타 정보 */}
-              <Input label="설립일자" value={selectedVendor.foundationDate || '-'} readOnly />
-              <Input label="업종" value={selectedVendor.industry || '-'} readOnly />
-              {/* <div className="col-span-1">
-                <Input 
-                  label="사용여부" 
-                  // 데이터가 'Y'일 때만 '사용', 나머지는 '미사용'
-                  value={selectedVendor.useYn?.toUpperCase() === 'Y' ? '사용' : '미사용'} 
-                  readOnly 
-                  className={selectedVendor.useYn?.toUpperCase() === 'Y' ? 'text-emerald-600' : 'text-red-500'} 
-                />
-              </div> */}
-              {selectedVendor.status === 'R' && (
-                <div className="col-span-2">
-                  <Input label="반려사유" value={selectedVendor.stopReason || '-'} readOnly className="text-red-600" />
+            {selectedVendor.status === 'R' && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-red-700">⚠️ 반려 사유 안내</span>
                 </div>
-              )}
-            </div>
-            {/* 상세 모달 내 파일 섹션 수정 */}
+                <div className="text-sm text-red-600 bg-white p-3 rounded border border-red-100">
+                  {/* DB에서 가져온 반려 사유 필드 출력 */}
+                  {selectedVendor.rejectReason || '입력된 사유가 없습니다.'}
+                </div>
+              </div>
+            )}
+
+            {/* 상태가 'C'인 경우: 모든 필드를 [기존 | 변경] 두 줄로 쪼개서 출력 */}
+            {selectedVendor.status === 'C' ? (
+              <div className="space-y-4">
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-xs font-bold text-center">
+                  왼쪽(회색)은 기존 마스터 정보이며, 오른쪽(파란색)은 변경 요청된 정보입니다.
+                </div>
+                
+                {[
+                  { label: "협력사명", curr: originalVendor?.vendorName, orig: selectedVendor.vendorName },
+                  { label: "협력사명(영문)", curr: originalVendor?.vendorNameEng, orig: selectedVendor.vendorNameEng },
+                  { label: "사업자번호", curr: originalVendor?.businessNo, orig: selectedVendor.businessNo },
+                  { label: "대표자명", curr: originalVendor?.ceoName, orig: selectedVendor.ceoName },
+                  { label: "전화번호", curr: originalVendor?.tel, orig: selectedVendor.tel },
+                  { label: "이메일", curr: originalVendor?.email, orig: selectedVendor.email },
+                ].map((field, idx) => (
+                  <div key={idx} className="grid grid-cols-2 gap-4 border-b pb-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-gray-400 font-bold">[기존 정보]</span>
+                      <Input label={field.label} value={field.orig || '데이터 없음'} readOnly className="bg-gray-100 text-gray-500" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-blue-500 font-bold">[변경 요청]</span>
+                      <Input label={field.label} value={field.curr || '-'} readOnly className="bg-blue-50 border-blue-200 font-bold" />
+                    </div>
+                  </div>
+                ))}
+
+                {/* 주소 대조 */}
+                <div className="grid grid-cols-2 gap-4 border-b pb-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-gray-400 font-bold">[기존 주소]</span>
+                    <Input value={selectedVendor.address || ''} readOnly className="bg-gray-100 text-gray-500" />
+                    <Input value={selectedVendor.addressDetail || ''} readOnly className="bg-gray-100 text-gray-500" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-blue-500 font-bold">[변경 주소]</span>
+                    <Input value={originalVendor?.address || ''} readOnly className="bg-blue-50 border-blue-200 font-bold" />
+                    <Input value={originalVendor?.addressDetail || ''} readOnly className="bg-blue-50 border-blue-200 font-bold" />
+                  </div>
+                </div>
+                
+                {/* 비고 대조 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-gray-400 font-bold">[기존 비고]</span>
+                    <Textarea value={selectedVendor.remark || ''} readOnly rows={2} className="bg-gray-100 text-gray-500" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-blue-500 font-bold">[변경 비고]</span>
+                    <Textarea value={originalVendor?.remark || ''} readOnly rows={2} className="bg-blue-50 border-blue-200 font-bold" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* 상태가 'C'가 아닐 때 (기존 상세 보기 구조 유지) */
+              <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-gray-100" />
+                <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
+                <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
+                <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
+                <Input label="전화번호" value={selectedVendor.tel} readOnly />
+                <Input label="이메일" value={selectedVendor.email} readOnly />
+                <div className="col-span-3">
+                  <Input label="주소" value={`${selectedVendor.address} ${selectedVendor.addressDetail}`} readOnly />
+                </div>
+                <div className="col-span-3">
+                  <Textarea label="비고" value={selectedVendor.remark} readOnly rows={3} />
+                </div>
+              </div>
+            )}
+
+            {/* 첨부파일 (공통) */}
             <div className="pt-4 border-t">
               <label className="text-sm font-medium text-gray-700">첨부파일</label>
               <div className="mt-2">
                 {attachedFiles.length > 0 ? (
                   <ul className="space-y-2">
                     {attachedFiles.map((file) => (
-                      // fileNo -> fileNum 으로 변경
-                      <li key={file.fileNum} className="flex items-center justify-between p-2 bg-gray-50 rounded-md border border-gray-200 group">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          {/* orgName -> originName 으로 변경 */}
-                          <span className="text-sm text-gray-700">{file.originName}</span>
-                          <span className="text-xs text-gray-400">
-                            ({(file.fileSize / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          className="h-8 px-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                          // 인자 값도 변경된 필드명으로 전달
-                          onClick={() => handleFileDownload(file.fileNum, file.originName)}
-                        >
-                          다운로드
-                        </Button>
+                      <li key={file.fileNum} className="flex items-center justify-between p-2 bg-gray-50 rounded-md border border-gray-200">
+                        <span className="text-sm text-gray-700">{file.originName}</span>
+                        <Button variant="secondary" size="sm" onClick={() => handleFileDownload(file.fileNum, file.originName)}>다운로드</Button>
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <div className="text-sm text-gray-400 italic">첨부된 파일이 없습니다.</div>
-                )}
-</div>
-            </div>
-
-            {/* 비고란 (하단 배치) */}
-            <div className="pt-4 border-t">
-              <Textarea label="비고" value={selectedVendor.remark || '등록된 비고가 없습니다.'} rows={3} readOnly />
+                ) : <div className="text-sm text-gray-400 italic">첨부된 파일이 없습니다.</div>}
+              </div>
             </div>
           </div>
         )}
       </Modal>
+      {/* 수정 모달 */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="협력업체 정보 수정 (변경 신청)"
+        size="xl"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>취소</Button>
+            <Button variant="primary" onClick={updateVendor}>수정 요청</Button>
+          </div>
+        }
+      >
+        {editVendorData && (
+          <div className="space-y-6">
+            {/* 안내 문구: 반려 상태일 때 반려 사유를 다시 보여줌 */}
+            {editVendorData.status === 'R' && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+                <strong>기존 반려 사유:</strong> {editVendorData.rejectReason || '사유 없음'}
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <Input 
+                label="협력사코드" 
+                value={editVendorData.vendorCode} 
+                readOnly 
+                className="bg-gray-100" 
+              />
+              <Input 
+                label="협력사명" 
+                value={editVendorData.vendorName}
+                onChange={(e) => setEditVendorData({...editVendorData, vendorName: e.target.value})}
+                required 
+              />
+              <Input 
+                label="사업자번호" 
+                value={editVendorData.businessNo} 
+                readOnly 
+                className="bg-gray-100" 
+              />
+              <Input 
+                label="대표자명" 
+                value={editVendorData.ceoName}
+                onChange={(e) => setEditVendorData({...editVendorData, ceoName: e.target.value})}
+              />
+              <Input 
+                label="전화번호" 
+                value={editVendorData.tel}
+                onChange={(e) => setEditVendorData({...editVendorData, tel: e.target.value})}
+              />
+              <Input 
+                label="이메일" 
+                value={editVendorData.email}
+                onChange={(e) => setEditVendorData({...editVendorData, email: e.target.value})}
+              />
+              
+              {/* 주소 필드 (기존 handleAddressSearch 활용 가능하게 구성) */}
+              <div className="col-span-3 grid grid-cols-4 gap-2">
+                <Input label="우편번호" value={editVendorData.zipCode} readOnly />
+                <div className="flex items-end">
+                  <Button variant="secondary" size="sm" className="mb-1">주소검색</Button>
+                </div>
+                <div className="col-span-2">
+                  <Input label="주소" value={editVendorData.address} readOnly />
+                </div>
+              </div>
+              
+              <div className="col-span-3">
+                <Textarea 
+                  label="수정 사유 / 비고" 
+                  value={editVendorData.remark}
+                  onChange={(e) => setEditVendorData({...editVendorData, remark: e.target.value})}
+                  rows={3} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+      
 
       {/* 등록 모달 */}
       <Modal
@@ -883,6 +1121,32 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
+      </Modal>
+      {/* 반려 사유 입력 모달 */}
+      <Modal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        title="협력업체 반려 사유 입력"
+        size="md"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setIsRejectModalOpen(false)}>취소</Button>
+            <Button variant="danger" onClick={() => rejectVendor(rejectReason)}>반려 확정</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-100 rounded text-red-700 text-sm">
+            선택한 <strong>{selectedVendors.length}건</strong>의 업체를 반려 처리합니다.
+          </div>
+          <Textarea 
+            label="반려 사유 (필수)" 
+            placeholder="반려 사유를 입력해주세요." 
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+          />
+        </div>
       </Modal>
     </div>
   );

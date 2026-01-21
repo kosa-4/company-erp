@@ -210,6 +210,18 @@
         LIMIT 1
     </select>
 
+    <!--로그인한 id로 권한 조회-->
+    <select id="selectRoleByUserId" parameterType="String" resultType="String">
+        SELECT
+            ROLE AS role
+        FROM
+            VN_USER
+        WHERE
+            USER_ID = #{loginId}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
     <!--협력사 사용자 마스터 테이블 단일 조회-->
     <select id="countVendorUsersByUserId" parameterType="String" resultType="int">
         SELECT
@@ -230,6 +242,20 @@
             VN_USER
         WHERE
             USER_ID = #{userId}
+    </select>
+
+    <!--vendor 권한 여부 조회-->
+    <select id="countVendorRoleByVendorCode" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            ROLE = 'VENDOR'
+        AND
+            DEL_FLAG = 'N'
     </select>
 
     <!--협력사 사용자 관리자 수 조회-->
@@ -315,7 +341,7 @@
             #{email},
             #{phone},
             #{fax},
-            NULL,
+            #{role},
             #{signDate},
             'A',
             'V'

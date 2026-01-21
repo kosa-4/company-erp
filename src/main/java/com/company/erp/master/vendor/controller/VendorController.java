@@ -69,6 +69,29 @@ public class VendorController {
         return ApiResponse.ok(files);
     }
 
+    // 3. 수정 전 데이터 조회
+    @GetMapping("{vendorCode}")
+    public ApiResponse getPreviousVendor(
+            @PathVariable("vendorCode") String vendorCode,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+        VendorListDto vendorUpdateReq =  vendorService.getVendorByVendorCode(vendorCode);
+        if(vendorUpdateReq == null){
+            return ApiResponse.ok("기존 승인 정보가 없는 신규 업체입니다.", null);
+        }
+        return ApiResponse.ok(vendorUpdateReq);
+    }
+
+    /* 수정 */
+    // 1. 수정
+    @PutMapping("/update")
+    public ApiResponse updateVendor(
+            @RequestBody VendorUpdateDto vendorUpdateDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+        vendorService.updateVendor(vendorUpdateDto, loginUser.getUserId());
+        return ApiResponse.ok("업데이트 완료");
+    }
+
+
     /* 저장 */
     // 1. 구매사에서 직접 협력업체 저장
     @PostMapping("/new")
@@ -116,16 +139,9 @@ public class VendorController {
     
     // 3. 협력업체 반려
     @PostMapping("/reject")
-    public ApiResponse rejectVendor(@RequestBody List<VendorUpdateDto> vendorUpdateDtoList, HttpSession currentSession) {
-        // 1) 현재 로그인 정보 반환
-        Object sessionAttr = currentSession.getAttribute(SessionConst.LOGIN_USER);
-        SessionUser loginUser = (sessionAttr instanceof SessionUser) ? (SessionUser) sessionAttr : null;
-
-        // 2) 로그인 정보 확인
-        if (loginUser == null) {
-            // userObj가 null인 경우 예외를 던지거나 401 에러 반환
-            return ApiResponse.fail("로그인 정보가 없습니다.");
-        }
+    public ApiResponse rejectVendor(
+            @RequestBody List<VendorUpdateDto> vendorUpdateDtoList,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
 
         // 3) id 반환
         String loginId = loginUser.getUserId();
