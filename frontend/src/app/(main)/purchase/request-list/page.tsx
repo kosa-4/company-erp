@@ -188,19 +188,20 @@ export default function PurchaseRequestListPage() {
   // 행 클릭 시 품목 목록 펼치기/접기
   const toggleExpand = async (prNo: string) => {
     const newExpanded = new Set(expandedPrs);
-    
+
     if (newExpanded.has(prNo)) {
       newExpanded.delete(prNo);
     } else {
       // 펼치기 - 품목 목록 조회
       newExpanded.add(prNo);
-      
+
       // 이미 조회한 품목 목록이 없으면 API 호출
       if (!prItemsMap.has(prNo)) {
         try {
           setLoadingDetail(true);
-          const detailList = await prApi.getDetail(prNo);
-          setPrItemsMap(prev => new Map(prev).set(prNo, detailList));
+          const detail = await prApi.getDetail(prNo);
+          const items = detail?.items ?? [];
+          setPrItemsMap(prev => new Map(prev).set(prNo, items));
         } catch (error) {
           alert('구매요청 품목 정보를 불러오는데 실패했습니다.');
           newExpanded.delete(prNo);
@@ -209,7 +210,7 @@ export default function PurchaseRequestListPage() {
         }
       }
     }
-    
+
     setExpandedPrs(newExpanded);
   };
 
@@ -228,9 +229,10 @@ export default function PurchaseRequestListPage() {
     // PR번호로 상세 정보 조회 (DT 항목 목록)
     try {
       setLoadingDetail(true);
-      const detailList = await prApi.getDetail(row.prNo);
-      setPrDetailItems(detailList);
-      setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+      const detail = await prApi.getDetail(row.prNo);
+      const items = detail?.items ?? [];
+      setPrDetailItems(items);
+      setEditPrItems(items.map(item => ({ ...item }))); // 복사본 생성
     } catch (error: any) {
       alert('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
       setPrDetailItems([]);
@@ -292,9 +294,10 @@ export default function PurchaseRequestListPage() {
     // 품목 목록 조회
     try {
       setLoadingDetail(true);
-      const detailList = await prApi.getDetail(firstRow.prNo);
-      setPrDetailItems(detailList);
-      setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+      const detail = await prApi.getDetail(firstRow.prNo);
+      const items = detail?.items ?? [];
+      setPrDetailItems(items);
+      setEditPrItems(items.map(item => ({ ...item }))); // 복사본 생성
     } catch (error: any) {
       console.error('구매요청 상세 정보 조회 실패:', error);
       alert('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
