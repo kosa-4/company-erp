@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { FileText, Save, Send, ArrowLeft, Calculator } from "lucide-react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { Card, Button, Input } from "@/components/ui";
 import { rfqApi } from "@/lib/api/rfq";
 import { getErrorMessage } from "@/lib/api/error";
