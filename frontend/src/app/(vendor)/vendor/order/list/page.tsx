@@ -180,9 +180,9 @@ export default function VendorOrderListPage() {
               if (selectedOrder && selectedOrder.checkFlag === 'N') {
                 handleConfirm(selectedOrder.poNo);
               } else if (!selectedOrder) {
-                alert('수신확인할 발주서를 선택해주세요.');
+                toast.warning('수신확인할 발주서를 선택해주세요.');
               } else {
-                alert('이미 확인된 발주서입니다.');
+                toast.warning('이미 확인된 발주서입니다.');
               }
             }}
             icon={<Check className="w-4 h-4" />}

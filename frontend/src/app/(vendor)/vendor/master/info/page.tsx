@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle, Lock } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
 import { Can } from '@/auth/Can';
+import { toast } from 'sonner';
 
 export default function VendorInfoChangePage() {
   // 1. DTO 필드명과 100% 일치시킨 초기 상태
@@ -29,7 +30,7 @@ export default function VendorInfoChangePage() {
 
   // 원본 저장
   const [originalData, setOriginalData] = useState<typeof formData | null>(null);
-  
+
   // 2. 초기 데이터 패치
   useEffect(() => {
     const fetchVendorData = async () => {
@@ -219,7 +220,7 @@ export default function VendorInfoChangePage() {
               />
             </section>
           )}
-          
+
         </div>
 
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
@@ -230,7 +231,7 @@ export default function VendorInfoChangePage() {
             disabled={!formData.editable}
           >
             {formData.editable ? "변경 신청 하기" : "수정 불가"}
-          </Button>          
+          </Button>
         </Can>
         </div>
       </Card>

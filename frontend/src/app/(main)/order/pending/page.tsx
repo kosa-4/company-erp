@@ -14,6 +14,8 @@ import {
   Textarea,
   ModalFooter
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi, RfqSelectedDTO, RfqSelectedItemDTO } from '@/lib/api/purchaseOrder';
 import { rfqApi } from '@/lib/api/rfq';
@@ -38,6 +40,7 @@ interface RfqGroup {
 }
 
 export default function OrderPendingPage() {
+  const router = useRouter();
   const [rfqGroups, setRfqGroups] = useState<RfqGroup[]>([]);
   const [expandedRfqs, setExpandedRfqs] = useState<Set<string>>(new Set());
   const [selectedRfqNo, setSelectedRfqNo] = useState<string | null>(null);
@@ -122,7 +125,7 @@ export default function OrderPendingPage() {
       setRfqGroups(groups);
     } catch (error) {
       console.error('데이터 조회 오류:', error);
-      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -188,7 +191,7 @@ export default function OrderPendingPage() {
       setVendorList(response.vendors || []);
     } catch (error) {
       console.error(error);
-      alert('협력사 목록을 불러오는데 실패했습니다.');
+      toast.error('협력사 목록을 불러오는데 실패했습니다.');
     }
   };
 
@@ -200,7 +203,7 @@ export default function OrderPendingPage() {
 
   const handleCreateOrder = () => {
     if (!selectedRfqNo) {
-      alert('발주할 견적을 선택해주세요.');
+      toast.warning('발주할 견적을 선택해주세요.');
       return;
     }
 
@@ -230,18 +233,18 @@ export default function OrderPendingPage() {
   const handleSaveOrder = async () => {
     // Validation
     if (!orderForm.poName.trim()) {
-      alert('발주명을 입력해주세요.');
+      toast.warning('발주명을 입력해주세요.');
       return;
     }
     if (!orderForm.poDate) {
-      alert('발주일자를 선택해주세요.');
+      toast.warning('발주일자를 선택해주세요.');
       return;
     }
     
     // 발주일자가 오늘 이후인지 검증
     const today = new Date().toISOString().split('T')[0];
     if (orderForm.poDate < today) {
-      alert('발주일자는 오늘 이후만 선택 가능합니다.');
+      toast.warning('발주일자는 오늘 이후만 선택 가능합니다.');
       return;
     }
     
@@ -251,23 +254,23 @@ export default function OrderPendingPage() {
     // 협력사 정보 확인 (기존 or 수동 선택)
     const finalVendorCode = selectedGroup.vendorCode || selectedVendor?.vendorCode;
     if (!finalVendorCode) {
-      alert('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
+      toast.warning('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
       return;
     }
 
     if (orderForm.items.length === 0) {
-      alert('발주 품목이 없습니다.');
+      toast.warning('발주 품목이 없습니다.');
       return;
     }
     // 품목별 Validation
     for (let i = 0; i < orderForm.items.length; i++) {
       const item = orderForm.items[i];
       if (!item.orderQuantity || item.orderQuantity <= 0) {
-        alert(`${i + 1}번째 품목의 발주수량을 확인해주세요.`);
+        toast.warning(`${i + 1}번째 품목의 발주수량을 확인해주세요.`);
         return;
       }
       if (!item.unitPrice || item.unitPrice <= 0) {
-        alert(`${i + 1}번째 품목의 단가를 확인해주세요.`);
+        toast.warning(`${i + 1}번째 품목의 단가를 확인해주세요.`);
         return;
       }
     }
@@ -302,14 +305,16 @@ export default function OrderPendingPage() {
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
       setSelectedVendor(null);
-      const moveToProgress = window.confirm('성공적으로 저장되었습니다. 발주진행현황으로 이동하시겠습니까?');
-      if (moveToProgress) {
-        window.location.href = '/order/progress';
-      } else {
-        await fetchData();
-      }
+      
+      toast.success('성공적으로 저장되었습니다.', {
+        action: {
+          label: '발주진행 이동',
+          onClick: () => router.push('/order/progress'),
+        },
+      });
+      await fetchData();
     } catch (error) {
-      alert('발주 저장 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('발주 저장 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -318,18 +323,18 @@ export default function OrderPendingPage() {
   const handleConfirmOrder = async () => {
     // Validation (저장과 동일)
     if (!orderForm.poName.trim()) {
-      alert('발주명을 입력해주세요.');
+      toast.warning('발주명을 입력해주세요.');
       return;
     }
     if (!orderForm.poDate) {
-      alert('발주일자를 선택해주세요.');
+      toast.warning('발주일자를 선택해주세요.');
       return;
     }
     
     // 발주일자가 오늘 이후인지 검증
     const today = new Date().toISOString().split('T')[0];
     if (orderForm.poDate < today) {
-      alert('발주일자는 오늘 이후만 선택 가능합니다.');
+      toast.warning('발주일자는 오늘 이후만 선택 가능합니다.');
       return;
     }
     
@@ -338,22 +343,22 @@ export default function OrderPendingPage() {
 
     const finalVendorCode = selectedGroup.vendorCode || selectedVendor?.vendorCode;
     if (!finalVendorCode) {
-      alert('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
+      toast.warning('협력업체 정보가 없습니다. 협력업체를 선택해주세요.');
       return;
     }
 
     if (orderForm.items.length === 0) {
-      alert('발주 품목이 없습니다.');
+      toast.warning('발주 품목이 없습니다.');
       return;
     }
     for (let i = 0; i < orderForm.items.length; i++) {
       const item = orderForm.items[i];
       if (!item.orderQuantity || item.orderQuantity <= 0) {
-        alert(`${i + 1}번째 품목의 발주수량을 확인해주세요.`);
+        toast.warning(`${i + 1}번째 품목의 발주수량을 확인해주세요.`);
         return;
       }
       if (!item.unitPrice || item.unitPrice <= 0) {
-        alert(`${i + 1}번째 품목의 단가를 확인해주세요.`);
+        toast.warning(`${i + 1}번째 품목의 단가를 확인해주세요.`);
         return;
       }
     }
@@ -392,14 +397,16 @@ export default function OrderPendingPage() {
       setIsOrderModalOpen(false);
       setSelectedRfqNo(null);
       setSelectedVendor(null);
-      const moveToProgress = window.confirm('성공적으로 확정되었습니다. 발주진행현황으로 이동하시겠습니까?');
-      if (moveToProgress) {
-        window.location.href = '/order/progress';
-      } else {
-        await fetchData();
-      }
+
+      toast.success('성공적으로 확정되었습니다.', {
+        action: {
+          label: '발주진행 이동',
+          onClick: () => router.push('/order/progress'),
+        },
+      });
+      await fetchData();
     } catch (error) {
-      alert('발주 확정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('발주 확정 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }

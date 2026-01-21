@@ -247,7 +247,6 @@ export default function RfqSelectionResultPage() {
                   columns={detailColumns}
                   data={detailData.items}
                   keyField="itemCd"
-                  maxHeight={400}
                 />
               </div>
             </div>
