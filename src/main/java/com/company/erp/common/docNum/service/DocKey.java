@@ -12,7 +12,7 @@ public enum DocKey {
     PO(ResetUnit.DAILY, "PO", "yyMMdd", "", 4, "PO2601050001"), // 발주요청
     GR(ResetUnit.DAILY, "GR", "yyMMdd", "", 4, "GR2601050001"), // 입고요청
     RQ(ResetUnit.DAILY, "RQ", "yyMMdd", "", 4, "RQ2601050001"), // 견적요청
-    OV(ResetUnit.DAILY, "OV", "yyMMdd", "", 4, "RQ2601050001"), // 협력사 외부회원가입
+    OV(ResetUnit.DAILY, "OV", "yyMMdd", "", 4, "OV2601050001"), // 협력사 외부회원가입
 
     //파일
     FL(ResetUnit.DAILY, "FL", "yyMMdd", "", 4, "FL2601050001"),
