@@ -147,7 +147,6 @@ export default function VendorQuoteEditPage({
 
   return (
     <div className="space-y-6">
-      <Toaster position="top-center" richColors />
 
       {/* Page Header */}
       <div className="flex items-center justify-between">
