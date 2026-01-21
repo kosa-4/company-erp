@@ -144,8 +144,7 @@ export interface RfqSelectionSearchRequest {
 export interface RfqProgressSearchRequest {
     rfqNum?: string;
     rfqSubject?: string;
-    fromDate?: string;
-    toDate?: string;
+    regDate?: string;
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;

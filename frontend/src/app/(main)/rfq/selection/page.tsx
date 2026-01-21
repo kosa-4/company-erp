@@ -77,7 +77,6 @@ export default function RfqSelectionPage() {
         progressCd: searchParams.status,
         ctrlUserNm: searchParams.buyer
       });
-      console.log('selectionList sample:', response?.[1]);
 
       // 데이터 그룹화 (RFQ 번호 기준)
       const grouped = response.reduce((acc, curr) => {
