@@ -112,7 +112,11 @@ export default function RfqSelectionPage() {
 
       setData(grouped);
       // 검색 시 기존 선택/확장 상태 초기화
-      setExpandedRows([]);
+      setExpandedRows(
+          grouped
+              .filter(g => g.progressCd === 'M' || g.progressCd === 'G')
+              .map(g => g.rfqNo)
+      );
       setSelectedRfqNums([]);
       setSelectedVendor(null);
     } catch (error) {
