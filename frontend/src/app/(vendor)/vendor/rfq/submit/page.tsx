@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy, Edit } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { Card, Button, Badge, Input, SearchPanel, DatePicker, Select } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { getErrorMessage } from '@/lib/api/error';
@@ -181,7 +181,6 @@ export default function VendorRfqSubmitPage() {
 
   return (
     <div className="space-y-6">
-      <Toaster position="top-center" richColors />
 
       {/* Page Header */}
       <div className="flex flex-col gap-6">

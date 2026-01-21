@@ -87,8 +87,6 @@ export default function RfqSelectionPage() {
           totalAmt: curr.totalAmt || 0,
           vnProgressCd: curr.vnProgressCd,
           vnProgressNm: curr.vnProgressNm,
-          regDate: curr.regDate?.substring(0,10) || '-',
-          selectDate: curr.selectDate?.substring(0,10) || '-',
           sendDate: curr.sendDate?.substring(0, 10) || '-',
           submitDate: curr.submitDate?.substring(0, 10) || '-',
           selectYn: curr.selectYn || 'N',
