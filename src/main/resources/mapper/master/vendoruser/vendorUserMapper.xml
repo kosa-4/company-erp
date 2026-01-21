@@ -414,6 +414,9 @@
             <if test="phone != null and phone != ''">
                 TEL_NUM = #{phone},
             </if>
+            <if test="blockFlag != null and blockFlag != ''">
+                BLOCK_FLAG = #{blockFlag},
+            </if>
         </set>
         WHERE
             USER_ID = #{userId}

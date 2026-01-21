@@ -4,6 +4,7 @@ import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
+import com.company.erp.master.vendor.dto.VendorUpdateDto;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
@@ -31,6 +32,16 @@ public class VendorUserController {
         List<VendorUserListDto> vendorUsers = vendorUserService.getVendorUserList(vendorUserSearchDto);
 
         return ResponseEntity.ok(vendorUsers);
+    }
+
+    /* 수정 */
+    // 1. 수정
+    @PutMapping("/update")
+    public ApiResponse updateVendor(
+            @RequestBody VendorUserUpdateDto vendorUserUpdateDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+        vendorUserService.updateVendorUser(vendorUserUpdateDto, loginUser.getUserId());
+        return ApiResponse.ok("업데이트 완료");
     }
 
     /* 저장 */

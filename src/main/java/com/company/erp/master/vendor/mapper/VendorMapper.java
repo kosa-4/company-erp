@@ -35,7 +35,8 @@ public interface VendorMapper {
     VendorListDto selectVendorByVendorCode(String vendorCode);
 
     /* 수정 */
-    void updateVendor(VendorUpdateDto vendorUpdateDto);
+    void updateVendorVNGL(VendorUpdateDto vendorUpdateDto);
+    void updateVendorVNCH(VendorUpdateDto vendorUpdateDto);
 
     /* 저장 */
     // 1. 마스터 테이블 저장

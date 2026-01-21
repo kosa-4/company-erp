@@ -21,6 +21,7 @@ public class VendorService {
     @Autowired
     VendorMapper vendorMapper;
 
+
     @Autowired
     DocNumService docNumService;
 
@@ -64,8 +65,10 @@ public class VendorService {
         // 2. 존재 시
         vendorUpdateDto.setModifiedBy(loginId);
         vendorUpdateDto.setModifiedAt(LocalDateTime.now());
+        vendorUpdateDto.setStatus("A");
 
-        vendorMapper.updateVendor(vendorUpdateDto);
+        vendorMapper.updateVendorVNGL(vendorUpdateDto);
+        vendorMapper.updateVendorVNCH(vendorUpdateDto);
     }
 
     /* 저장 */

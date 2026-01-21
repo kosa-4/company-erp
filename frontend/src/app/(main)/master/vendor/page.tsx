@@ -689,7 +689,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
     setLoading(true);
     try {
       const response = await fetch("/api/v1/vendors/update", {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editVendorData),
       });

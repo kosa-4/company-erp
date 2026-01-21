@@ -425,7 +425,7 @@
     </select>
 
     <!--협력사 정보 업데이트-->
-    <update id="updateVendor" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
+    <update id="updateVendorVNGL" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
         UPDATE
             VNGL
         <set>
@@ -454,7 +454,46 @@
                 RMK = #{remark},
             </if>
             MOD_DATE = #{modifiedAt},
-            MOD_USER_ID = #{modifiedBy}
+            MOD_USER_ID = #{modifiedBy},
+            PROGRESS_CD = 'A'
+        </set>
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </update>
+    <!--대기 테이블 정보 업데이트-->
+    <update id="updateVendorVNCH" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
+        UPDATE
+            VNCH
+        <set>
+            <if test="vendorName != null and vendorName != ''">
+                VENDOR_NM = #{vendorName},
+            </if>
+            <if test="vendorNameEng != null and vendorNameEng != ''">
+                VENDOR_ENG_NM = #{vendorNameEng},
+            </if>
+            <if test="ceoName != null and ceoName != ''">
+                CEO_USER_NM = #{ceoName},
+            </if>
+            <if test="tel != null and tel != ''">
+                TEL_NO = #{tel},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
+            </if>
+            <if test="zipCode != null and zipCode != ''">
+                ZIP_CD = #{zipCode},
+            </if>
+            <if test="address != null and address != ''">
+                ADDR = #{address},
+            </if>
+            <if test="remark != null and remark != ''">
+                RMK = #{remark},
+            </if>
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            PROGRESS_CD = #{status}
         </set>
         WHERE
             VENDOR_CD = #{vendorCode}

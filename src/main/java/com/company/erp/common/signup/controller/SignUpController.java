@@ -9,6 +9,7 @@ import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.common.signup.dto.SignUpDto;
 import com.company.erp.common.signup.service.SignUpService;
+import com.company.erp.master.vendoruser.service.VendorUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class SignUpController {
     private DocNumService docNumService;
 
     @Autowired
+    private VendorUserService vendorUserService;
+
+    @Autowired
     FileService fileService;
 
     @PostMapping("/signup")
@@ -45,6 +49,7 @@ public class SignUpController {
             @PathVariable("vendorCode") String vendorCode,
             @RequestParam("file") List<MultipartFile> files,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+
 
         for (MultipartFile file : files) {
             String file_num = docNumService.generateDocNumStr(DocKey.FL);

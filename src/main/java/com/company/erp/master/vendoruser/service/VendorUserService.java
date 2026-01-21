@@ -1,6 +1,8 @@
 package com.company.erp.master.vendoruser.service;
 
 import com.company.erp.common.session.SessionUser;
+import com.company.erp.master.vendor.dto.VendorListDto;
+import com.company.erp.master.vendor.dto.VendorUpdateDto;
 import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class VendorUserService {
@@ -24,6 +27,24 @@ public class VendorUserService {
     /* 조회 */
     public List<VendorUserListDto> getVendorUserList(VendorUserSearchDto vendorUserSearchDto) {
         return vendorUserMapper.selectVendorUserList(vendorUserSearchDto);
+    }
+
+    /* 수정 */
+    @Transactional
+    public void updateVendorUser(VendorUserUpdateDto vendorUserupdateDto, String loginId){
+        // 1. 존재 여부 체크
+        int vendorUser =  vendorUserMapper.countVendorUsersByUserId(vendorUserupdateDto.getUserId());
+        if(vendorUser == 0){
+            throw new NoSuchElementException("사용자가 존재하지 않습니다");
+        }
+
+        // 2. 존재 시
+        vendorUserupdateDto.setModifiedBy(loginId);
+        vendorUserupdateDto.setModifiedAt(LocalDateTime.now());
+        vendorUserupdateDto.setStatus("A");
+
+        vendorUserMapper.updateVN_USERByUserId(vendorUserupdateDto);
+        vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserupdateDto);
     }
     
     /* 저장 */
