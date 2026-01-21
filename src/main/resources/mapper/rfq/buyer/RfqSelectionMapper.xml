@@ -81,14 +81,14 @@
         'N' AND CTRL_USER_ID = #{loginUserId} </update>
 
     <update id="updateRfqStatusToSelected"> UPDATE RFQHD SET PROGRESS_CD = 'J', MOD_DATE = NOW(),
-        MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD = 'G' AND
+        MOD_USER_ID = #{loginUserId}, SELECT_DATE = NOW() WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD = 'G' AND
         CTRL_USER_ID = #{loginUserId} AND DEL_FLAG = 'N' </update>
 
     <update id="resetRfqVendorsSelection"> UPDATE RFQVN SET SELECT_YN = 'N' WHERE RFQ_NUM =
         #{rfqNum} AND DEL_FLAG = 'N' </update>
 
     <update id="updateRfqVendorSelection"> UPDATE RFQVN SET SELECT_YN = 'Y', PROGRESS_CD = 'J',
-        SELECT_RMK = #{selectRmk}, MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId}, SELECT_DATE = NOW() WHERE RFQ_NUM =
+        SELECT_RMK = #{selectRmk}, MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM =
         #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
 
     <update id="updateRfqVendorItemSelection"> UPDATE RFQVNDT SET SELECT_YN = 'Y', MOD_DATE = NOW(),
