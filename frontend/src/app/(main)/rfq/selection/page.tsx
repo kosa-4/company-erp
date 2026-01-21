@@ -16,6 +16,7 @@ import { rfqApi } from '@/lib/api/rfq';
 import { toast } from 'sonner';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/api/error';
+import RfqCompareModal from './RfqCompareModal';
 
 interface RfqSelectionVendor {
   vendorCd: string;
@@ -45,6 +46,7 @@ export default function RfqSelectionPage() {
   const [loading, setLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [selectedRfqNums, setSelectedRfqNums] = useState<string[]>([]);
+  const [compareRfqNo, setCompareRfqNo] = useState<string | null>(null);
 
   // 선정 대상 협력사 상태 (하나만 선택 가능)
   const [selectedVendor, setSelectedVendor] = useState<{ rfqNo: string; vendorCd: string; vendorNm: string } | null>(null);
@@ -172,6 +174,11 @@ export default function RfqSelectionPage() {
       return;
     }
 
+    if (selectedRfqNums.length !== 1) {
+      toast.error('개찰은 RFQ 1건만 선택해서 진행해주세요.');
+      return;
+    }
+
     const targetItems = data.filter(d => selectedRfqNums.includes(d.rfqNo));
     const invalidItems = targetItems.filter(d => d.progressCd !== 'M');
 
@@ -234,6 +241,25 @@ export default function RfqSelectionPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenCompare = () => {
+    if (selectedRfqNums.length !== 1) {
+      toast.error('견적비교는 RFQ 1건만 선택해서 진행해주세요.');
+      return;
+    }
+
+    const rfq = data.find(d => d.rfqNo === selectedRfqNums[0]);
+    if (!rfq) return;
+
+    // 정책: 개찰(G)/선정(J)만 비교 가능 (마감 M은 금액 비공개)
+    if (rfq.progressCd === 'M') {
+      toast.error('개찰(G) 이후에 견적비교가 가능합니다.');
+      return;
+    }
+
+    setCompareRfqNo(rfq.rfqNo);
+    setIsCompareModalOpen(true);
   };
 
   return (
@@ -306,7 +332,8 @@ export default function RfqSelectionPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="primary" onClick={handleOpen} loading={loading}>개찰</Button>
-            <Button variant="secondary" onClick={() => setIsCompareModalOpen(true)}>견적비교</Button>
+            {/*<Button variant="secondary" onClick={() => setIsCompareModalOpen(true)}>견적비교</Button>*/}
+            <Button variant="secondary" onClick={handleOpenCompare}>견적비교</Button>
             <Button variant="success" onClick={handleSelect} loading={loading}>선정</Button>
           </div>
         }
@@ -467,17 +494,27 @@ export default function RfqSelectionPage() {
         </div>
       </Card>
 
+      <RfqCompareModal
+          isOpen={isCompareModalOpen}
+          rfqNo={compareRfqNo}
+          onClose={() => {
+            setIsCompareModalOpen(false);
+            setCompareRfqNo(null);
+          }}
+      />
+
+
       {/* 견적비교 모달 (생략 또는 기존 유지) */}
-      <Modal
-        isOpen={isCompareModalOpen}
-        onClose={() => setIsCompareModalOpen(false)}
-        title="견적 비교"
-        size="xl"
-      >
-        <div className="p-8 text-center text-stone-500">
-          견적 비교 기능은 선정 대상 RFQ를 선택 후 상세 비교하는 화면으로 구현 예정입니다.
-        </div>
-      </Modal>
+      {/*<Modal*/}
+      {/*  isOpen={isCompareModalOpen}*/}
+      {/*  onClose={() => setIsCompareModalOpen(false)}*/}
+      {/*  title="견적 비교"*/}
+      {/*  size="xl"*/}
+      {/*>*/}
+      {/*  <div className="p-8 text-center text-stone-500">*/}
+      {/*    견적 비교 기능은 선정 대상 RFQ를 선택 후 상세 비교하는 화면으로 구현 예정입니다.*/}
+      {/*  </div>*/}
+      {/*</Modal>*/}
 
       {/* 선정 사유 입력 모달 */}
       <Modal
