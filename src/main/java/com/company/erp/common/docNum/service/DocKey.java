@@ -7,11 +7,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum DocKey {
     // 문서
-    NT(ResetUnit.DAILY, "NT", "yyMMdd", "", 4, "NT2601050001"),
-    PR(ResetUnit.DAILY, "PR", "yyMMdd", "", 4, "PR2601050001"),
-    PO(ResetUnit.DAILY, "PO", "yyMMdd", "", 4, "PO2601050001"),
-    GR(ResetUnit.DAILY, "GR", "yyMMdd", "", 4, "GR2601050001"),
-    RQ(ResetUnit.DAILY, "RQ", "yyMMdd", "", 4, "RQ2601050001"), // 요청 번호
+    NT(ResetUnit.DAILY, "NT", "yyMMdd", "", 4, "NT2601050001"), // 공지사항
+    PR(ResetUnit.DAILY, "PR", "yyMMdd", "", 4, "PR2601050001"), // 구매요청
+    PO(ResetUnit.DAILY, "PO", "yyMMdd", "", 4, "PO2601050001"), // 발주요청
+    GR(ResetUnit.DAILY, "GR", "yyMMdd", "", 4, "GR2601050001"), // 입고요청
+    RQ(ResetUnit.DAILY, "RQ", "yyMMdd", "", 4, "RQ2601050001"), // 견적요청
+    OV(ResetUnit.DAILY, "OV", "yyMMdd", "", 4, "OV2601050001"), // 협력사 외부회원가입
 
     //파일
     FL(ResetUnit.DAILY, "FL", "yyMMdd", "", 4, "FL2601050001"),
