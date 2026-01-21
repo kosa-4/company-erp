@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit2, Trash2, Search, Mail, Phone, X, Save, Lock, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Badge } from '@/components/ui';
+import { toast } from 'sonner';
 
 export default function VendorUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -41,7 +42,7 @@ export default function VendorUsersPage() {
   const handleOpenModal = (user?: any) => {
     if (user) {
       if (user.status === 'N' || user.status === 'C') {
-        alert('승인 및 변경 요청 상태일 시 수정이 불가능합니다.');
+        toast.warning('승인 및 변경 요청 상태일 시 수정이 불가능합니다.');
         return;
       }
 
@@ -73,7 +74,7 @@ export default function VendorUsersPage() {
   const handleSave = async () => {
     const isPasswordRequired = !editingUser;
     if (!formData.userId || !formData.userName || !formData.email || !formData.phone || (isPasswordRequired && !formData.password)) {
-      alert('필수 정보를 모두 입력해주세요.');
+      toast.warning('필수 정보를 모두 입력해주세요.');
       return;
     }
 
@@ -104,12 +105,12 @@ export default function VendorUsersPage() {
       });
 
       if (response.ok) {
-        alert(editingUser ? '수정 요청이 완료되었습니다.' : '신규 등록 요청이 완료되었습니다.');
+        toast.success(editingUser ? '수정 요청이 완료되었습니다.' : '신규 등록 요청이 완료되었습니다.');
         handleCloseModal();
         fetchUserList();
       }
     } catch (error) {
-      alert('서버와 통신할 수 없습니다.');
+      toast.error('서버와 통신할 수 없습니다.');
     }
   };
 
@@ -118,36 +119,41 @@ export default function VendorUsersPage() {
    */
   const handleDelete = async (user: any) => {
     if (user.status === 'N' || user.status === 'C') {
-      alert('승인 및 변경 요청 상태일 시 삭제가 불가능합니다.');
+      toast.warning('승인 및 변경 요청 상태일 시 삭제가 불가능합니다.');
       return;
     }
 
-    if (confirm('해당 사용자를 삭제하시겠습니까?')) {
-      try {
-        const response = await fetch(`/api/v1/vendor-portal/users/delete`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.userId,
-            userName: user.userName,
-            email: user.email,
-            phone: user.phone,
-            status: user.status,
-            vendorCode: user.vendorCode
-          })
-        });
+    toast('해당 사용자를 삭제하시겠습니까?', {
+      action: {
+        label: '삭제',
+        onClick: async () => {
+          try {
+            const response = await fetch(`/api/v1/vendor-portal/users/delete`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user.userId,
+                userName: user.userName,
+                email: user.email,
+                phone: user.phone,
+                status: user.status,
+                vendorCode: user.vendorCode
+              })
+            });
 
-        if (response.ok) {
-          alert('삭제 요청 되었습니다.');
-          fetchUserList();
-        } else {
-          const err = await response.json();
-          alert(err.message || '삭제 중 오류가 발생했습니다.');
+            if (response.ok) {
+              toast.success('삭제 요청 되었습니다.');
+              fetchUserList();
+            } else {
+              const err = await response.json();
+              toast.error(err.message || '삭제 중 오류가 발생했습니다.');
+            }
+          } catch (error) {
+            toast.error('서버와 통신할 수 없습니다.');
+          }
         }
-      } catch (error) {
-        alert('서버와 통신할 수 없습니다.');
       }
-    }
+    });
   };
 
   const renderStatusBadge = (status: string) => {

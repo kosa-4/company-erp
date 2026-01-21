@@ -71,8 +71,7 @@ export default function RfqSelectionPage() {
       const response = await rfqApi.getSelectionList({
         rfqNum: searchParams.rfqNo,
         rfqSubject: searchParams.rfqName,
-        regDate: searchParams.regDate,
-        selectDate: searchParams.selectDate,
+        fromDate: searchParams.regDate, // regDate를 fromDate로 매핑 (검색 조건에 toDate가 없으므로 단일 날짜 검색으로 가정하거나 범위 시작으로 사용)
         rfqType: searchParams.rfqType,
         progressCd: searchParams.status,
         ctrlUserNm: searchParams.buyer
@@ -101,7 +100,7 @@ export default function RfqSelectionPage() {
             rfqTypeNm: curr.rfqTypeNm,
             ctrlUserNm: curr.ctrlUserNm,
             regDate: curr.regDate?.substring(0, 10) || '-',
-            selectDate: curr.selectDate?.substring(0, 10) || '-',
+            selectDate: '-', // RfqSelectionResponse에 selectDate 필드가 없으므로 기본값 설정
             progressCd: curr.progressCd,
             progressNm: curr.progressNm,
             vendors: [vendor]
@@ -180,19 +179,24 @@ export default function RfqSelectionPage() {
       return;
     }
 
-    if (!confirm(`${selectedRfqNums.length}건을 개찰하시겠습니까? 개찰 후에는 금액이 공개됩니다.`)) return;
-
-    try {
-      setLoading(true);
-      await Promise.all(selectedRfqNums.map(num => rfqApi.openRfq(num)));
-      toast.success('개찰 처리가 완료되었습니다.');
-      handleSearch();
-      setSelectedRfqNums([]);
-    } catch (error) {
-      toast.error('개찰 처리 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    toast(`${selectedRfqNums.length}건을 개찰하시겠습니까? 개찰 후에는 금액이 공개됩니다.`, {
+      action: {
+        label: '개찰',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            await Promise.all(selectedRfqNums.map(num => rfqApi.openRfq(num)));
+            toast.success('개찰 처리가 완료되었습니다.');
+            handleSearch();
+            setSelectedRfqNums([]);
+          } catch (error) {
+            toast.error('개찰 처리 중 오류가 발생했습니다.');
+          } finally {
+            setLoading(false);
+          }
+        }
+      }
+    });
   };
 
   const handleSelect = () => {
@@ -206,7 +210,7 @@ export default function RfqSelectionPage() {
     // 이미 선정된 업체가 있는지 확인
     const alreadySelected = rfq?.vendors.some(v => v.selectYn === 'Y');
     if (alreadySelected || rfq?.progressCd === 'J') {
-      alert('이미 협력업체가 선정되었습니다.');
+      toast.warning('이미 협력업체가 선정되었습니다.');
       return;
     }
 

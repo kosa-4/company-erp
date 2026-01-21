@@ -13,6 +13,8 @@ import {
   Modal,
   ModalFooter
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { prApi, PrItemDTO } from '@/lib/api/pr';
@@ -31,6 +33,7 @@ interface PrItem {
 }
 
 export default function PurchaseRequestPage() {
+  const router = useRouter();
   const [prItems, setPrItems] = useState<PrItem[]>([]);
   const [selectedPrItems, setSelectedPrItems] = useState<PrItem[]>([]); // 체크된 품목들
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -70,7 +73,7 @@ export default function PurchaseRequestPage() {
         }));
       } catch (error) {
         console.error('초기 데이터 로드 실패:', error);
-        alert('초기 데이터를 불러오는데 실패했습니다.');
+        toast.error('초기 데이터를 불러오는데 실패했습니다.');
       } finally {
         setIsLoading(false);
       }
@@ -89,7 +92,7 @@ export default function PurchaseRequestPage() {
       setItemList(items);
     } catch (error) {
       console.error('품목 목록 로드 실패:', error);
-      alert('품목 목록을 불러오는데 실패했습니다.');
+      toast.error('품목 목록을 불러오는데 실패했습니다.');
     }
   };
 
@@ -149,7 +152,7 @@ export default function PurchaseRequestPage() {
       render: (value, row) => (
           <input
               type="number"
-              value={value || ''}
+              value={value as number || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'quantity', Number(e.target.value) || 0)}
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
@@ -171,7 +174,7 @@ export default function PurchaseRequestPage() {
       render: (value, row) => (
           <input
               type="number"
-              value={value || ''}
+              value={value as number || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'unitPrice', Number(e.target.value) || 0)}
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
@@ -200,7 +203,7 @@ export default function PurchaseRequestPage() {
       render: (value, row) => (
           <input
               type="date"
-              value={value || ''}
+              value={value as string || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'requestDeliveryDate', e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
@@ -215,7 +218,7 @@ export default function PurchaseRequestPage() {
       render: (value, row) => (
           <input
               type="text"
-              value={value || ''}
+              value={value as string || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'remark', e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -242,11 +245,11 @@ export default function PurchaseRequestPage() {
 
   const handleSave = async () => {
     if (!formData.prName.trim()) {
-      alert('구매요청명을 입력해주세요.');
+      toast.warning('구매요청명을 입력해주세요.');
       return;
     }
     if (prItems.length === 0) {
-      alert('품목을 추가해주세요.');
+      toast.warning('품목을 추가해주세요.');
       return;
     }
 
@@ -259,7 +262,7 @@ export default function PurchaseRequestPage() {
     );
 
     if (invalidItems.length > 0) {
-      alert('모든 품목의 수량, 단가, 희망납기일을 입력해주세요.');
+      toast.warning('모든 품목의 수량, 단가, 희망납기일을 입력해주세요.');
       return;
     }
 
@@ -295,7 +298,7 @@ export default function PurchaseRequestPage() {
       // 첨부파일 업로드 (실패해도 PR 자체는 저장된 상태 유지)
       if (uploadedFiles.length > 0) {
         if (!prNum) {
-          alert('구매요청 번호를 받지 못해 파일을 업로드할 수 없습니다.');
+          toast.warning('구매요청 번호를 받지 못해 파일을 업로드할 수 없습니다.');
         } else {
           for (const file of uploadedFiles) {
             try {
@@ -307,13 +310,19 @@ export default function PurchaseRequestPage() {
         }
       }
 
-      alert("구매요청 등록이 완료되었습니다.");
-      // 저장 후 페이지 리로드
-      window.location.reload();
+      toast.success("구매요청 등록이 완료되었습니다.", {
+        action: {
+          label: '목록으로 이동',
+          onClick: () => router.push('/purchase/request-list')
+        }
+      });
+      // 성공 후 목록 페이지로 이동 처리 (잠시 후 이동)
+      setTimeout(() => router.push('/purchase/request-list'), 1000);
+      
     } catch (error) {
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -347,23 +356,32 @@ export default function PurchaseRequestPage() {
   const handleRemoveItem = () => {
     // 체크된 아이템 삭제
     if (selectedPrItems.length === 0) {
-      alert('삭제할 품목을 선택해주세요.');
-      return;
-    }
-
-    if (!confirm(`선택한 ${selectedPrItems.length}건의 품목을 삭제하시겠습니까?`)) {
+      toast.warning('삭제할 품목을 선택해주세요.');
       return;
     }
 
     const selectedLineNos = selectedPrItems.map(item => item.lineNo);
+    const prevItems = [...prItems];
+    
     setPrItems(prItems.filter(item => !selectedLineNos.includes(item.lineNo)));
     setSelectedPrItems([]);
+    
+    toast.success(`${selectedPrItems.length}건의 품목이 삭제되었습니다.`, {
+      action: {
+        label: '실행취소',
+        onClick: () => {
+          setPrItems(prevItems);
+          toast.success('삭제가 취소되었습니다.');
+        }
+      },
+      duration: 4000,
+    });
   };
 
   // 품목 선택 모달에서 품목 추가
   const handleAddSelectedItems = async () => {
     if (selectedItemCodes.length === 0) {
-      alert('추가할 품목을 선택해주세요.');
+      toast.warning('추가할 품목을 선택해주세요.');
       return;
     }
 
@@ -392,7 +410,7 @@ export default function PurchaseRequestPage() {
       setIsItemModalOpen(false);
     } catch (error) {
       console.error('품목 정보 조회 실패:', error);
-      alert('품목 정보를 불러오는데 실패했습니다.');
+      toast.error('품목 정보를 불러오는데 실패했습니다.');
     }
   };
 
