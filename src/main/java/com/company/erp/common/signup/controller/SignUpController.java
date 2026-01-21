@@ -40,21 +40,23 @@ public class SignUpController {
     @PostMapping("/signup")
     public ResponseEntity<String> registerUser(@Valid @RequestBody SignUpDto signUpDto){
         // global exception이 있으므로 try-catch 사용 안해도 됨
-        signUpService.registerVendorWithManager(signUpDto);
-        return ResponseEntity.ok("success");
+        String vendorCode = signUpService.registerVendorWithManager(signUpDto);
+        return ResponseEntity.ok(vendorCode);
     }
     // 4. 첨부 파일 저장
-    @PostMapping("/signup/files")
+    @PostMapping("/signup/files/{vendorCode}")
     public ApiResponse registerFile(
             @PathVariable("vendorCode") String vendorCode,
-            @RequestParam("file") List<MultipartFile> files,
-            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+            @RequestPart("file") List<MultipartFile> files) {
 
+        if (files != null && !files.isEmpty()) {
 
-        for (MultipartFile file : files) {
-            String file_num = docNumService.generateDocNumStr(DocKey.FL);
-            fileService.upload(file, "OV", file_num, vendorCode, null);
+            for (MultipartFile file : files) {
+                String file_num = docNumService.generateDocNumStr(DocKey.FL);
+                fileService.upload(file, "OV", file_num, vendorCode, null);
+            }
         }
+
         return ApiResponse.ok(null);
     }
 

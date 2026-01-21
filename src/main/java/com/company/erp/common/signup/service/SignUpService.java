@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
 @Service
 public class SignUpService {
@@ -29,9 +30,10 @@ public class SignUpService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private DocNumService docNumService;
-
+    
+    // 1. 회원 가입
     @Transactional
-    public void registerVendorWithManager(SignUpDto signUpDto) {
+    public String registerVendorWithManager(SignUpDto signUpDto) {
 
         // 1. 중복 체크
         // 1-1. 아이디 중복 체크
@@ -80,7 +82,10 @@ public class SignUpService {
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
 
+        return vendorCode;
     }
+    
+
 
     // 협력 업체 정보 매핑
     private VendorRegisterDto convertToVendorRegisterDto(SignUpDto signUpDto) {

@@ -173,81 +173,82 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     // 인덱스가 일치하지 않는 파일들만 걸러서(filter) 새로운 배열로 세팅
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
+  
   const handleSignup = async () => {
-    setIsLoading(true);
-    setError(null);
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      // 1단계: 회원가입 데이터 전송 (JSON)
-      const response = await fetch('/api/v1/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      // 백엔드에서 에러 시 JSON, 성공 시에도 생성된 ID를 포함한 JSON을 준다고 가정
-      const resultText = await response.text();
-      let result;
-      try {
-        result = JSON.parse(resultText);
-      } catch (e) {
-        // JSON이 아닐 경우 (예: 그냥 "success" 문자열만 올 때)
-        if (resultText === "success") result = { success: true, data: formData.userId };
-        else throw new Error(resultText);
-      }
-
-      // 성공 처리
-      if (response.ok && (result.success || resultText === "success")) {
-        
-        // 2단계: 파일이 있으면 업로드 실행 (VendorPage 로직 재사용)
-        // 회원가입 시에는 생성된 userId 혹은 별도의 신청번호를 키로 사용합니다.
-        const uploadKey = result.data || formData.userId; 
-
-        if (selectedFiles.length > 0 && uploadKey) {
-          try {
-            const fileFormData = new FormData();
-            selectedFiles.forEach(file => {
-              fileFormData.append('file', file);
-              fileFormData.append('userId', uploadKey); // 관리자 페이지 조회용 키
-            });
-
-            // 파일 업로드 전용 API 호출
-            const fileRes = await fetch(`/api/v1/signup/files`, {
-              method: 'POST',
-              body: fileFormData,
-            });
-
-            if (!fileRes.ok) throw new Error('파일 업로드에 실패했습니다.');
-          } catch (fileErr: any) {
-            alert('회원가입은 되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
-          }
-        }
-
-        alert('회원가입 신청이 완료되었습니다.');
-        
-        // 상태 초기화 및 화면 전환
-        setFormData({
-          vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
-          ceoName: '', zipCode: '', address: '', addressDetail: '',
-          phone: '', industry: '', userName: '', userId: '',
-          email: '', password: '', passwordConfirm: '',
-        });
-        setSelectedFiles([]);
-        onSwitchMode('login');
-        return;
-      }
-
-      // 실패 처리 (기존 로직 유지)
-      const errorMsg = result.data ? Object.values(result.data)[0] : result.message;
-      throw new Error(errorMsg as string || '회원가입에 실패했습니다.');
-
-    } catch (err: any) {
-      setError(err.message);
-      alert(err.message);
-    } finally {
-      setIsLoading(false);
+  try {
+    // 0. 비밀번호 확인
+    if (formData.password !== formData.passwordConfirm) {
+      throw new Error('비밀번호가 일치하지 않습니다.');
     }
-  };
+
+    // --- [STEP 1] 회원가입 데이터 전송 (JSON) ---
+    // 결과값으로 백엔드가 생성한 vendorCode(VN...)를 받습니다.
+    const response = await fetch('/api/v1/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    // 백엔드가 ResponseEntity.ok(vendorCode)로 문자열만 주므로 text()로 받습니다.
+    const resultText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(resultText || '회원가입 신청 중 오류가 발생했습니다.');
+    }
+
+    // 서버에서 방금 생성된 vendorCode (예: VN20260121001)
+    const generatedVendorCode = resultText;
+
+    // --- [STEP 2] 파일이 있으면 업로드 실행 ---
+    if (selectedFiles.length > 0 && generatedVendorCode) {
+      try {
+        const fileFormData = new FormData();
+        
+        // 백엔드 @RequestPart("file") 키값과 일치시킴
+        selectedFiles.forEach(file => {
+          fileFormData.append('file', file);
+        });
+
+        // URL 경로에 vendorCode를 넣어서 전송 (백엔드 @PathVariable 매칭)
+        const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
+          method: 'POST',
+          body: fileFormData, // Content-Type 헤더는 브라우저가 자동 생성하게 둡니다.
+        });
+
+        if (!fileRes.ok) {
+          throw new Error('서류 업로드 중 오류가 발생했습니다.');
+        }
+      } catch (fileErr: any) {
+        // 가입은 성공했으나 파일만 실패한 경우
+        alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+      }
+    }
+
+    // --- [STEP 3] 최종 완료 ---
+    alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
+    
+    // 상태 초기화
+    setFormData({
+      vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
+      ceoName: '', zipCode: '', address: '', addressDetail: '',
+      phone: '', industry: '', userName: '', userId: '',
+      email: '', password: '', passwordConfirm: '',
+    });
+    setSelectedFiles([]);
+    
+    // 로그인 화면으로 전환
+    onSwitchMode('login');
+
+  } catch (err: any) {
+    setError(err.message);
+    alert(err.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));

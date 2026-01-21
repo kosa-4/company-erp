@@ -28,6 +28,14 @@ public class VendorUserService {
     public List<VendorUserListDto> getVendorUserList(VendorUserSearchDto vendorUserSearchDto) {
         return vendorUserMapper.selectVendorUserList(vendorUserSearchDto);
     }
+    // 2. 파일 업로드 위한 회사 코드 조회
+    public String getVendorCode(String userId) {
+        String vendorCode = vendorUserMapper.selectVendorCodeByLoginId(userId);
+        if(vendorCode == null){
+            throw new NoSuchElementException("해당 사용자의 회사 코드가 존재하지 않습니다.");
+        }
+        return vendorCode;
+    }
 
     /* 수정 */
     @Transactional
