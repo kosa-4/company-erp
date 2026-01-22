@@ -986,7 +986,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         <form ref={saveForm} onSubmit={(e) => e.preventDefault()}>
           <div className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <Input name="vendorCode" label="협력사코드" value="-" readOnly />
+              <Input name="vendorCode" label="협력사코드" value="-" readOnly disabled/> {/* 백에서 체번하므로 불필요 */}
               <Input name="vendorName" label="협력사명" placeholder="협력사명 입력" required />
               <Input name="vendorEngName" label="협력사명(영문)" placeholder="영문 협력사명 입력" />
               <Select

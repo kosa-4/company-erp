@@ -4,7 +4,6 @@ import com.company.erp.master.vendor.dto.VendorListDto;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
 import com.company.erp.master.vendor.dto.VendorSearchDto;
 import com.company.erp.master.vendor.dto.VendorUpdateDto;
-import com.company.erp.master.vendoruser.dto.VendorUserListDto;
 
 import java.util.List;
 

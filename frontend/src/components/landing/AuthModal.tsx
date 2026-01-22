@@ -96,66 +96,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }
   };
 
-  // const handleSignup = async () => {
-  //   setIsLoading(true);
-  //   setError(null);
-
-  //   try {
-  //     const response = await fetch('/api/v1/signup', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify(formData),
-  //     });
-
-  //     // 1. 백엔드에서 리턴한 "success" 문자열을 받기 위해 text() 사용
-  //     const resultText = await response.text();
-
-  //     // 2. 성공 처리: 응답이 "success"인 경우
-  //     if (response.ok && resultText === "success") {
-  //       alert('회원가입이 완료되었습니다.');
-        
-  //       // 데이터 초기화: 선언된 formData 구조 그대로 리셋
-  //       setFormData({
-  //         vendorName: '',
-  //         vendorNameEn: '',
-  //         businessType: '',
-  //         businessNo: '',
-  //         ceoName: '',
-  //         zipCode: '',
-  //         address: '',
-  //         addressDetail: '',
-  //         phone: '',
-  //         industry: '',
-  //         userName: '',
-  //         userId: '',
-  //         email: '',
-  //         password: '',
-  //         passwordConfirm: '',
-  //       });
-
-  //       // 로그인 화면으로 전환
-  //       onSwitchMode('login');
-  //       return; // 성공했으므로 여기서 중단
-  //     }
-
-  //     // 3. 실패 처리: 400 에러 등 JSON 에러 메시지 파싱
-  //     try {
-  //       const errorJson = JSON.parse(resultText);
-  //       // Validation 에러 메시지 추출
-  //       const errorMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
-  //       throw new Error(errorMsg as string || '회원가입에 실패했습니다.');
-  //     } catch (e: any) {
-  //       // JSON 파싱 실패 시 원문 텍스트 사용
-  //       throw new Error(e.name === 'SyntaxError' ? resultText : e.message);
-  //     }
-
-  //   } catch (err: any) {
-  //     setError(err.message);
-  //     alert(err.message);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  
    // 파일 첨부
   // 1. 파일 관련 상태 및 Ref 추가
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -175,83 +116,108 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   };
   
   const handleSignup = async () => {
-  setIsLoading(true);
-  setError(null);
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    // 0. 비밀번호 확인
-    if (formData.password !== formData.passwordConfirm) {
-      throw new Error('비밀번호가 일치하지 않습니다.');
-    }
-
-    // --- [STEP 1] 회원가입 데이터 전송 (JSON) ---
-    // 결과값으로 백엔드가 생성한 vendorCode(VN...)를 받습니다.
-    const response = await fetch('/api/v1/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-
-    // 백엔드가 ResponseEntity.ok(vendorCode)로 문자열만 주므로 text()로 받습니다.
-    const resultText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(resultText || '회원가입 신청 중 오류가 발생했습니다.');
-    }
-
-    // 서버에서 방금 생성된 vendorCode (예: VN20260121001)
-    const generatedVendorCode = resultText;
-
-    // --- [STEP 2] 파일이 있으면 업로드 실행 ---
-    if (selectedFiles.length > 0 && generatedVendorCode) {
-      try {
-        const fileFormData = new FormData();
-        
-        // 백엔드 @RequestPart("file") 키값과 일치시킴
-        selectedFiles.forEach(file => {
-          fileFormData.append('file', file);
-        });
-
-        // URL 경로에 vendorCode를 넣어서 전송 (백엔드 @PathVariable 매칭)
-        const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
-          method: 'POST',
-          body: fileFormData, // Content-Type 헤더는 브라우저가 자동 생성하게 둡니다.
-        });
-
-        if (!fileRes.ok) {
-          throw new Error('서류 업로드 중 오류가 발생했습니다.');
-        }
-      } catch (fileErr: any) {
-        // 가입은 성공했으나 파일만 실패한 경우
-        alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+    try {
+      // 0. 비밀번호 확인
+      if (formData.password !== formData.passwordConfirm) {
+        throw new Error('비밀번호가 일치하지 않습니다.');
       }
-    }
 
-    // --- [STEP 3] 최종 완료 ---
-    alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
-    
-    // 상태 초기화
-    setFormData({
-      vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
-      ceoName: '', zipCode: '', address: '', addressDetail: '',
-      phone: '', industry: '', userName: '', userId: '',
-      email: '', password: '', passwordConfirm: '',
-    });
-    setSelectedFiles([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    
-    // 로그인 화면으로 전환
-    onSwitchMode('login');
+      // --- [STEP 1] 회원가입 데이터 전송 (JSON) ---
+      // 결과값으로 백엔드가 생성한 vendorCode(VN...)를 받습니다.
+      const response = await fetch('/api/v1/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-  } catch (err: any) {
-    setError(err.message);
-    alert(err.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // 백엔드가 ResponseEntity.ok(vendorCode)로 문자열만 주므로 text()로 받습니다.
+      const resultText = await response.text();
+
+      if (!response.ok) {
+        let errorMessage:any = '회원가입 신청 중 오류가 발생했습니다.';
+
+        try {
+          // 1. 에러 응답을 JSON 객체로 변환 시도
+          const errorJson = JSON.parse(resultText);
+
+          // 2. 기본 메시지 가져오기
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
+
+          // 3. 상세 유효성 검사 에러(data)가 있다면 그 중 첫 번째 메시지로 덮어쓰기
+          if (errorJson.data && Object.keys(errorJson.data).length > 0) {
+            errorMessage = Object.values(errorJson.data)[0];
+          }
+
+        } catch (e) {
+          // JSON 파싱 실패 시 (예: 500 에러 HTML 등) 원본 텍스트 사용하거나 기본 메시지 유지
+          // 만약 resultText가 너무 길거나 HTML이라면 그냥 기본 메시지를 쓰는 게 나을 수도 있음
+          if (resultText && resultText.length < 100) { 
+             errorMessage = resultText;
+          }
+        }
+
+        // 깔끔하게 정리된 메시지로 에러를 던짐
+        throw new Error(errorMessage);
+      }
+
+      // 서버에서 방금 생성된 vendorCode (예: VN20260121001)
+      const generatedVendorCode = resultText;
+
+      // --- [STEP 2] 파일이 있으면 업로드 실행 ---
+      if (selectedFiles.length > 0 && generatedVendorCode) {
+        try {
+          const fileFormData = new FormData();
+          
+          // 백엔드 @RequestPart("file") 키값과 일치시킴
+          selectedFiles.forEach(file => {
+            fileFormData.append('file', file);
+          });
+
+          // URL 경로에 vendorCode를 넣어서 전송 (백엔드 @PathVariable 매칭)
+          const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
+            method: 'POST',
+            body: fileFormData, // Content-Type 헤더는 브라우저가 자동 생성하게 둡니다.
+          });
+
+          if (!fileRes.ok) {
+            throw new Error('서류 업로드 중 오류가 발생했습니다.');
+          }
+        } catch (fileErr: any) {
+          // 가입은 성공했으나 파일만 실패한 경우
+          alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+        }
+      }
+
+      // --- [STEP 3] 최종 완료 ---
+      alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
+      
+      // 상태 초기화
+      setFormData({
+        vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
+        ceoName: '', zipCode: '', address: '', addressDetail: '',
+        phone: '', industry: '', userName: '', userId: '',
+        email: '', password: '', passwordConfirm: '',
+      });
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // 로그인 화면으로 전환
+      onSwitchMode('login');
+
+    } catch (err: any) {
+      setError(err.message);
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
