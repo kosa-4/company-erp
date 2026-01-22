@@ -357,7 +357,248 @@ export default function RfqSelectionPage() {
               </div>
             }
         >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+              <tr className="bg-stone-50 border-b border-stone-200">
+                <th className="w-12 px-4 py-3.5">
+                  <div className="w-4" />
+                </th>
+                <th className="w-10 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  선택
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  RFQ번호
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">
+                  견적명
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  견적유형
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  구매담당자
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  등록일
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  선정일
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  상태
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  참여업체
+                </th>
+              </tr>
+              </thead>
+
+              <tbody className="divide-y divide-stone-100">
+              {loading && data.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
+                        <span className="text-stone-500">데이터를 불러오는 중...</span>
+                      </div>
+                    </td>
+                  </tr>
+              ) : data.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-16 text-center text-stone-500">
+                      조회된 데이터가 없습니다.
+                    </td>
+                  </tr>
+              ) : (
+                  data.map(row => {
+                    const isExpanded = expandedRows.includes(row.rfqNo);
+                    const isSelected = selectedRfqNo === row.rfqNo;
+                    const totalVendors = row.vendors.length;
+
+                    return (
+                        <React.Fragment key={row.rfqNo}>
+                          <tr
+                              className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${
+                                  isSelected ? 'bg-teal-50/50' : ''
+                              }`}
+                              onClick={() => {
+                                handleSelectRfq(row.rfqNo);
+                                toggleRow(row.rfqNo);
+                              }}
+                          >
+                            <td className="px-4 py-3 text-center">
+                              <svg
+                                  className={`w-4 h-4 text-stone-400 transition-transform ${
+                                      isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                              >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </td>
+
+                            <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                              <input
+                                  type="radio"
+                                  name="rfq-select"
+                                  className="w-4 h-4 text-teal-600"
+                                  checked={isSelected}
+                                  onChange={() => handleSelectRfq(row.rfqNo)}
+                              />
+                            </td>
+
+                            <td className="px-4 py-3 text-sm font-medium text-blue-600 text-center">
+                              {row.rfqNo}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-700">{row.rfqName}</td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.rfqTypeNm}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600 text-center">
+                              {row.ctrlUserNm}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.regDate}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.selectDate}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {getStatusBadge(row.progressCd, row.progressNm)}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
+                              {totalVendors}개 업체
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                              <tr className="bg-stone-50/50">
+                                <td colSpan={10} className="px-12 py-4">
+                                  <div className="border border-stone-200 rounded-lg overflow-hidden bg-white shadow-inner">
+                                    <table className="w-full">
+                                      <thead className="bg-stone-100/50">
+                                      <tr>
+                                        <th className="w-12 px-4 py-2"></th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          코드
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">
+                                          협력사명
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          상태
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">
+                                          총 견적금액
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          제출일
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          선정여부
+                                        </th>
+                                      </tr>
+                                      </thead>
+
+                                      <tbody className="divide-y divide-stone-100">
+                                      {row.vendors.map(vendor => {
+                                        const isVendorSelected =
+                                            selectedVendor?.rfqNo === row.rfqNo &&
+                                            selectedVendor?.vendorCd === vendor.vendorCd;
+
+                                        return (
+                                            <tr
+                                                key={vendor.vendorCd}
+                                                className={`hover:bg-stone-50/50 cursor-pointer ${
+                                                    isVendorSelected ? 'bg-teal-50' : ''
+                                                }`}
+                                                onClick={() =>
+                                                    setSelectedVendor({
+                                                      rfqNo: row.rfqNo,
+                                                      vendorCd: vendor.vendorCd,
+                                                      vendorNm: vendor.vendorNm,
+                                                    })
+                                                }
+                                            >
+                                              <td className="px-4 py-2 text-center">
+                                                <input
+                                                    type="radio"
+                                                    name={`vendor-${row.rfqNo}`}
+                                                    className="w-4 h-4 text-teal-600"
+                                                    checked={isVendorSelected}
+                                                    onChange={() =>
+                                                        setSelectedVendor({
+                                                          rfqNo: row.rfqNo,
+                                                          vendorCd: vendor.vendorCd,
+                                                          vendorNm: vendor.vendorNm,
+                                                        })
+                                                    }
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                              </td>
+
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center">
+                                                {vendor.vendorCd}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">
+                                                {vendor.vendorNm}
+                                              </td>
+                                              <td className="px-4 py-2 text-center text-xs">
+                                                <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
+                                                  {vendor.vnProgressNm}
+                                                </Badge>
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-700 text-right font-semibold">
+                                                {row.progressCd === 'M' ? (
+                                                    <span className="text-stone-400 font-bold tracking-widest text-xs">
+                                        ****
+                                      </span>
+                                                ) : vendor.totalAmt !== null && vendor.totalAmt !== undefined ? (
+                                                    `₩${formatNumber(vendor.totalAmt)}`
+                                                ) : (
+                                                    '-'
+                                                )}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-600 text-center font-medium">
+                                                {vendor.submitDate}
+                                              </td>
+                                              <td className="px-4 py-2 text-center">
+                                                {vendor.selectYn === 'Y' ? <Badge variant="green">선정됨</Badge> : '-'}
+                                              </td>
+                                            </tr>
+                                        );
+                                      })}
+
+                                      {row.vendors.length === 0 && (
+                                          <tr>
+                                            <td colSpan={7} className="py-4 text-center text-xs text-stone-400">
+                                              데이터가 없습니다.
+                                            </td>
+                                          </tr>
+                                      )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                          )}
+                        </React.Fragment>
+                    );
+                  })
+              )}
+              </tbody>
+            </table>
+          </div>
         </Card>
+
 
         <RfqCompareModal
             isOpen={isCompareModalOpen}
