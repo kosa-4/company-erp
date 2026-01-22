@@ -116,7 +116,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
   
-  const handleSignup = async () => {
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault(); // 폼 제출 시 새로고침 방지
     setIsLoading(true);
     setError(null);
 

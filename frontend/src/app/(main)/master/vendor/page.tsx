@@ -894,7 +894,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>취소</Button>
-            <Button variant="primary" onClick={updateVendor}>수정 요청</Button>
+            <Button variant="primary" onClick={updateVendor}>수정</Button>
           </div>
         }
       >
