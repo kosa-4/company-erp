@@ -152,7 +152,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       }
 
       // 3. 여기까지 내려왔으면 성공입니다. resultText가 바로 코드입니다.
-      const generatedVendorCode = resultText;
+      const generatedVendorCode = resultText.trim();
+      if (!generatedVendorCode) {
+        throw new Error('업체코드를 확인할 수 없습니다.');
+      }
 
       // --- [STEP 2] 파일이 있으면 업로드 실행 ---
       if (selectedFiles.length > 0 && generatedVendorCode) {

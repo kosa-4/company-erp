@@ -59,6 +59,10 @@ public class VendorPortalService {
     private boolean isEditable(String loginId, VendorListDto vendor) {
         // 1. 사용자 정보 조회
         HashMap<String, String> userInfo = vendorUserMapper.selectRoleAndVendorCodeByUserId(loginId);
+
+        if(userInfo == null){
+            throw new NoSuchElementException("사용자를 조회할 수 없습니다.");
+        }
         
         // 2. 사용자 권한 확인
         String role = userInfo.get("role");
@@ -82,7 +86,7 @@ public class VendorPortalService {
         String vendorCode = userInfo.get("vendorCode");
 
         // 2. 권한 확인
-        if(!role.equals("VENDOR")){
+        if(!"VENDOR".equals(role)){
             throw new IllegalStateException("수정 권한이 없습니다.");
         }
 
