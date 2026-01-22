@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle, Lock } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
+import { Can } from '@/auth/Can';
 import { toast } from 'sonner';
 
 export default function VendorInfoChangePage() {
@@ -27,35 +28,39 @@ export default function VendorInfoChangePage() {
   const [changeReason, setChangeReason] = useState(''); // 변경 사유(remark에 담김)
   const [loading, setLoading] = useState(true);
 
-  // 2. 초기 데이터 패치
-  const fetchVendorData = async () => {
-    try {
-      const response = await fetch('/api/v1/vendor-portal/info', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // DTO 필드명과 일치하므로 데이터 그대로 세팅
-        setFormData(data);
-        // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
-        if(data.remark) setChangeReason(data.remark);
-      } else {
-        toast.error('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      toast.error('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 원본 저장
+  const [originalData, setOriginalData] = useState<typeof formData | null>(null);
 
+  // 2. 초기 데이터 패치
   useEffect(() => {
+    const fetchVendorData = async () => {
+      try {
+        const response = await fetch('/api/v1/vendor-portal/info', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // DTO 필드명과 일치하므로 데이터 그대로 세팅
+          setFormData(data);
+          // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
+          setOriginalData(JSON.parse(JSON.stringify(data))); // 깊은 복사
+          if(data.remark) setChangeReason(data.remark);
+          if(data.remark) setChangeReason(data.remark);
+        } else {
+          alert('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchVendorData();
   }, []);
-
+  console.log("originalData " , originalData);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -64,13 +69,14 @@ export default function VendorInfoChangePage() {
   const handleRequestChange = async () => {
     if (!formData.editable) return;
     if (!changeReason.trim()) {
-      toast.warning('변경 사유를 입력해주세요.');
+      alert('변경 사유를 입력해주세요.');
       return;
     }
 
+    // DTO 구조와 동일하게 전달
     const requestBody = {
       ...formData,
-      remark: changeReason
+      remark: changeReason // 상세 사유를 remark 필드에 담아 전송
     };
     
     try {
@@ -82,13 +88,13 @@ export default function VendorInfoChangePage() {
       });
   
       if (response.ok) {
-        toast.success('협력업체 변경 신청이 접수되었습니다.');
-        fetchVendorData();
+        alert('협력업체 변경 신청이 접수되었습니다.');
+        window.location.reload();
       } else {
-        toast.error('신청 처리 중 오류가 발생했습니다.');
+        alert('신청 처리 중 오류가 발생했습니다.');
       }
     } catch (error) {
-      toast.error('네트워크 오류가 발생했습니다.');
+      alert('네트워크 오류가 발생했습니다.');
     }
   };
 
@@ -113,6 +119,7 @@ export default function VendorInfoChangePage() {
                   onChange={handleChange}
                   disabled={!formData.editable}
                 />
+
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">협력사명 (영문)</label>
@@ -133,8 +140,8 @@ export default function VendorInfoChangePage() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:bg-gray-100"
                 >
                   <option value="">선택</option>
-                  <option value="INDIVIDUAL">개인</option>
-                  <option value="CORP">법인</option>
+                  <option value="개인">개인</option>
+                  <option value="법인">법인</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -213,16 +220,19 @@ export default function VendorInfoChangePage() {
               />
             </section>
           )}
+
         </div>
 
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+        <Can roles={['VENDOR']}>
           <Button
             onClick={handleRequestChange}
             variant={formData.editable ? "primary" : "outline"}
             disabled={!formData.editable}
           >
-            {formData.editable ? "변경 신청 하기" : "승인 심사 대기 중"}
+            {formData.editable ? "변경 신청 하기" : "수정 불가"}
           </Button>
+        </Can>
         </div>
       </Card>
     </div>

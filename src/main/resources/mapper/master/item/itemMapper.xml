@@ -10,7 +10,8 @@
             (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
-            i.MAKER_NM AS manufacturerName
+            i.MAKER_NM AS manufacturerName,
+            i.REG_DATE AS createdAt
         FROM
             MTGL i
         <where>
@@ -23,6 +24,9 @@
             </if>
             <if test="useYn != null and useYn != ''">
                 AND i.USE_FLAG = #{useYn}
+            </if>
+            <if test="date != null">
+                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
@@ -65,11 +69,8 @@
             <if test="useYn != null and useYn != ''">
                 AND USE_FLAG = #{useYn}
             </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            <if test="date != null">
+                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')

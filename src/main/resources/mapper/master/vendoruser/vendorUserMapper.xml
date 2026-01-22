@@ -4,97 +4,91 @@
 <mapper namespace="com.company.erp.master.vendoruser.mapper.VendorUserMapper">
     <!--협력사 유저 정보 전체 조회-->
     <select id="selectVendorUserList" parameterType="com.company.erp.master.vendoruser.dto.VendorUserSearchDto" resultType="com.company.erp.master.vendoruser.dto.VendorUserListDto">
-        SELECT
-            U.askUserNum,
-            U.vendorCode,
-            (
-                SELECT VENDOR_NM FROM(
-                    SELECT VENDOR_NM, 1 AS priority FROM VNCH WHERE VENDOR_CD = U.vendorCode
-                    UNION ALL
-                    SELECT VENDOR_NM, 2 AS priority FROM VNGL WHERE VENDOR_CD = U.vendorCode
-                )NAME_T
-                ORDER BY priority ASC
-                LIMIT 1
-            ) AS vendorName,
-            U.userId,
-            U.userName,
-            U.phone,
-            U.email,
-            U.status,
-            U.createdAt,
-            U.blockFlag,
-            U.delFlag,
-            U.reqType
-        FROM (
-            <!--테이블 결합-->
+        SELECT * FROM(
             SELECT
-                ASK_USER_NUM AS askUserNum,
-                VENDOR_CD AS vendorCode,
-                USER_ID AS userId,
-                USER_NM AS userName,
-                TEL_NO AS phone,
-                EMAIL AS email,
-                PROGRESS_CD AS status,
-                REG_DATE AS createdAt,
-                'N' AS blockFlag,
-                DEL_FLAG AS delFlag,
-                REQ_TYPE AS reqType
-            FROM
-                VNCH_US
-            WHERE
-                PROGRESS_CD IN ('N', 'C', 'R')
-                AND DEL_FLAG = 'N'
-
-            UNION ALL
-
-            SELECT
-                NULL AS askUserNum,
-                VENDOR_CD AS vendorCode,
-                USER_ID AS userId,
-                USER_NM AS userName,
-                TEL_NUM AS phone,
-                EMAIL AS email,
-                PROGRESS_CD AS status,
-                REG_DATE AS createdAt,
-                BLOCK_FLAG AS blockFlag,
-                DEL_FLAG AS delFlag,
-                NULL AS reqType
-            FROM
-                VN_USER
-            WHERE
-                USER_ID NOT IN (
-                    <!--중복 제거-->
-                    SELECT USER_ID FROM VNCH_US
-                    WHERE PROGRESS_CD IN ('C', 'N', 'R')
+                U.askUserNum,
+                U.vendorCode,
+                COALESCE(
+                    (SELECT VENDOR_NM FROM VNCH WHERE VENDOR_CD = U.vendorCode LIMIT 1),
+                    (SELECT VENDOR_NM FROM VNGL WHERE VENDOR_CD = U.vendorCode LIMIT 1)
+                ) AS vendorName,
+                U.userId,
+                U.userName,
+                U.phone,
+                U.email,
+                U.status,
+                U.createdAt,
+                U.blockFlag,
+                U.delFlag,
+                U.reqType
+            FROM (
+                <!--테이블 결합-->
+                SELECT
+                    ASK_USER_NUM AS askUserNum,
+                    VENDOR_CD AS vendorCode,
+                    USER_ID AS userId,
+                    USER_NM AS userName,
+                    TEL_NO AS phone,
+                    EMAIL AS email,
+                    PROGRESS_CD AS status,
+                    REG_DATE AS createdAt,
+                    'N' AS blockFlag,
+                    DEL_FLAG AS delFlag,
+                    REQ_TYPE AS reqType
+                FROM
+                    VNCH_US
+                WHERE
+                    PROGRESS_CD IN ('N', 'C', 'R')
                     AND DEL_FLAG = 'N'
-                )
-            AND DEL_FLAG = 'N'
-        ) U
+
+                UNION ALL
+
+                SELECT
+                    NULL AS askUserNum,
+                    VENDOR_CD AS vendorCode,
+                    USER_ID AS userId,
+                    USER_NM AS userName,
+                    TEL_NUM AS phone,
+                    EMAIL AS email,
+                    PROGRESS_CD AS status,
+                    REG_DATE AS createdAt,
+                    BLOCK_FLAG AS blockFlag,
+                    DEL_FLAG AS delFlag,
+                    NULL AS reqType
+                FROM
+                    VN_USER
+                WHERE
+                    USER_ID NOT IN (
+                        <!--중복 제거-->
+                        SELECT USER_ID FROM VNCH_US
+                        WHERE PROGRESS_CD IN ('C', 'N', 'R')
+                        AND DEL_FLAG = 'N'
+                    )
+                AND DEL_FLAG = 'N'
+            ) U
+        ) T
 
         <where>
-            U.delFlag = 'N'
+            T.delFlag = 'N'
 
             <if test="userId != null and userId != ''">
-                AND U.userId LIKE CONCAT('%', #{userId}, '%')
+                AND T.userId LIKE CONCAT('%', #{userId}, '%')
             </if>
             <if test="userName != null and userName != ''">
-                AND U.userName LIKE CONCAT('%', #{userName}, '%')
+                AND T.userName LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="vendorCode != null and vendorCode != ''">
+                AND T.vendorCode LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND T.vendorName LIKE CONCAT('%', #{vendorName}, '%')
             </if>
             <if test="blockFlag != null and blockFlag != ''">
-                AND U.blockFlag = #{blockFlag}
-            </if>
-            <if test="startDate != null">
-                AND U.createdAt <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND U.createdAt <![CDATA[<=]]> #{endDate}
-            </if>
-            <if test="phone != null and phone != ''">
-                AND U.phone LIKE CONCAT('%', #{phone}, '%')
+                AND T.blockFlag = #{blockFlag}
             </if>
         </where>
         ORDER BY
-            U.createdAt DESC
+            T.createdAt DESC
     </select>
 
     <!--협력사 유저 정보 회사 코드로 조회-->
@@ -161,13 +155,6 @@
             ) U
         <where>
             U.delFlag = 'N'
-<!--            <if test="vendorName != null and vendorName != ''">-->
-<!--                AND (-->
-<!--                        GL.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
-<!--                    OR-->
-<!--                        CH.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')-->
-<!--                    )-->
-<!--            </if>-->
             <if test="userId != null and userId != ''">
                 AND U.userId LIKE CONCAT('%', #{userId}, '%')
             </if>
@@ -216,6 +203,21 @@
         LIMIT 1
     </select>
 
+    <!--로그인한 id로 권한 조회-->
+    <select id="selectRoleAndVendorCodeByUserId" parameterType="String" resultType="java.util.HashMap">
+        SELECT
+            ROLE AS role,
+            VENDOR_CD AS vendorCode
+        FROM
+            VN_USER
+        WHERE
+            USER_ID = #{loginId}
+        AND
+            DEL_FLAG = 'N'
+        AND
+            ROLE IN ('ADMIN', 'VENDOR')
+    </select>
+
     <!--협력사 사용자 마스터 테이블 단일 조회-->
     <select id="countVendorUsersByUserId" parameterType="String" resultType="int">
         SELECT
@@ -236,6 +238,20 @@
             VN_USER
         WHERE
             USER_ID = #{userId}
+    </select>
+
+    <!--vendor 권한 여부 조회-->
+    <select id="countVendorRoleByVendorCode" parameterType="String" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VN_USER
+        WHERE
+            VENDOR_CD = #{vendorCode}
+        AND
+            ROLE = 'VENDOR'
+        AND
+            DEL_FLAG = 'N'
     </select>
 
     <!--협력사 사용자 관리자 수 조회-->
@@ -321,7 +337,7 @@
             #{email},
             #{phone},
             #{fax},
-            NULL,
+            #{role},
             #{signDate},
             'A',
             'V'
@@ -393,6 +409,9 @@
             </if>
             <if test="phone != null and phone != ''">
                 TEL_NUM = #{phone},
+            </if>
+            <if test="blockFlag != null and blockFlag != ''">
+                BLOCK_FLAG = #{blockFlag},
             </if>
         </set>
         WHERE

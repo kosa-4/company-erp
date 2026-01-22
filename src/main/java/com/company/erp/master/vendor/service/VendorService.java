@@ -21,6 +21,7 @@ public class VendorService {
     @Autowired
     VendorMapper vendorMapper;
 
+
     @Autowired
     DocNumService docNumService;
 
@@ -46,6 +47,39 @@ public class VendorService {
 //        }
         return (fileNumList != null) ?  fileNumList : new ArrayList<>();
     }
+    
+    // 3. 대기 테이블에서 최신 수정 요청 데이터 조회
+    public VendorRegisterDto getVendorByVendorCode(String vendorCode) {
+        return vendorMapper.selectVendorVNCHByVendorCode(vendorCode);
+    }
+
+    /* 수정 */
+    @Transactional
+    public void updateVendor(VendorUpdateDto vendorUpdateDto, String loginId){
+
+        // 1. 마스터 테이블 업데이트
+        vendorUpdateDto.setModifiedBy(loginId);
+        vendorUpdateDto.setModifiedAt(LocalDateTime.now());
+        vendorUpdateDto.setStatus("A");
+
+        int updatedMaster = vendorMapper.updateVendorVNGL(vendorUpdateDto);
+        
+        // 2. 정상 업데이트 여부 확인
+        if(updatedMaster == 0){
+            throw new NoSuchElementException("회사가 존재하지 않습니다");
+        }
+
+        // 3. 구매사에서 직접 수정 시에도 대기 테이블 이력 남기기
+        VendorRegisterDto master =  vendorMapper.selectVendorVNGLByVendorCode(vendorUpdateDto.getVendorCode());
+
+        String askNum = docNumService.generateDocNumStr(DocKey.MD);
+        master.setAskNum(askNum);
+        master.setCreatedBy(loginId);
+        master.setCreatedAt(LocalDateTime.now());
+        master.setStatus("A");
+
+        vendorMapper.insertVendorVNCH(master);
+    }
 
     /* 저장 */
     // 1. 구매사에서 직접 등록 -> 바로 승인 후 마스터 테이블로 이동
@@ -63,8 +97,8 @@ public class VendorService {
         String vendorCode = docNumService.generateDocNumStr(DocKey.VN);
         vendorRegisterDto.setVendorCode(vendorCode);
         vendorRegisterDto.setCreatedBy(sessionId);
-        vendorRegisterDto.setCreatedAt(LocalDate.now());
-        vendorRegisterDto.setSignDate(LocalDate.now());
+        vendorRegisterDto.setCreatedAt(LocalDateTime.now());
+        vendorRegisterDto.setSignDate(LocalDateTime.now());
 
         // 3. 마스터 테이블에 저장
         vendorMapper.insertVendorVNGL(vendorRegisterDto);
@@ -88,8 +122,8 @@ public class VendorService {
             }
             // 3) 공통값 입력
             vendor.setModifiedBy(loginId);
-            vendor.setModifiedAt(LocalDate.now());
-            vendor.setSignDate(LocalDate.now());
+            vendor.setModifiedAt(LocalDateTime.now());
+            vendor.setSignDate(LocalDateTime.now());
             
             // 4) 상태값 확인
             String status = vendor.getStatus();
@@ -123,10 +157,12 @@ public class VendorService {
     // 3. 구매사에서 반려
     @Transactional
     public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String loginId) {
-        // 1) 단일 dto 반환
+
+
+        // 2) 단일 dto 반환
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
-            // 2) 입력값 설정
+            // 3) 입력값 설정
             dto.setModifiedAt(LocalDateTime.now());
             dto.setModifiedBy(loginId);
             dto.setSignUserId(loginId);

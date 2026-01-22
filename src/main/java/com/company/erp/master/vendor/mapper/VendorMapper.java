@@ -20,19 +20,31 @@ public interface VendorMapper {
 
     // 4. 로그인한 id로 대기 테이블 단일 조회
     VendorListDto selectVendorVNCHByLoginId(String loginId);
-    
-    // 4. 로그인한 id로 마스터 테이블 단일 조회
-    VendorListDto selectVendorVNGLByLoginId(String loginId);
 
-    // 5. 회사 코드로 파일 번호 조회
+    // 5. 로그인한 id로 마스터 테이블 단일 조회
+    VendorListDto selectVendorVNGLByLoginId(String loginId);
+    
+    // 6. 대기 상태 여부 확인
+    int countPending(String loginId);
+
+    // 7. 회사 코드로 파일 번호 조회
     List<String> selectFileNumByVendorCode (String vendorCode);
+    
+    // 8. 회사 코드로 대기 테이블 회사 정보 조회
+    VendorRegisterDto selectVendorVNCHByVendorCode(String vendorCode);
+    
+    // 9. 회사 코드로 마스터 테이블 회사 정보 조회
+    VendorRegisterDto selectVendorVNGLByVendorCode(String vendorCode);
+
+    /* 수정 */
+    int updateVendorVNGL(VendorUpdateDto vendorUpdateDto);
 
     /* 저장 */
     // 1. 마스터 테이블 저장
     void insertVendorVNGL(VendorRegisterDto vendorRegisterDto);
     
     // 2. 대기 테이블 저장
-    void insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
+    int insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
 
     /* 수정 */
     // 1. 마스터 테이블 업데이트

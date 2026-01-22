@@ -1,5 +1,6 @@
 package com.company.erp.master.category.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
@@ -15,9 +16,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 //@CrossOrigin(origins = "http://localhost:3000")
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/categories")
+@RequireRole({ "BUYER", "ADMIN" })
 public class CategoryController {
     @Autowired
     CategoryService categoryService;

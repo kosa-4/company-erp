@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/vendor-portal/users")
+@RequireRole({ "BUYER", "ADMIN", "VENDOR" })
 public class VendorUserPortalController {
     @Autowired
     VendorUserPortalService vendorUserPortalService;

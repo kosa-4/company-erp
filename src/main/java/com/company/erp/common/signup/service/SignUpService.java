@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
 @Service
 public class SignUpService {
@@ -29,9 +30,10 @@ public class SignUpService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private DocNumService docNumService;
-
+    
+    // 1. 회원 가입
     @Transactional
-    public void registerVendorWithManager(SignUpDto signUpDto) {
+    public String registerVendorWithManager(SignUpDto signUpDto) {
 
         // 1. 중복 체크
         // 1-1. 아이디 중복 체크
@@ -50,7 +52,7 @@ public class SignUpService {
         // 2. 변수 설정
 
         // 2-1. 요청 코드 생성
-        String askNum = docNumService.generateDocNumStr(DocKey.RQ);
+        String askNum = docNumService.generateDocNumStr(DocKey.OV);
         signUpDto.setAskNo(askNum);
         signUpDto.setAskUserNo(askNum);
 
@@ -80,7 +82,10 @@ public class SignUpService {
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
 
+        return vendorCode;
     }
+    
+
 
     // 협력 업체 정보 매핑
     private VendorRegisterDto convertToVendorRegisterDto(SignUpDto signUpDto) {
@@ -89,7 +94,7 @@ public class SignUpService {
         vendorRegisterDto.setAskNum(signUpDto.getAskNo());
         vendorRegisterDto.setVendorCode(signUpDto.getVendorCode());
         vendorRegisterDto.setVendorName(signUpDto.getVendorName());
-        vendorRegisterDto.setVendorEngName(signUpDto.getVendorNameEn());
+        vendorRegisterDto.setVendorNameEng(signUpDto.getVendorNameEn());
         vendorRegisterDto.setBusinessType(signUpDto.getBusinessType());
         vendorRegisterDto.setBusinessNo(signUpDto.getBusinessNo());
         vendorRegisterDto.setCeoName(signUpDto.getCeoName());
@@ -98,11 +103,11 @@ public class SignUpService {
         vendorRegisterDto.setAddressDetail(signUpDto.getAddressDetail());
         vendorRegisterDto.setTel(signUpDto.getPhone());
         vendorRegisterDto.setFax(signUpDto.getFax());
-        vendorRegisterDto.setEmail(signUpDto.getVendorEmail());
+        vendorRegisterDto.setEmail(signUpDto.getEmail());
         vendorRegisterDto.setIndustry(signUpDto.getIndustry());
         vendorRegisterDto.setCreatedBy(signUpDto.getCreatedBy());
         vendorRegisterDto.setStatus(signUpDto.getStatus());
-        vendorRegisterDto.setCreatedAt(LocalDate.now());
+        vendorRegisterDto.setCreatedAt(LocalDateTime.now());
         vendorRegisterDto.setFoundationDate(signUpDto.getFoundationDate());
 
         return vendorRegisterDto;
@@ -120,7 +125,7 @@ public class SignUpService {
         vendorUserRegisterDto.setStatus(signUpDto.getStatus());
         vendorUserRegisterDto.setPhone(signUpDto.getPhone());
         vendorUserRegisterDto.setFax(signUpDto.getFax());
-        vendorUserRegisterDto.setEmail(signUpDto.getUserEmail());
+        vendorUserRegisterDto.setEmail(signUpDto.getEmail());
         vendorUserRegisterDto.setPassword(signUpDto.getPassword());
         vendorUserRegisterDto.setComType(signUpDto.getComType());
         vendorUserRegisterDto.setReqType(signUpDto.getReqType());
