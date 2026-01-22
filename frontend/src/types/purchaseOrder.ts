@@ -33,4 +33,5 @@ export interface PurchaseOrderItemDTO {
     remark?: string;
     items: PurchaseOrderItemDTO[];
     receivedQuantity?: number;
+    checkFlag?: string;
   }
