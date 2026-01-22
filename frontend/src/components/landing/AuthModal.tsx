@@ -158,6 +158,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       }
 
       // --- [STEP 2] 파일이 있으면 업로드 실행 ---
+      let fileUploadFailed = false;
       if (selectedFiles.length > 0 && generatedVendorCode) {
         try {
           const fileFormData = new FormData();
@@ -180,12 +181,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           // 가입은 성공했으나 파일만 실패한 경우
           console.error('파일 업로드 오류:', fileErr);
           alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+          fileUploadFailed = true;
         }
       }
 
       // --- [STEP 3] 최종 완료 ---
       // 파일 업로드 실패 알림과 중복되지 않도록 조건부 알림
-      if (selectedFiles.length === 0) {
+      if (!fileUploadFailed) {
         alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
       }
       
