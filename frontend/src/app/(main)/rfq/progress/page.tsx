@@ -30,8 +30,7 @@ export default function RfqProgressPage() {
   const [searchParams, setSearchParams] = useState<RfqProgressSearchRequest>({
     rfqNum: '',
     rfqSubject: '',
-    fromDate: '',
-    toDate: '',
+    regDate: '',
     rfqType: '',
     progressCd: '',
     ctrlUserNm: '',
@@ -59,8 +58,7 @@ export default function RfqProgressPage() {
     setSearchParams({
       rfqNum: '',
       rfqSubject: '',
-      fromDate: '',
-      toDate: '',
+      regDate: '',
       rfqType: '',
       progressCd: '',
       ctrlUserNm: '',
@@ -102,23 +100,28 @@ export default function RfqProgressPage() {
       return toast.warning('임시저장(T) 상태인 건만 전송이 가능합니다.');
     }
 
-    if (!confirm(`${selectedRfqNums.length}건을 협력사에 전송하시겠습니까?`)) return;
-
-    try {
-      setLoading(true);
-      for (const rfqNum of selectedRfqNums) {
-        const item = targetItems.find(i => i.rfqNum === rfqNum);
-        const vendorCodes = item?.vendors.map(v => v.vendorCd) || [];
-        await rfqApi.sendRfq(rfqNum, vendorCodes);
+    toast(`${selectedRfqNums.length}건을 협력사에 전송하시겠습니까?`, {
+      action: {
+        label: '전송',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            for (const rfqNum of selectedRfqNums) {
+              const item = targetItems.find(i => i.rfqNum === rfqNum);
+              const vendorCodes = item?.vendors.map(v => v.vendorCd) || [];
+              await rfqApi.sendRfq(rfqNum, vendorCodes);
+            }
+            toast.success('전송되었습니다.');
+            setSelectedRfqNums([]);
+            await fetchData();
+          } catch (error) {
+            toast.error(getErrorMessage(error));
+          } finally {
+            setLoading(false);
+          }
+        }
       }
-      toast.success('전송되었습니다.');
-      setSelectedRfqNums([]);
-      fetchData();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleClose = async () => {
@@ -134,21 +137,26 @@ export default function RfqProgressPage() {
       return toast.warning(`다음 견적은 마감할 수 없습니다: ${invalidStatus}\n요청중(RFQS) 또는 제출완료(RFQC) 상태만 마감 가능합니다.`);
     }
 
-    if (!confirm(`${selectedRfqNums.length}건을 마감하시겠습니까?`)) return;
-
-    try {
-      setLoading(true);
-      for (const rfqNum of selectedRfqNums) {
-        await rfqApi.closeRfq(rfqNum);
+    toast(`${selectedRfqNums.length}건을 마감하시겠습니까?`, {
+      action: {
+        label: '마감',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            for (const rfqNum of selectedRfqNums) {
+              await rfqApi.closeRfq(rfqNum);
+            }
+            toast.success('마감 처리되었습니다.');
+            setSelectedRfqNums([]);
+            await fetchData();
+          } catch (error) {
+            toast.error(getErrorMessage(error));
+          } finally {
+            setLoading(false);
+          }
+        }
       }
-      toast.success('마감 처리되었습니다.');
-      setSelectedRfqNums([]);
-      fetchData();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleEdit = () => {

@@ -91,7 +91,7 @@ export default function NoticePage() {
         message: error?.message,
         data: error?.data
       });
-      alert(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -149,7 +149,7 @@ export default function NoticePage() {
       ));
     } catch (error: any) {
       console.error('공지사항 상세 조회 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
       setIsDetailModalOpen(false);
     }
   };
@@ -278,18 +278,21 @@ export default function NoticePage() {
       e.stopPropagation();
     }
     
-    if (!confirm('정말 삭제하시겠습니까?')) {
-      return;
-    }
-    
-    try {
-      await noticeApi.delete(noticeNum);
-      alert('공지사항이 삭제되었습니다.');
-      await fetchNoticeList();
-    } catch (error: any) {
-      console.error('공지사항 삭제 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
-    }
+    toast('정말 삭제하시겠습니까?', {
+      action: {
+        label: '삭제',
+        onClick: async () => {
+          try {
+            await noticeApi.delete(noticeNum);
+            toast.success('공지사항이 삭제되었습니다.');
+            await fetchNoticeList();
+          } catch (error: any) {
+            console.error('공지사항 삭제 실패:', error);
+            toast.error(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+          }
+        }
+      }
+    });
   };
   
   const handleSelectAll = (checked: boolean) => {
@@ -311,23 +314,26 @@ export default function NoticePage() {
   const handleDeleteSelected = async () => {
     if (!isBuyer) return;
     if (selectedNotices.length === 0) {
-      alert('삭제할 공지사항을 선택해주세요.');
+      toast.warning('삭제할 공지사항을 선택해주세요.');
       return;
     }
     
-    if (!confirm(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`)) {
-      return;
-    }
-    
-    try {
-      await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
-      alert('선택한 공지사항이 삭제되었습니다.');
-      setSelectedNotices([]);
-      await fetchNoticeList();
-    } catch (error: any) {
-      console.error('공지사항 일괄 삭제 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
-    }
+    toast(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`, {
+      action: {
+        label: '삭제',
+        onClick: async () => {
+           try {
+            await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
+            toast.success('선택한 공지사항이 삭제되었습니다.');
+            setSelectedNotices([]);
+            await fetchNoticeList();
+          } catch (error: any) {
+            console.error('공지사항 일괄 삭제 실패:', error);
+            toast.error(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+          }
+        }
+      }
+    });
   };
 
   // 선택된 항목 중 첫 번째를 상세 모달로 열기
@@ -416,11 +422,6 @@ export default function NoticePage() {
 
   // 공지사항 저장 핸들러
   const handleSave = async () => {
-    // 저장 확인 팝업
-    if (!confirm('저장하시겠습니까?')) {
-      return;
-    }
-
     // 유효성 검사
     if (!formData.subject || !formData.content || !formData.startDate || !formData.endDate) {
       toast.error('모든 필수 항목을 입력해주세요.');
@@ -571,7 +572,7 @@ export default function NoticePage() {
       width: 80,
       align: 'center',
       render: (value) => (
-        <span className="text-gray-600">{value || 0}</span>
+        <span className="text-gray-600">{Number(value || 0)}</span>
       ),
     },
     {
@@ -702,7 +703,6 @@ export default function NoticePage() {
               onConfirm={handleUpdate}
               cancelText="취소"
               confirmText="저장"
-              disabled={saving}
             />
           ) : (
             <ModalFooter
@@ -920,7 +920,6 @@ export default function NoticePage() {
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={handleSave}
             confirmText="저장"
-            disabled={saving}
           />
         }
       >

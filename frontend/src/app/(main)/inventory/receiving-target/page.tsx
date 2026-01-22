@@ -10,7 +10,10 @@ import {
   SearchPanel,
   Modal,
   Textarea,
+  ModalFooter
 } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { formatNumber } from "@/lib/utils";
 import {
   goodsReceiptApi,
@@ -55,6 +58,7 @@ interface ReceivingFormItem {
 }
 
 export default function ReceivingTargetPage() {
+  const router = useRouter();
   const [targetItems, setTargetItems] = useState<ReceivingTargetItem[]>([]);
   // 선택된 아이템 ID 집합
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(
@@ -152,7 +156,7 @@ export default function ReceivingTargetPage() {
       setSelectedItemIds(new Set()); // 조회 시 선택 초기화
     } catch (error) {
       console.error("데이터 조회 오류:", error);
-      alert("데이터 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
+      toast.error("데이터 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -189,7 +193,7 @@ export default function ReceivingTargetPage() {
       );
 
       if (firstSelectedItem && firstSelectedItem.poNo !== poNo) {
-        alert("동일한 발주번호의 품목만 함께 선택할 수 있습니다.");
+        toast.warning("동일한 발주번호의 품목만 함께 선택할 수 있습니다.");
         return;
       }
     }
@@ -204,7 +208,7 @@ export default function ReceivingTargetPage() {
 
   const handleReceiving = () => {
     if (selectedItemIds.size === 0) {
-      alert("입고 처리할 품목을 선택해주세요.");
+      toast.warning("입고 처리할 품목을 선택해주세요.");
       return;
     }
 
@@ -220,7 +224,7 @@ export default function ReceivingTargetPage() {
     );
 
     if (!isAllSamePo) {
-      alert("동일한 발주번호의 품목만 함께 입고 처리할 수 있습니다.");
+      toast.warning("동일한 발주번호의 품목만 함께 입고 처리할 수 있습니다.");
       return;
     }
 
@@ -285,7 +289,7 @@ export default function ReceivingTargetPage() {
       setSelectedPoDetail(detail);
       setIsPoDetailOpen(true);
     } catch (error) {
-      alert("발주 상세 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
+      toast.error("발주 상세 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
     }
   };
 
@@ -316,7 +320,7 @@ export default function ReceivingTargetPage() {
       setSelectedRfqDetail(detail);
       setIsRfqDetailOpen(true);
     } catch (error) {
-      alert("문서 상세 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
+      toast.error("문서 상세 조회 중 오류가 발생했습니다: " + getErrorMessage(error));
     }
   };
 
@@ -325,26 +329,26 @@ export default function ReceivingTargetPage() {
   const handleSaveReceiving = async () => {
     // Validation
     if (!grDate) {
-      alert("입고일자를 선택해주세요.");
+      toast.warning("입고일자를 선택해주세요.");
       return;
     }
     if (!currentPoNo) {
-      alert("발주 정보가 없습니다.");
+      toast.warning("발주 정보가 없습니다.");
       return;
     }
     if (receivingItems.length === 0) {
-      alert("입고 품목이 없습니다.");
+      toast.warning("입고 품목이 없습니다.");
       return;
     }
     // 품목별 Validation
     for (let i = 0; i < receivingItems.length; i++) {
       const item = receivingItems[i];
       if (item.receivedQuantity <= 0) {
-        alert(`${i + 1}번째 품목의 입고수량을 확인해주세요.`);
+        toast.warning(`${i + 1}번째 품목의 입고수량을 확인해주세요.`);
         return;
       }
       if (item.receivedQuantity > item.remainingQuantity) {
-        alert(
+        toast.warning(
           `${i + 1}번째 품목의 입고수량이 잔여수량(${item.remainingQuantity})을 초과했습니다.`,
         );
         return;
@@ -380,16 +384,15 @@ export default function ReceivingTargetPage() {
       setSelectedItemIds(new Set());
       setCurrentPoNo(null);
 
-      const moveToList = window.confirm(
-        "성공적으로 입고 처리되었습니다. 입고현황으로 이동하시겠습니까?",
-      );
-      if (moveToList) {
-        window.location.href = "/inventory/receiving-list";
-      } else {
-        await fetchData();
-      }
+      toast.success("성공적으로 입고 처리되었습니다.", {
+        action: {
+          label: "입고현황 이동",
+          onClick: () => router.push("/inventory/receiving-list"),
+        },
+      });
+      await fetchData();
     } catch (error) {
-      alert("입고 처리 중 오류가 발생했습니다: " + getErrorMessage(error));
+      toast.error("입고 처리 중 오류가 발생했습니다: " + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
