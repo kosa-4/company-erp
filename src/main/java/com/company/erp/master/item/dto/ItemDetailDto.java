@@ -29,7 +29,6 @@ public class ItemDetailDto{
     private String categoryM; // 중분류
     private String categoryS; // 소분류
     private int unitPrice;
-    private String deleteYn;
 
 }
 /*
