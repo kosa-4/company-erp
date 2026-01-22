@@ -2,33 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Badge, Button } from '@/components/ui';
-import { rfqApi } from '@/lib/api/rfq';
+import { rfqApi, CompareResponse } from '@/lib/api/rfq';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
-
-type CompareResponse = {
-    rfqNo: string;
-    rfqName: string;
-    items: Array<{
-        lineNo: number;
-        itemCd: string;
-        itemDesc: string;
-        itemSpec?: string;
-        unitCd?: string;
-        qty: number;
-    }>;
-    vendors: Array<{
-        vendorCd: string;
-        vendorNm: string;
-        selectYn?: 'Y' | 'N';
-    }>;
-    quotes: Array<{
-        vendorCd: string;
-        lineNo: number;
-        unitPrice: number | null;
-        amount: number | null;
-    }>;
-};
 
 export default function RfqCompareModal({
                                             isOpen,
@@ -45,35 +21,12 @@ export default function RfqCompareModal({
     useEffect(() => {
         if (!isOpen || !rfqNo) return;
 
-        // 모달 재오픈 시 잔상 방지
         setData(null);
 
         (async () => {
             try {
                 setLoading(true);
-
-                // ✅ 실제 API 붙일 때
-                // const res: CompareResponse = await rfqApi.getCompareDetail(rfqNo);
-                // setData(res);
-
-                // ✅ 더미 데이터 (확인용)
-                const res: CompareResponse = {
-                    rfqNo,
-                    rfqName: '테스트 RFQ',
-                    items: [
-                        { lineNo: 1, itemCd: 'IT001', itemDesc: '품목A', qty: 10 },
-                        { lineNo: 2, itemCd: 'IT002', itemDesc: '품목B', qty: 5 },
-                    ],
-                    vendors: [
-                        { vendorCd: 'V030', vendorNm: 'test0120', selectYn: 'N' },
-                        { vendorCd: 'V035', vendorNm: '동네통테', selectYn: 'Y' },
-                    ],
-                    quotes: [
-                        { vendorCd: 'V030', lineNo: 1, unitPrice: 3400, amount: 34000 },
-                        { vendorCd: 'V035', lineNo: 1, unitPrice: 19500, amount: 195000 },
-                    ],
-                };
-
+                const res = await rfqApi.getCompareDetail(rfqNo);
                 setData(res);
             } catch (e) {
                 toast.error('견적 비교 데이터를 불러오지 못했습니다.');
@@ -85,10 +38,14 @@ export default function RfqCompareModal({
     }, [isOpen, rfqNo]);
 
     const cellMap = useMemo(() => {
-        const m = new Map<string, { unitPrice: number | null; amount: number | null }>();
+        const m = new Map<string, { unitPrice: number | null; quoteQt: number | null; amount: number | null }>();
         if (!data) return m;
         for (const q of data.quotes) {
-            m.set(`${q.vendorCd}::${q.lineNo}`, { unitPrice: q.unitPrice, amount: q.amount });
+            m.set(`${q.vendorCd}::${q.lineNo}`, {
+                unitPrice: q.unitPrice,
+                quoteQt: q.quoteQt,
+                amount: q.amount,
+            });
         }
         return m;
     }, [data]);
@@ -102,6 +59,17 @@ export default function RfqCompareModal({
             }
         }
         return totals;
+    }, [data]);
+
+    // 선정된 업체가 앞에 보이게
+    const sortedVendors = useMemo(() => {
+        if (!data) return [];
+        return [...data.vendors].sort((a, b) => {
+            const aWinner = a.selectYn === 'Y' ? 0 : 1;
+            const bWinner = b.selectYn === 'Y' ? 0 : 1;
+            if (aWinner !== bWinner) return aWinner - bWinner; // ✅ Y가 먼저
+            return (a.vendorCd || '').localeCompare(b.vendorCd || ''); // 나머진 코드순(원하면 제거)
+        });
     }, [data]);
 
     return (
@@ -124,42 +92,41 @@ export default function RfqCompareModal({
                         </div>
 
                         <div className="overflow-auto border border-stone-200 rounded-lg">
-                            <table className="min-w-[1100px] w-full border-collapse">
-                                {/* ✅ colSpan/rowSpan 꼬임 방지: colgroup로 열 수 고정 */}
+                            <table className="w-full table-fixed min-w-[980px] border-separate border-spacing-0">
                                 <colgroup>
-                                    <col style={{ width: 260 }} />
-                                    <col style={{ width: 90 }} />
-                                    {data.vendors.map(v => (
+                                    <col style={{ width: 150 }} />
+                                    <col style={{ width: 50 }} />
+                                    {sortedVendors.map(v => (
                                         <React.Fragment key={v.vendorCd}>
-                                            <col style={{ width: 140 }} />
-                                            <col style={{ width: 160 }} />
+                                            <col style={{ width: 50 }} />
+                                            <col style={{ width: 50 }} />
+                                            <col style={{ width: 60 }} />
                                         </React.Fragment>
                                     ))}
                                 </colgroup>
 
                                 <thead className="bg-stone-50">
-                                {/* 1행: 협력사 그룹 헤더 */}
-                                <tr className="border-b border-stone-200">
+                                <tr>
                                     <th
                                         rowSpan={2}
-                                        className="px-3 py-2 text-xs font-medium text-stone-500 text-left align-middle"
+                                        className="px-2 py-2 text-xs font-semibold text-stone-600 text-left align-middle border-b-2 border-stone-300 border-r border-stone-200 last:border-r-0"
                                     >
                                         품목
                                     </th>
                                     <th
                                         rowSpan={2}
-                                        className="px-3 py-2 text-xs font-medium text-stone-500 text-right align-middle"
+                                        className="px-2 py-2 text-xs font-semibold text-stone-600 text-right align-middle border-b-2 border-stone-300 border-r border-stone-200 last:border-r-0"
                                     >
-                                        수량
+                                        요구수량
                                     </th>
 
-                                    {data.vendors.map(v => {
+                                    {sortedVendors.map((v) => {
                                         const isWinner = v.selectYn === 'Y';
                                         return (
                                             <th
                                                 key={v.vendorCd}
-                                                colSpan={2}
-                                                className={`px-3 py-2 text-xs font-medium text-center ${
+                                                colSpan={3}
+                                                className={`px-2 py-2 text-xs font-semibold text-center border-b border-stone-200 border-r border-stone-200 last:border-r-0 ${
                                                     isWinner ? 'bg-blue-50' : ''
                                                 }`}
                                             >
@@ -172,78 +139,60 @@ export default function RfqCompareModal({
                                     })}
                                 </tr>
 
-                                {/* 2행: 단가/금액 서브 헤더 */}
-                                <tr className="border-b border-stone-200">
-                                    {data.vendors.map(v => {
+                                <tr>
+                                    {sortedVendors.map((v) => {
                                         const isWinner = v.selectYn === 'Y';
+                                        const thClass =
+                                            `px-2 py-2 text-[11px] font-semibold text-stone-600 text-right border-b-2 border-stone-300 border-r border-stone-200 last:border-r-0 ` +
+                                            (isWinner ? 'bg-blue-50' : '');
                                         return (
                                             <React.Fragment key={v.vendorCd}>
-                                                <th
-                                                    className={`px-3 py-2 text-[11px] font-medium text-stone-500 text-right ${
-                                                        isWinner ? 'bg-blue-50' : ''
-                                                    }`}
-                                                >
-                                                    단가
-                                                </th>
-                                                <th
-                                                    className={`px-3 py-2 text-[11px] font-medium text-stone-500 text-right ${
-                                                        isWinner ? 'bg-blue-50' : ''
-                                                    }`}
-                                                >
-                                                    금액
-                                                </th>
+                                                <th className={thClass}>단가</th>
+                                                <th className={thClass}>견적수량</th>
+                                                <th className={thClass}>금액</th>
                                             </React.Fragment>
                                         );
                                     })}
                                 </tr>
                                 </thead>
 
-                                <tbody className="divide-y divide-stone-100">
-                                {data.items.map(item => (
+                                <tbody className="bg-white">
+                                {data.items.map((item) => (
                                     <tr key={item.lineNo} className="hover:bg-stone-50/60">
-                                        <td className="px-3 py-2 text-sm text-stone-700">
-                                            <div className="font-medium">{item.itemDesc}</div>
-                                            <div className="text-xs text-stone-400">
+                                        <td className="px-2 py-2 text-sm text-stone-700 border-b border-stone-200 border-r border-stone-200 last:border-r-0">
+                                            <div className="font-semibold truncate">{item.itemDesc}</div> {/* truncate : 텍스트가 늘어지지 않게함 */}
+                                            <div className="text-xs text-stone-400 truncate">
                                                 {item.itemCd}
                                                 {item.itemSpec ? ` · ${item.itemSpec}` : ''}
                                                 {item.unitCd ? ` · ${item.unitCd}` : ''}
                                             </div>
                                         </td>
 
-                                        <td className="px-3 py-2 text-sm text-stone-700 text-right">
+                                        <td className="px-2 py-2 text-sm font-semibold text-stone-800 text-right border-b border-stone-200 border-r border-stone-200 last:border-r-0">
                                             {formatNumber(item.qty)}
                                         </td>
 
-                                        {data.vendors.map(v => {
+                                        {sortedVendors.map((v) => {
                                             const isWinner = v.selectYn === 'Y';
                                             const cell = cellMap.get(`${v.vendorCd}::${item.lineNo}`);
                                             const unitPrice = cell?.unitPrice ?? null;
+                                            const quoteQt = cell?.quoteQt ?? null;
                                             const amount = cell?.amount ?? null;
+
+                                            const tdBase =
+                                                `px-2 py-2 text-sm text-right font-medium text-stone-700 border-b border-stone-200 border-r border-stone-200 last:border-r-0 ` +
+                                                (isWinner ? 'bg-blue-50/60' : '');
 
                                             return (
                                                 <React.Fragment key={v.vendorCd}>
-                                                    <td
-                                                        className={`px-3 py-2 text-sm text-right text-stone-700 ${
-                                                            isWinner ? 'bg-blue-50/60' : ''
-                                                        }`}
-                                                    >
-                                                        {unitPrice == null ? (
-                                                            <span className="text-stone-300">-</span>
-                                                        ) : (
-                                                            `₩${formatNumber(unitPrice)}`
-                                                        )}
+                                                    <td className={tdBase}>
+                                                        {unitPrice == null ? <span className="text-stone-300">-</span> : `₩${formatNumber(unitPrice)}`}
                                                     </td>
-
-                                                    <td
-                                                        className={`px-3 py-2 text-sm text-right text-stone-700 ${
-                                                            isWinner ? 'bg-blue-50/60' : ''
-                                                        }`}
-                                                    >
-                                                        {amount == null ? (
-                                                            <span className="text-stone-300">-</span>
-                                                        ) : (
-                                                            `₩${formatNumber(amount)}`
-                                                        )}
+                                                    <td className={tdBase}>
+                                                        {quoteQt == null ? <span className="text-stone-300">-</span> : formatNumber(quoteQt)}
+                                                    </td>
+                                                    <td className={tdBase}>
+                                                        {amount == null ? <span className="text-stone-300">-</span> : `₩${formatNumber(amount)}`}
                                                     </td>
                                                 </React.Fragment>
                                             );
@@ -251,19 +200,27 @@ export default function RfqCompareModal({
                                     </tr>
                                 ))}
 
-                                {/* 합계: 금액 열에만 표시 (단가 열은 비움) */}
-                                <tr className="bg-stone-50 border-t border-stone-200">
-                                    <td className="px-3 py-2 text-sm font-semibold text-stone-700">합계</td>
-                                    <td></td>
+                                {/* 합계 */}
+                                <tr className="bg-stone-50">
+                                    <td className="px-2 py-2 text-sm font-semibold text-stone-800 border-t-2 border-stone-300 border-r border-stone-200 last:border-r-0">
+                                        합계
+                                    </td>
+                                    <td className="border-t-2 border-stone-300 border-r border-stone-200 last:border-r-0"></td>
 
-                                    {data.vendors.map(v => {
+                                    {sortedVendors.map((v) => {
                                         const isWinner = v.selectYn === 'Y';
                                         const total = vendorTotals[v.vendorCd] || 0;
+
+                                        const tdBlank = `border-t-2 border-stone-300 border-r border-stone-200 last:border-r-0 ${
+                                            isWinner ? 'bg-blue-50/60' : ''
+                                        }`;
+
                                         return (
                                             <React.Fragment key={v.vendorCd}>
-                                                <td className={`${isWinner ? 'bg-blue-50/60' : ''}`}></td>
+                                                <td className={tdBlank}></td>
+                                                <td className={tdBlank}></td>
                                                 <td
-                                                    className={`px-3 py-2 text-sm font-semibold text-right text-stone-700 ${
+                                                    className={`px-2 py-2 text-sm font-semibold text-right text-stone-800 border-t-2 border-stone-300 border-r border-stone-200 last:border-r-0 ${
                                                         isWinner ? 'bg-blue-50/60' : ''
                                                     }`}
                                                 >

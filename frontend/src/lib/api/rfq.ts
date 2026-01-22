@@ -204,6 +204,32 @@ export interface RfqSaveRequest {
     }[];
 }
 
+export type CompareResponse = {
+    rfqNo: string;
+    rfqName: string;
+    items: Array<{
+        lineNo: number;
+        itemCd: string;
+        itemDesc: string;
+        itemSpec?: string;
+        unitCd?: string;
+        qty: number; // 요구수량(rfqQt)
+    }>;
+    vendors: Array<{
+        vendorCd: string;
+        vendorNm: string;
+        selectYn?: 'Y' | 'N';
+    }>;
+    quotes: Array<{
+        vendorCd: string;
+        lineNo: number;
+        unitPrice: number | null;
+        quoteQt: number | null;
+        amount: number | null;
+    }>;
+};
+
+
 export const rfqApi = {
     /**
      * 견적대기목록 조회
@@ -297,6 +323,12 @@ export const rfqApi = {
      */
     getSelectionResultDetail: (rfqNum: string) =>
         api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
+
+    /**
+     * 가격비교
+     */
+    getCompareDetail: (rfqNo: string) =>
+        api.get<CompareResponse>(`/v1/buyer/rfq-compare/compare/${rfqNo}`),
 
     // ========== 협력사 API ==========
 
