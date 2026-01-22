@@ -139,12 +139,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
       // 2. 에러가 났을 때만! 텍스트를 JSON으로 바꿔서 메시지를 깹니다.
       if (!response.ok) {
-        // 이 안에서만 JSON 파싱을 합니다.
-        const errorJson = JSON.parse(resultText);
-        
-        // 상세 에러(data)가 있으면 그거 쓰고, 없으면 기본 메시지(message)
-        const serverMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
-        
+        let serverMsg = resultText;
+        try {
+          // 이 안에서만 JSON 파싱을 합니다.
+          const errorJson = JSON.parse(resultText);
+          // 상세 에러(data)가 있으면 그거 쓰고, 없으면 기본 메시지(message)
+          serverMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
+        } catch {
+          // JSON이 아니면 원문 유지
+        }
         throw new Error(serverMsg);
       }
 

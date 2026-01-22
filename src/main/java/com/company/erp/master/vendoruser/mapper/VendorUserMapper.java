@@ -7,6 +7,7 @@ import com.company.erp.master.vendoruser.dto.VendorUserRegisterDto;
 import com.company.erp.master.vendoruser.dto.VendorUserSearchDto;
 import com.company.erp.master.vendoruser.dto.VendorUserUpdateDto;
 
+import java.util.HashMap;
 import java.util.List;
 
 public interface VendorUserMapper {
@@ -21,7 +22,7 @@ public interface VendorUserMapper {
     // 4. 협력사 사용자 과거 이력 조회
     int countVendorUserHistoryByUserId(String userId);
     // 5. 사용자 권한 조회
-    String selectRoleByUserId(String loginId);
+    HashMap<String, String> selectRoleAndVendorCodeByUserId(String loginId);
     // 6. vendor 권한 여부 조회
     int countVendorRoleByVendorCode(String vendorCode);
 

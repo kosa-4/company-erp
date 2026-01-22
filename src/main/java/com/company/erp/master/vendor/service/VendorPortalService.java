@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 @Service
@@ -56,7 +57,11 @@ public class VendorPortalService {
     }
 
     private boolean isEditable(String loginId, VendorListDto vendor) {
-        String role = vendorUserMapper.selectRoleByUserId(loginId);
+        // 1. 사용자 정보 조회
+        HashMap<String, String> userInfo = vendorUserMapper.selectRoleAndVendorCodeByUserId(loginId);
+        
+        // 2. 사용자 권한 확인
+        String role = userInfo.get("role");
         if(role == null) return false;
         return role.equals("VENDOR") && vendor != null;
     }
@@ -66,37 +71,46 @@ public class VendorPortalService {
     @Transactional
     public void requestVendorChange(VendorRegisterDto vendorRegisterDto, String loginId) {
 
-        String role = vendorUserMapper.selectRoleByUserId(loginId);
+        HashMap<String, String> userInfo = vendorUserMapper.selectRoleAndVendorCodeByUserId(loginId);
 
         // 1. 사용자 존재 여부 확인
-        if(role == null){
+        if(userInfo == null){
             throw new NoSuchElementException("사용자를 조회할 수 없습니다.");
         }
-        
+
+        String role = userInfo.get("role");
+        String vendorCode = userInfo.get("vendorCode");
+
         // 2. 권한 확인
         if(!role.equals("VENDOR")){
             throw new IllegalStateException("수정 권한이 없습니다.");
         }
 
-        // 3. 승인 대기 여부 확인
-        int pending = vendorMapper.countPending(loginId);
-        if(pending > 0){
-            throw new IllegalStateException("승인 요청 상태일 시 수정할 수 없습니다.");
+        // 3. 업체 정보 확인
+        if(vendorCode == null){
+            throw new IllegalStateException("협력사 정보가 없습니다.");
         }
 
-        // 4. 조건 충족 시
-        // 4-1. 요청 코드 생성
+        // 3. 대기 테이블 삽입
+        // 3-1. 요청 코드 생성
         String askNum = docNumService.generateDocNumStr(DocKey.MD);
         vendorRegisterDto.setAskNum(askNum);
 
-        // 4-2. 수정자 id 및 날짜 입력
+        // 3-2. 수정자 id 및 날짜 입력
         vendorRegisterDto.setCreatedBy(loginId);
         vendorRegisterDto.setCreatedAt(LocalDateTime.now());
 
-        // 4-3. 상태 설정
+        // 3-3. 상태 설정
         vendorRegisterDto.setStatus("C");
         
-        // 최종 DB 저장
-        vendorMapper.insertVendorVNCH(vendorRegisterDto);
+        // 3-4. 회사 코드 강제 입력
+        vendorRegisterDto.setVendorCode(vendorCode);
+
+        int inserted = vendorMapper.insertVendorVNCH(vendorRegisterDto);
+
+        // 4. 삽입 조건으로 상태값 검증 -> 롤백 (원자성 체크)
+        if(inserted == 0){
+            throw new IllegalStateException("이미 승인 대기 중인 상태 입니다.");
+        }
     }
 }

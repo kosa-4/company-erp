@@ -204,15 +204,18 @@
     </select>
 
     <!--로그인한 id로 권한 조회-->
-    <select id="selectRoleByUserId" parameterType="String" resultType="String">
+    <select id="selectRoleAndVendorCodeByUserId" parameterType="String" resultType="java.util.HashMap">
         SELECT
-            ROLE AS role
+            ROLE AS role,
+            VENDOR_CD AS vendorCode
         FROM
             VN_USER
         WHERE
             USER_ID = #{loginId}
         AND
             DEL_FLAG = 'N'
+        AND
+            ROLE IN ('ADMIN', 'VENDOR')
     </select>
 
     <!--협력사 사용자 마스터 테이블 단일 조회-->

@@ -214,7 +214,7 @@
             SIGN_USER_ID,
             COM_TYPE
         )
-        VALUES(
+        SELECT
             #{askNum},
             #{vendorCode},
             #{createdAt},
@@ -240,7 +240,10 @@
             NULL,
             NULL,
             'V'
-        )
+        FROM
+            DUAL
+        WHERE NOT EXISTS
+            (SELECT 1 FROM VNCH WHERE VENDOR_CD = #{vendorCode} AND PROGRESS_CD = 'C')
     </insert>
 
     <!--마스터 테이블 상태 업데이트-->
@@ -402,7 +405,7 @@
         AND
             V.PROGRESS_CD = 'A'
         AND
-            DEL_FLAG = 'N'
+            V.DEL_FLAG = 'N'
 
     </select>
     <!--사업자 번호 중복 체크-->

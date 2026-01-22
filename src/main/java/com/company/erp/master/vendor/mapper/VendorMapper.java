@@ -44,7 +44,7 @@ public interface VendorMapper {
     void insertVendorVNGL(VendorRegisterDto vendorRegisterDto);
     
     // 2. 대기 테이블 저장
-    void insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
+    int insertVendorVNCH(VendorRegisterDto vendorRegisterDto);
 
     /* 수정 */
     // 1. 마스터 테이블 업데이트
