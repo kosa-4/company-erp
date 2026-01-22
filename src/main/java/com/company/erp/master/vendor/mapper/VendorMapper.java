@@ -31,12 +31,14 @@ public interface VendorMapper {
     // 7. 회사 코드로 파일 번호 조회
     List<String> selectFileNumByVendorCode (String vendorCode);
     
-    // 8. 회사 코드로 회사 정보 조회
-    VendorListDto selectVendorByVendorCode(String vendorCode);
+    // 8. 회사 코드로 대기 테이블 회사 정보 조회
+    VendorRegisterDto selectVendorVNCHByVendorCode(String vendorCode);
+    
+    // 9. 회사 코드로 마스터 테이블 회사 정보 조회
+    VendorRegisterDto selectVendorVNGLByVendorCode(String vendorCode);
 
     /* 수정 */
-    void updateVendorVNGL(VendorUpdateDto vendorUpdateDto);
-    void updateVendorVNCH(VendorUpdateDto vendorUpdateDto);
+    int updateVendorVNGL(VendorUpdateDto vendorUpdateDto);
 
     /* 저장 */
     // 1. 마스터 테이블 저장

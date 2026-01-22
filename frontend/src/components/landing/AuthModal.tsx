@@ -238,6 +238,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       email: '', password: '', passwordConfirm: '',
     });
     setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     
     // 로그인 화면으로 전환
     onSwitchMode('login');
@@ -580,7 +583,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     <div className="md:col-span-2">
                       <label className={labelClassName}>이메일 *</label>
                       <input 
-                        type="userEmail"
+                        type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}

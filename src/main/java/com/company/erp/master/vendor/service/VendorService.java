@@ -48,27 +48,37 @@ public class VendorService {
         return (fileNumList != null) ?  fileNumList : new ArrayList<>();
     }
     
-    // 3. 마스터 테이블에서 수정 전 데이터 조회
-    public VendorListDto getVendorByVendorCode(String vendorCode) {
-        return vendorMapper.selectVendorByVendorCode(vendorCode);
+    // 3. 대기 테이블에서 최신 수정 요청 데이터 조회
+    public VendorRegisterDto getVendorByVendorCode(String vendorCode) {
+        return vendorMapper.selectVendorVNCHByVendorCode(vendorCode);
     }
 
     /* 수정 */
     @Transactional
     public void updateVendor(VendorUpdateDto vendorUpdateDto, String loginId){
-        // 1. 존재 여부 체크
-        VendorListDto vendor =  vendorMapper.selectVendorByVendorCode(vendorUpdateDto.getVendorCode());
-        if(vendor == null){
-            throw new NoSuchElementException("회사가 존재하지 않습니다");
-        }
 
-        // 2. 존재 시
+        // 1. 마스터 테이블 업데이트
         vendorUpdateDto.setModifiedBy(loginId);
         vendorUpdateDto.setModifiedAt(LocalDateTime.now());
         vendorUpdateDto.setStatus("A");
 
-        vendorMapper.updateVendorVNGL(vendorUpdateDto);
-        vendorMapper.updateVendorVNCH(vendorUpdateDto);
+        int updatedMaster = vendorMapper.updateVendorVNGL(vendorUpdateDto);
+        
+        // 2. 정상 업데이트 여부 확인
+        if(updatedMaster == 0){
+            throw new NoSuchElementException("회사가 존재하지 않습니다");
+        }
+
+        // 3. 구매사에서 직접 수정 시에도 대기 테이블 이력 남기기
+        VendorRegisterDto master =  vendorMapper.selectVendorVNGLByVendorCode(vendorUpdateDto.getVendorCode());
+
+        String askNum = docNumService.generateDocNumStr(DocKey.MD);
+        master.setAskNum(askNum);
+        master.setCreatedBy(loginId);
+        master.setCreatedAt(LocalDateTime.now());
+        master.setStatus("A");
+
+        vendorMapper.insertVendorVNCH(master);
     }
 
     /* 저장 */

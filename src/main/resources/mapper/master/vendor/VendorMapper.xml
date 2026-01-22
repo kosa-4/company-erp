@@ -19,6 +19,7 @@
             GL.IRS_NO AS businessNo,
             GL.TEL_NO AS tel,
             GL.FAX_NO AS fax,
+            GL.EMAIL AS email,
             GL.ZIP_CD AS zipCode,
             GL.ADDR_DT AS addressDetail,
             GL.FOUNDATION_DATE AS foundationDate,
@@ -38,6 +39,8 @@
                 ) rn
             FROM
                 VNCH
+            WHERE
+                DEL_FLAG = 'N'
 
         ) CH
         ON
@@ -95,6 +98,32 @@
             ASK_NUM = #{askNum}
         AND
             PROGRESS_CD IN ('N', 'C')
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--대기 테이블 단일 조회-->
+    <select id="selectVendorVNGLByVendorCode" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
+        SELECT
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            FAX_NO AS fax,
+            EMAIL AS email,
+            FOUNDATION_DATE AS foundationDate,
+            INDUSTRY_TYPE AS industry,
+            RMK AS remark
+        FROM
+            VNGL
+        WHERE
+            VENDOR_CD = #{vendorCode}
         AND
             DEL_FLAG = 'N'
     </select>
@@ -386,27 +415,28 @@
         ) > 0
     </select>
 
-    <!--회사 코드로 정보 마스터 테이블 조회-->
-    <select id="selectVendorByVendorCode" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
+    <!--회사 코드로 최신 요청 데이터 조회-->
+    <select id="selectVendorVNCHByVendorCode" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorRegisterDto">
         SELECT
-        VENDOR_CD AS vendorCode,
-        VENDOR_NM AS vendorName,
-        VENDOR_ENG_NM AS vendorNameEng,
-        REG_TYPE AS businessType,
-        IRS_NO AS businessNo,
-        CEO_USER_NM AS ceoName,
-        INDUSTRY_TYPE AS industry,
-        ZIP_CD AS zipCode,
-        ADDR AS address,
-        ADDR_DT AS addressDetail,
-        TEL_NO AS tel,
-        PROGRESS_CD AS status,
-        RMK AS remark
+            VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            INDUSTRY_TYPE AS industry,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            PROGRESS_CD AS status,
+            RMK AS remark
         FROM
-        VNCH
+            VNCH
         WHERE
-        VENDOR_CD = #{vendorCode}
-        ORDER BY REG_DATE DESC, ASK_NUM DESC
+            VENDOR_CD = #{vendorCode}
+        ORDER BY
+            REG_DATE DESC, ASK_NUM DESC
         LIMIT 1
     </select>
 
@@ -456,44 +486,6 @@
             MOD_DATE = #{modifiedAt},
             MOD_USER_ID = #{modifiedBy},
             PROGRESS_CD = 'A'
-        </set>
-        WHERE
-            VENDOR_CD = #{vendorCode}
-        AND
-            DEL_FLAG = 'N'
-    </update>
-    <!--대기 테이블 정보 업데이트-->
-    <update id="updateVendorVNCH" parameterType="com.company.erp.master.vendor.dto.VendorUpdateDto">
-        UPDATE
-            VNCH
-        <set>
-            <if test="vendorName != null and vendorName != ''">
-                VENDOR_NM = #{vendorName},
-            </if>
-            <if test="vendorNameEng != null and vendorNameEng != ''">
-                VENDOR_ENG_NM = #{vendorNameEng},
-            </if>
-            <if test="ceoName != null and ceoName != ''">
-                CEO_USER_NM = #{ceoName},
-            </if>
-            <if test="tel != null and tel != ''">
-                TEL_NO = #{tel},
-            </if>
-            <if test="email != null and email != ''">
-                EMAIL = #{email},
-            </if>
-            <if test="zipCode != null and zipCode != ''">
-                ZIP_CD = #{zipCode},
-            </if>
-            <if test="address != null and address != ''">
-                ADDR = #{address},
-            </if>
-            <if test="remark != null and remark != ''">
-                RMK = #{remark},
-            </if>
-            MOD_DATE = #{modifiedAt},
-            MOD_USER_ID = #{modifiedBy},
-            PROGRESS_CD = #{status}
         </set>
         WHERE
             VENDOR_CD = #{vendorCode}

@@ -1,5 +1,6 @@
 package com.company.erp.master.vendoruser.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
@@ -19,9 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 
-@SessionIgnore
 @RestController
 @RequestMapping("api/v1/vendor-users")
+@RequireRole({ "BUYER", "ADMIN" })
 public class VendorUserController {
     @Autowired
     VendorUserService vendorUserService;

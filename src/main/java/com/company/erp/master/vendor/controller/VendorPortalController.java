@@ -1,5 +1,6 @@
 package com.company.erp.master.vendor.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.exception.ApiResponse;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
@@ -14,9 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/vendor-portal/info")
+@RequireRole({ "BUYER", "ADMIN", "VENDOR" })
 public class VendorPortalController {
     @Autowired
     VendorPortalService vendorPortalService;

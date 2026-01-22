@@ -1,5 +1,6 @@
 package com.company.erp.master.vendor.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.exception.ApiResponse;
@@ -29,9 +30,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/vendors")
+@RequireRole({ "BUYER", "ADMIN" })
 public class VendorController {
     @Autowired
     private VendorService vendorService;
@@ -74,7 +75,7 @@ public class VendorController {
     public ApiResponse getPreviousVendor(
             @PathVariable("vendorCode") String vendorCode,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
-        VendorListDto vendorUpdateReq =  vendorService.getVendorByVendorCode(vendorCode);
+        VendorRegisterDto vendorUpdateReq =  vendorService.getVendorByVendorCode(vendorCode);
         if(vendorUpdateReq == null){
             return ApiResponse.ok("기존 승인 정보가 없는 신규 업체입니다.", null);
         }

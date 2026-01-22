@@ -176,11 +176,14 @@ export default function VendorPage() {
   if (vendor.status === 'C') {
     try {
       // 마스터 데이터를 가져오는 전용 경로
-      const response = await fetch(`/api/v1/vendors/${vendor.vendorCode}`);
+      const clickedCode = vendor.vendorCode;
+      const response = await fetch(`/api/v1/vendors/${clickedCode}`);
+      if (!response.ok) throw new Error('마스터 데이터 조회 실패');
       const result = await response.json();
       
       if (result.success && result.data) {
         // 백엔드에서 온 순수 마스터(VNGL) 데이터만 세팅
+        if (latestVendorCodeRef.current !== clickedCode) return;
         setOriginalVendor(result.data); 
       }
     } catch (error) {
@@ -193,48 +196,6 @@ export default function VendorPage() {
   setIsDetailModalOpen(true);
 };
 
-  const renderDiffField = (label: string, currentValue: any, originalValue: any, isTextArea = false) => {
-  // 1. 값 비교를 위해 공백 제거 및 문자열화
-  const curr = String(currentValue ?? '').trim();
-  const orig = String(originalValue ?? '').trim();
-
-  // 2. 변경 여부 판단 (원본이 있고 값이 다를 때만 강조)
-  const isChanged = originalVendor && curr !== orig;
-
-  return (
-    <div className={isTextArea ? "col-span-3" : ""}>
-      <div className="flex flex-col gap-1">
-        {/* [메인 박스] 여기에는 반드시 '수정 후' 데이터(selectedVendor)가 나와야 함 */}
-        {isTextArea ? (
-          <Textarea 
-            label={label} 
-            value={currentValue || ''} // selectedVendor의 값이 여기 들어감
-            readOnly 
-            rows={3}
-            className={isChanged ? "border-amber-500 bg-amber-50 ring-1 ring-amber-500/30" : "bg-gray-50"} 
-          />
-        ) : (
-          <Input 
-            label={label} 
-            value={currentValue || '-'} // selectedVendor의 값이 여기 들어감
-            readOnly 
-            className={isChanged ? "border-amber-500 bg-amber-50 ring-1 ring-amber-500/30" : "bg-gray-50"} 
-          />
-        )}
-        
-        {/* [하단 표시] 변경되었을 때만 '수정 전' 마스터 데이터를 아래에 표시 */}
-        {isChanged && (
-          <div className="flex items-start gap-1 px-1 mt-0.5 bg-red-50 py-1 rounded">
-            <span className="text-[11px] text-red-600 font-bold shrink-0">[수정 전(기존)]</span>
-            <span className="text-[11px] text-gray-500 line-through break-all font-medium">
-              {originalValue || '(데이터 없음)'}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
@@ -272,22 +233,7 @@ export default function VendorPage() {
       width: 120,
       align: 'left',
     },
-    // {
-    //   key: 'useYn',
-    //   header: '사용여부',
-    //   width: 100,
-    //   align: 'center',
-    //   render: (value) => {
-    //     // 값이 존재하고, 대문자로 변환했을 때 정확히 'Y'인 경우만 '사용'
-    //     const isUsed = value && String(value).toUpperCase() === 'Y';
-        
-    //     return (
-    //       <span className={isUsed ? 'text-emerald-600' : 'text-red-500'}>
-    //         {isUsed ? '사용' : '미사용'}
-    //       </span>
-    //     );
-    //   },
-    // },
+
     {
       key: 'businessType',
       header: '사업형태',
@@ -358,9 +304,11 @@ export default function VendorPage() {
       // 1. 에러 통합 처리
       if (!response.ok || !result.success) {
       // result.errors => valid 메세지
-      const errorMsg =(Object.values(result.data)[0] as string)
-
-      throw new Error(errorMsg);
+      const errorMsg =
+          (result?.data && typeof result.data === 'object' && Object.values(result.data)[0]) ||
+          result?.message ||
+          '협력업체 등록에 실패했습니다.';
+      throw new Error(String(errorMsg));
     }
       
     const vendorCode = result.data; // 컨트롤러가 준 vendorCode가 여기 담김!
@@ -673,6 +621,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
     }
 
     // 3. 데이터 세팅 및 모달 오픈
+    setSelectedFiles([]); // 수정 흐름 시작 시 파일 상태 초기화
     setEditVendorData({ ...vendor }); // 원본 데이터 복사
     setIsEditModalOpen(true);
   };
@@ -784,8 +733,8 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         padding={false}
         actions={
           <div className="flex gap-2">
-            <Button variant="danger" onClick={() => selectedVendors.length > 0 && handleRejectClick()}>반려</Button>
-            <Button variant="success" onClick={() => selectedVendors.length > 0 && approveVendor(selectedVendors)}>승인</Button>
+            <Button variant="danger" onClick={handleRejectClick}>반려</Button>
+            <Button variant="success" onClick={() => approveVendor(selectedVendors)}>승인</Button>
             <Button variant="secondary" onClick={handleEditVendor} disabled={selectedVendors.length !== 1}>
               수정
             </Button>
@@ -907,7 +856,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
                 <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
                 <Input label="전화번호" value={selectedVendor.tel} readOnly />
-                <Input label="이메일" value={selectedVendor.email} readOnly />
+                <Input label="이메일" defaultValue={selectedVendor.email} readOnly />
                 <div className="col-span-3">
                   <Input label="주소" value={`${selectedVendor.address} ${selectedVendor.addressDetail}`} readOnly />
                 </div>
@@ -939,7 +888,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       {/* 수정 모달 */}
       <Modal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => { setIsEditModalOpen(false); setSelectedFiles([]); }}
         title="협력업체 정보 수정 (변경 신청)"
         size="xl"
         footer={
@@ -1021,7 +970,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       {/* 등록 모달 */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => { setIsCreateModalOpen(false); setSelectedFiles([]); }}
         title="협력업체 등록"
         size="xl"
         footer={

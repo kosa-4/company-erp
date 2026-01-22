@@ -1,5 +1,6 @@
 package com.company.erp.master.item.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.docNum.dto.DocNumDTO;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
@@ -23,10 +24,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-//@CrossOrigin(origins = "http://localhost:3000")
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/items")
+@RequireRole({ "BUYER", "ADMIN", "USER" })
 public class ItemController {
     @Autowired
     ItemService itemService;

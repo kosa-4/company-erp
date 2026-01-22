@@ -87,7 +87,7 @@ public class VendorPortalService {
 
         // 4. 조건 충족 시
         // 4-1. 요청 코드 생성
-        String askNum = docNumService.generateDocNumStr(DocKey.RQ);
+        String askNum = docNumService.generateDocNumStr(DocKey.MD);
         vendorRegisterDto.setAskNum(askNum);
 
         // 4-2. 수정자 id 및 날짜 입력

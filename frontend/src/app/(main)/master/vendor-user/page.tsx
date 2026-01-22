@@ -132,15 +132,13 @@ export default function VendorUserPage() {
         body: JSON.stringify(selectedRows),
       });
 
-      if (response.ok) {
-        alert('처리가 완료되었습니다.');
-        
-        // [핵심] 수동 필터링 대신 서버 데이터를 다시 호출하여 목록 최신화
-        await fetchVendorUsers(); 
-        
-        // 선택했던 체크박스 초기화
-        setSelectedRows([]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '처리에 실패했습니다.');
       }
+      alert('처리가 완료되었습니다.');
+      await fetchVendorUsers();
+      setSelectedRows([]);
     } catch (e: any) {
       alert(e.message);
     }
