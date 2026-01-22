@@ -11,7 +11,10 @@ import {
   SearchPanel,
   Modal,
   Textarea,
+  ModalFooter // Ensure this is imported if not already, or use Custom Footer
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
 import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
@@ -35,6 +38,7 @@ interface PoGroup {
   remark: string;
   items: PurchaseOrderItemDTO[];
   receivedQuantity: number;
+  checkFlag: string;
 }
 
 export default function OrderProgressPage() {
@@ -53,6 +57,10 @@ export default function OrderProgressPage() {
   const [loading, setLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrderDTO | null>(null);
+
+  // 반려 모달 상태
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   // 수정 모달 상태
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -147,12 +155,13 @@ export default function OrderProgressPage() {
           remark: po.remark || '',
           items: po.items || [],
           receivedQuantity: Number(po.receivedQuantity) || 0,
+          checkFlag: po.checkFlag || 'N',
         };
       });
 
       setPoGroups(groups);
     } catch (error) {
-      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
       console.error(error);
     } finally {
       setLoading(false);
@@ -203,21 +212,21 @@ export default function OrderProgressPage() {
       setSelectedPo(detail);
       setIsDetailModalOpen(true);
     } catch (error) {
-      alert('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
   // 수정 모달 열기
   const handleEdit = async () => {
     if (!selectedPoNo) {
-      alert('선택한 문서가 없습니다.');
+      toast.warning('선택한 문서가 없습니다.');
       return;
     }
     const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
     if (!selectedGroup) return;
 
     if (selectedGroup.status !== 'T') {
-      alert('저장 상태의 항목만 수정할 수 있습니다.');
+      toast.warning('저장 상태의 항목만 수정할 수 있습니다.');
       return;
     }
 
@@ -243,7 +252,7 @@ export default function OrderProgressPage() {
       });
       setIsEditModalOpen(true);
     } catch (error) {
-      alert('발주 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('발주 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -252,7 +261,7 @@ export default function OrderProgressPage() {
     if (!editingPo || !editingPo.poNo) return;
 
     if (!editForm.poName.trim()) {
-      alert('발주명을 입력해주세요.');
+      toast.warning('발주명을 입력해주세요.');
       return;
     }
 
@@ -280,13 +289,13 @@ export default function OrderProgressPage() {
       };
 
       await purchaseOrderApi.update(editingPo.poNo, updateData);
-      alert('발주가 수정되었습니다.');
+      toast.success('발주가 수정되었습니다.');
       setIsEditModalOpen(false);
       setEditingPo(null);
       setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
-      alert('발주 수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('발주 수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -301,16 +310,16 @@ export default function OrderProgressPage() {
     if (!selectedGroup) return;
 
     if (selectedGroup.status !== 'T') {
-      alert('저장 상태의 항목만 확정할 수 있습니다.');
+      toast.warning('저장 상태의 항목만 확정할 수 있습니다.');
       return;
     }
     try {
       await purchaseOrderApi.confirm(selectedPoNo);
-      alert('발주가 확정되었습니다.');
+      toast.success('발주가 확정되었습니다.');
       setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
-      alert('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('확정 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -323,16 +332,16 @@ export default function OrderProgressPage() {
     if (!selectedGroup) return;
 
     if (selectedGroup.status !== 'D') {
-      alert('확정 상태의 항목만 승인할 수 있습니다.');
+      toast.warning('확정 상태의 항목만 승인할 수 있습니다.');
       return;
     }
     try {
       await purchaseOrderApi.approve(selectedPoNo);
-      alert('발주가 승인되었습니다.');
+      toast.success('발주가 승인되었습니다.');
       setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
-      alert('승인 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('승인 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -345,19 +354,28 @@ export default function OrderProgressPage() {
     if (!selectedGroup) return;
 
     if (selectedGroup.status !== 'D') {
-      alert('확정 상태의 항목만 반려할 수 있습니다.');
+      toast.warning('확정 상태의 항목만 반려할 수 있습니다.');
       return;
     }
-    const reason = prompt('반려사유를 입력해주세요.');
-    if (reason) {
-      try {
-        await purchaseOrderApi.reject(selectedPoNo, reason);
-        alert('발주가 반려되었습니다.');
-        setSelectedPoNo(null);
-        await fetchData();
-      } catch (error) {
-        alert('반려 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
-      }
+    setRejectReason('');
+    setIsRejectModalOpen(true);
+  };
+
+  const confirmReject = async () => {
+    if (!selectedPoNo) return;
+    if (!rejectReason.trim()) {
+      toast.warning('반려사유를 입력해주세요.');
+      return;
+    }
+
+    try {
+      await purchaseOrderApi.reject(selectedPoNo, rejectReason);
+      toast.success('발주가 반려되었습니다.');
+      setIsRejectModalOpen(false);
+      setSelectedPoNo(null);
+      await fetchData();
+    } catch (error) {
+      toast.error('반려 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -369,17 +387,22 @@ export default function OrderProgressPage() {
     const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
     if (!selectedGroup) return;
 
+    if (selectedGroup.status === 'S') {
+      toast.warning('이미 발주전송된 건입니다');
+      return;
+    }
+
     if (selectedGroup.status !== 'A') {
-      alert('승인 상태의 항목만 발주전송할 수 있습니다.');
+      toast.warning('승인 상태의 항목만 발주전송할 수 있습니다.');
       return;
     }
     try {
       await purchaseOrderApi.send(selectedPoNo);
-      alert('발주가 전송되었습니다.');
+      toast.success('발주가 전송되었습니다.');
       setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
-      alert('발주전송 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('발주전송 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -392,16 +415,16 @@ export default function OrderProgressPage() {
     if (!selectedGroup) return;
 
     if (selectedGroup.status !== 'C') {
-      alert('납품완료 상태의 항목만 종결할 수 있습니다.');
+      toast.warning('납품완료 상태의 항목만 종결할 수 있습니다.');
       return;
     }
     try {
       await purchaseOrderApi.close(selectedPoNo);
-      alert('발주가 종결되었습니다.');
+      toast.success('발주가 종결되었습니다.');
       setSelectedPoNo(null);
       await fetchData();
     } catch (error) {
-      alert('종결 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('종결 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -609,12 +632,16 @@ export default function OrderProgressPage() {
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               입고완료
                             </span>
+                          ) : group.status === 'S' && group.checkFlag === 'N' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              미확인
+                            </span>
                           ) : group.receivedQuantity > 0 ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                               입고진행중
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                               미입고
                             </span>
                           )}
@@ -887,6 +914,32 @@ export default function OrderProgressPage() {
           </div>
         )}
       </Modal>
+      {/* 반려 사유 입력 모달 */}
+       <Modal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        title="반려 사유 입력"
+        size="sm"
+        footer={
+          <>
+             <Button variant="secondary" onClick={() => setIsRejectModalOpen(false)}>취소</Button>
+             <Button variant="danger" onClick={confirmReject}>반려</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            반려 사유를 입력해주세요. 입력된 사유는 협력사에게 전달됩니다.
+          </p>
+          <Textarea 
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="반려 사유를 입력하세요..."
+            rows={4}
+          />
+        </div>
+      </Modal>
+
     </div>
   );
 }

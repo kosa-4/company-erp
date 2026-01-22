@@ -11,8 +11,11 @@ import {
   SearchPanel,
   Badge,
   Modal,
-  ModalFooter
+  ModalFooter,
+  Textarea
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
 import { goodsReceiptApi, GoodsReceiptDTO, GoodsReceiptItemDTO } from '@/lib/api/goodsReceipt';
 import { getErrorMessage } from '@/lib/api/error';
@@ -59,6 +62,16 @@ export default function ReceivingListPage() {
   const [adjustUnitPrice, setAdjustUnitPrice] = useState(0);
   const [adjustItemCode, setAdjustItemCode] = useState('');
   const [targetItem, setTargetItem] = useState<ReceivingRecord | null>(null);
+  
+  // 상세 팝업용 상태
+  const [isGrDetailModalOpen, setIsGrDetailModalOpen] = useState(false);
+  const [isPoDetailModalOpen, setIsPoDetailModalOpen] = useState(false);
+  const [selectedGrDetail, setSelectedGrDetail] = useState<GoodsReceiptDTO | null>(null);
+  const [selectedPoDetail, setSelectedPoDetail] = useState<any>(null);
+
+  // 취소 모달 상태
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   // 데이터 조회
   const fetchData = async () => {
@@ -107,7 +120,7 @@ export default function ReceivingListPage() {
       setSelectedItemIds(new Set()); // 조회 시 선택 초기화
     } catch (error) {
       console.error('데이터 조회 오류:', error);
-      alert('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('데이터 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -154,10 +167,34 @@ export default function ReceivingListPage() {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
+  // 입고 상세 조회
+  const handleViewGrDetail = async (grNo: string) => {
+    try {
+      const detail = await goodsReceiptApi.getDetail(grNo);
+      setSelectedGrDetail(detail);
+      setIsGrDetailModalOpen(true);
+    } catch (error) {
+      toast.error('입고 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
+  // 발주 상세 조회
+  const handleViewPoDetail = async (poNo: string) => {
+    try {
+      const response = await fetch(`/api/v1/purchase-orders/${poNo}`);
+      if (!response.ok) throw new Error('발주 상세 조회 실패');
+      const detail = await response.json();
+      setSelectedPoDetail(detail);
+      setIsPoDetailModalOpen(true);
+    } catch (error) {
+      toast.error('발주 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
   // 입고조정 버튼 클릭
   const handleAdjust = async () => {
     if (selectedItemIds.size === 0) {
-      alert('조정할 품목을 선택해주세요.');
+      toast.warning('조정할 품목을 선택해주세요.');
       return;
     }
 
@@ -170,7 +207,7 @@ export default function ReceivingListPage() {
     // 여기서는 부분입고 상태일 때만 가능하다는 기존 로직을 따르거나, 
     // 혹은 모든 상태에서 가능하게 할 수 있음. 일단 기존 로직 유지
     if (row.status === 'GRX') {
-      alert('취소된 입고 건은 조정할 수 없습니다.');
+      toast.warning('취소된 입고 건은 조정할 수 없습니다.');
       return;
     }
 
@@ -188,7 +225,7 @@ export default function ReceivingListPage() {
       setIsAdjustMode(true);
       setIsDetailModalOpen(true);
     } catch (error) {
-      alert('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('상세 정보 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
     }
   };
 
@@ -203,7 +240,7 @@ export default function ReceivingListPage() {
     if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
 
     if (adjustQuantity <= 0) {
-      alert('입고수량을 확인해주세요.');
+      toast.warning('입고수량을 확인해주세요.');
       return;
     }
 
@@ -214,12 +251,12 @@ export default function ReceivingListPage() {
         grAmount: adjustAmount,
         warehouseCode: targetItem?.storageLocation, // 저장위치 유지
       });
-      alert('수정되었습니다.');
+      toast.success('수정되었습니다.');
       setIsDetailModalOpen(false);
       setSelectedItemIds(new Set());
       await fetchData();
     } catch (error) {
-      alert('수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('수정 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -228,19 +265,27 @@ export default function ReceivingListPage() {
   // 입고 취소
   const handleCancelItem = async () => {
     if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+    setCancelReason('');
+    setIsCancelModalOpen(true);
+  };
 
-    const reason = prompt('취소 사유를 입력해주세요.');
-    if (!reason) return;
+  const confirmCancel = async () => {
+    if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+    if (!cancelReason.trim()) {
+      toast.warning('취소 사유를 입력해주세요.');
+      return;
+    }
 
     try {
       setLoading(true);
-      await goodsReceiptApi.cancelItem(selectedGr.grNo, adjustItemCode, reason);
-      alert('입고가 취소되었습니다.');
-      setIsDetailModalOpen(false);
+      await goodsReceiptApi.cancelItem(selectedGr.grNo, adjustItemCode, cancelReason);
+      toast.success('입고가 취소되었습니다.');
+      setIsCancelModalOpen(false);
+      setIsDetailModalOpen(false); // 상세 모달도 함께 닫기
       setSelectedItemIds(new Set());
       await fetchData();
     } catch (error) {
-      alert('취소 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
+      toast.error('취소 처리 중 오류가 발생했습니다: ' + getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -272,14 +317,9 @@ export default function ReceivingListPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendor: e.target.value }))}
         />
         <DatePicker
-          label="입고일자 시작"
+          label="입고일자"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="입고일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
         />
         <Select
           label="입고상태"
@@ -366,9 +406,29 @@ export default function ReceivingListPage() {
                           className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
                         />
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.grNo}</td>
-                      <td className="px-4 py-3.5 text-sm text-center font-medium text-blue-600 whitespace-nowrap">{item.poNo}</td>
-                      <td className="px-4 py-3.5 text-sm text-center text-blue-600 whitespace-nowrap">{item.itemCode}</td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        <span 
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewGrDetail(item.grNo);
+                          }}
+                        >
+                          {item.grNo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                        <span 
+                          className="font-medium text-blue-600 hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewPoDetail(item.poNo);
+                          }}
+                        >
+                          {item.poNo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-center text-gray-900 whitespace-nowrap">{item.itemCode}</td>
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">{getStatusBadge(item.status)}</td>
                       <td className="px-4 py-3.5 text-sm text-left font-medium text-gray-900 whitespace-nowrap">{item.itemName}</td>
                       <td className="px-4 py-3.5 text-sm text-center text-stone-600 whitespace-nowrap">{item.receiver}</td>
@@ -463,6 +523,169 @@ export default function ReceivingListPage() {
           </div>
         )}
       </Modal>
+
+      {/* 입고 상세 모달 */}
+      <Modal
+        isOpen={isGrDetailModalOpen}
+        onClose={() => setIsGrDetailModalOpen(false)}
+        title="입고 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsGrDetailModalOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedGrDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">입고번호</label>
+                <p className="font-medium">{selectedGrDetail.grNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedGrDetail.poNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">입고일자</label>
+                <p className="font-medium">{selectedGrDetail.grDate?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">협력업체</label>
+                <p className="font-medium">{selectedGrDetail.vendorName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">저장위치</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedGrDetail.items?.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemDesc}</td>
+                      <td className="p-3 text-right">{formatNumber(item.grQuantity)}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.grAmount))}</td>
+                      <td className="p-3">{item.warehouseCode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 입고금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedGrDetail.totalAmount || 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 발주 상세 모달 */}
+      <Modal
+        isOpen={isPoDetailModalOpen}
+        onClose={() => setIsPoDetailModalOpen(false)}
+        title="발주 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsPoDetailModalOpen(false)}>닫기</Button>
+        }
+      >
+        {selectedPoDetail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">PO번호</label>
+                <p className="font-medium">{selectedPoDetail.poNo}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주명</label>
+                <p className="font-medium">{selectedPoDetail.poName}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">발주일자</label>
+                <p className="font-medium">{selectedPoDetail.poDate?.split('T')[0]}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">협력업체</label>
+                <p className="font-medium">{selectedPoDetail.vendorName}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedPoDetail.items?.map((item: any, index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCode}</td>
+                      <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-right">{formatNumber(item.orderQuantity)}</td>
+                      <td className="p-3 text-right">₩{formatNumber(Number(item.unitPrice))}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 발주금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(Number(selectedPoDetail.totalAmount || 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 취소 사유 입력 모달 */}
+        <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title="입고 취소 사유 입력"
+        size="sm"
+        footer={
+          <>
+              <Button variant="secondary" onClick={() => setIsCancelModalOpen(false)}>취소</Button>
+              <Button variant="danger" onClick={confirmCancel}>입고 취소</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            취소 사유를 입력해주세요.
+          </p>
+          <Textarea 
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="취소 사유를 입력하세요..."
+            rows={4}
+          />
+        </div>
+      </Modal>
+
     </div>
   );
 }

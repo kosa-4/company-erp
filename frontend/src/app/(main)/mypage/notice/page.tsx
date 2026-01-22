@@ -17,10 +17,14 @@ import {
 import { Notice, ColumnDef } from '@/types';
 import { noticeApi, NoticeListResponse, NoticeDetailResponse, FileListItemResponse } from '@/lib/api/notice';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 
 export default function NoticePage() {
+  const { user } = useAuth();
+  const isBuyer = user?.role === 'BUYER' || user?.role === 'ADMIN';
+
   const [notices, setNotices] = useState<Notice[]>([]);
   const [searchParams, setSearchParams] = useState({
     startDate: '',
@@ -87,7 +91,7 @@ export default function NoticePage() {
         message: error?.message,
         data: error?.data
       });
-      alert(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -145,18 +149,20 @@ export default function NoticePage() {
       ));
     } catch (error: any) {
       console.error('공지사항 상세 조회 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
       setIsDetailModalOpen(false);
     }
   };
   
   const handleContentClick = () => {
+    if (!isBuyer) return;
     setIsEditing(true);
     setDeletedFileNums([]);
     setEditUploadedFiles([]);
   };
 
   const handleTitleClick = () => {
+    if (!isBuyer) return;
     setIsEditing(true);
     setDeletedFileNums([]);
     setEditUploadedFiles([]);
@@ -205,8 +211,7 @@ export default function NoticePage() {
         subject: editFormData.subject,
         content: editFormData.content,
       });
-      console.log('공지사항 내용 수정 완료');
-      
+
       // 2. 삭제된 파일 논리적 삭제 처리
       if (deletedFileNums.length > 0) {
         console.log('삭제할 파일 개수:', deletedFileNums.length);
@@ -268,22 +273,26 @@ export default function NoticePage() {
   };
   
   const handleDelete = async (noticeNum: string, e?: React.MouseEvent) => {
+    if (!isBuyer) return;
     if (e) {
       e.stopPropagation();
     }
     
-    if (!confirm('정말 삭제하시겠습니까?')) {
-      return;
-    }
-    
-    try {
-      await noticeApi.delete(noticeNum);
-      alert('공지사항이 삭제되었습니다.');
-      await fetchNoticeList();
-    } catch (error: any) {
-      console.error('공지사항 삭제 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
-    }
+    toast('정말 삭제하시겠습니까?', {
+      action: {
+        label: '삭제',
+        onClick: async () => {
+          try {
+            await noticeApi.delete(noticeNum);
+            toast.success('공지사항이 삭제되었습니다.');
+            await fetchNoticeList();
+          } catch (error: any) {
+            console.error('공지사항 삭제 실패:', error);
+            toast.error(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+          }
+        }
+      }
+    });
   };
   
   const handleSelectAll = (checked: boolean) => {
@@ -303,23 +312,46 @@ export default function NoticePage() {
   };
   
   const handleDeleteSelected = async () => {
+    if (!isBuyer) return;
     if (selectedNotices.length === 0) {
-      alert('삭제할 공지사항을 선택해주세요.');
+      toast.warning('삭제할 공지사항을 선택해주세요.');
       return;
     }
     
-    if (!confirm(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`)) {
+    toast(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`, {
+      action: {
+        label: '삭제',
+        onClick: async () => {
+           try {
+            await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
+            toast.success('선택한 공지사항이 삭제되었습니다.');
+            setSelectedNotices([]);
+            await fetchNoticeList();
+          } catch (error: any) {
+            console.error('공지사항 일괄 삭제 실패:', error);
+            toast.error(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+          }
+        }
+      }
+    });
+  };
+
+  // 선택된 항목 중 첫 번째를 상세 모달로 열기
+  const handleEdit = async () => {
+    if (!isBuyer) return;
+    if (selectedNotices.length === 0) {
+      toast.error('수정할 공지사항을 선택해주세요.');
       return;
     }
     
-    try {
-      await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
-      alert('선택한 공지사항이 삭제되었습니다.');
-      setSelectedNotices([]);
-      await fetchNoticeList();
-    } catch (error: any) {
-      console.error('공지사항 일괄 삭제 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 삭제에 실패했습니다.');
+    // 선택된 항목 중 첫 번째를 찾아서 상세 모달 열기
+    const firstSelectedNoticeNo = selectedNotices[0];
+    const notice = notices.find(n => n.noticeNo === firstSelectedNoticeNo);
+    
+    if (notice) {
+      await handleRowClick(notice);
+      // 상세 모달이 열리면 수정 모드로 전환
+      setIsEditing(true);
     }
   };
 
@@ -333,9 +365,7 @@ export default function NoticePage() {
     const loadInitData = async () => {
       if (isCreateModalOpen) {
         try {
-          console.log('공지사항 초기 데이터 로드 시작');
           const initData = await noticeApi.getInitData();
-          console.log('공지사항 초기 데이터 응답:', initData);
           setRegUserName(initData.regUserName || '');
           setFormData({
             subject: '',
@@ -392,11 +422,6 @@ export default function NoticePage() {
 
   // 공지사항 저장 핸들러
   const handleSave = async () => {
-    // 저장 확인 팝업
-    if (!confirm('저장하시겠습니까?')) {
-      return;
-    }
-
     // 유효성 검사
     if (!formData.subject || !formData.content || !formData.startDate || !formData.endDate) {
       toast.error('모든 필수 항목을 입력해주세요.');
@@ -414,17 +439,12 @@ export default function NoticePage() {
       
       // 공지사항 번호 가져오기
       const noticeNum = (response as any).noticeNum;
-      console.log('공지사항 저장 응답:', response);
-      console.log('생성된 공지사항 번호:', noticeNum);
-      console.log('업로드할 파일 개수:', uploadedFiles.length);
-      
+
       // 파일 업로드 (실패해도 공지사항은 저장됨)
       if (uploadedFiles.length > 0) {
         if (!noticeNum) {
-          console.error('공지사항 번호가 없어 파일을 업로드할 수 없습니다.');
           toast.error('공지사항 번호를 받지 못해 파일을 업로드할 수 없습니다.');
         } else {
-          console.log(`파일 업로드 시작 - 파일 개수: ${uploadedFiles.length}, noticeNum: ${noticeNum}`);
           for (const file of uploadedFiles) {
             try {
               console.log(`파일 업로드 시도: ${file.name}, 크기: ${file.size} bytes`);
@@ -467,7 +487,7 @@ export default function NoticePage() {
     }
   };
 
-  const columns: ColumnDef<Notice>[] = [
+  const baseColumns: ColumnDef<Notice>[] = [
     {
       key: 'checkbox',
       header: (
@@ -505,16 +525,22 @@ export default function NoticePage() {
       header: '공지번호',
       width: 140,
       align: 'center',
+      render: (value, notice) => (
+        <span
+          className="font-medium text-blue-600 hover:underline cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRowClick(notice);
+          }}
+        >
+          {String(value)}
+        </span>
+      ),
     },
     {
       key: 'title',
       header: '공지명',
       align: 'left',
-      render: (value) => (
-        <span className="text-blue-600 hover:underline cursor-pointer font-medium">
-          {String(value)}
-        </span>
-      ),
     },
     {
       key: 'createdAt',
@@ -546,7 +572,7 @@ export default function NoticePage() {
       width: 80,
       align: 'center',
       render: (value) => (
-        <span className="text-gray-600">{value || 0}</span>
+        <span className="text-gray-600">{Number(value || 0)}</span>
       ),
     },
     {
@@ -568,6 +594,10 @@ export default function NoticePage() {
     },
   ];
 
+  const columns: ColumnDef<Notice>[] = isBuyer
+    ? baseColumns
+    : baseColumns.filter(col => col.key !== 'checkbox' && col.key !== 'actions');
+
   return (
     <motion.div 
       className="space-y-6"
@@ -575,33 +605,13 @@ export default function NoticePage() {
       animate={{ opacity: 1 }}
     >
       {/* Page Header - 무채색 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Bell className="w-5 h-5 text-gray-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">공지사항</h1>
-            <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Bell className="w-5 h-5 text-gray-600" />
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="primary" 
-            onClick={() => setIsCreateModalOpen(true)}
-            icon={<Plus className="w-4 h-4" />}
-          >
-            등록
-          </Button>
-          {selectedNotices.length > 0 && (
-            <Button 
-              variant="danger" 
-              onClick={handleDeleteSelected}
-              icon={<Trash2 className="w-4 h-4" />}
-            >
-              선택 삭제 ({selectedNotices.length})
-            </Button>
-          )}
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">공지사항</h1>
+          <p className="text-sm text-gray-500">시스템 공지사항을 확인할 수 있습니다.</p>
         </div>
       </div>
 
@@ -629,12 +639,43 @@ export default function NoticePage() {
       <Card 
         title="공지사항 목록"
         padding={false}
+        actions={
+          <div className="flex items-center gap-2">
+            {isBuyer && (
+              <>
+                <Button
+                  variant="primary" 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  등록
+                </Button>
+                <Button
+                    variant="outline"
+                    disabled={selectedNotices.length === 0}
+                    onClick={handleEdit}
+                >
+                  수정
+                </Button>
+
+                {selectedNotices.length > 0 && (
+                  <Button
+                    variant="danger"
+                    onClick={handleDeleteSelected}
+                    icon={<Trash2 className="w-4 h-4" />}
+                  >
+                    선택 삭제 ({selectedNotices.length})
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        }
       >
         <DataGrid
           columns={columns}
           data={notices}
           keyField="noticeNo"
-          onRowClick={handleRowClick}
           loading={loading}
           emptyMessage="등록된 공지사항이 없습니다."
         />
@@ -662,7 +703,6 @@ export default function NoticePage() {
               onConfirm={handleUpdate}
               cancelText="취소"
               confirmText="저장"
-              disabled={saving}
             />
           ) : (
             <ModalFooter
@@ -795,9 +835,11 @@ export default function NoticePage() {
                   </div>
                   <div className="flex-1">
                     <h2 
-                      className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={handleTitleClick}
-                      title="클릭하여 수정"
+                      className={`text-lg font-semibold text-gray-900 transition-colors ${
+                        isBuyer ? 'cursor-pointer hover:text-blue-600' : ''
+                      }`}
+                      onClick={isBuyer ? handleTitleClick : undefined}
+                      title={isBuyer ? '클릭하여 수정' : undefined}
                     >
                       {selectedNotice.title}
                     </h2>
@@ -828,9 +870,11 @@ export default function NoticePage() {
                 </div>
 
                 <div 
-                  className="bg-stone-50 rounded-2xl p-6 min-h-[200px] cursor-pointer hover:bg-stone-100 transition-colors"
-                  onClick={handleContentClick}
-                  title="클릭하여 수정"
+                  className={`bg-stone-50 rounded-2xl p-6 min-h-[200px] transition-colors ${
+                    isBuyer ? 'cursor-pointer hover:bg-stone-100' : ''
+                  }`}
+                  onClick={isBuyer ? handleContentClick : undefined}
+                  title={isBuyer ? '클릭하여 수정' : undefined}
                 >
                   <p className="text-stone-700 whitespace-pre-wrap leading-relaxed">{selectedNotice.content}</p>
                 </div>
@@ -876,7 +920,6 @@ export default function NoticePage() {
             onClose={() => setIsCreateModalOpen(false)}
             onConfirm={handleSave}
             confirmText="저장"
-            disabled={saving}
           />
         }
       >

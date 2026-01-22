@@ -57,6 +57,11 @@ const Header: React.FC<HeaderProps> = ({ user: propUser }) => {
   }, [authUser]);
 
   // API에서 가져온 userName을 우선 사용 (propUser 무시)
+  const mappedRole: 'ADMIN' | 'MANAGER' | 'USER' = 
+    authUser?.role === 'ADMIN' ? 'ADMIN' : 
+    authUser?.role === 'BUYER' ? 'USER' : 
+    'USER';
+
   const user: UserType = {
     id: authUser?.userId || '',
     userId: authUser?.userId || '',
@@ -67,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ user: propUser }) => {
     departmentCode: '',
     departmentName: departmentName,
     userType: authUser?.comType === 'B' ? 'BUYER' : 'VENDOR',
-    role: authUser?.role || 'USER',
+    role: mappedRole,
   };
 
   const handleLogout = async () => {

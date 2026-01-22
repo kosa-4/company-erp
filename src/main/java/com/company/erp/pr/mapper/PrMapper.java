@@ -24,8 +24,26 @@ public interface PrMapper {
                                       @Param("requester") String requester,
                                       @Param("deptName") String deptName,
                                       @Param("progressCd") String progressCd,
-                                      @Param("startDate") String startDate,
-                                      @Param("endDate") String endDate);
+                                      @Param("pcType") String pcType,
+                                      @Param("requestDate") String requestDate,
+                                      @Param("offset") Integer offset,
+                                      @Param("pageSize") Integer pageSize,
+                                      @Param("regUserId") String regUserId,
+                                      @Param("isBuyerDept") Boolean isBuyerDept);
+    
+    // 구매요청 현황 목록 총 개수 조회
+    int selectPrListCount(@Param("prNum") String prNum,
+                         @Param("prSubject") String prSubject,
+                         @Param("requester") String requester,
+                         @Param("deptName") String deptName,
+                         @Param("progressCd") String progressCd,
+                         @Param("pcType") String pcType,
+                         @Param("requestDate") String requestDate,
+                         @Param("regUserId") String regUserId,
+                         @Param("isBuyerDept") Boolean isBuyerDept);
+    
+    // 구매팀 여부 확인
+    boolean isBuyerDept(@Param("deptCd") String deptCd);
     
     // 구매요청 상세 품목 목록 조회
     List<PrDtDTO> selectPrDetail(@Param("prNum") String prNum);
@@ -36,7 +54,7 @@ public interface PrMapper {
 
     void rejectPr(@Param("prNum") String prNum, @Param("userId") String userId, @Param("deptCd") String deptCd);
 
-    // PROGRESS_CD의 CODE_NAME 조회 (승인 상태 확인용)
+    // PROGRESS_CD의 CODE_NAME 조회 (승인 상태 확인)
     String selectProgressCdName(@Param("progressCd") String progressCd);
 
     // 구매요청 헤더 수정 (구매요청명, 구매유형만)
@@ -44,5 +62,16 @@ public interface PrMapper {
                     @Param("prSubject") String prSubject,
                     @Param("pcType") String pcType,
                     @Param("modUserId") String modUserId);
+
+    // 구매요청 헤더 총액 업데이트
+    int updatePrHdAmount(@Param("prNum") String prNum, 
+                         @Param("prAmt") java.math.BigDecimal prAmt);
+
+    // 구매요청 품목 수정 (수량, 단가) - 단일 품목
+    int updatePrDt(@Param("prNum") String prNum,
+                    @Param("itemCd") String itemCd,
+                    @Param("prQt") java.math.BigDecimal prQt,
+                    @Param("unitPrc") java.math.BigDecimal unitPrc,
+                    @Param("prAmt") java.math.BigDecimal prAmt);
 
 }

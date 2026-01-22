@@ -53,6 +53,13 @@ public class GoodsReceiptService {
             if (po.getPoNo() != null) {
                 List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
 
+                // 기존 GR 정보 조회 (저장위치 제한용)
+                Map<String, Object> existingGr = goodsReceiptMapper.selectExistingGrByPoNo(po.getPoNo());
+                String existingWarehouse = null;
+                if (existingGr != null && existingGr.get("warehouseCode") != null) {
+                    existingWarehouse = (String) existingGr.get("warehouseCode");
+                }
+
                 // 각 품목별 남은 입고 수량 계산
                 for (PurchaseOrderItemDTO item : items) {
                     Integer receivedQty = goodsReceiptMapper.getReceivedQuantity(po.getPoNo(), item.getItemCode());
@@ -61,13 +68,28 @@ public class GoodsReceiptService {
 
                     int remaining = item.getOrderQuantity() - receivedQty;
                     item.setRemainingQuantity(Math.max(0, remaining));
+                    
+                    // 기존 GR의 저장위치가 있으면 해당 위치로 고정
+                    if (existingWarehouse != null) {
+                        item.setStorageLocation(existingWarehouse);
+                    }
                 }
 
                 po.setItems(items);
+                
+                // 기존 GR 저장위치 정보를 PO에 설정 (프론트엔드에서 활용)
+                if (existingWarehouse != null) {
+                    po.setRemark("EXISTING_WH:" + existingWarehouse);
+                }
             }
         }
 
         return list;
+    }
+
+    // 발주번호로 기존 GR 정보 조회 (API용)
+    public Map<String, Object> getExistingGrInfo(String poNo) {
+        return goodsReceiptMapper.selectExistingGrByPoNo(poNo);
     }
 
     // 입고현황 목록 조회
@@ -127,9 +149,26 @@ public class GoodsReceiptService {
         }
         // ========== End Validation ==========
 
-        // 입고번호 생성
-        String grNo = docNumService.generateDocNumStr(DocKey.GR);
-        dto.setGrNo(grNo);
+        // 현재 사용자 ID, 부서 가져오기
+        String currentUserId = getCurrentUserId();
+        String currentDeptCd = getCurrentUserDeptCd();
+
+        // 기존 GR 조회 (중복채번 방지)
+        Map<String, Object> existingGr = goodsReceiptMapper.selectExistingGrByPoNo(dto.getPoNo());
+        
+        String grNo;
+        boolean isNewGr = false;
+        
+        if (existingGr != null && existingGr.get("grNo") != null) {
+            // 기존 GR이 있으면 재사용
+            grNo = (String) existingGr.get("grNo");
+            dto.setGrNo(grNo);
+        } else {
+            // 기존 GR이 없으면 새로 채번
+            grNo = docNumService.generateDocNumStr(DocKey.GR);
+            dto.setGrNo(grNo);
+            isNewGr = true;
+        }
 
         // 입고일자가 null이면 오늘 날짜로 설정
         if (dto.getGrDate() == null) {
@@ -142,15 +181,14 @@ public class GoodsReceiptService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setTotalAmount(totalAmount);
 
-        // 현재 사용자 ID, 부서 가져오기
-        String currentUserId = getCurrentUserId();
-        String currentDeptCd = getCurrentUserDeptCd();
-
-        // 초기 상태 설정 (부분입고로 시작, 이후 계산하여 업데이트)
-        dto.setStatus(GoodsReceiptStatus.PARTIAL);
-
-        // 헤더 등록
-        goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
+        // 새 GR인 경우에만 헤더 등록
+        if (isNewGr) {
+            // 초기 상태 설정 (부분입고로 시작, 이후 계산하여 업데이트)
+            dto.setStatus(GoodsReceiptStatus.PARTIAL);
+            
+            // 헤더 등록
+            goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
+        }
 
         // PO에서 협력사 코드 조회
         PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(dto.getPoNo());

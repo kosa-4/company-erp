@@ -6,7 +6,7 @@
     <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
     <select id="selectPendingPOList" parameterType="map"
         resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
-        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.CTRL_USER_ID AS ctrlUserName,
+        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.PR_NUM AS prNo, h.CTRL_USER_ID AS ctrlUserName,
         v.VENDOR_NM AS vendorName FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE
         h.PROGRESS_CD = 'S' AND h.CHECK_FLAG = 'Y' AND h.DEL_FLAG = 'N' AND NOT EXISTS ( SELECT 1
         FROM GRHD g WHERE g.PO_NUM = h.PO_NUM AND g.PROGRESS_CD = 'GRE' AND g.DEL_FLAG = 'N' ) <if
@@ -18,6 +18,21 @@
         &gt;= #{startDate} </if>
         <if test="endDate != null and endDate != ''"> AND h.PO_DATE &lt;=
         #{endDate} </if> ORDER BY h.PO_DATE DESC </select>
+
+    <!-- 발주번호로 기존 GR 정보 조회 (GR번호, 저장위치) - 중복채번 방지용 -->
+    <select id="selectExistingGrByPoNo" parameterType="String" resultType="map">
+        SELECT 
+            h.GR_NUM AS grNo,
+            d.WH_CD AS warehouseCode
+        FROM GRHD h
+        INNER JOIN GRDT d ON h.GR_NUM = d.GR_NUM
+        WHERE h.PO_NUM = #{poNo}
+          AND h.PROGRESS_CD != 'GRX'
+          AND h.DEL_FLAG = 'N'
+          AND d.DEL_FLAG = 'N'
+          AND d.STATUS_CD = 'N'
+        LIMIT 1
+    </select>
 
     <!-- ========== 입고현황 ========== -->
     <!-- 입고 목록 조회 -->

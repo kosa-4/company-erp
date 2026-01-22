@@ -61,7 +61,7 @@ public class VendorUserPortalService {
         vendorUserRegisterDto.setPassword(encryptedPassword);
 
         // 3. 요청 코드 생성
-        String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
+        String askUserNum = docNumService.generateDocNumStr(DocKey.MD);
         vendorUserRegisterDto.setAskUserNum(askUserNum);
 
         // 3. 변수 설정
@@ -77,7 +77,6 @@ public class VendorUserPortalService {
     }
 
     /* 수정 */
-
     @Transactional
     public void updateVendorUser(
             VendorUserRegisterDto vendorUserRegisterDto,
@@ -119,7 +118,7 @@ public class VendorUserPortalService {
             case "A": // 4-1. 승인 상태일 시
                 
                 // 4-1-1) 입력 값 저장
-                String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
+                String askUserNum = docNumService.generateDocNumStr(DocKey.MD);
                 vendorUserRegisterDto.setAskUserNum(askUserNum);
                 vendorUserRegisterDto.setVendorCode(vendorUser.getVendorCode());
                 vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
@@ -205,7 +204,7 @@ public class VendorUserPortalService {
                     throw new IllegalStateException("진행 중인 프로세스가 존재하여 삭제할 수 없습니다.");
                 }
                 
-                String askUserNum = docNumService.generateDocNumStr(DocKey.RQ);
+                String askUserNum = docNumService.generateDocNumStr(DocKey.MD);
                 vendorUserRegisterDto.setAskUserNum(askUserNum);
                 vendorUserRegisterDto.setCreatedAt(LocalDateTime.now());
                 vendorUserRegisterDto.setCreatedBy(loginId);

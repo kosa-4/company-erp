@@ -83,7 +83,7 @@ export interface RfqDetailResponse {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
-        totalAmt?: number;
+        totalAmt?: number | string;
         selectYn: string;
     }[];
 }
@@ -105,7 +105,7 @@ export interface RfqProgressGroup {
         progressNm: string;
         sendDate?: string;
         submitDate?: string;
-        totalAmt?: number;
+        totalAmt?: number | string;
         selectYn?: string;
     }[];
 }
@@ -120,13 +120,14 @@ export interface RfqSelectionResponse {
     ctrlUserId: string;
     ctrlUserNm: string;
     regDate: string;
+    selectDate?: string;
     vendorCd: string;
     vendorNm: string;
     vnProgressCd: string;
     vnProgressNm: string;
     sendDate?: string;
     submitDate?: string;
-    totalAmt?: number;
+    totalAmt?: number | string;
     selectYn?: string;
     rmk?: string;
 }
@@ -136,6 +137,7 @@ export interface RfqSelectionSearchRequest {
     rfqSubject?: string;
     fromDate?: string;
     toDate?: string;
+    selectDate?: string;
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
@@ -144,8 +146,7 @@ export interface RfqSelectionSearchRequest {
 export interface RfqProgressSearchRequest {
     rfqNum?: string;
     rfqSubject?: string;
-    fromDate?: string;
-    toDate?: string;
+    regDate?: string;
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
@@ -158,7 +159,7 @@ export interface RfqSelectionResultResponse {
     rfqTypeNm: string;
     vendorCd: string;
     vendorNm: string;
-    totalAmt: number;
+    totalAmt: number | string;
     ctrlUserId: string;
     ctrlUserNm: string;
     regDate: string;
@@ -171,8 +172,8 @@ export interface RfqResultItem {
     spec: string;
     unit: string;
     qty: number;
-    unitPrice: number;
-    amt: number;
+    unitPrice: number | string;
+    amt: number | string;
     dlvyDate: string;
     rmk: string;
 }
@@ -204,6 +205,32 @@ export interface RfqSaveRequest {
         rmk?: string;
     }[];
 }
+
+export type CompareResponse = {
+    rfqNo: string;
+    rfqName: string;
+    items: Array<{
+        lineNo: number;
+        itemCd: string;
+        itemDesc: string;
+        itemSpec?: string;
+        unitCd?: string;
+        qty: number; // 요구수량(rfqQt)
+    }>;
+    vendors: Array<{
+        vendorCd: string;
+        vendorNm: string;
+        selectYn?: 'Y' | 'N';
+    }>;
+    quotes: Array<{
+        vendorCd: string;
+        lineNo: number;
+        unitPrice: number | null;
+        quoteQt: number | null;
+        amount: number | null;
+    }>;
+};
+
 
 export const rfqApi = {
     /**
@@ -299,12 +326,18 @@ export const rfqApi = {
     getSelectionResultDetail: (rfqNum: string) =>
         api.get<RfqSelectionResultDetailResponse>(`/v1/buyer/rfq-selection-results/${rfqNum}`),
 
+    /**
+     * 가격비교
+     */
+    getCompareDetail: (rfqNo: string) =>
+        api.get<CompareResponse>(`/v1/buyer/rfq-compare/compare/${rfqNo}`),
+
     // ========== 협력사 API ==========
 
     /**
      * 협력사 RFQ 목록 조회
      */
-    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; startDate?: string; endDate?: string }) =>
+    getVendorRfqList: (params?: { searchText?: string; progressCd?: string; reqCloseDate?: string }) =>
         api.get<any[]>('/v1/vendor/rfqs', { ...params }),
 
     /**

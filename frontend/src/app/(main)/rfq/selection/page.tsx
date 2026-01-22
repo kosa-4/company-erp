@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   PageHeader,
   Card,
@@ -8,38 +8,54 @@ import {
   Input,
   Select,
   DatePicker,
-  DataGrid,
   SearchPanel,
   Badge,
-  Modal
+  Modal,
 } from '@/components/ui';
-import { ColumnDef } from '@/types';
-import { formatNumber } from '@/lib/utils';
-import { rfqApi, RfqProgressGroup } from '@/lib/api/rfq';
+import { rfqApi } from '@/lib/api/rfq';
 import { toast } from 'sonner';
+import { formatNumber } from '@/lib/utils';
+import RfqCompareModal from './RfqCompareModal';
 
-interface RfqSelection {
-  rfqNo: string;
-  rfqName: string;
-  rfqType: string;
-  buyer: string;
-  createdAt: string;
-  itemCode: string;
-  itemName: string;
-  estimatedAmount: number;
-  quotedAmount: number | null;
-  vendorName: string;
-  vendorCode: string;
-  status: 'M' | 'G' | 'J';
-  sentDate: string;
-  submittedDate: string;
+interface RfqSelectionVendor {
+  vendorCd: string;
+  vendorNm: string;
+  totalAmt: number | string | null;
+  vnProgressCd: string;
+  vnProgressNm: string;
+  sendDate: string;
+  submitDate: string;
+  selectYn: string;
 }
 
-
+interface RfqSelectionGroup {
+  rfqNo: string;
+  rfqName: string;
+  rfqTypeNm: string;
+  ctrlUserNm: string;
+  regDate: string;
+  selectDate: string;
+  progressCd: string;
+  progressNm: string;
+  vendors: RfqSelectionVendor[];
+}
 
 export default function RfqSelectionPage() {
-  const [data, setData] = useState<RfqSelection[]>([]);
-  const [selectedRows, setSelectedRows] = useState<RfqSelection[]>([]);
+  const [data, setData] = useState<RfqSelectionGroup[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<string[]>([]);
+
+  const [selectedRfqNo, setSelectedRfqNo] = useState<string | null>(null);
+
+  const [compareRfqNo, setCompareRfqNo] = useState<string | null>(null);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+  const [selectedVendor, setSelectedVendor] = useState<{
+    rfqNo: string;
+    vendorCd: string;
+    vendorNm: string;
+  } | null>(null);
+
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
     rfqName: '',
@@ -48,51 +64,86 @@ export default function RfqSelectionPage() {
     rfqType: '',
     status: '',
     buyer: '',
+    regDate: '',
+    selectDate: '',
   });
-  const [loading, setLoading] = useState(false);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
-  // 선정 사유 모달 상태
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [selectionReason, setSelectionReason] = useState('');
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
       const response = await rfqApi.getSelectionList({
         rfqNum: searchParams.rfqNo,
         rfqSubject: searchParams.rfqName,
-        fromDate: searchParams.startDate,
-        toDate: searchParams.endDate,
+        regDate: searchParams.regDate,
+        selectDate: searchParams.selectDate,
         rfqType: searchParams.rfqType,
         progressCd: searchParams.status,
-        ctrlUserNm: searchParams.buyer
+        ctrlUserNm: searchParams.buyer,
       });
 
-      // 신규 API는 이미 플래트닝된 데이터를 내려주므로 간단히 변환
-      const formatted: RfqSelection[] = response.map(item => ({
-        rfqNo: item.rfqNum,
-        rfqName: item.rfqSubject,
-        rfqType: item.rfqTypeNm,
-        buyer: item.ctrlUserNm,
-        createdAt: item.regDate?.substring(0, 10),
-        itemCode: '-',
-        itemName: '-',
-        estimatedAmount: 0,
-        quotedAmount: item.totalAmt || 0,
-        vendorName: item.vendorNm,
-        vendorCode: item.vendorCd,
-        status: item.progressCd as any,
-        sentDate: item.sendDate?.substring(0, 10) || '-',
-        submittedDate: item.submitDate?.substring(0, 10) || '-',
-      }));
-      setData(formatted);
+      const grouped = response.reduce((acc, curr) => {
+        const existing = acc.find(g => g.rfqNo === curr.rfqNum);
+
+        const vendor: RfqSelectionVendor = {
+          vendorCd: curr.vendorCd,
+          vendorNm: curr.vendorNm,
+          totalAmt: curr.totalAmt || 0,
+          vnProgressCd: curr.vnProgressCd,
+          vnProgressNm: curr.vnProgressNm,
+          sendDate: curr.sendDate?.substring(0, 10) || '-',
+          submitDate: curr.submitDate?.substring(0, 10) || '-',
+          selectYn: curr.selectYn || 'N',
+        };
+
+        if (existing) {
+          existing.vendors.push(vendor);
+        } else {
+          acc.push({
+            rfqNo: curr.rfqNum,
+            rfqName: curr.rfqSubject,
+            rfqTypeNm: curr.rfqTypeNm,
+            ctrlUserNm: curr.ctrlUserNm,
+            regDate: curr.regDate?.substring(0, 10) || '-',
+            selectDate: curr.selectDate?.substring(0, 10) || '-',
+            progressCd: curr.progressCd,
+            progressNm: curr.progressNm,
+            vendors: [vendor],
+          });
+        }
+
+        return acc;
+      }, [] as RfqSelectionGroup[]);
+
+      grouped.forEach(g => {
+        g.vendors.sort((a, b) => {
+          if (a.selectYn === b.selectYn) return 0;
+          return a.selectYn === 'Y' ? -1 : 1;
+        });
+      });
+
+      setData(grouped);
+
+      setExpandedRows(
+          grouped
+              .filter(g => g.progressCd === 'M' || g.progressCd === 'G')
+              .map(g => g.rfqNo)
+      );
+
+      setSelectedRfqNo(null);
+      setSelectedVendor(null);
     } catch (error) {
       toast.error('목록 조회 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]);
+
+  useEffect(() => {
+    handleSearch();
+  }, [handleSearch]);
 
   const handleReset = () => {
     setSearchParams({
@@ -103,107 +154,84 @@ export default function RfqSelectionPage() {
       rfqType: '',
       status: '',
       buyer: '',
+      regDate: '',
+      selectDate: '',
     });
   };
 
-  useEffect(() => {
-    handleSearch();
-  }, []);
-
-
-
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: any, label: string }> = {
-      M: { variant: 'gray' as const, label: '마감' },
-      G: { variant: 'blue' as const, label: '개찰' },
-      J: { variant: 'green' as const, label: '선정완료' },
-    };
-    const { variant, label } = config[status] || { variant: 'gray', label: status };
-    return <Badge variant={variant}>{label}</Badge>;
+  const toggleRow = (rfqNo: string) => {
+    setExpandedRows(prev =>
+        prev.includes(rfqNo) ? prev.filter(id => id !== rfqNo) : [...prev, rfqNo]
+    );
   };
 
-  const columns: ColumnDef<RfqSelection>[] = [
-    {
-      key: 'rfqNo',
-      header: '견적번호',
-      width: 110,
-      align: 'center',
-      render: (value) => (
-        <span className="text-blue-600 hover:underline cursor-pointer font-medium">
-          {String(value)}
-        </span>
-      ),
-    },
-    { key: 'rfqName', header: '견적명', width: 200, align: 'left' },
-    { key: 'rfqType', header: '견적유형', width: 80, align: 'center' },
-    { key: 'buyer', header: '구매담당자', width: 90, align: 'center' },
-    { key: 'createdAt', header: '등록일', width: 90, align: 'center' },
-    { key: 'itemCode', header: '품목코드', width: 120, align: 'center' },
-    { key: 'itemName', header: '품목명', width: 140, align: 'left' },
-    {
-      key: 'estimatedAmount',
-      header: '예상금액',
-      width: 110,
-      align: 'right',
-      render: (value) => `₩${formatNumber(Number(value))}`,
-    },
-    {
-      key: 'quotedAmount',
-      header: '총 견적금액',
-      width: 120,
-      align: 'right',
-      render: (value, row) => {
-        if (row.status === 'M') {
-          return <span className="text-gray-400 font-bold tracking-widest">****</span>;
-        }
-        return value ? `₩${formatNumber(Number(value))}` : '-';
-      },
-    },
-    { key: 'vendorName', header: '협력사명', width: 140, align: 'left' },
-    { key: 'vendorCode', header: '협력사코드', width: 120, align: 'center' },
-    {
-      key: 'status',
-      header: '상태',
-      width: 90,
-      align: 'center',
-      render: (value) => getStatusBadge(value as RfqSelection['status']),
-    },
-    { key: 'sentDate', header: '전송일', width: 90, align: 'center' },
-    { key: 'submittedDate', header: '제출일', width: 90, align: 'center' },
-  ];
+  const handleSelectRfq = (rfqNo: string) => {
+    setSelectedRfqNo(rfqNo);
+    setSelectedVendor(null);
+  };
 
+  const getStatusBadge = (status: string, label: string) => {
+    const config: Record<string, { variant: 'gray' | 'yellow' | 'green' | 'blue' | 'red' }> = {
+      M: { variant: 'red' },
+      G: { variant: 'blue' },
+      J: { variant: 'green' },
+    };
+    const { variant } = config[status] || { variant: 'gray' };
+    return <Badge variant={variant as any}>{label}</Badge>;
+  };
+
+  // 개찰
   const handleOpen = async () => {
-    const mRows = selectedRows.filter(r => r.status === 'M');
-    if (mRows.length === 0) {
+    if (!selectedRfqNo) {
+      toast.error('개찰할 항목을 선택해주세요.');
+      return;
+    }
+
+    const target = data.find(d => d.rfqNo === selectedRfqNo);
+    if (!target) return;
+
+    if (target.progressCd !== 'M') {
       toast.error('마감(M) 상태의 항목만 개찰할 수 있습니다.');
       return;
     }
 
-    // 개찰은 RFQ 단위로 수행 (중복 제거)
-    const rfqNums = Array.from(new Set(mRows.map(r => r.rfqNo)));
-
-    if (!confirm(`${rfqNums.length}건을 개찰하시겠습니까? 개찰 후에는 금액이 공개됩니다.`)) return;
-
-    try {
-      setLoading(true);
-      await Promise.all(rfqNums.map(num => rfqApi.openRfq(num)));
-      toast.success('개찰 처리가 완료되었습니다.');
-      handleSearch();
-      setSelectedRows([]);
-    } catch (error) {
-      toast.error('개찰 처리 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    toast('1건을 개찰하시겠습니까? 개찰 후에는 금액이 공개됩니다.', {
+      action: {
+        label: '개찰',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            await rfqApi.openRfq(selectedRfqNo);
+            toast.success('개찰 처리가 완료되었습니다.');
+            await handleSearch();
+            setSelectedRfqNo(null);
+            setSelectedVendor(null);
+          } catch (error) {
+            toast.error('개찰 처리 중 오류가 발생했습니다.');
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    });
   };
 
+  // 선정
   const handleSelect = () => {
-    if (selectedRows.length !== 1) {
-      toast.error('선정할 협력사를 하나만 선택해주세요.');
+    if (!selectedVendor) {
+      toast.error('선정할 협력사를 선택해주세요.');
       return;
     }
-    const row = selectedRows[0];
-    if (row.status !== 'G') {
+
+    const rfq = data.find(d => d.rfqNo === selectedVendor.rfqNo);
+
+    const alreadySelected = rfq?.vendors.some(v => v.selectYn === 'Y');
+    if (alreadySelected || rfq?.progressCd === 'J') {
+      toast.warning('이미 협력업체가 선정되었습니다.');
+      return;
+    }
+
+    if (rfq?.progressCd !== 'G') {
       toast.error('개찰(G) 상태인 항목만 선정할 수 있습니다.');
       return;
     }
@@ -213,14 +241,20 @@ export default function RfqSelectionPage() {
   };
 
   const confirmSelection = async () => {
-    const row = selectedRows[0];
+    if (!selectedVendor) return;
+
     try {
       setLoading(true);
-      await rfqApi.selectVendor(row.rfqNo, row.vendorCode, selectionReason);
+      await rfqApi.selectVendor(
+          selectedVendor.rfqNo,
+          selectedVendor.vendorCd,
+          selectionReason
+      );
       toast.success('협력업체 선정이 완료되었습니다.');
       setIsReasonModalOpen(false);
-      handleSearch();
-      setSelectedRows([]);
+      await handleSearch();
+      setSelectedVendor(null);
+      setSelectedRfqNo(null);
     } catch (error) {
       toast.error('선정 처리 중 오류가 발생했습니다.');
     } finally {
@@ -228,193 +262,388 @@ export default function RfqSelectionPage() {
     }
   };
 
+  // 견적비교
+  const handleOpenCompare = () => {
+    if (!selectedRfqNo) {
+      toast.error('견적비교는 문서단위로 1건만 선택해서 진행해주세요.');
+      return;
+    }
+
+    const rfq = data.find(d => d.rfqNo === selectedRfqNo);
+    if (!rfq) return;
+
+    if (rfq.progressCd === 'M') {
+      toast.error('개찰(G) 이후에 견적비교가 가능합니다.');
+      return;
+    }
+
+    setCompareRfqNo(rfq.rfqNo);
+    setIsCompareModalOpen(true);
+  };
+
   return (
-    <div>
-      <PageHeader
-        title="협력업체 선정"
-        subtitle="마감된 견적에 대해 협력업체를 선정합니다."
-        icon={
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
-        }
-      />
+      <div className="space-y-6">
+        <PageHeader
+            title="협력업체 선정"
+            subtitle="마감된 견적에 대해 협력업체를 선정합니다."
+        />
 
-      <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
-        <Input
-          label="RFQ번호"
-          placeholder="RFQ번호 입력"
-          value={searchParams.rfqNo}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일자 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
-        />
-        <Input
-          label="견적명"
-          placeholder="견적명 입력"
-          value={searchParams.rfqName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
-        />
-        <Select
-          label="견적유형"
-          value={searchParams.rfqType}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqType: e.target.value }))}
-          options={[
-            { value: '', label: '전체' },
-            { value: 'PRIVATE', label: '수의계약' },
-            { value: 'COMPETITIVE', label: '지명경쟁' },
-          ]}
-        />
-        <Select
-          label="상태"
-          value={searchParams.status}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
-          options={[
-            { value: '', label: '전체' },
-            { value: 'M', label: '마감' },
-            { value: 'G', label: '개찰' },
-            { value: 'J', label: '선정완료' },
-          ]}
-        />
-        <Input
-          label="구매담당자"
-          placeholder="담당자명 입력"
-          value={searchParams.buyer}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
-        />
-      </SearchPanel>
+        <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
+          <Input
+              label="RFQ번호"
+              placeholder="RFQ번호 입력"
+              value={searchParams.rfqNo}
+              onChange={e => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
+          />
+          <Input
+              label="견적명"
+              placeholder="견적명 입력"
+              value={searchParams.rfqName}
+              onChange={e => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+          />
+          <DatePicker
+              label="선정일"
+              value={searchParams.selectDate}
+              onChange={e => setSearchParams(prev => ({ ...prev, selectDate: e.target.value }))}
+          />
+          <DatePicker
+              label="등록일"
+              value={searchParams.regDate}
+              onChange={e => setSearchParams(prev => ({ ...prev, regDate: e.target.value }))}
+          />
+          <Select
+              label="견적유형"
+              value={searchParams.rfqType}
+              onChange={e => setSearchParams(prev => ({ ...prev, rfqType: e.target.value }))}
+              options={[
+                { value: '', label: '전체' },
+                { value: 'OC', label: '수의계약' },
+                { value: 'AC', label: '지명경쟁' },
+              ]}
+          />
+          <Select
+              label="상태"
+              value={searchParams.status}
+              onChange={e => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
+              options={[
+                { value: '', label: '전체' },
+                { value: 'M', label: '마감' },
+                { value: 'G', label: '개찰' },
+                { value: 'J', label: '선정완료' },
+              ]}
+          />
+          <Input
+              label="구매담당자"
+              placeholder="담당자명 입력"
+              value={searchParams.buyer}
+              onChange={e => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
+          />
+        </SearchPanel>
 
-      <Card
-        title="협력업체 선정 목록"
-        padding={false}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="primary" onClick={handleOpen}>개찰</Button>
-            <Button variant="secondary" onClick={() => setIsCompareModalOpen(true)}>견적비교</Button>
-            <Button variant="success" onClick={handleSelect}>선정</Button>
-          </div>
-        }
-      >
-        <DataGrid
-          columns={columns}
-          data={data}
-          keyField="rfqNo"
-          loading={loading}
-          selectable
-          selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
-          emptyMessage="협력업체 선정 대상이 없습니다."
-        />
-      </Card>
-
-      {/* 견적비교 모달 */}
-      <Modal
-        isOpen={isCompareModalOpen}
-        onClose={() => setIsCompareModalOpen(false)}
-        title="견적 비교"
-        size="xl"
-      >
-        <div className="space-y-4">
-          {/* 헤더 정보 */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div>
-              <span className="text-sm text-gray-500">RFQ번호:</span>
-              <span className="ml-2 font-medium">RFQ-2024-0088</span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">견적명:</span>
-              <span className="ml-2 font-medium">사무용품 견적</span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">총 예상금액:</span>
-              <span className="ml-2 font-medium text-blue-600">₩1,250,000</span>
-            </div>
-          </div>
-
-          {/* 비교 테이블 */}
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="p-3 text-left font-semibold text-gray-600">협력사코드</th>
-                  <th className="p-3 text-left font-semibold text-gray-600">협력사명</th>
-                  <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
-                  <th className="p-3 text-right font-semibold text-gray-600">단가</th>
-                  <th className="p-3 text-right font-semibold text-gray-600">수량</th>
-                  <th className="p-3 text-right font-semibold text-gray-600">금액</th>
-                  <th className="p-3 text-center font-semibold text-gray-600">납기가능일</th>
-                  <th className="p-3 text-center font-semibold text-gray-600">제출일</th>
-                </tr>
+        <Card
+            title="협력업체 선정 목록 (RFQ 단위)"
+            padding={false}
+            actions={
+              <div className="flex gap-2">
+                <Button variant="primary" onClick={handleOpen} loading={loading}>
+                  개찰
+                </Button>
+                <Button variant="secondary" onClick={handleOpenCompare}>
+                  견적비교
+                </Button>
+                <Button variant="success" onClick={handleSelect} loading={loading}>
+                  선정
+                </Button>
+              </div>
+            }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+              <tr className="bg-stone-50 border-b border-stone-200">
+                <th className="w-12 px-4 py-3.5">
+                  <div className="w-4" />
+                </th>
+                <th className="w-10 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  선택
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  RFQ번호
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">
+                  견적명
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  견적유형
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  구매담당자
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  등록일
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  선정일
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  상태
+                </th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                  참여업체
+                </th>
+              </tr>
               </thead>
-              <tbody>
-                <tr className="border-t bg-blue-50">
-                  <td className="p-3">VND-2024-0002</td>
-                  <td className="p-3 font-medium">(주)오피스프로</td>
-                  <td className="p-3">A4 복사용지</td>
-                  <td className="p-3 text-right">₩24,000</td>
-                  <td className="p-3 text-right">50</td>
-                  <td className="p-3 text-right font-medium text-blue-600">₩1,200,000</td>
-                  <td className="p-3 text-center">2025-01-08</td>
-                  <td className="p-3 text-center">2024-12-27</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="p-3">VND-2024-0001</td>
-                  <td className="p-3">(주)테크솔루션</td>
-                  <td className="p-3">A4 복사용지</td>
-                  <td className="p-3 text-right">₩25,500</td>
-                  <td className="p-3 text-right">50</td>
-                  <td className="p-3 text-right">₩1,275,000</td>
-                  <td className="p-3 text-center">2025-01-10</td>
-                  <td className="p-3 text-center">2024-12-28</td>
-                </tr>
+
+              <tbody className="divide-y divide-stone-100">
+              {loading && data.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
+                        <span className="text-stone-500">데이터를 불러오는 중...</span>
+                      </div>
+                    </td>
+                  </tr>
+              ) : data.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-16 text-center text-stone-500">
+                      조회된 데이터가 없습니다.
+                    </td>
+                  </tr>
+              ) : (
+                  data.map(row => {
+                    const isExpanded = expandedRows.includes(row.rfqNo);
+                    const isSelected = selectedRfqNo === row.rfqNo;
+                    const totalVendors = row.vendors.length;
+
+                    return (
+                        <React.Fragment key={row.rfqNo}>
+                          <tr
+                              className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${
+                                  isSelected ? 'bg-teal-50/50' : ''
+                              }`}
+                              onClick={() => {
+                                handleSelectRfq(row.rfqNo);
+                                toggleRow(row.rfqNo);
+                              }}
+                          >
+                            <td className="px-4 py-3 text-center">
+                              <svg
+                                  className={`w-4 h-4 text-stone-400 transition-transform ${
+                                      isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                              >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </td>
+
+                            <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                              <input
+                                  type="radio"
+                                  name="rfq-select"
+                                  className="w-4 h-4 text-teal-600"
+                                  checked={isSelected}
+                                  onChange={() => handleSelectRfq(row.rfqNo)}
+                              />
+                            </td>
+
+                            <td className="px-4 py-3 text-sm font-medium text-blue-600 text-center">
+                              {row.rfqNo}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-700">{row.rfqName}</td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.rfqTypeNm}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-600 text-center">
+                              {row.ctrlUserNm}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.regDate}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
+                              {row.selectDate}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {getStatusBadge(row.progressCd, row.progressNm)}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
+                              {totalVendors}개 업체
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                              <tr className="bg-stone-50/50">
+                                <td colSpan={10} className="px-12 py-4">
+                                  <div className="border border-stone-200 rounded-lg overflow-hidden bg-white shadow-inner">
+                                    <table className="w-full">
+                                      <thead className="bg-stone-100/50">
+                                      <tr>
+                                        <th className="w-12 px-4 py-2"></th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          코드
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">
+                                          협력사명
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          상태
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">
+                                          총 견적금액
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          제출일
+                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
+                                          선정여부
+                                        </th>
+                                      </tr>
+                                      </thead>
+
+                                      <tbody className="divide-y divide-stone-100">
+                                      {row.vendors.map(vendor => {
+                                        const isVendorSelected =
+                                            selectedVendor?.rfqNo === row.rfqNo &&
+                                            selectedVendor?.vendorCd === vendor.vendorCd;
+
+                                        return (
+                                            <tr
+                                                key={vendor.vendorCd}
+                                                className={`hover:bg-stone-50/50 cursor-pointer ${
+                                                    isVendorSelected ? 'bg-teal-50' : ''
+                                                }`}
+                                                onClick={() =>
+                                                    setSelectedVendor({
+                                                      rfqNo: row.rfqNo,
+                                                      vendorCd: vendor.vendorCd,
+                                                      vendorNm: vendor.vendorNm,
+                                                    })
+                                                }
+                                            >
+                                              <td className="px-4 py-2 text-center">
+                                                <input
+                                                    type="radio"
+                                                    name={`vendor-${row.rfqNo}`}
+                                                    className="w-4 h-4 text-teal-600"
+                                                    checked={isVendorSelected}
+                                                    onChange={() =>
+                                                        setSelectedVendor({
+                                                          rfqNo: row.rfqNo,
+                                                          vendorCd: vendor.vendorCd,
+                                                          vendorNm: vendor.vendorNm,
+                                                        })
+                                                    }
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                              </td>
+
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center">
+                                                {vendor.vendorCd}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">
+                                                {vendor.vendorNm}
+                                              </td>
+                                              <td className="px-4 py-2 text-center text-xs">
+                                                <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
+                                                  {vendor.vnProgressNm}
+                                                </Badge>
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-700 text-right font-semibold">
+                                                {row.progressCd === 'M' ? (
+                                                    <span className="text-stone-400 font-bold tracking-widest text-xs">
+                                        ****
+                                      </span>
+                                                ) : vendor.totalAmt !== null && vendor.totalAmt !== undefined ? (
+                                                    `₩${formatNumber(vendor.totalAmt)}`
+                                                ) : (
+                                                    '-'
+                                                )}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-600 text-center font-medium">
+                                                {vendor.submitDate}
+                                              </td>
+                                              <td className="px-4 py-2 text-center">
+                                                {vendor.selectYn === 'Y' ? <Badge variant="green">선정됨</Badge> : '-'}
+                                              </td>
+                                            </tr>
+                                        );
+                                      })}
+
+                                      {row.vendors.length === 0 && (
+                                          <tr>
+                                            <td colSpan={7} className="py-4 text-center text-xs text-stone-400">
+                                              데이터가 없습니다.
+                                            </td>
+                                          </tr>
+                                      )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                          )}
+                        </React.Fragment>
+                    );
+                  })
+              )}
               </tbody>
             </table>
           </div>
+        </Card>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="secondary">엑셀다운로드</Button>
-            <Button variant="secondary" onClick={() => setIsCompareModalOpen(false)}>닫기</Button>
-          </div>
-        </div>
-      </Modal>
 
-      {/* 선정 사유 입력 모달 */}
-      <Modal
-        isOpen={isReasonModalOpen}
-        onClose={() => setIsReasonModalOpen(false)}
-        title="업체 선정 사유 입력"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div className="p-3 bg-blue-50 rounded-md">
-            <p className="text-sm text-blue-800">
-              <strong>선정 대상:</strong> {selectedRows[0]?.vendorName} ({selectedRows[0]?.vendorCode})
-            </p>
+        <RfqCompareModal
+            isOpen={isCompareModalOpen}
+            rfqNo={compareRfqNo}
+            onClose={() => {
+              setIsCompareModalOpen(false);
+              setCompareRfqNo(null);
+            }}
+        />
+
+        <Modal
+            isOpen={isReasonModalOpen}
+            onClose={() => setIsReasonModalOpen(false)}
+            title="업체 선정 사유 입력"
+            size="md"
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-50 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>선정 대상:</strong> {selectedVendor?.vendorNm} ({selectedVendor?.vendorCd})
+              </p>
+            </div>
+
+            <Input
+                label="선정 사유"
+                placeholder="선정 사유를 입력하세요"
+                value={selectionReason}
+                onChange={e => setSelectionReason(e.target.value)}
+                required
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>
+                취소
+              </Button>
+              <Button
+                  variant="success"
+                  onClick={confirmSelection}
+                  disabled={!selectionReason || loading}
+              >
+                최종 선정 확정
+              </Button>
+            </div>
           </div>
-          <Input
-            label="선정 사유"
-            placeholder="선정 사유를 입력하세요 (예: 최저가 낙찰, 납기 준수 등)"
-            value={selectionReason}
-            onChange={(e) => setSelectionReason(e.target.value)}
-            required
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>취소</Button>
-            <Button variant="success" onClick={confirmSelection} disabled={!selectionReason || loading}>
-              최종 선정 확정
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+        </Modal>
+      </div>
   );
 }
-

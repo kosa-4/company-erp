@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation';
 import { register } from 'module';
 import { Router } from 'lucide-react';
 import { Category } from './TreeItem';
+import { Can } from '@/auth/Can';
+import { User } from '@/types';
 
 interface ItemDetail{
   itemCode: string,
@@ -39,6 +41,7 @@ interface ItemDetail{
   createdAt: string,
   createdBy: string,
   remark: string,
+  editable: boolean
 }
 
 
@@ -48,7 +51,7 @@ export default function ItemPage() {
 
   // 1. 상태 정의
   // 1-1. 품목 목록 출력용 상태 변수
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<ItemDetail[]>([]);
   const [page, setPage] = useState("1");
   const [totalPage, setTotalPage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -59,8 +62,7 @@ export default function ItemPage() {
     itemCode: '',
     itemName: '',
     useYn: '',
-    startDate: '',
-    endDate: '',
+    date: '',
     manufacturerName: '',
     page: "1",
   });
@@ -136,8 +138,7 @@ export default function ItemPage() {
       itemCode: '',
       itemName: '',
       useYn: '',
-      startDate: '',
-      endDate: '',
+      date: '',
       manufacturerName: '',
       page: '',
     });
@@ -150,12 +151,12 @@ export default function ItemPage() {
   }, [searchParams]); 
 
   // 5. 컬럼 정의
-  const columns: ColumnDef<Item>[] = [ // response 키와 일치 필요
+  const columns: ColumnDef<ItemDetail>[] = [ // response 키와 일치 필요
     
     {
       key: 'itemCode',
       header: '품목코드',
-      width: 140,
+      width: 80,
       align: 'center',
       render: (value) => (
         <span className="text-blue-600 hover:underline cursor-pointer font-medium">
@@ -166,37 +167,44 @@ export default function ItemPage() {
     {
       key: 'itemName',
       header: '품목명',
+      width: 80, 
       align: 'left',
     },
     {
       key: 'itemType',
       header: '품목종류',
-      width: 100,
-      align: 'center',
+      width: 50,
+      align: 'left',
     },
     {
       key: 'spec',
       header: '규격',
-      width: 200,
+      width: 50,
       align: 'left',
     },
     {
       key: 'unit',
       header: '단위',
-      width: 60,
-      align: 'center',
-    },
-    {
-      key: 'manufacturerCode',
-      header: '제조사코드',
-      width: 100,
-      align: 'center',
+      width: 10,
+      align: 'left',
     },
     {
       key: 'manufacturerName',
       header: '제조사명',
-      width: 120,
+      width: 10,
       align: 'left',
+    },
+    {
+      key: 'createdAt', // 서버에서 내려주는 키값이 createdAt 인지 확인하세요
+      header: '등록일자',
+      width: 50,
+      align: 'center',
+      render: (value) => (
+        // 데이터가 "2026-01-20T15:30:00" 형태라면 앞의 10자리만 추출
+        <span className="text-gray-600 text-sm">
+          {value ? String(value).substring(0, 10) : '-'}
+        </span>
+      ),
     },
     
   ];
@@ -204,7 +212,7 @@ export default function ItemPage() {
   /* 품목 상세 정보 */
 
   // 1. 행 클릭 시 실행
-  const handleRowClick = async (item: Item) => {
+  const handleRowClick = async (item: ItemDetail) => {
   // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
   // onRowClick?: (row: T) => void; 함수에 담아 실행
     try{
@@ -411,6 +419,9 @@ export default function ItemPage() {
     setSelectedPath(reversePath);
   }
 
+  // 권한
+
+
   return (
     <div>
       <PageHeader 
@@ -446,16 +457,24 @@ export default function ItemPage() {
             { value: 'N', label: '미사용' },
           ]}
         />
-        <DatePicker
-          label="등록일자 시작"
+        {/* <DatePicker
+          label="등록일자"
           value={searchParams.startDate}
           onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
+        /> */}
         <DatePicker
-          label="등록일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+          label="등록일자"
+          value={searchParams.date}
+          // (e) => e.target.value 가 아니라, 들어오는 값(date)을 그대로 넣어줍니다.
+          onChange={(e) => {
+            const date = e.target.value;
+
+            setSearchParams(prev => ({ 
+            ...prev, 
+            date: date
+          }))}}
         />
+
         <Input
           label="제조사"
           placeholder="제조사명 입력"
@@ -468,14 +487,15 @@ export default function ItemPage() {
         title="품목 목록"
         padding={false}
         actions={
-          <Button variant="primary" onClick={() =>  {
-              setIsCreateModalOpen(true); 
-            }}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            등록
-          </Button>
+            <Can roles={['ADMIN','BUYER']}>
+              <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                등록
+              </Button>
+            </Can>
+          
         }
       >
         {/* items 요소 출력 */}        
@@ -498,12 +518,15 @@ export default function ItemPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            <Button variant="primary" onClick={updateItem}>수정</Button>
+            <Can roles={['ADMIN', 'BUYER']}>
+              <Button variant="primary" onClick={updateItem}>수정</Button>
+            </Can>
           </>
         }
       >
         
         {selectedItem && (
+
           <form ref={saveForm}>
             <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">               
@@ -518,7 +541,7 @@ export default function ItemPage() {
                   {/* <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/> */}
                   <Input name='manufacturerName' label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
                   <Input name='modelNo' label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt || ""} readOnly />
+                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt ? selectedItem.createdAt.substring(0, 10) : ""} readOnly />
                   <Input name='createdBy' label="등록자" value={selectedItem.createdBy} readOnly />
                 </div>
                 <Textarea name='remark' label="비고" defaultValue={selectedItem.remark || ''} rows={3}/>
@@ -548,7 +571,7 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               
-              <Input name='itemCode' label="품목코드" value="자동 증가" readOnly />
+              <Input name='itemCode' label="품목코드" value="-" readOnly />
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
               <Input 

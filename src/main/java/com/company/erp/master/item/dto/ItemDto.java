@@ -17,8 +17,6 @@ public class ItemDto {
     private String itemName; // 품목명
     private String itemNameEn; // 품목 영문명
     private String spec; // 규격
-    private String itemRemark; // 품목 상세 설명
-    private String manufacturerCode; // 제조사 코드
     private String manufacturerName; // 제조사 명
     private String modelNo ; // 제조 모델 번호
     private String departmentCode; // 사용 부서

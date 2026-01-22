@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.company.erp.rfq.buyer.selection.mapper.RfqCompareMapper">
+
+    <!-- 헤더 (RFQHD) -->
+    <select id="selectHeader" parameterType="string"
+            resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqCompareResponse">
+        SELECT
+            RFQ_NUM     AS rfqNo,
+            RFQ_SUBJECT AS rfqName
+        FROM RFQHD
+        WHERE RFQ_NUM = #{rfqNo}
+          AND DEL_FLAG = 'N'
+    </select>
+
+    <!-- 품목 (RFQDT) -->
+    <select id="selectItems" parameterType="string"
+            resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqCompareResponse$Item">
+        SELECT
+            LINE_NO   AS lineNo,
+            ITEM_CD   AS itemCd,
+            ITEM_DESC AS itemDesc,
+            ITEM_SPEC AS itemSpec,
+            UNIT_CD   AS unitCd,
+            RFQ_QT    AS qty
+        FROM RFQDT
+        WHERE RFQ_NUM = #{rfqNo}
+          AND DEL_FLAG = 'N'
+        ORDER BY LINE_NO
+    </select>
+
+    <!-- 협력업체 (RFQVN + VNGL) -->
+    <select id="selectVendors" parameterType="string"
+            resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqCompareResponse$Vendor">
+        SELECT
+            rq.VENDOR_CD AS vendorCd,
+            vn.VENDOR_NM AS vendorNm,
+            rq.SELECT_YN AS selectYn
+        FROM RFQVN rq
+                 JOIN VNGL vn
+                      ON rq.VENDOR_CD = vn.VENDOR_CD
+                          AND vn.DEL_FLAG = 'N'
+        WHERE rq.RFQ_NUM = #{rfqNo}
+          AND rq.DEL_FLAG = 'N'
+        ORDER BY rq.VENDOR_CD
+    </select>
+
+    <!-- 품목별 견적 (RFQVNDT) -->
+    <select id="selectQuoteRows" parameterType="java.lang.String"
+            resultType="com.company.erp.rfq.buyer.selection.dto.response.RfqCompareResponse$RfqCompareQuoteRow">
+        SELECT
+            VENDOR_CD       AS vendorCd,
+            LINE_NO         AS lineNo,
+            QUOTE_QT        AS quoteQt,
+            QUOTE_UNIT_PRC  AS unitPriceEnc,
+            QUOTE_AMT       AS amountEnc
+        FROM RFQVNDT
+        WHERE RFQ_NUM = #{rfqNo}
+          AND DEL_FLAG = 'N'
+        ORDER BY VENDOR_CD, LINE_NO
+    </select>
+
+</mapper>

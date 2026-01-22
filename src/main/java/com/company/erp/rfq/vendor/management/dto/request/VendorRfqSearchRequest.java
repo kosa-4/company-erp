@@ -16,6 +16,6 @@ public class VendorRfqSearchRequest {
 
     private String searchText; // 검색어 (견적번호, 견적명)
     private String progressCd; // 상태 필터 (RFQVN.PROGRESS_CD)
-    private String startDate; // 시작일
-    private String endDate; // 종료일
+    private String rfqDate;
+    private String reqCloseDate;
 }

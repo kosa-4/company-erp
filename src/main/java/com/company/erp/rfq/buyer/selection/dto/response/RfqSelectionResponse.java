@@ -19,7 +19,8 @@ public class RfqSelectionResponse {
     private String progressNm;
     private String ctrlUserId;
     private String ctrlUserNm;
-    private LocalDateTime regDate;
+    private String regDate;
+    private String selectDate;
 
     private String vendorCd;
     private String vendorNm;
@@ -27,7 +28,7 @@ public class RfqSelectionResponse {
     private String vnProgressNm;
     private LocalDateTime sendDate;
     private LocalDateTime submitDate;
-    private BigDecimal totalAmt;
+    private String totalAmt;
     private String selectYn;
     private String rmk;
 }

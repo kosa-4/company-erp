@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import com.company.erp.common.session.SessionConst;
+import com.company.erp.common.util.AesCryptoUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,9 @@ public class PurchaseOrderService {
     private final DocNumService docNumService;
     private final HttpSession httpSession;
 
+    @Value("${app.crypto.key}")
+    private String cryptoKey;
+
     // ========== 발주대기 조회 (RFQ 선정완료) ==========
     public List<RfqSelectedDTO> getRfqSelectedList(
             String rfqNo, String rfqName, String vendorName,
@@ -46,10 +51,27 @@ public class PurchaseOrderService {
 
         List<RfqSelectedDTO> list = purchaseOrderMapper.selectRfqSelectedList(params);
 
-        // 각 RFQ에 대해 품목 상세 조회하여 추가
+        // 각 RFQ에 대해 품목 상세 조회하여 추가 및 복호화
         for (RfqSelectedDTO rfq : list) {
+            // 헤더 총액 복호화 (안전 처리)
+            rfq.setRfqAmount(decryptSafe(rfq.getRfqAmount()));
+
             if (rfq.getRfqNo() != null) {
-                List<RfqSelectedItemDTO> items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                List<RfqSelectedItemDTO> items;
+                // 긴급(E) 또는 단가계약(C) 인 경우 PR 아이템 조회 (단, rfqNo는 prNo로 alias 되어있음)
+                if ("E".equals(rfq.getPurchaseType()) || "C".equals(rfq.getPurchaseType())) {
+                    items = purchaseOrderMapper.selectPrItemsAsRfqItems(rfq.getRfqNo());
+                } else {
+                    items = purchaseOrderMapper.selectRfqSelectedItems(rfq.getRfqNo());
+                }
+
+                // 품목별 단가/금액 복호화 (안전 처리)
+                if (items != null) {
+                    for (RfqSelectedItemDTO item : items) {
+                        item.setUnitPrice(decryptSafe(item.getUnitPrice()));
+                        item.setAmount(decryptSafe(item.getAmount()));
+                    }
+                }
                 rfq.setItems(items);
             }
         }
@@ -182,6 +204,9 @@ public class PurchaseOrderService {
         String currentUserId = getCurrentUserId();
         String currentDeptCd = getCurrentUserDeptCd();
 
+        // 발주담당자 설정 (세션의 현재 사용자)
+        dto.setPurchaseManager(currentUserId);
+
         // 헤더 등록 (regUserId, ctrlDeptCd 별도 전달)
         purchaseOrderMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
@@ -202,7 +227,10 @@ public class PurchaseOrderService {
     // 현재 사용자 ID 가져오기 (세션에서)
     private String getCurrentUserId() {
         SessionUser user = getSessionUser();
-        return user != null ? user.getUserId() : "SYSTEM";
+        if (user == null || user.getUserId() == null) {
+            throw new SecurityException("로그인 정보가 없습니다. 다시 로그인해주세요.");
+        }
+        return user.getUserId();
     }
 
     // 현재 사용자 부서 코드 가져오기 (세션에서)
@@ -372,6 +400,22 @@ public class PurchaseOrderService {
         validateStatusTransition(existing.getStatus(), nextStatus);
         purchaseOrderMapper.updateStatus(poNo, nextStatus, userId);
         return true;
+    }
+
+    /**
+     * 안전한 복호화 메서드
+     * 복호화 실패 시 원본 데이터가 숫자 형식이면 원본 반환, 아니면 "0" 반환
+     */
+    private String decryptSafe(String value) {
+        try {
+            return AesCryptoUtil.decrypt(value, cryptoKey);
+        } catch (Exception e) {
+            // 복호화 실패 시, 원본이 숫자라면 평문으로 간주하여 반환 (테스트 데이터 호환성)
+            if (value != null && value.matches("-?\\d+(\\.\\d+)?")) {
+                return value;
+            }
+            return "0";
+        }
     }
 
 }

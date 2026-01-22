@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PageHeader,
   Card,
@@ -13,6 +13,8 @@ import {
   Modal,
   ModalFooter
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ColumnDef } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { prApi, PrItemDTO } from '@/lib/api/pr';
@@ -31,6 +33,7 @@ interface PrItem {
 }
 
 export default function PurchaseRequestPage() {
+  const router = useRouter();
   const [prItems, setPrItems] = useState<PrItem[]>([]);
   const [selectedPrItems, setSelectedPrItems] = useState<PrItem[]>([]); // 체크된 품목들
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -42,6 +45,12 @@ export default function PurchaseRequestPage() {
     itemCode: '',
     itemName: '',
   });
+
+  // 첨부파일 상태
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+  // 타이머 ID 관리 (중복 네비게이션 방지)
+  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     prNo: '',
@@ -67,13 +76,23 @@ export default function PurchaseRequestPage() {
         }));
       } catch (error) {
         console.error('초기 데이터 로드 실패:', error);
-        alert('초기 데이터를 불러오는데 실패했습니다.');
+        toast.error('초기 데이터를 불러오는데 실패했습니다.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadInitData();
+  }, []);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
+    };
   }, []);
 
   // 품목 목록 로드 함수
@@ -86,7 +105,7 @@ export default function PurchaseRequestPage() {
       setItemList(items);
     } catch (error) {
       console.error('품목 목록 로드 실패:', error);
-      alert('품목 목록을 불러오는데 실패했습니다.');
+      toast.error('품목 목록을 불러오는데 실패했습니다.');
     }
   };
 
@@ -135,33 +154,45 @@ export default function PurchaseRequestPage() {
     { key: 'unit', header: '단위', width: 60, align: 'center' },
     {
       key: 'quantity',
-      header: '수량',
+      header: (
+        <span>
+          수량
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 100,
       align: 'right',
       render: (value, row) => (
           <input
               type="number"
-              value={value || ''}
+              value={value as number || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'quantity', Number(e.target.value) || 0)}
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="1"
+              required
           />
       ),
     },
     {
       key: 'unitPrice',
-      header: '단가',
+      header: (
+        <span>
+          단가
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'right',
       render: (value, row) => (
           <input
               type="number"
-              value={value || ''}
+              value={value as number || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'unitPrice', Number(e.target.value) || 0)}
               className="w-full text-right border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               step="100"
+              required
           />
       ),
     },
@@ -174,15 +205,21 @@ export default function PurchaseRequestPage() {
     },
     {
       key: 'requestDeliveryDate',
-      header: '희망납기일',
+      header: (
+        <span>
+          희망납기일
+          <span className="text-red-500 ml-0.5">*</span>
+        </span>
+      ),
       width: 130,
       align: 'center',
       render: (value, row) => (
           <input
               type="date"
-              value={value || ''}
+              value={value as string || ''}
               onChange={(e) => handleItemChange(row.lineNo, 'requestDeliveryDate', e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
           />
       ),
     },
@@ -191,12 +228,12 @@ export default function PurchaseRequestPage() {
       header: '비고',
       width: 150,
       align: 'left',
-      render: (value) => (
+      render: (value, row) => (
           <input
               type="text"
-              value={value || ''}
-              readOnly
-              className="w-full border border-gray-300 rounded px-2 py-1 bg-gray-50 text-gray-700 cursor-not-allowed"
+              value={value as string || ''}
+              onChange={(e) => handleItemChange(row.lineNo, 'remark', e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
       ),
     },
@@ -221,21 +258,24 @@ export default function PurchaseRequestPage() {
 
   const handleSave = async () => {
     if (!formData.prName.trim()) {
-      alert('구매요청명을 입력해주세요.');
+      toast.warning('구매요청명을 입력해주세요.');
       return;
     }
     if (prItems.length === 0) {
-      alert('품목을 추가해주세요.');
+      toast.warning('품목을 추가해주세요.');
       return;
     }
 
-    // 품목의 수량과 단가 검증 (전체 품목)
+
+    // 품목의 수량, 단가, 희망납기일 검증 (전체 품목)
     const invalidItems = prItems.filter(item =>
-        !item.quantity || item.quantity <= 0 || !item.unitPrice || item.unitPrice <= 0
+      !item.quantity || item.quantity <= 0 ||
+      !item.unitPrice || item.unitPrice <= 0 ||
+      !item.requestDeliveryDate
     );
 
     if (invalidItems.length > 0) {
-      alert('모든 품목의 수량과 단가를 입력해주세요.');
+      toast.warning('모든 품목의 수량, 단가, 희망납기일을 입력해주세요.');
       return;
     }
 
@@ -263,19 +303,74 @@ export default function PurchaseRequestPage() {
           rmk: item.remark || '',
         })),
       };
-        const result = await prApi.save(requestData);
-        alert("구매요청 등록이 완료되었습니다.");
-        console.log('구매요청 등록 성공:', result);
-        // 저장 후 페이지 리로드
-        window.location.reload();
-      } catch (error) {
-      console.error('구매요청 등록 실패:', error);
+      const result = await prApi.save(requestData);
+
+      // 생성된 PR번호
+      const prNum = (result as any).prNum;
+
+      // 첨부파일 업로드 (실패해도 PR 자체는 저장된 상태 유지)
+      if (uploadedFiles.length > 0) {
+        if (!prNum) {
+          toast.warning('구매요청 번호를 받지 못해 파일을 업로드할 수 없습니다.');
+        } else {
+          for (const file of uploadedFiles) {
+            try {
+              await prApi.uploadFile(prNum, file);
+            } catch (e) {
+              console.error('파일 업로드 실패:', e);
+            }
+          }
+        }
+      }
+
+      toast.success("구매요청 등록이 완료되었습니다.", {
+        action: {
+          label: '목록으로 이동',
+          onClick: () => {
+            // 액션 클릭 시 타이머 취소 후 즉시 이동
+            if (navigationTimerRef.current) {
+              clearTimeout(navigationTimerRef.current);
+              navigationTimerRef.current = null;
+            }
+            router.push('/purchase/request-list');
+          }
+        }
+      });
+      
+      // 성공 후 1초 뒤 자동 이동 (액션 클릭 시 취소됨)
+      navigationTimerRef.current = setTimeout(() => {
+        router.push('/purchase/request-list');
+        navigationTimerRef.current = null;
+      }, 1000);
+      
+    } catch (error) {
       // 에러 객체에서 메시지 추출
       const errorMessage = error instanceof Error ? error.message : '구매요청 등록에 실패했습니다.';
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // 파일 선택 핸들러
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  // 파일 제거 핸들러
+  const handleFileRemove = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleAddItem = () => {
@@ -285,23 +380,32 @@ export default function PurchaseRequestPage() {
   const handleRemoveItem = () => {
     // 체크된 아이템 삭제
     if (selectedPrItems.length === 0) {
-      alert('삭제할 품목을 선택해주세요.');
-      return;
-    }
-
-    if (!confirm(`선택한 ${selectedPrItems.length}건의 품목을 삭제하시겠습니까?`)) {
+      toast.warning('삭제할 품목을 선택해주세요.');
       return;
     }
 
     const selectedLineNos = selectedPrItems.map(item => item.lineNo);
+    const prevItems = [...prItems];
+    
     setPrItems(prItems.filter(item => !selectedLineNos.includes(item.lineNo)));
     setSelectedPrItems([]);
+    
+    toast.success(`${selectedPrItems.length}건의 품목이 삭제되었습니다.`, {
+      action: {
+        label: '실행취소',
+        onClick: () => {
+          setPrItems(prevItems);
+          toast.success('삭제가 취소되었습니다.');
+        }
+      },
+      duration: 4000,
+    });
   };
 
   // 품목 선택 모달에서 품목 추가
   const handleAddSelectedItems = async () => {
     if (selectedItemCodes.length === 0) {
-      alert('추가할 품목을 선택해주세요.');
+      toast.warning('추가할 품목을 선택해주세요.');
       return;
     }
 
@@ -321,7 +425,8 @@ export default function PurchaseRequestPage() {
         unitPrice: 0, // 사용자가 입력해야 함
         amount: 0,
         requestDeliveryDate: '',
-        remark: item.rmk || '',
+        // 품목 마스터의 비고는 가져오지 않고, 구매요청에서 직접 입력하도록 기본값만 설정
+        remark: '',
       }));
 
       setPrItems([...prItems, ...newItems]);
@@ -329,7 +434,7 @@ export default function PurchaseRequestPage() {
       setIsItemModalOpen(false);
     } catch (error) {
       console.error('품목 정보 조회 실패:', error);
-      alert('품목 정보를 불러오는데 실패했습니다.');
+      toast.error('품목 정보를 불러오는데 실패했습니다.');
     }
   };
 
@@ -409,7 +514,14 @@ export default function PurchaseRequestPage() {
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">첨부파일</label>
               <div className="flex gap-2">
-                <input type="file" className="hidden" id="file-upload" />
+                <input
+                  type="file"
+                  className="hidden"
+                  id="file-upload"
+                  multiple
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                />
                 <Button
                     variant="secondary"
                     className="h-[42px]"
@@ -418,6 +530,28 @@ export default function PurchaseRequestPage() {
                   파일 선택
                 </Button>
               </div>
+              {/* 선택된 파일 목록 */}
+              {uploadedFiles.length > 0 && (
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between text-xs text-gray-700 bg-gray-50 rounded px-2 py-1"
+                    >
+                      <span className="truncate mr-2">
+                        {file.name} ({formatFileSize(file.size)})
+                      </span>
+                      <button
+                        type="button"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleFileRemove(index)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-4">

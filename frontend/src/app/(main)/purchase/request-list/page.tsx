@@ -14,9 +14,12 @@ import {
   Modal,
   ModalFooter
 } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ColumnDef, StatusType } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { prApi, PrListResponse, PrDtDTO } from '@/lib/api/pr';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PurchaseRequest {
   prNo: string;
@@ -32,13 +35,26 @@ interface PurchaseRequest {
 
 // 백엔드 응답을 프론트엔드 형식으로 변환
 const transformPrListResponse = (response: PrListResponse[]): PurchaseRequest[] => {
-  // regDate가 Date 객체 또는 문자열일 수 있으므로 처리
+  // regDate를 KST 기준 YYYY-MM-DD로 변환
   const formatDate = (date: string | Date | null | undefined): string => {
     if (!date) return '';
-    if (typeof date === 'string') {
-      return date.split('T')[0];
+
+    try {
+      const d =
+        typeof date === 'string'
+          ? new Date(date)
+          : new Date(date);
+
+      if (Number.isNaN(d.getTime())) return '';
+
+      // 브라우저 로컬 타임존(KST 환경 기준)에서 연-월-일만 추출
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
     }
-    return new Date(date).toISOString().split('T')[0];
   };
 
   return response.map((item, index) => {
@@ -82,6 +98,10 @@ const mapProgressCdToStatus = (progressCd: string | null | undefined): StatusTyp
 };
 
 export default function PurchaseRequestListPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const isBuyer = user?.role === 'BUYER' || user?.role === 'ADMIN';
+  
   const [data, setData] = useState<PurchaseRequest[]>([]);
   const [selectedRows, setSelectedRows] = useState<PurchaseRequest[]>([]);
   const [searchParams, setSearchParams] = useState({
@@ -91,6 +111,7 @@ export default function PurchaseRequestListPage() {
     endDate: '',
     requester: '',
     department: '',
+    purchaseType: '',
     status: '',
   });
   const [loading, setLoading] = useState(false);
@@ -104,6 +125,13 @@ export default function PurchaseRequestListPage() {
     purchaseType: '',
   });
   const [saving, setSaving] = useState(false);
+  const [expandedPrs, setExpandedPrs] = useState<Set<string>>(new Set());
+  const [prItemsMap, setPrItemsMap] = useState<Map<string, PrDtDTO[]>>(new Map());
+  const [editPrItems, setEditPrItems] = useState<PrDtDTO[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // 목록 조회
   const fetchData = async () => {
@@ -114,42 +142,53 @@ export default function PurchaseRequestListPage() {
       const params = {
         prNum: searchParams.prNo || undefined,
         prSubject: searchParams.prName || undefined,
+        pcType: searchParams.purchaseType || undefined,
         requester: searchParams.requester || undefined,
         deptName: searchParams.department || undefined,
         progressCd: searchParams.status || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        requestDate: searchParams.startDate || undefined,
+        page: currentPage,
+        pageSize: pageSize,
       };
 
       console.log('API 요청 params:', params);
       const response = await prApi.getList(params);
       console.log('백엔드 응답 원본:', response);
-      console.log('응답 데이터 개수:', response?.length || 0);
       
-      if (!response || response.length === 0) {
+      if (!response || !response.items || response.items.length === 0) {
         console.warn('응답 데이터가 비어있습니다.');
         setData([]);
+        setTotalCount(0);
+        setTotalPages(0);
         return;
       }
       
-      const transformedData = transformPrListResponse(response);
+      const transformedData = transformPrListResponse(response.items);
       console.log('변환된 데이터:', transformedData);
       setData(transformedData);
+      setTotalCount(response.totalCount || 0);
+      setTotalPages(response.totalPages || 0);
     } catch (error) {
       console.error('구매요청 목록 조회 실패:', error);
-      alert('구매요청 목록을 불러오는데 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      toast.error('구매요청 목록을 불러오는데 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
     } finally {
       setLoading(false);
     }
   };
 
-  // 초기 로드
+  // 초기 로드 및 페이지 변경 시 재조회
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   const handleSearch = async () => {
+    setCurrentPage(1); // 검색 시 1페이지로 이동
     await fetchData();
+  };
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const handleReset = () => {
@@ -160,12 +199,44 @@ export default function PurchaseRequestListPage() {
       endDate: '',
       requester: '',
       department: '',
+      purchaseType: '',
       status: '',
     });
   };
 
-  const handleRowClick = async (row: PurchaseRequest) => {
-    console.log('🔍 구매요청 상세 조회 시작 - PR번호:', row.prNo);
+  // 행 클릭 시 품목 목록 펼치기/접기
+  const toggleExpand = async (prNo: string) => {
+    const newExpanded = new Set(expandedPrs);
+    
+    if (newExpanded.has(prNo)) {
+      newExpanded.delete(prNo);
+    } else {
+      // 펼치기 - 품목 목록 조회
+      newExpanded.add(prNo);
+      
+      // 이미 조회한 품목 목록이 없으면 API 호출
+      if (!prItemsMap.has(prNo)) {
+        try {
+          setLoadingDetail(true);
+          const detail = await prApi.getDetail(prNo);
+          const detailList = detail.items || [];
+          setPrItemsMap(prev => new Map(prev).set(prNo, detailList));
+        } catch (error) {
+          toast.error('구매요청 품목 정보를 불러오는데 실패했습니다.');
+          newExpanded.delete(prNo);
+        } finally {
+          setLoadingDetail(false);
+        }
+      }
+    }
+    
+    setExpandedPrs(newExpanded);
+  };
+
+  // PR번호 클릭 시 상세 모달 열기
+  const handlePrNoClick = async (row: PurchaseRequest, e: React.MouseEvent) => {
+    e.stopPropagation(); // 행 클릭 이벤트 전파 방지
+    
     setSelectedPr(row);
     setIsDetailModalOpen(true);
     setIsEditing(false);
@@ -174,18 +245,17 @@ export default function PurchaseRequestListPage() {
       purchaseType: row.purchaseType,
     });
 
-    // PR번호로 상세 정보 조회 (DT 항목 목록)
+    // PR번호로 상세 정보 조회 (헤더 + DT 항목 목록)
     try {
       setLoadingDetail(true);
-      console.log('📡 API 호출 - getDetail:', row.prNo);
-      const detailList = await prApi.getDetail(row.prNo);
-      console.log('✅ API 응답 성공 - 품목 개수:', detailList?.length || 0);
-      console.log('📦 상세 데이터:', detailList);
+      const detail = await prApi.getDetail(row.prNo);
+      const detailList = detail.items || [];
       setPrDetailItems(detailList);
-    } catch (error) {
-      console.error('❌ 구매요청 상세 조회 실패:', error);
-      alert('구매요청 상세 정보를 불러오는데 실패했습니다.');
+      setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+    } catch (error: any) {
+      toast.error('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
       setPrDetailItems([]);
+      setEditPrItems([]);
     } finally {
       setLoadingDetail(false);
     }
@@ -216,21 +286,45 @@ export default function PurchaseRequestListPage() {
   };
 
   // 목록에서 수정 버튼 클릭 핸들러
-  const handleEditFromList = () => {
+  const handleEditFromList = async () => {
     if (selectedRows.length === 0) {
-      alert('수정할 구매요청을 선택해주세요.');
+      toast.warning('수정할 구매요청을 선택해주세요.');
       return;
     }
 
     // 승인된 항목 필터링
     const editableRows = selectedRows.filter(row => row.status !== 'APPROVED');
     if (editableRows.length === 0) {
-      alert('수정 가능한 구매요청이 없습니다. (승인된 항목은 수정할 수 없습니다)');
+      toast.warning('수정 가능한 구매요청이 없습니다. (승인된 항목은 수정할 수 없습니다)');
       return;
     }
 
     // 첫 번째 선택된 항목의 상세 화면 열기
-    handleRowClick(editableRows[0]);
+    const firstRow = editableRows[0];
+    setSelectedPr(firstRow);
+    setIsDetailModalOpen(true);
+    setIsEditing(true);
+    setEditFormData({
+      prName: firstRow.prName,
+      purchaseType: firstRow.purchaseType,
+
+    });
+
+    // 품목 목록 조회
+    try {
+      setLoadingDetail(true);
+      const detail = await prApi.getDetail(firstRow.prNo);
+      const detailList = detail.items || [];
+      setPrDetailItems(detailList);
+      setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+    } catch (error: any) {
+      console.error('구매요청 상세 정보 조회 실패:', error);
+      toast.error('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
+      setPrDetailItems([]);
+      setEditPrItems([]);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   // 상세 모달 내부 수정 버튼 클릭 핸들러
@@ -245,6 +339,8 @@ export default function PurchaseRequestListPage() {
         prName: selectedPr.prName,
         purchaseType: selectedPr.purchaseType,
       });
+      // 품목 목록도 원래대로 복원
+      setEditPrItems(prDetailItems.map(item => ({ ...item })));
     }
   };
 
@@ -252,33 +348,50 @@ export default function PurchaseRequestListPage() {
     if (!selectedPr) return;
 
     if (!editFormData.prName.trim()) {
-      alert('구매요청명을 입력해주세요.');
+      toast.warning('구매요청명을 입력해주세요.');
+      return;
+    }
+
+    // 품목 수량, 단가 검증
+    if (editPrItems.length === 0) {
+      toast.warning('품목이 없습니다.');
+      return;
+    }
+
+    const invalidItems = editPrItems.filter(item => 
+      !item.prQt || Number(item.prQt) <= 0 || !item.unitPrc || Number(item.unitPrc) <= 0
+    );
+
+    if (invalidItems.length > 0) {
+      toast.warning('모든 품목의 수량과 단가를 입력해주세요.');
       return;
     }
 
     try {
       setSaving(true);
       const pcTypeKorean = convertPurchaseTypeToKorean(editFormData.purchaseType);
+      
+      // 품목 데이터 변환
+      const prDtList = editPrItems.map(item => ({
+        itemCd: item.itemCd,
+        prQt: Number(item.prQt),
+        unitPrc: Number(item.unitPrc),
+      }));
+
       await prApi.update(selectedPr.prNo, {
         prSubject: editFormData.prName,
         pcType: pcTypeKorean,
+        prDtList: prDtList,
       });
 
-      alert('구매요청이 수정되었습니다.');
+      toast.success('구매요청이 수정되었습니다.');
       setIsEditing(false);
-
-      // 목록 새로고침
+      setIsDetailModalOpen(false);
       await fetchData();
 
-      // 상세 정보도 업데이트
-      setSelectedPr({
-        ...selectedPr,
-        prName: editFormData.prName,
-        purchaseType: editFormData.purchaseType,
-      });
     } catch (error: any) {
       console.error('구매요청 수정 실패:', error);
-      alert(error?.data?.error || error?.message || '구매요청 수정에 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '구매요청 수정에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -309,8 +422,11 @@ export default function PurchaseRequestListPage() {
       header: 'PR번호',
       width: 150,
       align: 'center',
-      render: (value) => (
-          <span className="text-blue-600 hover:underline cursor-pointer font-medium">
+      render: (value, row) => (
+        <span 
+          className="text-blue-600 hover:underline cursor-pointer font-medium"
+          onClick={(e) => handlePrNoClick(row as PurchaseRequest, e)}
+        >
           {String(value)}
         </span>
       ),
@@ -343,20 +459,20 @@ export default function PurchaseRequestListPage() {
     // 승인 상태인 항목이 제거되었으면 알림
     if (selected.length !== filtered.length) {
       const removedCount = selected.length - filtered.length;
-      alert(`${removedCount}건의 승인된 구매요청은 선택할 수 없습니다.`);
+      toast.info(`${removedCount}건의 승인된 구매요청은 선택할 수 없습니다.`);
     }
   };
 
   const handleDelete = async () => {
     if (selectedRows.length === 0) {
-      alert('삭제할 항목을 선택해주세요.');
+      toast.warning('삭제할 항목을 선택해주세요.');
       return;
     }
 
     // 승인 상태인 항목이 있는지 다시 한번 체크 (안전장치)
     const approvedItems = selectedRows.filter(row => row.status === 'APPROVED');
     if (approvedItems.length > 0) {
-      alert('승인된 구매요청은 삭제할 수 없습니다.');
+      toast.warning('승인된 구매요청은 삭제할 수 없습니다.');
       setSelectedRows(selectedRows.filter(row => row.status !== 'APPROVED'));
       return;
     }
@@ -364,195 +480,98 @@ export default function PurchaseRequestListPage() {
     // 중복 제거 (같은 PR번호)
     const uniquePrNos = [...new Set(selectedRows.map(row => row.prNo))];
 
-    if (!confirm(`선택한 ${uniquePrNos.length}건의 구매요청을 삭제하시겠습니까?\n(논리적 삭제: 복구 가능)`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      console.log('삭제 요청 PR번호:', uniquePrNos);
-      
-      // 각 PR번호에 대해 삭제 API 호출
-      const results = await Promise.allSettled(
-        uniquePrNos.map(async (prNo) => {
-          console.log(`삭제 시도: ${prNo}`);
+    toast(`선택한 ${uniquePrNos.length}건의 구매요청을 삭제하시겠습니까?`, {
+      action: {
+        label: '삭제',
+        onClick: async () => {
           try {
-            const result = await prApi.delete(prNo);
-            console.log(`삭제 성공: ${prNo}`, result);
-            return result;
-          } catch (err) {
-            console.error(`삭제 실패: ${prNo}`, err);
-            throw err;
+            setLoading(true);
+            await Promise.all(uniquePrNos.map(prNo => prApi.delete(prNo)));
+            toast.success(`${uniquePrNos.length}건이 삭제되었습니다.`);
+            setSelectedRows([]);
+            await fetchData();
+          } catch (error) {
+            console.error('구매요청 삭제 실패:', error);
+            toast.error('구매요청 삭제에 실패했습니다.');
+          } finally {
+            setLoading(false);
           }
-        })
-      );
-
-      // 성공/실패 카운트
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
-      
-      // 실패한 항목 상세 로그
-      const failedResults = results.filter(r => r.status === 'rejected');
-      if (failedResults.length > 0) {
-        console.error('❌ 삭제 실패 상세:', failedResults.map((r: any) => ({
-          reason: r.reason,
-          message: r.reason?.message,
-          status: r.reason?.status,
-        })));
+        }
       }
-
-      if (failCount > 0) {
-        const errorMsg = failedResults[0] && 'reason' in failedResults[0] 
-          ? (failedResults[0].reason as any)?.message || '알 수 없는 오류'
-          : '알 수 없는 오류';
-        alert(`${successCount}건 삭제 완료, ${failCount}건 실패\n오류: ${errorMsg}`);
-      } else {
-        alert(`${successCount}건이 삭제되었습니다.`);
-      }
-
-      setSelectedRows([]);
-      // 목록 다시 조회
-      await fetchData();
-    } catch (error) {
-      console.error('❌ 구매요청 삭제 실패:', error);
-      alert('구매요청 삭제에 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleApprove = async () => {
     if (selectedRows.length === 0) {
-      alert('승인할 항목을 선택해주세요.');
+      toast.warning('승인할 항목을 선택해주세요.');
       return;
     }
 
-    // 승인 상태인 항목 필터링
-    const approvableRows = selectedRows.filter(row => row.status !== 'APPROVED');
+    // 승인 상태 또는 반려 상태인 항목 필터링 (임시저장 상태만 승인 가능)
+    const approvableRows = selectedRows.filter(row => row.status === 'TEMP');
     if (approvableRows.length === 0) {
-      alert('승인 가능한 항목이 없습니다. (이미 승인된 항목은 제외됩니다)');
+      toast.warning('승인 가능한 항목이 없습니다.');
       return;
     }
     
-    if (approvableRows.length !== selectedRows.length) {
-      const alreadyApprovedCount = selectedRows.length - approvableRows.length;
-      if (!confirm(`승인 가능한 항목 ${approvableRows.length}건을 승인하시겠습니까?\n(이미 승인된 항목 ${alreadyApprovedCount}건은 제외됩니다)`)) {
-        return;
-      }
-    } else {
-      if (!confirm(`선택한 ${approvableRows.length}건의 구매요청을 승인하시겠습니까?`)) {
-        return;
-      }
-    }
+    // 중복 제거
+    const prNos = [...new Set(approvableRows.map(row => row.prNo))];
 
-    try {
-      setLoading(true);
-      // 승인 가능한 행들에서 prNo를 추출하고 중복 제거
-      const prNos = approvableRows.map(row => row.prNo);
-      const uniquePrNos = [...new Set(prNos)];
-      console.log('✅ 승인 요청 PR번호:', uniquePrNos);
-
-      // 각 prNo에 대해 승인 API 호출
-      const results = await Promise.allSettled(
-        uniquePrNos.map(async (prNo) => {
-          console.log(`✅ 승인 시도: ${prNo}`);
+    toast(`${prNos.length}건의 구매요청을 승인하시겠습니까?`, {
+      action: {
+        label: '승인',
+        onClick: async () => {
           try {
-            const result = await prApi.approve(prNo);
-            console.log(`✅ 승인 성공: ${prNo}`, result);
-            return result;
-          } catch (err) {
-            console.error(`❌ 승인 실패: ${prNo}`, err);
-            throw err;
+             setLoading(true);
+             await Promise.all(prNos.map(prNo => prApi.approve(prNo)));
+             toast.success(`${prNos.length}건이 승인되었습니다.`);
+             setSelectedRows([]);
+             await fetchData();
+          } catch (error) {
+             console.error('구매요청 승인 실패:', error);
+             toast.error('구매요청 승인에 실패했습니다.');
+          } finally {
+             setLoading(false);
           }
-        })
-      );
-
-      // 성공/실패 카운트
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
-
-      if (failCount > 0) {
-        alert(`${successCount}건 승인 완료, ${failCount}건 실패`);
-      } else {
-        alert(`${successCount}건이 승인되었습니다.`);
+        }
       }
-
-      setSelectedRows([]);
-      // 목록 다시 조회하여 변경된 상태값 반영 (승인 상태로 변경된 항목은 체크박스가 비활성화됨)
-      await fetchData();
-    } catch (error) {
-      console.error('❌ 구매요청 승인 실패:', error);
-      alert('구매요청 승인에 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleReject = async () => {
     if (selectedRows.length === 0) {
-      alert('반려할 항목을 선택해주세요.');
+      toast.warning('반려할 항목을 선택해주세요.');
       return;
     }
 
     // 승인 상태인 항목은 반려 불가
     const rejectableRows = selectedRows.filter(row => row.status !== 'APPROVED');
     if (rejectableRows.length === 0) {
-      alert('반려 가능한 항목이 없습니다. (승인된 항목은 반려할 수 없습니다)');
+      toast.warning('반려 가능한 항목이 없습니다.');
       return;
     }
-    
-    if (rejectableRows.length !== selectedRows.length) {
-      const approvedCount = selectedRows.length - rejectableRows.length;
-      if (!confirm(`반려 가능한 항목 ${rejectableRows.length}건을 반려하시겠습니까?\n(승인된 항목 ${approvedCount}건은 제외됩니다)`)) {
-        return;
+
+    const prNos = [...new Set(rejectableRows.map(row => row.prNo))];
+
+    toast(`${prNos.length}건의 구매요청을 반려하시겠습니까?`, {
+      action: {
+        label: '반려',
+        onClick: async () => {
+           try {
+             setLoading(true);
+             await Promise.all(prNos.map(prNo => prApi.reject(prNo)));
+             toast.success(`${prNos.length}건이 반려되었습니다.`);
+             setSelectedRows([]);
+             await fetchData();
+           } catch (error) {
+             console.error('구매요청 반려 실패:', error);
+             toast.error('구매요청 반려에 실패했습니다.');
+           } finally {
+             setLoading(false);
+           }
+        }
       }
-    } else {
-      if (!confirm(`선택한 ${rejectableRows.length}건의 구매요청을 반려하시겠습니까?`)) {
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-      // 반려 가능한 행들에서 prNo를 추출하고 중복 제거
-      const prNos = rejectableRows.map(row => row.prNo);
-      const uniquePrNos = [...new Set(prNos)];
-      console.log('❌ 반려 요청 PR번호:', uniquePrNos);
-
-      // 각 prNo에 대해 반려 API 호출
-      const results = await Promise.allSettled(
-        uniquePrNos.map(async (prNo) => {
-          console.log(`❌ 반려 시도: ${prNo}`);
-          try {
-            const result = await prApi.reject(prNo);
-            console.log(`✅ 반려 성공: ${prNo}`, result);
-            return result;
-          } catch (err) {
-            console.error(`❌ 반려 실패: ${prNo}`, err);
-            throw err;
-          }
-        })
-      );
-
-      // 성공/실패 카운트
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
-
-      if (failCount > 0) {
-        alert(`${successCount}건 반려 완료, ${failCount}건 실패`);
-      } else {
-        alert(`${successCount}건이 반려되었습니다.`);
-      }
-
-      setSelectedRows([]);
-      // 목록 다시 조회하여 변경된 상태값 반영
-      await fetchData();
-    } catch (error) {
-      console.error('❌ 구매요청 반려 실패:', error);
-      alert('구매요청 반려에 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -581,15 +600,23 @@ export default function PurchaseRequestListPage() {
               onChange={(e) => setSearchParams(prev => ({ ...prev, prName: e.target.value }))}
           />
           <DatePicker
-              label="요청일자 시작"
+              label="요청일자"
               value={searchParams.startDate}
               onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
           />
-          <DatePicker
-              label="요청일자 종료"
-              value={searchParams.endDate}
-              onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
+
+          <Select
+              label="구매유형"
+              value={searchParams.purchaseType}
+              onChange={(e) => setSearchParams(prev => ({ ...prev, purchaseType: e.target.value }))}
+              options={[
+                { value: '', label: '전체' },
+                { value: '일반구매', label: '일반' },
+                { value: '단가계약', label: '단가계약' },
+                { value: '긴급구매', label: '긴급' },
+              ]}
           />
+
           <Input
               label="요청자"
               placeholder="요청자 입력"
@@ -647,42 +674,244 @@ export default function PurchaseRequestListPage() {
                 >
                   삭제
                 </Button>
-                <Button 
-                  variant="success" 
-                  onClick={handleApprove}
-                  disabled={
-                    selectedRows.length === 0 || 
-                    selectedRows.some(row => row.status === 'APPROVED')
-                  }
-                >
-                  승인
-                </Button>
-                <Button 
-                  variant="danger" 
-                  onClick={handleReject}
-                  disabled={
-                    selectedRows.length === 0 || 
-                    selectedRows.some(row => row.status === 'APPROVED')
-                  }
-                >
-                  반려
-                </Button>
+                {isBuyer && (
+                  <>
+                    <Button 
+                      variant="success" 
+                      onClick={handleApprove}
+                      disabled={
+                        selectedRows.length === 0 || 
+                        selectedRows.some(row => row.status !== 'TEMP')
+                      }
+                    >
+                      승인
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      onClick={handleReject}
+                      disabled={
+                        selectedRows.length === 0 || 
+                        selectedRows.some(row => row.status === 'APPROVED')
+                      }
+                    >
+                      반려
+                    </Button>
+                  </>
+                )}
               </div>
             }
         >
-          <DataGrid
-              columns={columns}
-              data={data}
-              keyField="prNo"
-              loading={loading}
-              selectable
-              selectedRows={selectedRows}
-              onSelectionChange={handleSelectionChange}
-              isRowSelectable={isRowSelectable}
-              onRowClick={handleRowClick}
-              emptyMessage="구매요청 내역이 없습니다."
-          />
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <p className="mt-2 text-sm text-gray-500">로딩 중...</p>
+            </div>
+          ) : data.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              구매요청 내역이 없습니다.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-4 py-3.5 text-center w-12"></th>
+                    <th className="px-4 py-3.5 text-center w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.length === data.filter(row => row.status !== 'APPROVED').length && data.filter(row => row.status !== 'APPROVED').length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRows(data.filter(row => row.status !== 'APPROVED'));
+                          } else {
+                            setSelectedRows([]);
+                          }
+                        }}
+                        className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500 cursor-pointer"
+                      />
+                    </th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[100px]">상태</th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[150px]">PR번호</th>
+                    <th className="px-4 py-3.5 font-medium text-left w-[250px]">구매요청명</th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[100px]">구매유형</th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[100px]">요청자</th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[120px]">부서</th>
+                    <th className="px-4 py-3.5 font-medium text-center w-[110px]">요청일</th>
+                    <th className="px-4 py-3.5 font-medium text-right w-[150px]">금액</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data.map((row) => (
+                    <React.Fragment key={row.prNo}>
+                      <tr 
+                        className={`
+                          transition-colors duration-150 cursor-pointer
+                          ${selectedRows.some(r => r.prNo === row.prNo) ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                        `}
+                        onClick={() => toggleExpand(row.prNo)}
+                      >
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          <svg 
+                            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedPrs.has(row.prNo) ? 'rotate-90' : ''}`}
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </td>
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.some(r => r.prNo === row.prNo)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (e.target.checked) {
+                                if (row.status !== 'APPROVED') {
+                                  setSelectedRows(prev => [...prev, row]);
+                                } else {
+                                  alert('승인된 구매요청은 선택할 수 없습니다.');
+                                }
+                              } else {
+                                setSelectedRows(prev => prev.filter(r => r.prNo !== row.prNo));
+                              }
+                            }}
+                            disabled={row.status === 'APPROVED'}
+                            className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </td>
+                        <td className="px-4 py-3.5 text-center">{getStatusBadge(row.status)}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span 
+                            className="text-blue-600 hover:underline cursor-pointer font-medium"
+                            onClick={(e) => handlePrNoClick(row, e)}
+                          >
+                            {row.prNo}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-left">{row.prName}</td>
+                        <td className="px-4 py-3.5 text-center">{row.purchaseType}</td>
+                        <td className="px-4 py-3.5 text-center">{row.requester}</td>
+                        <td className="px-4 py-3.5 text-center">{row.department}</td>
+                        <td className="px-4 py-3.5 text-center">{row.requestDate}</td>
+                        <td className="px-4 py-3.5 text-right font-medium">₩{formatNumber(row.amount)}</td>
+                      </tr>
+                      
+                      {/* 펼쳐진 품목 상세 */}
+                      {expandedPrs.has(row.prNo) && (
+                        <tr>
+                          <td colSpan={10} className="bg-gray-50/50 px-4 py-3">
+                            <div className="ml-12">
+                              {loadingDetail ? (
+                                <div className="text-center py-4">
+                                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+                                  <p className="mt-2 text-sm text-gray-500">품목 정보를 불러오는 중...</p>
+                                </div>
+                              ) : prItemsMap.has(row.prNo) && prItemsMap.get(row.prNo)!.length > 0 ? (
+                                <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                                  <thead className="bg-gray-100">
+                                    <tr>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-center">품목코드</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-left">품목명</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-center">규격</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-center">단위</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-right">수량</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-right">단가</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-right">금액</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-center">희망납기일</th>
+                                      <th className="px-3 py-2 text-xs font-semibold text-gray-600 text-left">비고</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-100">
+                                    {prItemsMap.get(row.prNo)!.map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2 text-xs text-center">{item.itemCd || '-'}</td>
+                                        <td className="px-3 py-2 text-xs text-left">{item.itemDesc || '-'}</td>
+                                        <td className="px-3 py-2 text-xs text-center">{item.itemSpec || '-'}</td>
+                                        <td className="px-3 py-2 text-xs text-center">{item.unitCd || '-'}</td>
+                                        <td className="px-3 py-2 text-xs text-right">{formatNumber(Number(item.prQt) || 0)}</td>
+                                        <td className="px-3 py-2 text-xs text-right">₩{formatNumber(Number(item.unitPrc) || 0)}</td>
+                                        <td className="px-3 py-2 text-xs text-right font-medium">₩{formatNumber(Number(item.prAmt) || 0)}</td>
+                                        <td className="px-3 py-2 text-xs text-center">
+                                          {item.delyDate
+                                              ? new Date(item.delyDate).toISOString().slice(0, 10)
+                                              : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs text-left">{item.rmk || '-'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <div className="text-center py-4 text-gray-500 text-sm">
+                                  등록된 품목이 없습니다.
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
+
+        {/* 페이징 */}
+        {totalPages > 0 && (
+          <div className="flex items-center justify-center mt-4 px-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+              >
+                이전
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={loading}
+                      className="min-w-[40px]"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages || loading}
+              >
+                다음
+              </Button>
+            </div>
+            <div className="absolute left-4 text-sm text-gray-600">
+              총 {totalCount}건 중 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)}건 표시
+            </div>
+          </div>
+        )}
 
         {/* 상세 모달 */}
         <Modal
@@ -702,7 +931,6 @@ export default function PurchaseRequestListPage() {
                     onConfirm={handleSaveEdit}
                     cancelText="취소"
                     confirmText="저장"
-                    disabled={saving}
                 />
               ) : (
                 <ModalFooter
@@ -724,11 +952,6 @@ export default function PurchaseRequestListPage() {
                     <h3 className="text-lg font-semibold">구매요청 상세</h3>
                     {getStatusBadge(selectedPr.status)}
                   </div>
-                  {!isEditing && selectedPr.status !== 'APPROVED' && (
-                    <Button variant="secondary" size="sm" onClick={handleEdit}>
-                      수정
-                    </Button>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -794,20 +1017,61 @@ export default function PurchaseRequestListPage() {
                             상세 정보를 불러오는 중...
                           </td>
                         </tr>
-                    ) : prDetailItems.length === 0 ? (
+                    ) : (isEditing ? editPrItems : prDetailItems).length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-8 text-center text-gray-500">
                             품목 정보가 없습니다.
                           </td>
                         </tr>
                     ) : (
-                        prDetailItems.map((item, index) => (
+                        (isEditing ? editPrItems : prDetailItems).map((item, index) => {
+                          const prQt = Number(item.prQt) || 0;
+                          const unitPrc = Number(item.unitPrc) || 0;
+                          const prAmt = prQt * unitPrc;
+                          
+                          return (
                             <tr key={index} className="border-t">
                               <td className="p-3 text-sm">{item.itemCd || ''}</td>
                               <td className="p-3 text-sm">{item.itemDesc || ''}</td>
-                              <td className="p-3 text-sm text-right">{formatNumber(Number(item.prQt) || 0)}</td>
-                              <td className="p-3 text-sm text-right">₩{formatNumber(Number(item.unitPrc) || 0)}</td>
-                              <td className="p-3 text-sm text-right font-medium">₩{formatNumber(Number(item.prAmt) || 0)}</td>
+                              <td className="p-3 text-sm text-right">
+                                {isEditing ? (
+                                  <Input
+                                    type="number"
+                                    value={prQt}
+                                    onChange={(e) => {
+                                      const newQt = Number(e.target.value) || 0;
+                                      const newItems = [...editPrItems];
+                                      newItems[index] = { ...newItems[index], prQt: newQt };
+                                      setEditPrItems(newItems);
+                                    }}
+                                    className="w-24 text-right"
+                                    min="0"
+                                    step="1"
+                                  />
+                                ) : (
+                                  formatNumber(prQt)
+                                )}
+                              </td>
+                              <td className="p-3 text-sm text-right">
+                                {isEditing ? (
+                                  <Input
+                                    type="number"
+                                    value={unitPrc}
+                                    onChange={(e) => {
+                                      const newUnitPrc = Number(e.target.value) || 0;
+                                      const newItems = [...editPrItems];
+                                      newItems[index] = { ...newItems[index], unitPrc: newUnitPrc };
+                                      setEditPrItems(newItems);
+                                    }}
+                                    className="w-32 text-right"
+                                    min="0"
+                                    step="1"
+                                  />
+                                ) : (
+                                  `₩${formatNumber(unitPrc)}`
+                                )}
+                              </td>
+                              <td className="p-3 text-sm text-right font-medium">₩{formatNumber(prAmt)}</td>
                               <td className="p-3 text-sm text-center">
                                 {item.delyDate
                                     ? (typeof item.delyDate === 'string'
@@ -816,7 +1080,8 @@ export default function PurchaseRequestListPage() {
                                     : ''}
                               </td>
                             </tr>
-                        ))
+                          );
+                        })
                     )}
                     </tbody>
                   </table>
@@ -827,7 +1092,13 @@ export default function PurchaseRequestListPage() {
                     <span className="text-gray-500 mr-4">총 요청금액:</span>
                     <span className="text-xl font-bold text-blue-600">
                   ₩{formatNumber(
-                        prDetailItems.length > 0
+                        isEditing && editPrItems.length > 0
+                            ? editPrItems.reduce((sum, item) => {
+                                const qt = Number(item.prQt) || 0;
+                                const unitPrc = Number(item.unitPrc) || 0;
+                                return sum + (qt * unitPrc);
+                              }, 0)
+                            : prDetailItems.length > 0
                             ? prDetailItems.reduce((sum, item) => sum + (Number(item.prAmt) || 0), 0)
                             : selectedPr.amount
                     )}

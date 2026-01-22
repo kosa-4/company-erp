@@ -4,46 +4,100 @@
 <mapper namespace="com.company.erp.rfq.vendor.management.mapper.RfqVendorManagementMapper">
 
     <!-- 협력사별 RFQ 목록 조회 -->
-    <select id="selectVendorRfqList"
-        resultType="com.company.erp.rfq.vendor.management.dto.response.VendorRfqListResponse">
-        SELECT h.RFQ_NUM as rfqNum, h.RFQ_SUBJECT as rfqSubject, h.RFQ_DATE as rfqDate,
-        h.REQ_CLOSE_DATE as reqCloseDate, h.PROGRESS_CD as progressCd, CASE h.PROGRESS_CD WHEN 'T'
-        THEN '임시저장' WHEN 'RFQS' THEN '협력사요청' WHEN 'M' THEN '마감' WHEN 'G' THEN '개찰' WHEN 'J' THEN
-        '선정완료' ELSE h.PROGRESS_CD END as progressName, v.PROGRESS_CD as vendorProgressCd, CASE
-        v.PROGRESS_CD WHEN 'RFQS' THEN '요청' WHEN 'RFQJ' THEN '접수' WHEN 'RFQT' THEN '임시저장' WHEN
-        'RFQC' THEN '제출완료' WHEN 'F' THEN '포기' ELSE v.PROGRESS_CD END as vendorProgressName,
-        h.RFQ_TYPE as rfqType, CASE h.RFQ_TYPE WHEN 'OC' THEN '수의계약' WHEN 'AC' THEN '지명경쟁' ELSE
-        h.RFQ_TYPE END as rfqTypeName, v.SELECT_YN as selectYn, (SELECT COUNT(*) FROM rfqdt WHERE
-        RFQ_NUM = h.RFQ_NUM AND DEL_FLAG = 'N') as itemCount FROM rfqhd h INNER JOIN rfqvn v ON
-        h.RFQ_NUM = v.RFQ_NUM WHERE v.VENDOR_CD = #{vendorCd} AND h.DEL_FLAG = 'N' AND v.DEL_FLAG =
-        'N' <if
-            test="search != null">
-            <if test="search.searchText != null and search.searchText != ''"> AND ( h.RFQ_NUM LIKE
-        CONCAT('%', #{search.searchText}, '%') OR h.RFQ_SUBJECT LIKE CONCAT('%',
-        #{search.searchText}, '%') ) </if>
-            <if
-                test="search.progressCd != null and search.progressCd != ''"> AND v.PROGRESS_CD =
-        #{search.progressCd} </if>
-            <if test="search.startDate != null and search.startDate != ''">
-        AND h.RFQ_DATE >= #{search.startDate} </if>
-            <if
-                test="search.endDate != null and search.endDate != ''"> AND h.RFQ_DATE &lt;=
-        #{search.endDate} </if>
-        </if> ORDER BY h.RFQ_DATE DESC, h.RFQ_NUM DESC </select>
+    <select id="selectVendorRfqList" resultType="com.company.erp.rfq.vendor.management.dto.response.VendorRfqListResponse">
+        SELECT
+            h.RFQ_NUM as rfqNum,
+            h.RFQ_SUBJECT as rfqSubject,
+            h.RFQ_DATE as rfqDate,
+            h.REQ_CLOSE_DATE as reqCloseDate,
+            h.PROGRESS_CD as progressCd,
+            CASE h.PROGRESS_CD 
+                WHEN 'T' THEN '임시저장' 
+                WHEN 'RFQS' THEN '협력사요청' 
+                WHEN 'M' THEN '마감' 
+                WHEN 'G' THEN '개찰' 
+                WHEN 'J' THEN '선정완료' 
+                ELSE h.PROGRESS_CD 
+            END as progressName,
+            v.PROGRESS_CD as vendorProgressCd,
+            CASE v.PROGRESS_CD 
+                WHEN 'RFQS' THEN '요청' 
+                WHEN 'RFQJ' THEN '접수' 
+                WHEN 'RFQT' THEN '임시저장' 
+                WHEN 'RFQC' THEN '제출완료' 
+                WHEN 'F' THEN '포기' 
+                ELSE v.PROGRESS_CD 
+            END as vendorProgressName,
+            h.RFQ_TYPE as rfqType,
+            CASE h.RFQ_TYPE 
+                WHEN 'OC' THEN '수의계약' 
+                WHEN 'AC' THEN '지명경쟁' 
+                ELSE h.RFQ_TYPE 
+            END as rfqTypeName,
+            v.SELECT_YN as selectYn,
+            (SELECT COUNT(*) FROM rfqdt WHERE RFQ_NUM = h.RFQ_NUM AND DEL_FLAG = 'N') as itemCount
+        FROM rfqhd h
+        INNER JOIN rfqvn v ON h.RFQ_NUM = v.RFQ_NUM
+        WHERE v.VENDOR_CD = #{vendorCd}
+          AND h.DEL_FLAG = 'N'
+          AND v.DEL_FLAG = 'N'
+        <if test="search != null">
+            <if test="search.searchText != null and search.searchText != ''">
+                AND (h.RFQ_NUM LIKE CONCAT('%', #{search.searchText}, '%') OR h.RFQ_SUBJECT LIKE CONCAT('%', #{search.searchText}, '%'))
+            </if>
+            <if test="search.progressCd != null and search.progressCd != ''">
+                AND v.PROGRESS_CD = #{search.progressCd}
+            </if>
+            <if test="search.reqCloseDate != null and search.reqCloseDate != ''">
+                AND h.REQ_CLOSE_DATE &gt;= CONCAT(#{search.reqCloseDate}, ' 00:00:00')
+                AND h.REQ_CLOSE_DATE &lt;= CONCAT(#{search.reqCloseDate}, ' 23:59:59')
+            </if>
+        </if>
+        ORDER BY h.RFQ_DATE DESC, h.RFQ_NUM DESC
+    </select>
 
     <!-- 협력사별 RFQ 상세 조회 (헤더) -->
     <select id="selectVendorRfqDetail"
         resultType="com.company.erp.rfq.vendor.management.dto.response.VendorRfqDetailResponse">
-        SELECT h.RFQ_NUM as rfqNum, h.RFQ_SUBJECT as rfqSubject, h.RFQ_DATE as rfqDate,
-        h.REQ_CLOSE_DATE as reqCloseDate, h.PROGRESS_CD as progressCd, CASE h.PROGRESS_CD WHEN 'T'
-        THEN '임시저장' WHEN 'RFQS' THEN '협력사요청' WHEN 'M' THEN '마감' WHEN 'G' THEN '개찰' WHEN 'J' THEN
-        '선정완료' ELSE h.PROGRESS_CD END as progressName, v.PROGRESS_CD as vendorProgressCd, CASE
-        v.PROGRESS_CD WHEN 'RFQS' THEN '요청' WHEN 'RFQJ' THEN '접수' WHEN 'RFQT' THEN '임시저장' WHEN
-        'RFQC' THEN '제출완료' WHEN 'F' THEN '포기' ELSE v.PROGRESS_CD END as vendorProgressName,
-        h.RFQ_TYPE as rfqType, CASE h.RFQ_TYPE WHEN 'OC' THEN '수의계약' WHEN 'AC' THEN '지명경쟁' ELSE
-        h.RFQ_TYPE END as rfqTypeName, h.RMK as rmk FROM rfqhd h INNER JOIN rfqvn v ON h.RFQ_NUM =
-        v.RFQ_NUM WHERE h.RFQ_NUM = #{rfqNum} AND v.VENDOR_CD = #{vendorCd} AND h.DEL_FLAG = 'N' AND
-        v.DEL_FLAG = 'N' </select>
+        SELECT h.RFQ_NUM                  as rfqNum,
+               h.RFQ_SUBJECT              as rfqSubject,
+               h.RFQ_DATE                 as rfqDate,
+               h.REQ_CLOSE_DATE           as reqCloseDate,
+               h.PROGRESS_CD              as progressCd,
+               CASE h.PROGRESS_CD
+                   WHEN 'T'
+                       THEN '임시저장'
+                   WHEN 'RFQS' THEN '협력사요청'
+                   WHEN 'M' THEN '마감'
+                   WHEN 'G' THEN '개찰'
+                   WHEN 'J' THEN
+                       '선정완료'
+                   ELSE h.PROGRESS_CD END as progressName,
+               v.PROGRESS_CD              as vendorProgressCd,
+               CASE
+                   v.PROGRESS_CD
+                   WHEN 'RFQS' THEN '요청'
+                   WHEN 'RFQJ' THEN '접수'
+                   WHEN 'RFQT' THEN '임시저장'
+                   WHEN
+                       'RFQC' THEN '제출완료'
+                   WHEN 'F' THEN '포기'
+                   ELSE v.PROGRESS_CD END as vendorProgressName,
+               h.RFQ_TYPE                 as rfqType,
+               CASE h.RFQ_TYPE
+                   WHEN 'OC' THEN '수의계약'
+                   WHEN 'AC' THEN '지명경쟁'
+                   ELSE
+                       h.RFQ_TYPE END     as rfqTypeName,
+               h.RMK                      as rmk
+        FROM rfqhd h
+                 INNER JOIN rfqvn v ON h.RFQ_NUM =
+                                       v.RFQ_NUM
+        WHERE h.RFQ_NUM = #{rfqNum}
+          AND v.VENDOR_CD = #{vendorCd}
+          AND h.DEL_FLAG = 'N'
+          AND v.DEL_FLAG = 'N'
+    </select>
 
     <!-- 협력사별 RFQ 상세 조회 (품목 목록) -->
     <select id="selectVendorRfqItems"
