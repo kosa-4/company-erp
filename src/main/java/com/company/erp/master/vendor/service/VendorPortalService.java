@@ -51,7 +51,6 @@ public class VendorPortalService {
         boolean editable = isEditable(loginId, masterVendor);
 
         masterVendor.setEditable(editable);
-        System.out.println(editable);
         // 수정 요청 전 협력 업체 정보 보여줄 값
         return masterVendor;
     }

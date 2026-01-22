@@ -378,29 +378,31 @@
     <select id="selectVendorVNGLByLoginId" parameterType="String" resultType="com.company.erp.master.vendor.dto.VendorListDto">
 
         SELECT
-        V.VENDOR_CD AS vendorCode,
-        VENDOR_NM AS vendorName,
-        VENDOR_ENG_NM AS vendorNameEng,
-        REG_TYPE AS businessType,
-        IRS_NO AS businessNo,
-        CEO_USER_NM AS ceoName,
-        INDUSTRY_TYPE AS industry,
-        ZIP_CD AS zipCode,
-        ADDR AS address,
-        ADDR_DT AS addressDetail,
-        TEL_NO AS tel,
-        V.PROGRESS_CD AS status,
-        RMK AS remark
+            V.VENDOR_CD AS vendorCode,
+            VENDOR_NM AS vendorName,
+            VENDOR_ENG_NM AS vendorNameEng,
+            REG_TYPE AS businessType,
+            IRS_NO AS businessNo,
+            CEO_USER_NM AS ceoName,
+            INDUSTRY_TYPE AS industry,
+            ZIP_CD AS zipCode,
+            ADDR AS address,
+            ADDR_DT AS addressDetail,
+            TEL_NO AS tel,
+            V.PROGRESS_CD AS status,
+            RMK AS remark
         FROM
-        VNGL V
+            VNGL V
         INNER JOIN
-        VN_USER U
+            VN_USER U
         ON
-        V.VENDOR_CD = U.VENDOR_CD
+            V.VENDOR_CD = U.VENDOR_CD
         WHERE
-        U.USER_ID = #{loginId}
+            U.USER_ID = #{loginId}
         AND
-        V.PROGRESS_CD = 'A'
+            V.PROGRESS_CD = 'A'
+        AND
+            DEL_FLAG = 'N'
 
     </select>
     <!--사업자 번호 중복 체크-->

@@ -107,6 +107,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
       setSelectedFiles(prev => [...prev, ...filesArray]); // 파일 누적
+      e.target.value = '';
     }
   };
   // 특정 파일 제거 기능
@@ -133,39 +134,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         body: JSON.stringify(formData),
       });
 
-      // 백엔드가 ResponseEntity.ok(vendorCode)로 문자열만 주므로 text()로 받습니다.
+      // 1. 일단 무조건 텍스트로 받습니다.
       const resultText = await response.text();
 
+      // 2. 에러가 났을 때만! 텍스트를 JSON으로 바꿔서 메시지를 깹니다.
       if (!response.ok) {
-        let errorMessage:any = '회원가입 신청 중 오류가 발생했습니다.';
-
-        try {
-          // 1. 에러 응답을 JSON 객체로 변환 시도
-          const errorJson = JSON.parse(resultText);
-
-          // 2. 기본 메시지 가져오기
-          if (errorJson.message) {
-            errorMessage = errorJson.message;
-          }
-
-          // 3. 상세 유효성 검사 에러(data)가 있다면 그 중 첫 번째 메시지로 덮어쓰기
-          if (errorJson.data && Object.keys(errorJson.data).length > 0) {
-            errorMessage = Object.values(errorJson.data)[0];
-          }
-
-        } catch (e) {
-          // JSON 파싱 실패 시 (예: 500 에러 HTML 등) 원본 텍스트 사용하거나 기본 메시지 유지
-          // 만약 resultText가 너무 길거나 HTML이라면 그냥 기본 메시지를 쓰는 게 나을 수도 있음
-          if (resultText && resultText.length < 100) { 
-             errorMessage = resultText;
-          }
-        }
-
-        // 깔끔하게 정리된 메시지로 에러를 던짐
-        throw new Error(errorMessage);
+        // 이 안에서만 JSON 파싱을 합니다.
+        const errorJson = JSON.parse(resultText);
+        
+        // 상세 에러(data)가 있으면 그거 쓰고, 없으면 기본 메시지(message)
+        const serverMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
+        
+        throw new Error(serverMsg);
       }
 
-      // 서버에서 방금 생성된 vendorCode (예: VN20260121001)
+      // 3. 여기까지 내려왔으면 성공입니다. resultText가 바로 코드입니다.
       const generatedVendorCode = resultText;
 
       // --- [STEP 2] 파일이 있으면 업로드 실행 ---
