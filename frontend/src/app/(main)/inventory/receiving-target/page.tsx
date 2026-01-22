@@ -906,7 +906,7 @@ export default function ReceivingTargetPage() {
       <Modal
         isOpen={isRfqDetailOpen}
         onClose={() => setIsRfqDetailOpen(false)}
-        title={selectedRfqDetail?.header?.rfqNum ? "RFQ 상세" : "PR 상세"}
+        title={selectedRfqDetail?.header?.rfqNum ? "RFQ 상세" : "구매요청 상세"}
         size="lg"
         footer={
           <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
