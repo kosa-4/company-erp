@@ -493,9 +493,6 @@
             <if test="address != null and address != ''">
                 ADDR = #{address},
             </if>
-            <if test="email != null and email != ''">
-                EMAIL = #{email},
-            </if>
             <if test="remark != null and remark != ''">
                 RMK = #{remark},
             </if>

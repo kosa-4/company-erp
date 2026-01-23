@@ -56,13 +56,11 @@ export default function VendorInfoChangePage() {
         });
         if (response.ok) {
           const data = await response.json();
-          console.log(data)
 
           // DTO 필드명과 일치하므로 데이터 그대로 세팅
           setFormData(data);
           // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
           setOriginalData(JSON.parse(JSON.stringify(data))); // 깊은 복사
-          if(data.remark) setChangeReason(data.remark);
           if(data.remark) setChangeReason(data.remark);
         } else {
           alert('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
@@ -76,7 +74,6 @@ export default function VendorInfoChangePage() {
     };
     fetchVendorData();
   }, []);
-  console.log("originalData " , originalData);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));

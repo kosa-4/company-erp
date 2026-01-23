@@ -98,8 +98,7 @@
             i.USE_FLAG AS useYn,
             i.RMK AS remark,
             i.REG_DATE AS createdAt,
-            i.REG_USER_ID AS createdBy,
-            i.RMK AS remark
+            i.REG_USER_ID AS createdBy
         FROM
             MTGL i
         WHERE

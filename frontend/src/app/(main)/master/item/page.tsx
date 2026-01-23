@@ -162,7 +162,7 @@ export default function ItemPage() {
   // 3-3. 검색 시 1페이지로 이동
   const handleSearchList = () => {
     setPage(String(1));
-    setSearchParams(prev => ({...prev, page:page}));
+    setSearchParams(prev => ({...prev, page: "1"}));
   }
   // 3-4. 목록 초기화
   const handleReset = () => {
@@ -320,16 +320,18 @@ export default function ItemPage() {
   // 1. useRef 정의
   // form 태그 내 input 참조
   const saveForm = useRef<HTMLFormElement>(null); 
+  const createForm = useRef<HTMLFormElement>(null);
+  const editForm = useRef<HTMLFormElement>(null);
 
   // 2. 품목 저장
   const saveItem = async () => {
     
     // 2-1. form 태그 null 처리
-    if(!saveForm.current){
+    if(!createForm.current){
       return;
     }
     // 2-2. form 데이터 저장
-    const formData = new FormData(saveForm.current);
+    const formData = new FormData(createForm.current);
     const data = Object.fromEntries(formData.entries());
     
     try{
@@ -353,7 +355,7 @@ export default function ItemPage() {
       setSelectedCate(undefined);
 
       // 2. 입력 폼 초기화 (인풋 초기화)
-      saveForm.current.reset();
+      createForm.current.reset();
 
       // 3. UI 상태 정리 (모달 닫고 리스트 새로고침)
       setIsCreateModalOpen(false);
@@ -372,11 +374,11 @@ export default function ItemPage() {
   const updateItem = async () => {
 
     // 1-1. form 태그 null 처리
-    if(!saveForm.current){
+    if(!editForm.current){
       return
     }
     // 1-2. form 데이터 저장
-    const formData = new FormData(saveForm.current);
+    const formData = new FormData(editForm.current);
     const currentData = Object.fromEntries(formData.entries()); 
     const data = Object.fromEntries(formData.entries());
     delete data.createdAt; // createdAt를 서버로 보내지 않음
@@ -650,7 +652,7 @@ export default function ItemPage() {
         }
       >
         {selectedItem && (
-          <form ref={saveForm} key={selectedItem.itemCode}>
+          <form ref={editForm} key={selectedItem.itemCode}>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 
@@ -828,7 +830,7 @@ export default function ItemPage() {
           />
         }
       >
-        <form ref={saveForm}>
+        <form ref={createForm}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               
@@ -888,7 +890,7 @@ export default function ItemPage() {
       {/* 카테고리 모달 */}      
       {isCateModalOpen && (
         <Modal
-          isOpen={isCreateModalOpen}
+          isOpen={isCateModalOpen}
           onClose={() => setIsCateModalOpen(false)}
           title="품목 카테고리"
           size="lg"

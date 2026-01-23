@@ -7,10 +7,8 @@ import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.exception.ApiResponse;
-import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.item.dto.ItemDetailDto;
-import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
