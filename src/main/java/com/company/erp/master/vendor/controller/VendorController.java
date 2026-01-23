@@ -158,9 +158,9 @@ public class VendorController {
             @PathVariable("vendorCode") String vendorCode,
             @RequestParam("file") List<MultipartFile> files,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
-
+        // 1. 공통 번호 체번
+        String file_num = docNumService.generateDocNumStr(DocKey.FL);
         for (MultipartFile file : files) {
-            String file_num = docNumService.generateDocNumStr(DocKey.FL);
             fileService.upload(file, "VN", file_num, vendorCode, loginUser);
         }
         return ApiResponse.ok(null);
