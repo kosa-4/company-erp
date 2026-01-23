@@ -167,34 +167,42 @@ export default function VendorPage() {
   const [originalVendor, setOriginalVendor] = useState<Vendor | null>(null);
 
   const handleRowClick = async (vendor: Vendor) => {
-    // 1. [변경 후] 리스트 데이터는 이미 최종본(COALESCE)이므로 바로 세팅
-    setSelectedVendor(vendor); 
-    setOriginalVendor(null); // 초기화
+    // 1. 공통 초기화
     setAttachedFiles([]);
     latestVendorCodeRef.current = vendor.vendorCode;
+    
+    // 파일 목록 조회
+    fetchVendorFiles(vendor.vendorCode);
 
-    // 2. [변경 전] 'C' 상태일 때만 방금 만드신 컨트롤러 호출
+    // 2. 상태별 분기 처리
     if (vendor.status === 'C') {
-      try {
-        const clickedCode = vendor.vendorCode;
-        // 작성하신 @GetMapping("/master/{vendorCode}") 호출
-        const response = await fetch(`/api/v1/vendors/master/${clickedCode}`);
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          if (latestVendorCodeRef.current !== clickedCode) return;
-          // 마스터 테이블의 순수 과거 데이터가 여기에 담깁니다.
-          setOriginalVendor(result.data); 
-        }
-      } catch (error) {
-        console.error("기존 정보 로드 실패:", error);
+      // [CASE 1] 변경 요청 상태 -> "대조 모드"
+      // 화면 표시용(Request) = 리스트의 데이터(Staging)
+      setSelectedVendor(vendor);
+      
+      // 비교 대상(Master) 가져오기
+      const masterData = await fetchMasterVendor(vendor.vendorCode);
+      setOriginalVendor(masterData); // 이게 null이면 비교화면에 '데이터 없음'으로 뜸
+
+    } else {
+      // [CASE 2] 그 외 상태 (승인, 반려, 신규 등) -> "마스터 정보 우선 모드"
+      // ⭐ 여기서 마스터 데이터를 조회해서 덮어씁니다.
+      const masterData = await fetchMasterVendor(vendor.vendorCode);
+      
+      if (masterData) {
+        // 마스터 데이터가 있으면 그것을 보여줌 (승인된 업체의 최신 정보)
+        setSelectedVendor(masterData);
+      } else {
+        // 마스터 데이터가 없으면(예: 완전 신규 신청중이라 마스터에 없음) 리스트 데이터 사용
+        setSelectedVendor(vendor);
       }
+      
+      // 비교 대상은 없음
+      setOriginalVendor(null);
     }
 
-    fetchVendorFiles(vendor.vendorCode);
     setIsDetailModalOpen(true);
   };
-
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
@@ -676,8 +684,23 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
     }
   };
   /* 수정 */
+  // [추가] 마스터 테이블 데이터 조회 헬퍼 함수
+const fetchMasterVendor = async (vendorCode: string) => {
+  try {
+    const response = await fetch(`/api/v1/vendors/master/${vendorCode}`);
+    if (!response.ok) return null;
+    
+    const result = await response.json();
+    if (result.success && result.data) {
+      return result.data as Vendor;
+    }
+    return null;
+  } catch (error) {
+    console.error("마스터 정보 조회 실패:", error);
+    return null;
+  }
+};
 
-  // 체크 후 수정 버튼 클릭 함수 업데이트
   /* 수정 버튼 클릭 함수 수정 */
   const handleEditVendor = async () => {
     // 1. 한 건 선택 여부 체크
@@ -685,26 +708,38 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       return alert("수정은 한 건만 선택해야 합니다.");
     }
 
-    const vendor = selectedVendors[0];
+    const currentListVendor = selectedVendors[0];
 
-    // 2. ⭐ [중요] 이전 데이터 싹 지우기 (잔상 및 로딩 오류 방지)
-    setEditVendorData(null);    // 기존 데이터 초기화
-    setAttachedFiles([]);      // 기존 파일 목록 초기화
-    setSelectedFiles([]);      // 새로 추가하려던 로컬 파일 초기화
-    
-    // 3. ⭐ [중요] 현재 작업 중인 코드를 Ref에 즉시 저장
-    latestVendorCodeRef.current = vendor.vendorCode;
-
-    // 4. 상태 체크
-    if (vendor.status !== 'A' && vendor.status !== 'R') {
+    // 2. 상태 체크 (승인 or 반려만 수정 가능)
+    if (currentListVendor.status !== 'A' && currentListVendor.status !== 'R') {
       return alert("승인(A) 또는 반려(R) 상태인 업체만 수정할 수 있습니다.");
     }
 
-    // 5. 새 데이터 세팅 및 파일 로드
-    setEditVendorData({ ...vendor }); 
-    await fetchVendorFiles(vendor.vendorCode);
+    // 3. 초기화
+    setEditVendorData(null);    
+    setAttachedFiles([]);      
+    setSelectedFiles([]);      
+    latestVendorCodeRef.current = currentListVendor.vendorCode;
+
+    // 4. ⭐ [핵심] 마스터 데이터(최신 원본) 조회 후 세팅
+    // 리스트에 있는 정보는 Staging 정보일 수 있으므로, 수정 시에는 Master 정보를 가져옴
+    const masterData = await fetchMasterVendor(currentListVendor.vendorCode);
     
-    // 6. 모든 준비가 끝난 후 모달 오픈
+    if (masterData) {
+        // 마스터 데이터가 있으면 그것으로 수정 폼 초기화
+        // 단, status는 리스트의 현재 상태(R 등)를 유지해야 할 수도 있으나,
+        // 보통 '정보 수정'은 Master 데이터를 기반으로 하므로 Master를 우선함.
+        // 반려 사유 등을 유지하고 싶다면 병합: { ...masterData, status: currentListVendor.status, rejectReason: currentListVendor.rejectReason }
+        setEditVendorData(masterData);
+    } else {
+        // 마스터가 없으면 리스트 데이터 사용 (Fallback)
+        setEditVendorData({ ...currentListVendor });
+    }
+
+    // 5. 파일 로드
+    await fetchVendorFiles(currentListVendor.vendorCode);
+    
+    // 6. 모달 오픈
     setIsEditModalOpen(true);
   };
   /* 협력사 정보 수정 요청 (변경/재신청) */
@@ -859,11 +894,66 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 {/* 데이터 비교 폼 영역 (기존 코드 유지) */}
                 <div className="space-y-4">
                   {[
-                    { label: "협력사명", master: originalVendor?.vendorName, req: selectedVendor.vendorName },
-                    { label: "대표자명", master: originalVendor?.ceoName, req: selectedVendor.ceoName },
-                    { label: "사업자번호", master: originalVendor?.businessNo, req: selectedVendor.businessNo },
-                    { label: "전화번호", master: originalVendor?.tel, req: selectedVendor.tel },
-                    { label: "주소", master: originalVendor?.address, req: selectedVendor.address },
+                    { 
+                      label: "협력사명", 
+                      master: originalVendor?.vendorName, 
+                      req: selectedVendor.vendorName 
+                    },
+                    { 
+                      label: "협력사명(영문)", 
+                      master: originalVendor?.vendorNameEng, 
+                      req: selectedVendor.vendorNameEng 
+                    },
+                    { 
+                      label: "사업형태", 
+                      master: originalVendor?.businessType === 'CORP' ? '법인' : (originalVendor?.businessType === 'INDIVIDUAL' ? '개인' : originalVendor?.businessType), 
+                      req: selectedVendor.businessType === 'CORP' ? '법인' : '개인' 
+                    },
+                    { 
+                      label: "사업자번호", 
+                      master: originalVendor?.businessNo, 
+                      req: selectedVendor.businessNo 
+                    },
+                    { 
+                      label: "대표자명", 
+                      master: originalVendor?.ceoName, 
+                      req: selectedVendor.ceoName 
+                    },
+                    { 
+                      label: "전화번호", 
+                      master: originalVendor?.tel, 
+                      req: selectedVendor.tel 
+                    },
+                    { 
+                      label: "팩스번호", 
+                      master: originalVendor?.fax, 
+                      req: selectedVendor.fax 
+                    },
+                    { 
+                      label: "이메일", 
+                      master: originalVendor?.email, 
+                      req: selectedVendor.email 
+                    },
+                    { 
+                      label: "설립일자", 
+                      master: originalVendor?.foundationDate?.substring(0, 10), 
+                      req: selectedVendor.foundationDate?.substring(0, 10) 
+                    },
+                    { 
+                      label: "업종", 
+                      master: originalVendor?.industry, 
+                      req: selectedVendor.industry 
+                    },
+                    { 
+                      label: "전체 주소", 
+                      master: originalVendor ? `(${originalVendor.zipCode}) ${originalVendor.address} ${originalVendor.addressDetail || ''}` : null,
+                      req: `(${selectedVendor.zipCode}) ${selectedVendor.address} ${selectedVendor.addressDetail || ''}`
+                    },
+                    { 
+                      label: "비고 (변경 사유)", 
+                      master: originalVendor?.remark, 
+                      req: selectedVendor.remark 
+                    },
                   ].map((field, idx) => (
                     <div key={idx} className="grid grid-cols-2 gap-4 border-b pb-2">
                       <div className="flex flex-col gap-1">
@@ -951,11 +1041,57 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 </div>
               </div>
             ) : (
-              /* [CASE 2] 그 외 상태: 최신 정보 단일 출력 (기존 코드 유지) */
-              <div className="space-y-6">
-                 {/* ... 상세 카드 UI ... */}
+             /* [CASE 2] 그 외 상태(승인, 신규, 반려 등): 최신 정보 단일 출력 */
+            <div className="space-y-6">
+                 
+                 {/* 반려 상태일 경우 반려 사유 표시 (기존 유지) */}
+                 {selectedVendor.status === 'R' && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm mb-4">
+                      <strong>🚨 반려 사유:</strong> {selectedVendor.rejectReason || '사유가 기록되지 않았습니다.'}
+                    </div>
+                 )}
+
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-lg border border-slate-200">
-                    {/* (위의 CASE 2 카드 로직 넣기) */}
+                    <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-white" />
+                    <Input label="협력사명" value={selectedVendor.vendorName} readOnly className="bg-white" />
+                    <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly className="bg-white" />
+                    <Input 
+                        label="사업형태" 
+                        value={selectedVendor.businessType === 'CORP' ? '법인' : '개인'} 
+                        readOnly 
+                        className="bg-white" 
+                    />
+                    <Input label="사업자번호" value={selectedVendor.businessNo} readOnly className="bg-white" />
+                    <Input label="대표자명" value={selectedVendor.ceoName} readOnly className="bg-white" />
+                    <Input label="전화번호" value={selectedVendor.tel || '-'} readOnly className="bg-white" />
+                    <Input label="이메일" value={selectedVendor.email} readOnly className="bg-white" />
+                    <Input label="업종" value={selectedVendor.industry || '-'} readOnly className="bg-white" />
+                    <Input label="설립일자" value={selectedVendor.foundationDate?.substring(0,10) || '-'} readOnly className="bg-white" />
+                    
+                    {/* 주소 영역 */}
+                    <div className="col-span-1 md:col-span-2 border-t border-slate-200 pt-4 mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2">
+                                <Input label="우편번호" value={selectedVendor.zipCode} readOnly className="bg-white mb-2 w-32" />
+                                <Input label="주소" value={selectedVendor.address} readOnly className="bg-white mb-2" />
+                                <Input label="상세주소" value={selectedVendor.addressDetail || ''} readOnly className="bg-white" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ▼▼▼ [추가됨] 비고(Remark) 영역 ▼▼▼ */}
+                    <div className="col-span-1 md:col-span-2 border-t border-slate-200 pt-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                            비고 / 특이사항
+                        </label>
+                        <textarea 
+                            className="w-full p-3 bg-white border border-gray-300 rounded-md text-sm text-gray-700 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            rows={3}
+                            readOnly
+                            value={selectedVendor.remark || ''}
+                            placeholder="등록된 비고 사항이 없습니다."
+                        />
+                    </div>
                  </div>
                  
                  {/* 전체 파일 목록 (구분 필요 없음) */}

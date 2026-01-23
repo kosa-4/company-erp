@@ -136,39 +136,44 @@ useEffect(() => {
     };
     
     try {
-      // 1. 정보 수정 신청 전송 (이것만 성공하면 됨)
+      // 1. 정보 수정 신청 전송
       const response = await fetch('/api/v1/vendor-portal/info/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
         credentials: 'include',
       });
-  
-      if (!response.ok) {
-        throw new Error('정보 변경 신청에 실패했습니다.');
+      
+      // 2. 응답 JSON 파싱 (여기서 askNum을 꺼냅니다)
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || '정보 변경 신청에 실패했습니다.');
       }
 
-      // 2. 정보 신청이 성공했다면 파일 업로드 시도
-      if (selectedFiles.length > 0) {
+      // ⭐ [핵심 수정] 서버가 준 askNum (MD26...)을 받습니다.
+      const askNum = result.data;
+      console.log("생성된 신청 번호:", askNum);
+
+      // 3. 파일 업로드 시도 (askNum 사용)
+      if (selectedFiles.length > 0 && askNum) {
         try {
-          await uploadFiles(formData.vendorCode);
+          // 🚀 formData.vendorCode가 아니라 'askNum'을 넘깁니다!
+          await uploadFiles(askNum);
         } catch (fileErr) {
-          // 파일 업로드는 실패해도 에러만 띄우고 프로세스는 계속 진행 (새로고침으로 넘어감)
           console.error("파일 업로드 실패:", fileErr);
-          toast.error('변경 신청은 완료되었으나, 증빙 서류 업로드에 실패했습니다. 관리자에게 별도로 제출해주세요.');
+          toast.error('변경 신청은 완료되었으나, 파일 업로드에 실패했습니다.');
         }
       }
 
-      // 3. 최종 처리: 파일 성공/실패 여부와 상관없이 정보 신청이 성공했다면 무조건 새로고침
       toast.success('변경 신청이 접수되었습니다.');
       
-      // 즉시 새로고침하여 DB의 바뀐 상태(editable: false)를 불러와 수정을 막음
+      // 4. 성공 후 새로고침
       setTimeout(() => {
         window.location.reload();
       }, 1000);
 
     } catch (error: any) {
-      // 텍스트 정보 전송 자체가 실패했을 때만 새로고침을 안 하고 멈춤
       toast.error(error.message || '네트워크 오류가 발생했습니다.');
       setLoading(false);
     }
@@ -202,17 +207,27 @@ useEffect(() => {
   };
 
   // --- 파일 업로드 실행 함수 ---
-  const uploadFiles = async (vendorCode: string) => {
-    const fileFormData = new FormData();
-    selectedFiles.forEach(file => fileFormData.append('file', file));
+  // 인자명을 vendorCode -> askNum으로 변경하여 명확하게 함
+  const uploadFiles = async (askNum: string) => {
+    console.log("파일 업로드 시작 - 번호:", askNum);
 
-    // 파일 업로드 API (백엔드 경로에 맞춰 수정 필요)
-    const response = await fetch(`/api/v1/vendor-portal/info/files/${vendorCode}`, {
+    const fileFormData = new FormData();
+    selectedFiles.forEach(file => {
+        fileFormData.append('file', file);
+        // 필요하다면 백엔드 요구사항에 따라 askNum을 body에도 추가
+        // fileFormData.append('askNum', askNum); 
+    });
+
+    // 🚀 URL 끝부분에 askNum(MD...)이 들어가도록 수정
+    const response = await fetch(`/api/v1/vendor-portal/info/files/${askNum}`, {
       method: 'POST',
       body: fileFormData,
     });
     
-    if (!response.ok) throw new Error('파일 업로드에 실패했습니다.');
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`파일 업로드 실패: ${errText}`);
+    }
   };
 
   if (loading) return <div className="p-10 text-center">데이터 로딩 중...</div>;

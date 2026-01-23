@@ -162,6 +162,18 @@
             DEL_FLAG = 'N'
     </select>
 
+    <!--요청 번호로 회사 코드 조회-->
+    <select id="selectVendorCodeByAskNum" parameterType="String" resultType="String">
+        SELECT
+            VENDOR_CD AS vendorCode
+        FROM
+            VNCH
+        WHERE
+            ASK_NUM = #{askNum}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
     <!--협력사 마스터 테이블 저장-->
     <insert id="insertVendorVNGL" parameterType="com.company.erp.master.vendor.dto.VendorRegisterDto">
         INSERT INTO
@@ -396,6 +408,8 @@
                 V.PROGRESS_CD AS status,
                 V.RMK AS remark,
                 V.EMAIL AS email,
+                V.FOUNDATION_DATE AS foundationDate,
+                V.FAX_NO AS fax,
                 ROW_NUMBER() OVER (
                     PARTITION BY V.VENDOR_CD
                     ORDER BY V.REG_DATE DESC, V.ASK_NUM DESC

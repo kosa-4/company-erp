@@ -79,11 +79,19 @@ public class VendorPortalService {
         if(role == null) return false;
         return role.equals("VENDOR") && vendor != null;
     }
+    // 3. 요청 번호로 회사 코드 조회
+    public String getVendorCodeByAskNum(String askNum){
+        String vendorCode = vendorMapper.selectVendorCodeByAskNum(askNum);
+        if(vendorCode == null ||  vendorCode.isEmpty()){
+            throw new NoSuchElementException("회사가 존재하지 않습니다.");
+        }
+        return vendorCode;
+    }
 
     /* 변경 요청 */
     // 1. 협력 업체 변경 신청
     @Transactional
-    public void requestVendorChange(VendorRegisterDto vendorRegisterDto, String loginId) {
+    public String requestVendorChange(VendorRegisterDto vendorRegisterDto, String loginId) {
 
         HashMap<String, String> userInfo = vendorUserMapper.selectRoleAndVendorCodeByUserId(loginId);
 
@@ -126,5 +134,7 @@ public class VendorPortalService {
         if(inserted == 0){
             throw new IllegalStateException("이미 승인 대기 중인 상태 입니다.");
         }
+
+        return askNum;
     }
 }

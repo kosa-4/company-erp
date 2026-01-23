@@ -66,8 +66,8 @@ public class VendorPortalController {
         // 3) id 반환
         String loginId = loginUser.getUserId();
 
-        vendorPortalService.requestVendorChange(vendorRegisterDto, loginId);
-        return ApiResponse.ok("수정 요청이 완료되었습니다");
+        String askNum = vendorPortalService.requestVendorChange(vendorRegisterDto, loginId);
+        return ApiResponse.ok("수정 요청이 완료되었습니다 [NEW_VER_1]", askNum);
     }
     
     // 3. 첨부 파일 조회
@@ -82,15 +82,15 @@ public class VendorPortalController {
     }
 
     // 4. 첨부 파일 저장
-    @PostMapping("/files/{vendorCode}")
+    @PostMapping("/files/{askNum}")
     public ApiResponse registerFile(
-            @PathVariable("vendorCode") String vendorCode,
+            @PathVariable("askNum") String askNum,
             @RequestParam("file") List<MultipartFile> files,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        String vendorCode = vendorPortalService.getVendorCodeByAskNum(askNum);
 
         for (MultipartFile file : files) {
-            String file_num = docNumService.generateDocNumStr(DocKey.FL);
-            fileService.upload(file, "VN", file_num, vendorCode, loginUser);
+            fileService.upload(file, "VN", askNum, vendorCode, loginUser);
         }
         return ApiResponse.ok(null);
     }
