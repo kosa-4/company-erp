@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Building2, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 // 다음 우편번호 API 타입 선언
 declare global {
@@ -46,7 +47,6 @@ interface VendorFormData {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) => {
-  // 인증 컨텍스트에서 login 함수 가져오기
   const { login } = useAuth();
 
   // 로그인 폼 상태
@@ -74,12 +74,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     passwordConfirm: '',
   });
 
-  /**
-   * 로그인 처리
-   * - 성공 시 AuthContext의 login 함수가 role에 따라 자동 라우팅
-   *   - VENDOR 외 (구매사) → /home
-   *   - VENDOR (협력사) → /vendor/home
-   */
+  // 로그인 처리
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -87,224 +82,233 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
     try {
       await login(loginId, loginPassword);
-      // 로그인 성공 시 AuthContext에서 라우팅 처리
+      toast.success('로그인 성공');
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+      const msg = err instanceof Error ? err.message : '로그인에 실패했습니다.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  
-   // 파일 첨부
-  // 1. 파일 관련 상태 및 Ref 추가
+  // 파일 첨부
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 2. 파일 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      setSelectedFiles(prev => [...prev, ...filesArray]); // 파일 누적
+      setSelectedFiles((prev) => [...prev, ...filesArray]);
       e.target.value = '';
+      toast.message(`${filesArray.length}개 파일이 추가되었습니다.`);
     }
   };
-  // 특정 파일 제거 기능
+
   const removeFile = (index: number) => {
-    // 인덱스가 일치하지 않는 파일들만 걸러서(filter) 새로운 배열로 세팅
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    toast.message('파일이 제거되었습니다.');
   };
-  
+
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault(); // 폼 제출 시 새로고침 방지
+    e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // 0. 비밀번호 확인
       if (formData.password !== formData.passwordConfirm) {
         throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
-      // --- [STEP 1] 회원가입 데이터 전송 (JSON) ---
-      // 결과값으로 백엔드가 생성한 vendorCode(VN...)를 받습니다.
       const response = await fetch('/api/v1/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
-      // 1. 일단 무조건 텍스트로 받습니다.
       const resultText = await response.text();
 
-      // 2. 에러가 났을 때만! 텍스트를 JSON으로 바꿔서 메시지를 깹니다.
       if (!response.ok) {
         let serverMsg = resultText;
         try {
-          // 이 안에서만 JSON 파싱을 합니다.
           const errorJson = JSON.parse(resultText);
-          // 상세 에러(data)가 있으면 그거 쓰고, 없으면 기본 메시지(message)
-          serverMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
+          serverMsg = errorJson.data ? (Object.values(errorJson.data)[0] as string) : errorJson.message;
         } catch {
           // JSON이 아니면 원문 유지
         }
         throw new Error(serverMsg);
       }
 
-      // 3. 여기까지 내려왔으면 성공입니다. resultText가 바로 코드입니다.
       const generatedVendorCode = resultText.trim();
       if (!generatedVendorCode) {
         throw new Error('업체코드를 확인할 수 없습니다.');
       }
 
-      // --- [STEP 2] 파일이 있으면 업로드 실행 ---
       let fileUploadFailed = false;
-      if (selectedFiles.length > 0 && generatedVendorCode) {
+      if (selectedFiles.length > 0) {
         try {
           const fileFormData = new FormData();
-          
-          // 백엔드 @RequestPart("file") 키값과 일치시킴
-          selectedFiles.forEach(file => {
-            fileFormData.append('file', file);
-          });
+          selectedFiles.forEach((file) => fileFormData.append('file', file));
 
-          // URL 경로에 vendorCode를 넣어서 전송 (백엔드 @PathVariable 매칭)
           const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
             method: 'POST',
-            body: fileFormData, // Content-Type 헤더는 브라우저가 자동 생성하게 둡니다.
+            body: fileFormData,
           });
 
           if (!fileRes.ok) {
             throw new Error('서류 업로드 중 오류가 발생했습니다.');
           }
+
+          toast.success('서류 업로드 완료');
         } catch (fileErr: any) {
-          // 가입은 성공했으나 파일만 실패한 경우
           console.error('파일 업로드 오류:', fileErr);
-          alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+          toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
           fileUploadFailed = true;
         }
       }
 
-      // --- [STEP 3] 최종 완료 ---
-      // 파일 업로드 실패 알림과 중복되지 않도록 조건부 알림
       if (!fileUploadFailed) {
-        alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
+        toast.success('회원가입 신청이 완료되었습니다.');
+      } else {
+        toast.message('회원가입 신청은 접수되었습니다.');
       }
-      
-      // 상태 초기화
-      setFormData({
-        vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
-        ceoName: '', zipCode: '', address: '', addressDetail: '',
-        phone: '', industry: '', userName: '', userId: '',
-        email: '', password: '', passwordConfirm: '',
-      });
-      setSelectedFiles([]);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // 로그인 화면으로 전환
-      onSwitchMode('login');
 
+      setFormData({
+        vendorName: '',
+        vendorNameEn: '',
+        businessType: '',
+        businessNo: '',
+        ceoName: '',
+        zipCode: '',
+        address: '',
+        addressDetail: '',
+        phone: '',
+        industry: '',
+        userName: '',
+        userId: '',
+        email: '',
+        password: '',
+        passwordConfirm: '',
+      });
+
+      setSelectedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      onSwitchMode('login');
     } catch (err: any) {
-      setError(err.message);
-      alert(err.message);
+      const msg = err?.message || '가입 중 오류가 발생했습니다.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // 다음 우편번호 검색
   const handleAddressSearch = () => {
     if (!window.daum?.Postcode) {
-      alert('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      toast.info('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
     new window.daum.Postcode({
       oncomplete: (data) => {
-        // 도로명 주소 + 건물명 조합
         let fullAddress = data.roadAddress;
         if (data.buildingName) {
           fullAddress += ` (${data.buildingName})`;
         }
 
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           zipCode: data.zonecode,
           address: fullAddress,
         }));
-      }
+
+        toast.success('주소가 입력되었습니다.');
+      },
     }).open();
   };
 
- 
-
-  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent block p-2.5 transition-all outline-none";
+  // ============================================
+  // 스타일 (파스텔 인디고 테마)
+  // ============================================
+  const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-[#a5b4fc] focus:border-transparent block p-2.5 transition-all outline-none hover:bg-white hover:shadow-inner placeholder:text-slate-400";
   const labelClassName = "block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 selection:bg-[#e0e7ff] selection:text-[#4338ca]">
       {/* Backdrop */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-[#fdfbf7]/80 backdrop-blur-md"
+        className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
       />
 
-      {/* Modal Content */}
+      {/* Modal Content - Glassy & 3D Effect */}
       <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
+        initial={{ scale: 0.9, opacity: 0, y: 20, rotateX: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0, rotateX: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        transition={{ type: "spring", damping: 20, stiffness: 300 }}
-        className={`relative w-full ${mode === 'signup' ? 'max-w-2xl' : 'max-w-md'} bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col`}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className={`relative w-full ${mode === 'signup' ? 'max-w-2xl' : 'max-w-md'} 
+          bg-white/95 backdrop-blur-xl border border-white/40 
+          rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col
+          ring-1 ring-black/5
+        `}
+        style={{ perspective: '1000px' }}
       >
-        {/* Decorative Gradient */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+        {/* Decorative Gradient - Top Bar (Pastel) */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#a5b4fc] via-[#818cf8] to-[#a5b4fc]"></div>
         
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 transition-colors p-1 rounded-md hover:bg-slate-100 z-10"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors p-2 rounded-full hover:bg-slate-100/80 z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="p-8 overflow-y-auto flex-1">
-          <div className="text-center mb-6">
+          <div className="text-center mb-8">
             {mode === 'signup' && (
-              <div className="flex items-center justify-center mb-3">
-                <div className="p-3 bg-emerald-50 rounded-full">
-                  <Building2 className="w-6 h-6 text-emerald-600" />
+              <motion.div 
+                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
+                className="flex items-center justify-center mb-4"
+              >
+                <div className="p-4 bg-[#eef2ff] rounded-2xl shadow-sm">
+                  <Building2 className="w-8 h-8 text-[#818cf8]" />
                 </div>
-              </div>
+              </motion.div>
             )}
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              {mode === 'login' ? '로그인' : '협력사 회원가입'}
+            <h2 className="text-3xl font-bold text-slate-800 mb-2 tracking-tight">
+              {mode === 'login' ? 'Welcome Back' : 'Partner Sign Up'}
             </h2>
-            <p className="text-sm text-slate-500">
-              {mode === 'login' ? 'ID / PW 입력' : '협력사 회원가입을 위해 아래 정보를 입력해주세요.'}
+            <p className="text-slate-500">
+              {mode === 'login' ? '로그인을 위해 계정 정보를 입력해주세요.' : '새로운 파트너십을 위한 첫 걸음입니다.'}
             </p>
           </div>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-5" onSubmit={mode === 'login' ? handleLogin : handleSignup}>
             {mode === 'signup' ? (
               <>
                 {/* 협력사 정보 섹션 */}
-                <div className="bg-slate-50 rounded-xl p-4 space-y-4 border border-slate-100">
-                  <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+                  className="bg-slate-50/50 rounded-xl p-5 space-y-4 border border-slate-200/60"
+                >
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-3 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
                     협력사 정보
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* 협력사명 */}
                     <div>
                       <label className={labelClassName}>협력사명 *</label>
                       <input 
@@ -318,7 +322,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
-                    {/* 협력사명 (영문) */}
                     <div>
                       <label className={labelClassName}>협력사명 (영문)</label>
                       <input 
@@ -331,7 +334,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
-                    {/* 사업형태 */}
                     <div>
                       <label className={labelClassName}>사업형태 *</label>
                       <select 
@@ -349,7 +351,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       </select>
                     </div>
 
-                    {/* 사업자등록번호 */}
                     <div>
                       <label className={labelClassName}>사업자등록번호 *</label>
                       <input 
@@ -363,7 +364,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
-                    {/* 대표자명 */}
                     <div>
                       <label className={labelClassName}>대표자명 *</label>
                       <input 
@@ -377,7 +377,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
-                    {/* 업종 */}
                     <div>
                       <label className={labelClassName}>업종 *</label>
                       <input 
@@ -410,7 +409,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                           <button 
                             type="button"
                             onClick={handleAddressSearch}
-                            className="px-4 py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm rounded-lg transition-colors flex items-center gap-1 font-medium"
+                            className="px-4 py-2.5 bg-[#eef2ff] hover:bg-[#e0e7ff] text-[#6366f1] text-sm rounded-lg transition-colors flex items-center gap-1 font-medium border border-[#c7d2fe]"
                           >
                             <Search className="w-4 h-4" />
                             검색
@@ -456,13 +455,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       required
                     />
                   </div>
-                </div>
+                </motion.div>
+                
                 {/* 증빙 서류 첨부 섹션 */}
-                <div className="space-y-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+                  className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60"
+                >
                   <label className="text-sm font-medium text-slate-700">첨부파일 (다중 선택 가능)</label>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-4">
-                      {/* 1. 파일 선택 버튼 (VendorPage 스타일) */}
                       <button 
                         type="button" 
                         className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded-md transition-colors font-medium"
@@ -471,7 +473,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         파일 추가
                       </button>
 
-                      {/* 2. 숨겨진 Input */}
                       <input 
                         type="file" 
                         ref={fileInputRef}
@@ -485,7 +486,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       </p>
                     </div>
 
-                    {/* 3. 선택된 파일 목록 (VendorPage 로직 그대로 사용) */}
                     {selectedFiles.length > 0 && (
                       <ul className="bg-white border rounded-md divide-y divide-slate-200 shadow-sm">
                         {selectedFiles.map((file, index) => (
@@ -499,7 +499,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                               onClick={() => removeFile(index)}
                               className="text-slate-400 hover:text-red-500 transition-colors"
                             >
-                              {/* Lucide X 아이콘 대신 텍스트나 기본 SVG 사용 가능 */}
                               <X className="w-4 h-4" /> 
                             </button>
                           </li>
@@ -507,11 +506,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       </ul>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
                 {/* 계정 정보 섹션 */}
-                <div className="bg-slate-50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-2 mb-3">
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
+                  className="bg-slate-50/50 rounded-xl p-5 space-y-4 border border-slate-200/60"
+                >
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-3 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
                     계정 정보
                   </h3>
                   
@@ -581,13 +584,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </>
             ) : (
-              <>
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+                className="space-y-4"
+              >
                 {/* 로그인 에러 메시지 */}
                 {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                     {error}
                   </div>
                 )}
@@ -598,7 +605,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     type="text" 
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    className={inputClassName}
+                    className={`${inputClassName} py-3.5`}
                     placeholder="ID"
                     disabled={isLoading}
                   />
@@ -610,43 +617,42 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     type="password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className={inputClassName}
+                    className={`${inputClassName} py-3.5`}
                     placeholder="••••••••"
                     disabled={isLoading}
                   />
                 </div>
-              </>
+              </motion.div>
             )}
 
             <motion.button 
-              type={mode === 'login' ? 'submit' : 'button'}
-              onClick={mode === 'login' ? handleLogin : handleSignup}
+              type="submit"
               disabled={isLoading}
-              whileHover={{ scale: isLoading ? 1 : 1.02 }}
+              whileHover={{ scale: isLoading ? 1 : 1.02, translateY: -1 }}
               whileTap={{ scale: isLoading ? 1 : 0.98 }}
-              className={`w-full text-white font-medium rounded-lg text-sm px-5 py-3 text-center transition-colors shadow-lg flex items-center justify-center gap-2 ${
+              className={`w-full text-white font-bold rounded-xl text-md px-5 py-3.5 text-center transition-all shadow-lg flex items-center justify-center gap-2 mt-4 ${
                 isLoading 
-                  ? 'bg-emerald-400 cursor-not-allowed' 
-                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'
+                  ? 'bg-[#a5b4fc] cursor-not-allowed' 
+                  : 'bg-[#818cf8] hover:bg-[#6366f1] shadow-[#818cf8]/30 ring-1 ring-white/20'
               }`}
             >
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
               {mode === 'login' ? (isLoading ? '로그인 중...' : '로그인') : '회원가입 신청'}
             </motion.button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-500">
+          <div className="mt-8 pt-6 border-t border-slate-100 text-center text-sm text-slate-500">
             {mode === 'login' ? (
               <>
                 계정이 없으신가요?{' '}
-                <button onClick={() => onSwitchMode('signup')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('signup')} className="text-[#6366f1] hover:text-[#4f46e5] font-semibold hover:underline ml-1">
                   회원가입
                 </button>
               </>
             ) : (
               <>
                 이미 계정이 있으신가요?{' '}
-                <button onClick={() => onSwitchMode('login')} className="text-emerald-600 hover:text-emerald-500 font-medium hover:underline">
+                <button onClick={() => onSwitchMode('login')} className="text-[#6366f1] hover:text-[#4f46e5] font-semibold hover:underline ml-1">
                   로그인
                 </button>
               </>

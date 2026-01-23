@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, use } from 'react';
-import { 
-  PageHeader, 
-  Card, 
-  Button, 
-  Input, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
   Select,
   DatePicker,
   Textarea,
@@ -51,6 +51,12 @@ interface ItemDetail{
 
 
 export default function ItemPage() {
+  const { user, isLoading } = useAuth();
+
+  // ✅ USER 권한이면 체크박스(선택 컬럼) 숨김
+  // - 로딩 중엔 안전하게 false 처리
+  const canSelect = !isLoading && user?.role !== 'USER';
+
   /* 검색 및 조회 */
 
   // 1. 상태 정의
@@ -182,11 +188,11 @@ export default function ItemPage() {
     {
       key: 'selection',
       // [수정] 헤더: 라디오 버튼은 전체 선택이 없으므로 텍스트로 대체
-      header: '선택', 
+      header: '선택',
       width: 5,
       align: 'center',
-      render: (_, row) => ( 
-        <div onClick={(e) => e.stopPropagation()}> 
+      render: (_, row) => (
+        <div onClick={(e) => e.stopPropagation()}>
           {/* [수정] 체크박스 -> 라디오 버튼으로 변경 */}
           <input
             type="radio"
@@ -269,22 +275,22 @@ export default function ItemPage() {
 
     // [수정] 이름(Nm)과 코드(itemCls)를 모두 세팅해줍니다.
   const newPath: any = [
-    { 
+    {
       itemClsNm: data.itemType || '',      // 이름 (보여주기용)
       itemCls: data.itemTypeCode || ''     // 코드 (저장용) - SQL에서 가져와야 함!
-    }, 
-    { 
-      itemClsNm: data.categoryL || '', 
+    },
+    {
+      itemClsNm: data.categoryL || '',
       itemCls: data.categoryLCode || ''    // SQL 추가 필요
-    }, 
-    { 
-      itemClsNm: data.categoryM || '', 
-      itemCls: data.categoryMCode || '' 
-    }, 
-    { 
-      itemClsNm: data.categoryS || '', 
-      itemCls: data.categorySCode || '' 
-    } 
+    },
+    {
+      itemClsNm: data.categoryM || '',
+      itemCls: data.categoryMCode || ''
+    },
+    {
+      itemClsNm: data.categoryS || '',
+      itemCls: data.categorySCode || ''
+    }
   ];
 
   setSelectedPath(newPath);
@@ -309,22 +315,22 @@ export default function ItemPage() {
     // [여기가 핵심!] 수정 버튼을 눌렀을 때도 경로를 만들어줘야 합니다.
     // handleRowClick에 있는 로직을 그대로 가져옵니다.
     const newPath: any = [
-      { 
-        itemClsNm: data.itemType || '', 
+      {
+        itemClsNm: data.itemType || '',
         itemCls: data.itemTypeCode || '' // SQL에서 가져온 코드값
-      }, 
-      { 
-        itemClsNm: data.categoryL || '', 
-        itemCls: data.categoryLCode || '' 
-      }, 
-      { 
-        itemClsNm: data.categoryM || '', 
-        itemCls: data.categoryMCode || '' 
-      }, 
-      { 
-        itemClsNm: data.categoryS || '', 
-        itemCls: data.categorySCode || '' 
-      } 
+      },
+      {
+        itemClsNm: data.categoryL || '',
+        itemCls: data.categoryLCode || ''
+      },
+      {
+        itemClsNm: data.categoryM || '',
+        itemCls: data.categoryMCode || ''
+      },
+      {
+        itemClsNm: data.categoryS || '',
+        itemCls: data.categorySCode || ''
+      }
     ];
 
     setSelectedPath(newPath); // [중요] 상태 업데이트
@@ -633,12 +639,12 @@ export default function ItemPage() {
 
                 수정
               </Button>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onClick={() => {
                   // [핵심] 모달 열기 전에 기존 선택된 카테고리/경로 정보 초기화
-                  setSelectedPath([]);       
-                  setSelectedCate(undefined); 
+                  setSelectedPath([]);
+                  setSelectedCate(undefined);
                   setIsCreateModalOpen(true);
                 }}
               >
@@ -869,7 +875,7 @@ export default function ItemPage() {
               setSelectedCate(undefined); // [추가] 닫을 때 초기화
             }}
             onConfirm={() => {
-              saveItem();            
+              saveItem();
 
             }}
             confirmText="저장"
@@ -879,18 +885,18 @@ export default function ItemPage() {
         <form ref={createForm}>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              
+
               <Input name='itemCode' label="품목코드" value="-" readOnly disabled/>
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
-              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
+              <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />
               {/* 4. 품목 분류 (Type) */}
               {/* (1) 눈에 보이는 Input: 사용자용 (이름 표시) */}
-              <Input 
-                label="품목 분류" 
-                placeholder="품목 분류 선택" 
+              <Input
+                label="품목 분류"
+                placeholder="품목 분류 선택"
                 // 보여주는 건 이름(Nm)
-                value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
-                readOnly={true} 
+                value={selectedPath[0] ? selectedPath[0].itemClsNm : ''}
+                readOnly={true}
                 onClick={() => {
                   if (isCreateModalOpen || isEditMode) { // 수정/등록 모드일 때만 열림
                       setIsCateModalOpen(true);
@@ -901,52 +907,52 @@ export default function ItemPage() {
               />
               {/* (2) 숨겨진 Input: 서버 전송용 (코드 전송) */}
               {/* name을 DTO와 일치시켜야 FormData가 이 값을 가져갑니다 */}
-              <input 
-                type="hidden" 
-                name="itemType" 
-                value={selectedPath[0] ? selectedPath[0].itemCls : ''} 
+              <input
+                type="hidden"
+                name="itemType"
+                value={selectedPath[0] ? selectedPath[0].itemCls : ''}
               />
 
 
               {/* 5. 대분류 (L) */}
-              <Input 
-                label="품목 대분류" 
+              <Input
+                label="품목 대분류"
                 placeholder="품목 대분류"
-                value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
+                value={selectedPath[1] ? selectedPath[1].itemClsNm : ''}
                 readOnly={true}
               />
-              <input 
-                type="hidden" 
-                name="categoryL" 
-                value={selectedPath[1] ? selectedPath[1].itemCls : ''} 
+              <input
+                type="hidden"
+                name="categoryL"
+                value={selectedPath[1] ? selectedPath[1].itemCls : ''}
               />
 
 
               {/* 6. 중분류 (M) */}
-              <Input 
-                label="품목 중분류" 
+              <Input
+                label="품목 중분류"
                 placeholder="품목 중분류"
-                value={selectedPath[2] ? selectedPath[2].itemClsNm : ''} 
+                value={selectedPath[2] ? selectedPath[2].itemClsNm : ''}
                 readOnly={true}
               />
-              <input 
-                type="hidden" 
-                name="categoryM" 
-                value={selectedPath[2] ? selectedPath[2].itemCls : ''} 
+              <input
+                type="hidden"
+                name="categoryM"
+                value={selectedPath[2] ? selectedPath[2].itemCls : ''}
               />
 
 
               {/* 7. 소분류 (S) */}
-              <Input 
-                label="품목 소분류" 
+              <Input
+                label="품목 소분류"
                 placeholder="품목 소분류"
-                value={selectedPath[3] ? selectedPath[3].itemClsNm : ''} 
+                value={selectedPath[3] ? selectedPath[3].itemClsNm : ''}
                 readOnly={true}
               />
-              <input 
-                type="hidden" 
-                name="categoryS" 
-                value={selectedPath[3] ? selectedPath[3].itemCls : ''} 
+              <input
+                type="hidden"
+                name="categoryS"
+                value={selectedPath[3] ? selectedPath[3].itemCls : ''}
               />
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
