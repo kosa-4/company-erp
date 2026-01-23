@@ -518,6 +518,9 @@
             <if test="tel != null and tel != ''">
                 TEL_NO = #{tel},
             </if>
+            <if test="fax != null and fax != ''">
+                FAX_NO = #{fax},
+            </if>
             <if test="email != null and email != ''">
                 EMAIL = #{email},
             </if>
@@ -526,6 +529,9 @@
             </if>
             <if test="address != null and address != ''">
                 ADDR = #{address},
+            </if>
+            <if test="addressDetail != null and addressDetail != ''">
+                ADDR_DT = #{addressDetail},
             </if>
             <if test="remark != null and remark != ''">
                 RMK = #{remark},
