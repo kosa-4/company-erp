@@ -239,7 +239,20 @@ export default function VendorPage() {
       header: '사업형태',
       width: 100,
       align: 'center',
-      render: (value) => value === 'CORP' ? '법인' : '개인',
+      render: (value) => {
+        // 1. 값이 없는 경우 처리
+        if (!value) return '-';
+        
+        // 2. 문자열로 변환 -> 공백제거 -> 대문자로 통일
+        const normalizedValue = String(value).trim().toUpperCase();
+
+        // 3. 비교 로직
+        if (normalizedValue === 'CORP') return '법인';
+        if (normalizedValue === 'INDIVIDUAL') return '개인';
+        
+        // 4. 만약 DB에 '법인'이라는 한글 자체가 들어있다면 그대로 출력
+        return String(value); 
+      },
     },
     {
       key: 'industry',
@@ -341,7 +354,7 @@ export default function VendorPage() {
   setSelectedFiles([]);
   fetchVendors();
 };
-
+// 등록 주소
   const handleAddressSearch = () => {
   if (!window.daum?.Postcode) {
     alert('우편번호 서비스를 불러오는 중입니다.');
@@ -369,6 +382,37 @@ export default function VendorPage() {
     }
   }).open();
 };
+
+/* 수정 모달용 주소 검색 함수 */
+  const handleEditAddressSearch = () => {
+    if (!window.daum?.Postcode) {
+      alert('우편번호 서비스를 불러오는 중입니다.');
+      return;
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        let fullAddress = data.roadAddress;
+        if (data.buildingName) {
+          fullAddress += ` (${data.buildingName})`;
+        }
+
+        // State를 직접 업데이트
+        setEditVendorData(prev => {
+            if(!prev) return null;
+            return {
+                ...prev,
+                zipCode: data.zonecode,
+                address: fullAddress,
+                addressDetail: '' // 상세주소 초기화 (사용자 재입력 유도)
+            }
+        });
+        
+        // 상세주소 입력창으로 포커스를 주려면 별도 ref가 필요하지만, 
+        // 여기서는 데이터 업데이트에 집중합니다.
+      }
+    }).open();
+  };
 
   /* 승인 */
   const approveVendor = async (targets: Vendor[] = selectedVendors) => {
@@ -894,16 +938,16 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>취소</Button>
-            <Button variant="primary" onClick={updateVendor}>수정</Button>
+            <Button variant="primary" onClick={updateVendor}>수정 요청</Button>
           </div>
         }
       >
         {editVendorData && (
           <div className="space-y-6">
-            {/* 안내 문구: 반려 상태일 때 반려 사유를 다시 보여줌 */}
+            {/* 안내 문구: 반려 상태일 때 반려 사유 표시 */}
             {editVendorData.status === 'R' && (
               <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
-                <strong>기존 반려 사유:</strong> {editVendorData.rejectReason || '사유 없음'}
+                <strong>🚨 기존 반려 사유:</strong> {editVendorData.rejectReason || '사유 없음'}
               </div>
             )}
 
@@ -921,7 +965,24 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 required 
               />
               <Input 
-                label="사업자번호" 
+                label="협력사명(영문)" 
+                placeholder="영문 협력사명 입력"
+                value={editVendorData.vendorNameEng || ''}
+                onChange={(e) => setEditVendorData({...editVendorData, vendorNameEng: e.target.value})}
+              />
+              
+              <Select
+                label="사업형태"
+                value={editVendorData.businessType}
+                onChange={(e) => setEditVendorData({...editVendorData, businessType: e.target.value as 'CORP' | 'INDIVIDUAL'})}
+                required
+                options={[
+                  { value: 'CORP', label: '법인' },
+                  { value: 'INDIVIDUAL', label: '개인' },
+                ]}
+              />
+              <Input 
+                label="사업자등록번호" 
                 value={editVendorData.businessNo} 
                 readOnly 
                 className="bg-gray-100" 
@@ -930,37 +991,128 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 label="대표자명" 
                 value={editVendorData.ceoName}
                 onChange={(e) => setEditVendorData({...editVendorData, ceoName: e.target.value})}
+                required
               />
+
+              {/* 주소 필드 */}
+              <div className="flex gap-2">
+                <Input 
+                    label="우편번호" 
+                    value={editVendorData.zipCode} 
+                    readOnly 
+                    required 
+                />
+                <div className="flex items-end">
+                  <Button onClick={handleEditAddressSearch} variant="secondary" className="h-[42px]">검색</Button>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Input 
+                    label="주소" 
+                    value={editVendorData.address} 
+                    readOnly 
+                    required 
+                />
+              </div>
+              <Input 
+                label="상세주소" 
+                value={editVendorData.addressDetail || ''}
+                onChange={(e) => setEditVendorData({...editVendorData, addressDetail: e.target.value})}
+                placeholder="상세주소 입력" 
+              />
+
               <Input 
                 label="전화번호" 
-                value={editVendorData.tel}
+                value={editVendorData.tel || ''}
                 onChange={(e) => setEditVendorData({...editVendorData, tel: e.target.value})}
+                placeholder="02-0000-0000" 
+              />
+              <Input 
+                label="팩스번호" 
+                value={editVendorData.fax || ''}
+                onChange={(e) => setEditVendorData({...editVendorData, fax: e.target.value})}
+                placeholder="02-0000-0000" 
               />
               <Input 
                 label="이메일" 
                 value={editVendorData.email}
                 onChange={(e) => setEditVendorData({...editVendorData, email: e.target.value})}
+                type="email" 
+                required 
               />
               
-              {/* 주소 필드 (기존 handleAddressSearch 활용 가능하게 구성) */}
-              <div className="col-span-3 grid grid-cols-4 gap-2">
-                <Input label="우편번호" value={editVendorData.zipCode} readOnly />
-                <div className="flex items-end">
-                  <Button variant="secondary" size="sm" className="mb-1">주소검색</Button>
-                </div>
-                <div className="col-span-2">
-                  <Input label="주소" value={editVendorData.address} readOnly />
-                </div>
-              </div>
+              <DatePicker 
+                label="설립일자" 
+                value={editVendorData.foundationDate || ''}
+                onChange={(val) => setEditVendorData({...editVendorData, foundationDate: String(val)})}
+              />
               
-              <div className="col-span-3">
+              <Input 
+                label="업종" 
+                value={editVendorData.industry || ''}
+                onChange={(e) => setEditVendorData({...editVendorData, industry: e.target.value})}
+                placeholder="업종 입력" 
+              />
+            </div>
+            
+            {/* 파일 첨부 UI (등록 폼과 동일하게 구성) */}
+            <div className="space-y-2 pt-4 border-t">
+              <label className="text-sm font-medium text-gray-700">추가 첨부파일 (기존 파일은 유지됩니다)</label>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    파일 추가
+                  </Button>
+                  {/* 파일 Input은 hidden 상태로 등록 폼과 공유하거나 별도 생성 가능. 여기선 등록 폼의 ref 재사용 */}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    className="hidden" 
+                    multiple 
+                    onChange={handleFileChange}
+                  />
+                </div>
+                
+                {/* 선택된 파일 목록 */}
+                {selectedFiles.length > 0 && (
+                  <ul className="bg-gray-50 border rounded-md divide-y divide-gray-200">
+                    {selectedFiles.map((file, index) => (
+                      <li key={index} className="flex items-center justify-between p-2 px-3">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          </svg>
+                          <span className="text-sm text-gray-600 truncate max-w-[300px]">{file.name}</span>
+                          <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="col-span-3">
                 <Textarea 
                   label="수정 사유 / 비고" 
-                  value={editVendorData.remark}
+                  value={editVendorData.remark || ''}
                   onChange={(e) => setEditVendorData({...editVendorData, remark: e.target.value})}
                   rows={3} 
+                  placeholder="정보 변경 사유 등을 입력하세요."
                 />
-              </div>
             </div>
           </div>
         )}

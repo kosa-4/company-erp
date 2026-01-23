@@ -76,10 +76,24 @@
             AND
                 PARENT_ITEM_CLS = #{item.parentItemCls} <!--같은 부모 내에서 중복 되는 경우 부모가 다르면 상관 없음-->
             AND
+                ITEM_CLS = #{item.itemCls}
+            AND
                 ITEM_LVL = #{item.itemLvl}
+            AND
+                DEL_FLAG = 'N'
             )
         </foreach>
 
+    </select>
+    <!--품목 코드 중복 체크-->
+    <select id="checkCodeDuplicate" parameterType="java.util.List" resultType="int">
+        SELECT COUNT(*)
+        FROM MTCA
+        WHERE DEL_FLAG = 'N'
+        AND ITEM_CLS IN
+        <foreach collection="list" item="item" open="(" close=")" separator=",">
+            #{item.itemCls}
+        </foreach>
     </select>
 
     <!--자식 카테고리 존재 여부 확인-->
@@ -90,24 +104,26 @@
             MTCA
         WHERE
             PARENT_ITEM_CLS = #{itemCls}
+        AND
+            DEL_FLAG = 'N'
 
     </select>
 
     <!--품목 분류 저장-->
     <insert id="insertCategory" parameterType="java.util.List">
         INSERT INTO
-        MTCA(
-        ITEM_CLS,
-        PARENT_ITEM_CLS,
-        ITEM_LVL,
-        ITEM_CLS_NM,
-        REG_DATE,
-        REG_USER_ID,
-        MOD_DATE,
-        MOD_USER_ID,
-        DEL_FLAG,
-        USE_FLAG
-        )
+            MTCA(
+                ITEM_CLS,
+                PARENT_ITEM_CLS,
+                ITEM_LVL,
+                ITEM_CLS_NM,
+                REG_DATE,
+                REG_USER_ID,
+                MOD_DATE,
+                MOD_USER_ID,
+                DEL_FLAG,
+                USE_FLAG
+            )
         VALUES
         <foreach collection="list" item="item" separator=",">
             (
@@ -120,19 +136,34 @@
             #{item.modifiedAt},
             #{item.modifiedBy},
             'N',
-            'Y'
+            #{item.useFlag}
             )
         </foreach>
+        /* [핵심] 키가 중복되면(이미 삭제된 데이터가 있으면) 아래처럼 업데이트해라 */
+        ON DUPLICATE KEY UPDATE
+        ITEM_CLS_NM = VALUES(ITEM_CLS_NM),       -- 이름은 새로 입력한 걸로 변경
+        USE_FLAG    = VALUES(USE_FLAG),          -- 사용 여부도 새 걸로 변경
+        DEL_FLAG    = 'N',                       -- [중요] 삭제된 걸 다시 살려냄 (N으로 변경)
+        PARENT_ITEM_CLS = VALUES(PARENT_ITEM_CLS), -- 부모 카테고리도 변경될 수 있으니 업데이트
+        MOD_DATE    = NOW()                      -- 수정일 업데이트
     </insert>
 
-    <!--카테고리 삭제-->
+    <!--카테고리 삭제 및 수정 -->
     <update id="updateCategory" parameterType="com.company.erp.master.category.dto.CategoryUpdateDto">
         UPDATE
             MTCA
         <set>
-            MOD_DATE = NOW(),
+            MOD_DATE = #{modifiedAt},
             MOD_USER_ID = #{modifiedBy},
-            <if test="delFlag != null">
+            <if test="itemClsNm != null and itemClsNm != ''">
+                ITEM_CLS_NM = #{itemClsNm},
+            </if>
+
+            <if test="useFlag != null and useFlag != ''">
+                USE_FLAG = #{useFlag},
+            </if>
+
+            <if test="delFlag != null and delFlag != ''">
                 DEL_FLAG = #{delFlag}
             </if>
         </set>

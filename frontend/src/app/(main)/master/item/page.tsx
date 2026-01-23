@@ -79,29 +79,23 @@ export default function ItemPage() {
   // [추가] 1-4. 체크박스 선택 상태 관리
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // [추가] 전체 선택/해제 핸들러
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      // 현재 페이지의 모든 itemCode를 선택
-      const allIds = items.map((item) => item.itemCode);
-      setSelectedIds(allIds);
-    } else {
-      // 전체 해제
-      setSelectedIds([]);
-    }
-  };
+  // // [추가] 전체 선택/해제 핸들러
+  // const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.checked) {
+  //     // 현재 페이지의 모든 itemCode를 선택
+  //     const allIds = items.map((item) => item.itemCode);
+  //     setSelectedIds(allIds);
+  //   } else {
+  //     // 전체 해제
+  //     setSelectedIds([]);
+  //   }
+  // };
 
-  // [추가] 개별 행 선택/해제 핸들러
   const handleSelectRow = (id: string) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        // 이미 있으면 제거
-        return prev.filter((item) => item !== id);
-      } else {
-        // 없으면 추가
-        return [...prev, id];
-      }
-    });
+    // 이미 선택된 것을 다시 누르면 해제할지, 유지할지에 따라 다르지만
+    // 보통 라디오 버튼은 다른 걸 누르기 전엔 유지됩니다.
+    // 여기서는 클릭 시 무조건 해당 ID 하나만 선택되도록 합니다.
+    setSelectedIds([id]);
   };
   
   // 2. 품목 조회
@@ -186,31 +180,24 @@ export default function ItemPage() {
   // 5. 컬럼 정의
   const columns: ColumnDef<ItemDetail>[] = [ // response 키와 일치 필요
     {
-      key: 'selection', // 데이터에는 없는 키지만 컬럼 구분을 위해 지정
-      header: (
-        <input
-          type="checkbox"
-          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          // 데이터가 있고, 선택된 개수와 전체 개수가 같으면 체크
-          checked={items.length > 0 && selectedIds.length === items.length}
-          onChange={handleSelectAll}
-        />
-      ),
+      key: 'selection',
+      // [수정] 헤더: 라디오 버튼은 전체 선택이 없으므로 텍스트로 대체
+      header: '선택', 
       width: 5,
       align: 'center',
-      render: (_, row) => ( // 두 번째 인자로 row 데이터가 들어온다고 가정
+      render: (_, row) => ( 
         <div onClick={(e) => e.stopPropagation()}> 
-          {/* 부모인 RowClick 이벤트 전파 방지 */}
+          {/* [수정] 체크박스 -> 라디오 버튼으로 변경 */}
           <input
-            type="checkbox"
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            type="radio"
+            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+            // 현재 행의 ID가 selectedIds 배열에 들어있는지 확인
             checked={selectedIds.includes(row.itemCode)}
             onChange={() => handleSelectRow(row.itemCode)}
           />
         </div>
       ),
     },
-    
     {
       key: 'itemCode',
       header: '품목코드',
@@ -280,17 +267,28 @@ export default function ItemPage() {
     const data = await response.json();
     setSelectedItem(data);
 
-    // [핵심] selectedPath 배열을 UI 순서에 맞춰 강제로 생성합니다.
-    // index 0: 품목 분류, index 1: 대분류, index 2: 중분류, index 3: 소분류
-    const newPath:any = [
-      { itemClsNm: data.itemType || '' },     // index 0 (품목 분류)
-      { itemClsNm: data.categoryL || '' },    // index 1 (대분류)
-      { itemClsNm: data.categoryM || '' },    // index 2 (중분류)
-      { itemClsNm: data.categoryS || '' }     // index 3 (소분류)
-    ];
+    // [수정] 이름(Nm)과 코드(itemCls)를 모두 세팅해줍니다.
+  const newPath: any = [
+    { 
+      itemClsNm: data.itemType || '',      // 이름 (보여주기용)
+      itemCls: data.itemTypeCode || ''     // 코드 (저장용) - SQL에서 가져와야 함!
+    }, 
+    { 
+      itemClsNm: data.categoryL || '', 
+      itemCls: data.categoryLCode || ''    // SQL 추가 필요
+    }, 
+    { 
+      itemClsNm: data.categoryM || '', 
+      itemCls: data.categoryMCode || '' 
+    }, 
+    { 
+      itemClsNm: data.categoryS || '', 
+      itemCls: data.categorySCode || '' 
+    } 
+  ];
 
-    setSelectedPath(newPath);
-    setIsDetailModalOpen(true);
+  setSelectedPath(newPath);
+  setIsDetailModalOpen(true);
 
   } catch (error) {
     console.error("데이터 로드 실패:", error);
@@ -300,19 +298,43 @@ export default function ItemPage() {
   
 
   const fetchDetailItem = async (code: string) => {
-    try {
-      const response = await fetch(`/api/v1/items/${code}`);
-      if (!response.ok) throw new Error("서버 응답 오류");
+  try {
+    const response = await fetch(`/api/v1/items/${code}`);
+    if (!response.ok) throw new Error("서버 응답 오류");
 
-      const data = await response.json();
-      setSelectedItem(data);
-      setOriginalItem(data); // 원본 데이터 복사본 저장
-      setIsDetailModalOpen(true);
-    } catch (error) {
-      console.error("데이터를 가져오는 중 오류 발생:", error);
-      alert("데이터 로드에 실패했습니다.");
-    }
-  };
+    const data = await response.json();
+    setSelectedItem(data);
+    setOriginalItem(data); // 원본 데이터 저장
+
+    // [여기가 핵심!] 수정 버튼을 눌렀을 때도 경로를 만들어줘야 합니다.
+    // handleRowClick에 있는 로직을 그대로 가져옵니다.
+    const newPath: any = [
+      { 
+        itemClsNm: data.itemType || '', 
+        itemCls: data.itemTypeCode || '' // SQL에서 가져온 코드값
+      }, 
+      { 
+        itemClsNm: data.categoryL || '', 
+        itemCls: data.categoryLCode || '' 
+      }, 
+      { 
+        itemClsNm: data.categoryM || '', 
+        itemCls: data.categoryMCode || '' 
+      }, 
+      { 
+        itemClsNm: data.categoryS || '', 
+        itemCls: data.categorySCode || '' 
+      } 
+    ];
+
+    setSelectedPath(newPath); // [중요] 상태 업데이트
+
+    setIsDetailModalOpen(true);
+  } catch (error) {
+    console.error("데이터를 가져오는 중 오류 발생:", error);
+    alert("데이터 로드에 실패했습니다.");
+  }
+};
   
   
   /* 저장 */
@@ -611,7 +633,15 @@ export default function ItemPage() {
 
                 수정
               </Button>
-              <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  // [핵심] 모달 열기 전에 기존 선택된 카테고리/경로 정보 초기화
+                  setSelectedPath([]);       
+                  setSelectedCate(undefined); 
+                  setIsCreateModalOpen(true);
+                }}
+              >
                 등록
               </Button>
             </Can>
@@ -632,13 +662,21 @@ export default function ItemPage() {
       {/* [수정됨] 상세/수정 모달 */}
       <Modal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedPath([]);        // [추가] 닫을 때 초기화
+          setSelectedCate(undefined); // [추가] 닫을 때 초기화
+        }}
         // 모드에 따라 타이틀 변경 (선택사항)
         title={isEditMode ? "품목 수정" : "품목 상세"}
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>
+            <Button variant="secondary" onClick={() => {
+              setIsDetailModalOpen(false);
+              setSelectedPath([]);        // [추가] 닫을 때 초기화
+              setSelectedCate(undefined); // [추가] 닫을 때 초기화
+            }}>
               {isEditMode ? "취소" : "닫기"}
             </Button>
             
@@ -816,12 +854,20 @@ export default function ItemPage() {
       {/* 등록 모달 */}      
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setSelectedPath([]);        // [추가] 닫을 때 초기화
+          setSelectedCate(undefined); // [추가] 닫을 때 초기화
+        }}
         title="품목 등록"
         size="lg"
         footer={
           <ModalFooter
-            onClose={() => setIsCreateModalOpen(false)}
+            onClose={() => {
+              setIsCreateModalOpen(false);
+              setSelectedPath([]);        // [추가] 닫을 때 초기화
+              setSelectedCate(undefined); // [추가] 닫을 때 초기화
+            }}
             onConfirm={() => {
               saveItem();            
 
@@ -837,34 +883,71 @@ export default function ItemPage() {
               <Input name='itemCode' label="품목코드" value="-" readOnly disabled/>
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
+              {/* 4. 품목 분류 (Type) */}
+              {/* (1) 눈에 보이는 Input: 사용자용 (이름 표시) */}
               <Input 
-              name='itemType' 
-              label="품목 분류" 
-              placeholder="품목 분류 입력" 
-              defaultValue={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
-              onClick={() => {
-                setIsCateModalOpen(true)
-                fetchCategories();
-                }}/>
+                label="품목 분류" 
+                placeholder="품목 분류 선택" 
+                // 보여주는 건 이름(Nm)
+                value={selectedPath[0] ? selectedPath[0].itemClsNm : ''} 
+                readOnly={true} 
+                onClick={() => {
+                  if (isCreateModalOpen || isEditMode) { // 수정/등록 모드일 때만 열림
+                      setIsCateModalOpen(true);
+                      fetchCategories();
+                  }
+                }}
+                // 주의: name 속성을 제거하거나 view_ 등으로 바꿔서 서버 전송을 막거나 무시하게 함
+              />
+              {/* (2) 숨겨진 Input: 서버 전송용 (코드 전송) */}
+              {/* name을 DTO와 일치시켜야 FormData가 이 값을 가져갑니다 */}
+              <input 
+                type="hidden" 
+                name="itemType" 
+                value={selectedPath[0] ? selectedPath[0].itemCls : ''} 
+              />
+
+
+              {/* 5. 대분류 (L) */}
               <Input 
-              name='categoryL' 
-              label="품목 대분류" 
-              placeholder="품목 대분류" 
-              value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
-              readOnly/>
+                label="품목 대분류" 
+                placeholder="품목 대분류"
+                value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
+                readOnly={true}
+              />
+              <input 
+                type="hidden" 
+                name="categoryL" 
+                value={selectedPath[1] ? selectedPath[1].itemCls : ''} 
+              />
+
+
+              {/* 6. 중분류 (M) */}
               <Input 
-              name='categoryM' 
-              label="품목 중분류" 
-              placeholder="품목 중분류"
-              value={selectedPath[2] ? selectedPath[2].itemClsNm : ''}  
-              readOnly/>
+                label="품목 중분류" 
+                placeholder="품목 중분류"
+                value={selectedPath[2] ? selectedPath[2].itemClsNm : ''} 
+                readOnly={true}
+              />
+              <input 
+                type="hidden" 
+                name="categoryM" 
+                value={selectedPath[2] ? selectedPath[2].itemCls : ''} 
+              />
+
+
+              {/* 7. 소분류 (S) */}
               <Input 
-              name='categoryS' 
-              label="품목 소분류" 
-              placeholder="품목 소분류 입력" 
-              value={selectedPath[3] ? selectedPath[3].itemClsNm : ''}  
-              readOnly/>
-              {/* <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/> */}
+                label="품목 소분류" 
+                placeholder="품목 소분류"
+                value={selectedPath[3] ? selectedPath[3].itemClsNm : ''} 
+                readOnly={true}
+              />
+              <input 
+                type="hidden" 
+                name="categoryS" 
+                value={selectedPath[3] ? selectedPath[3].itemCls : ''} 
+              />
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
                 name='unit'
