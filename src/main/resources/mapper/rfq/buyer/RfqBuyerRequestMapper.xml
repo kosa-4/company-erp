@@ -46,11 +46,31 @@
 
     <!-- [신규] PR 기반 초기화 데이터 조회: Header -->
     <select id="selectRfqInitHeader"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header"> SELECT
-        NULL AS rfqNum, NULL AS rfqSubject, NULL AS rfqDate, 'T' AS progressCd, '임시저장' AS
-        progressNm, 'OC' AS rfqType, '수의계약' AS rfqTypeNm, h.PR_NUM AS prNum, h.PC_TYPE AS pcType,
-        NULL AS reqCloseDate, NULL AS rmk, NULL AS ctrlUserId, NULL AS ctrlUserNm FROM PRHD h WHERE
-        h.PR_NUM = #{prNum} AND h.PROGRESS_CD = 'A' AND h.DEL_FLAG = 'N' </select>
+        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+        SELECT
+               NULL      AS rfqNum,
+               NULL      AS rfqSubject,
+               NULL      AS rfqDate,
+               'T'       AS progressCd,
+               '임시저장'    AS
+                            progressNm,
+               'OC'      AS rfqType,
+               '수의계약'    AS rfqTypeNm,
+               h.PR_NUM  AS prNum,
+               h.PC_TYPE AS pcType,
+               c.CODE_NAME AS pcTypeNm,
+               NULL      AS reqCloseDate,
+               NULL      AS rmk,
+               NULL      AS ctrlUserId,
+               NULL      AS ctrlUserNm
+        FROM PRHD h
+        JOIN CODD c
+          ON c.CODE = h.PC_TYPE
+         AND c.CODE_GROUP = 'PC_TYPE'
+        WHERE h.PR_NUM = #{prNum}
+          AND h.PROGRESS_CD = 'A'
+          AND h.DEL_FLAG = 'N'
+        </select>
 
     <!-- [신규] PR 기반 초기화 데이터 조회: Items -->
     <select id="selectRfqInitItems"

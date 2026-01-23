@@ -16,7 +16,7 @@
                h.CTRL_USER_ID   AS ctrlUserId,
                u.USER_NM        AS ctrlUserNm,
                h.REG_DATE       AS regDate,
-               v.MOD_DATE       AS selectDate
+               h.SELECT_DATE    AS selectDate
         FROM RFQHD h
         INNER JOIN RFQVN v ON h.RFQ_NUM = v.RFQ_NUM 
             AND v.SELECT_YN = 'Y' 
@@ -32,13 +32,15 @@
         <if test="rfqSubject != null and rfqSubject != ''">
             AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqSubject}, '%')
         </if>
-        <if test="fromDate != null and fromDate != ''">
-            AND h.REG_DATE &gt;= #{fromDate}
+        <if test="regDate != null and regDate != ''">
+            AND h.REG_DATE &gt;= CONCAT(#{regDate}, ' 00:00:00')
+            AND h.REG_DATE &lt;= CONCAT(#{regDate}, ' 23:59:59')
         </if>
-        <if test="toDate != null and toDate != ''">
-            AND h.REG_DATE &lt;= #{toDate}
+        <if test="selectDate != null and selectDate != ''">
+            AND h.SELECT_DATE &gt;= CONCAT(#{selectDate}, ' 00:00:00')
+            AND h.SELECT_DATE &lt;= CONCAT(#{selectDate}, ' 23:59:59')
         </if>
-        ORDER BY v.MOD_DATE DESC, h.RFQ_NUM DESC
+        ORDER BY h.SELECT_DATE DESC, h.RFQ_NUM DESC
     </select>
 
     <!-- 특정 RFQ의 선정 결과 헤더 조회 -->

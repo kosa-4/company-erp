@@ -15,6 +15,6 @@ public class RfqSelectionResultResponse {
     private String totalAmt; // 총 견적금액
     private String ctrlUserId; // 구매담당자 ID
     private String ctrlUserNm; // 구매담당자명
-    private LocalDateTime regDate; // 등록일
-    private LocalDateTime selectDate; // 선정일 (MOD_DATE 활용)
+    private String regDate; // 등록일
+    private String selectDate; // 선정일 (MOD_DATE 활용)
 }

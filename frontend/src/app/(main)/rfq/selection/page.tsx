@@ -15,6 +15,7 @@ import {
 import { rfqApi } from '@/lib/api/rfq';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/api/error';
 import RfqCompareModal from './RfqCompareModal';
 
 interface RfqSelectionVendor {
@@ -71,6 +72,29 @@ export default function RfqSelectionPage() {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [selectionReason, setSelectionReason] = useState('');
 
+  // ✅ RFQ 상세 모달 상태 (입고 화면 방식)
+  const [isRfqDetailOpen, setIsRfqDetailOpen] = useState(false);
+  const [selectedRfqDetail, setSelectedRfqDetail] = useState<any>(null);
+
+  // ✅ RFQ 상세 조회 (입고 화면 방식 그대로: ApiResponse.data)
+  const handleViewRfqDetail = async (rfqNo: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // row 클릭(select+toggle) 방지
+    if (!rfqNo) return;
+
+    try {
+      const response = await fetch(`/api/v1/buyer/rfqs/${rfqNo}`);
+      if (!response.ok) throw new Error('RFQ 상세 조회 실패');
+
+      const apiResponse = await response.json();
+      const detail = apiResponse?.data;
+
+      setSelectedRfqDetail(detail);
+      setIsRfqDetailOpen(true);
+    } catch (error) {
+      toast.error('RFQ 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
+    }
+  };
+
   const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
@@ -84,7 +108,7 @@ export default function RfqSelectionPage() {
         ctrlUserNm: searchParams.buyer,
       });
 
-      const grouped = response.reduce((acc, curr) => {
+      const grouped = response.reduce((acc: RfqSelectionGroup[], curr: any) => {
         const existing = acc.find(g => g.rfqNo === curr.rfqNum);
 
         const vendor: RfqSelectionVendor = {
@@ -245,11 +269,7 @@ export default function RfqSelectionPage() {
 
     try {
       setLoading(true);
-      await rfqApi.selectVendor(
-          selectedVendor.rfqNo,
-          selectedVendor.vendorCd,
-          selectionReason
-      );
+      await rfqApi.selectVendor(selectedVendor.rfqNo, selectedVendor.vendorCd, selectionReason);
       toast.success('협력업체 선정이 완료되었습니다.');
       setIsReasonModalOpen(false);
       await handleSearch();
@@ -283,10 +303,7 @@ export default function RfqSelectionPage() {
 
   return (
       <div className="space-y-6">
-        <PageHeader
-            title="협력업체 선정"
-            subtitle="마감된 견적에 대해 협력업체를 선정합니다."
-        />
+        <PageHeader title="협력업체 선정" subtitle="마감된 견적에 대해 협력업체를 선정합니다." />
 
         <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
           <Input
@@ -341,7 +358,7 @@ export default function RfqSelectionPage() {
         </SearchPanel>
 
         <Card
-            title="협력업체 선정 목록 (RFQ 단위)"
+            title="협력업체 선정 목록"
             padding={false}
             actions={
               <div className="flex gap-2">
@@ -364,33 +381,15 @@ export default function RfqSelectionPage() {
                 <th className="w-12 px-4 py-3.5">
                   <div className="w-4" />
                 </th>
-                <th className="w-10 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  선택
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  RFQ번호
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">
-                  견적명
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  견적유형
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  구매담당자
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  등록일
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  선정일
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  상태
-                </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
-                  참여업체
-                </th>
+                <th className="w-10 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center"></th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">RFQ번호</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">견적명</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">견적유형</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">구매담당자</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">등록일</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">선정일</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">상태</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">참여업체</th>
               </tr>
               </thead>
 
@@ -419,9 +418,7 @@ export default function RfqSelectionPage() {
                     return (
                         <React.Fragment key={row.rfqNo}>
                           <tr
-                              className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${
-                                  isSelected ? 'bg-teal-50/50' : ''
-                              }`}
+                              className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${isSelected ? 'bg-teal-50/50' : ''}`}
                               onClick={() => {
                                 handleSelectRfq(row.rfqNo);
                                 toggleRow(row.rfqNo);
@@ -429,19 +426,12 @@ export default function RfqSelectionPage() {
                           >
                             <td className="px-4 py-3 text-center">
                               <svg
-                                  className={`w-4 h-4 text-stone-400 transition-transform ${
-                                      isExpanded ? 'rotate-180' : ''
-                                  }`}
+                                  className={`w-4 h-4 text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
                               >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
                             </td>
 
@@ -455,25 +445,23 @@ export default function RfqSelectionPage() {
                               />
                             </td>
 
-                            <td className="px-4 py-3 text-sm font-medium text-blue-600 text-center">
-                              {row.rfqNo}
+                            {/* ✅ RFQ번호 클릭 시 상세 모달 */}
+                            <td className="px-4 py-3 text-sm font-medium text-center">
+                          <span
+                              className="text-blue-600 hover:underline cursor-pointer"
+                              onClick={(e) => handleViewRfqDetail(row.rfqNo, e)}
+                              title="RFQ 상세 보기"
+                          >
+                            {row.rfqNo}
+                          </span>
                             </td>
+
                             <td className="px-4 py-3 text-sm text-stone-700">{row.rfqName}</td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
-                              {row.rfqTypeNm}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-stone-600 text-center">
-                              {row.ctrlUserNm}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
-                              {row.regDate}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">
-                              {row.selectDate}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {getStatusBadge(row.progressCd, row.progressNm)}
-                            </td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.rfqTypeNm}</td>
+                            <td className="px-4 py-3 text-sm text-stone-600 text-center">{row.ctrlUserNm}</td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.regDate}</td>
+                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.selectDate}</td>
+                            <td className="px-4 py-3 text-center">{getStatusBadge(row.progressCd, row.progressNm)}</td>
                             <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
                               {totalVendors}개 업체
                             </td>
@@ -487,24 +475,12 @@ export default function RfqSelectionPage() {
                                       <thead className="bg-stone-100/50">
                                       <tr>
                                         <th className="w-12 px-4 py-2"></th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
-                                          코드
-                                        </th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">
-                                          협력사명
-                                        </th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
-                                          상태
-                                        </th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">
-                                          총 견적금액
-                                        </th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
-                                          제출일
-                                        </th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">
-                                          선정여부
-                                        </th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">코드</th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">협력사명</th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">상태</th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">총 견적금액</th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">제출일</th>
+                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">선정여부</th>
                                       </tr>
                                       </thead>
 
@@ -517,9 +493,7 @@ export default function RfqSelectionPage() {
                                         return (
                                             <tr
                                                 key={vendor.vendorCd}
-                                                className={`hover:bg-stone-50/50 cursor-pointer ${
-                                                    isVendorSelected ? 'bg-teal-50' : ''
-                                                }`}
+                                                className={`hover:bg-stone-50/50 cursor-pointer ${isVendorSelected ? 'bg-teal-50' : ''}`}
                                                 onClick={() =>
                                                     setSelectedVendor({
                                                       rfqNo: row.rfqNo,
@@ -545,12 +519,8 @@ export default function RfqSelectionPage() {
                                                 />
                                               </td>
 
-                                              <td className="px-4 py-2 text-sm text-stone-500 text-center">
-                                                {vendor.vendorCd}
-                                              </td>
-                                              <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">
-                                                {vendor.vendorNm}
-                                              </td>
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center">{vendor.vendorCd}</td>
+                                              <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">{vendor.vendorNm}</td>
                                               <td className="px-4 py-2 text-center text-xs">
                                                 <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
                                                   {vendor.vnProgressNm}
@@ -558,9 +528,7 @@ export default function RfqSelectionPage() {
                                               </td>
                                               <td className="px-4 py-2 text-sm text-stone-700 text-right font-semibold">
                                                 {row.progressCd === 'M' ? (
-                                                    <span className="text-stone-400 font-bold tracking-widest text-xs">
-                                        ****
-                                      </span>
+                                                    <span className="text-stone-400 font-bold tracking-widest text-xs">****</span>
                                                 ) : vendor.totalAmt !== null && vendor.totalAmt !== undefined ? (
                                                     `₩${formatNumber(vendor.totalAmt)}`
                                                 ) : (
@@ -599,7 +567,6 @@ export default function RfqSelectionPage() {
           </div>
         </Card>
 
-
         <RfqCompareModal
             isOpen={isCompareModalOpen}
             rfqNo={compareRfqNo}
@@ -634,15 +601,100 @@ export default function RfqSelectionPage() {
               <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>
                 취소
               </Button>
-              <Button
-                  variant="success"
-                  onClick={confirmSelection}
-                  disabled={!selectionReason || loading}
-              >
+              <Button variant="success" onClick={confirmSelection} disabled={!selectionReason || loading}>
                 최종 선정 확정
               </Button>
             </div>
           </div>
+        </Modal>
+
+        {/* ✅ RFQ 상세 모달 */}
+        <Modal
+            isOpen={isRfqDetailOpen}
+            onClose={() => setIsRfqDetailOpen(false)}
+            title="RFQ 상세"
+            size="lg"
+            footer={
+              <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
+                닫기
+              </Button>
+            }
+        >
+          {selectedRfqDetail ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">RFQ번호</label>
+                    <p className="font-medium">{selectedRfqDetail?.header?.rfqNum || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">견적명</label>
+                    <p className="font-medium">{selectedRfqDetail?.header?.rfqSubject || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">요청일자</label>
+                    <p className="font-medium">
+                      {(selectedRfqDetail?.header?.rfqDate || '')?.split('T')[0] || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">담당자</label>
+                    <p className="font-medium">{selectedRfqDetail?.header?.ctrlUserNm || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                      <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                      <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {(selectedRfqDetail?.items || []).map((item: any, index: number) => (
+                        <tr key={index} className="border-t">
+                          <td className="p-3">{item.itemCd || '-'}</td>
+                          <td className="p-3">{item.itemDesc || '-'}</td>
+                          <td className="p-3 text-right">{formatNumber(Number(item.rfqQt || 0))}</td>
+                          <td className="p-3 text-right">₩{formatNumber(Number(item.estUnitPrc || 0))}</td>
+                          <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.estAmt || 0))}</td>
+                        </tr>
+                    ))}
+
+                    {(!selectedRfqDetail?.items || selectedRfqDetail.items.length === 0) && (
+                        <tr className="border-t">
+                          <td colSpan={5} className="p-4 text-center text-xs text-gray-400">
+                            품목 정보가 없습니다.
+                          </td>
+                        </tr>
+                    )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <div className="text-right">
+                    <span className="text-gray-500 mr-4">총 금액:</span>
+                    <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(
+                        Number(
+                            selectedRfqDetail?.items?.reduce(
+                                (sum: number, it: any) => sum + Number(it.estAmt || 0),
+                                0
+                            ) || 0
+                        )
+                    )}
+                </span>
+                  </div>
+                </div>
+              </div>
+          ) : (
+              <div className="py-10 text-center text-stone-500">상세 데이터가 없습니다.</div>
+          )}
         </Modal>
       </div>
   );

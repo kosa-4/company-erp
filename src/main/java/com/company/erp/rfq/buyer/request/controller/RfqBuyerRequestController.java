@@ -14,10 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/v1/buyer/rfqs") // 설계안이 /api/buyer/rfqs면 여기 v1 여부 통일 필요
+@RequestMapping("/api/v1/buyer/rfqs")
 @RequiredArgsConstructor
 public class RfqBuyerRequestController {
 

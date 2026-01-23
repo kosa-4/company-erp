@@ -34,7 +34,8 @@ public class RfqDetailResponse {
         private String ctrlUserId; // 담당자ID
         private String ctrlUserNm; // 담당자명
         private String prNum; // PR번호 (Hidden)
-        private String pcType; // 구매유형 (Hidden)
+        private String pcType; // 구매유형 (code)
+        private String pcTypeNm; // 구매유형 (name)
     }
 
     @Getter
