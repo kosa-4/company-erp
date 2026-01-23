@@ -82,8 +82,15 @@ const AutoFitCamera = () => {
     return null;
 };
 
+interface SlideWrapperProps {
+    url: string;
+    isActive: boolean;
+    targetPosition: [number, number, number];
+    targetRotation: [number, number, number];
+}
+
 // Wrapper handles the smooth animation of each slide to its target state
-const SlideWrapper = ({ url, isActive, targetPosition, targetRotation }: any) => {
+const SlideWrapper = ({ url, isActive, targetPosition, targetRotation }: SlideWrapperProps) => {
     const meshRef = useRef<THREE.Group>(null);
     const texture = useTexture(url);
     const thickness = 0.2; 

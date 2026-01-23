@@ -17,8 +17,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
+import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
 import { goodsReceiptApi, GoodsReceiptDTO, GoodsReceiptItemDTO } from '@/lib/api/goodsReceipt';
 import { getErrorMessage } from '@/lib/api/error';
+import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
 
 interface ReceivingRecord {
   id: string; // 고유 ID (grNo + itemCode)
@@ -62,12 +64,13 @@ export default function ReceivingListPage() {
   const [adjustUnitPrice, setAdjustUnitPrice] = useState(0);
   const [adjustItemCode, setAdjustItemCode] = useState('');
   const [targetItem, setTargetItem] = useState<ReceivingRecord | null>(null);
+  const [poItemData, setPoItemData] = useState<{ orderQuantity: number; totalReceived: number; currentMyQuantity: number } | null>(null);
   
   // 상세 팝업용 상태
   const [isGrDetailModalOpen, setIsGrDetailModalOpen] = useState(false);
   const [isPoDetailModalOpen, setIsPoDetailModalOpen] = useState(false);
   const [selectedGrDetail, setSelectedGrDetail] = useState<GoodsReceiptDTO | null>(null);
-  const [selectedPoDetail, setSelectedPoDetail] = useState<any>(null);
+  const [selectedPoDetail, setSelectedPoDetail] = useState<PurchaseOrderDTO | null>(null);
 
   // 취소 모달 상태
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -203,9 +206,6 @@ export default function ReceivingListPage() {
 
     if (!row) return;
     
-    // 입고완료 상태에서도 조정 가능하도록 할지? 일반적으로는 가능하지만 취소는 안됨
-    // 여기서는 부분입고 상태일 때만 가능하다는 기존 로직을 따르거나, 
-    // 혹은 모든 상태에서 가능하게 할 수 있음. 일단 기존 로직 유지
     if (row.status === 'GRX') {
       toast.warning('취소된 입고 건은 조정할 수 없습니다.');
       return;
@@ -214,13 +214,31 @@ export default function ReceivingListPage() {
     try {
       // 상세 정보 조회 (Header 정보 필요)
       const detail = await goodsReceiptApi.getDetail(row.grNo);
+      const targetItemDetail = detail.items?.find((i) => i.itemCode === row.itemCode);
+      
+      const orderQty = targetItemDetail?.orderQty || 0;
+      // accumulatedQty: 현재까지의 총 누적 입고량 (현재 건 포함)
+      const totalRecv = targetItemDetail?.accumulatedQty || 0;
+      const currentMyQty = targetItemDetail?.grQuantity || 0;
+      
+      // 잔여 수량 (발주 수량 - 총 누적 입고량)
+      // 이미 총 누적량에 현재 건이 포함되어 있다고 가정하면, 순수 잔여량은 orderQty - totalRecv
+      const remaining = Math.max(0, orderQty - totalRecv);
+
       setSelectedGr(detail);
       setTargetItem(row);
+      setPoItemData({ 
+        orderQuantity: orderQty, 
+        totalReceived: totalRecv, 
+        currentMyQuantity: currentMyQty 
+      });
       
       setAdjustItemCode(row.itemCode);
-      setAdjustQuantity(row.receivedQuantity);
+      
+      // 요청 사항: "입고 조정 모달에서 표시되는 입고수량은 남은 입고수량이어야 함"
+      setAdjustQuantity(remaining);
       setAdjustUnitPrice(row.unitPrice);
-      setAdjustAmount(row.receivedAmount);
+      setAdjustAmount(remaining * row.unitPrice); // 금액도 잔량 기준으로 다시 계산 표시
       
       setIsAdjustMode(true);
       setIsDetailModalOpen(true);
@@ -242,6 +260,17 @@ export default function ReceivingListPage() {
     if (adjustQuantity <= 0) {
       toast.warning('입고수량을 확인해주세요.');
       return;
+    }
+
+    // 발주 수량 초과 검증
+    if (poItemData) {
+      // 나를 제외한 다른 입고량 합계
+      const otherReceived = poItemData.totalReceived - poItemData.currentMyQuantity;
+      // 새로운 총 입고 예상량 = 다른 입고량 + 이번 조정 수량
+      if (otherReceived + adjustQuantity > poItemData.orderQuantity) {
+        toast.warning(`총 입고수량이 발주수량(${formatNumber(poItemData.orderQuantity)})을 초과할 수 없습니다.`);
+        return;
+      }
     }
 
     try {
@@ -501,7 +530,7 @@ export default function ReceivingListPage() {
                       type="number"
                       value={adjustQuantity}
                       min={0}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border rounded-md text-right"
                       onChange={(e) => handleAdjustQuantityChange(parseInt(e.target.value) || 0)}
                     />
                     <span className="text-sm text-gray-500">{targetItem.unit}</span>
@@ -635,7 +664,7 @@ export default function ReceivingListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedPoDetail.items?.map((item: any, index: number) => (
+                  {selectedPoDetail.items?.map((item, index) => (
                     <tr key={index} className="border-t">
                       <td className="p-3">{item.itemCode}</td>
                       <td className="p-3">{item.itemName}</td>
