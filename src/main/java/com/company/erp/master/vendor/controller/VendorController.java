@@ -56,30 +56,33 @@ public class VendorController {
             @PathVariable("vendorCode") String vendorCode,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
         // 1. 회사 코드로 파일 번호 조회
-        List<String> fileNumList = vendorService.getFileNumByVendorCode(vendorCode);
-
-        // 2. 조회한 파일 정보 리스트
-        List<AttFileEntity> files = new ArrayList<>();
-        
-        // 3. 상세 정보 조회 후 저장
-        for(String fileNum : fileNumList){
-            AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
-            files.add(file);
-        }
+        List<AttFileEntity> files = vendorService.getFilesByVendorCode(vendorCode, loginUser);
 
         return ApiResponse.ok(files);
     }
 
-    // 3. 수정 전 데이터 조회
+    // 3. 대기 테이블에서 수정 후 데이터 조회
     @GetMapping("{vendorCode}")
+    public ApiResponse getChangedVendor(
+            @PathVariable("vendorCode") String vendorCode,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+        VendorRegisterDto vendorChanged =  vendorService.getVendorVNCHByVendorCode(vendorCode);
+        if(vendorChanged == null){
+            return ApiResponse.ok("기존 승인 정보가 없는 신규 업체입니다.", null);
+        }
+        return ApiResponse.ok(vendorChanged);
+    }
+
+    // 4. 마스터 테이블에서 수정 전 데이터 조회
+    @GetMapping("/master/{vendorCode}")
     public ApiResponse getPreviousVendor(
             @PathVariable("vendorCode") String vendorCode,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
-        VendorRegisterDto vendorUpdateReq =  vendorService.getVendorByVendorCode(vendorCode);
-        if(vendorUpdateReq == null){
-            return ApiResponse.ok("기존 승인 정보가 없는 신규 업체입니다.", null);
+        VendorRegisterDto vendorPrev = vendorService.getVendorVNGLByVendorCode(vendorCode);
+        if(vendorPrev == null){
+            return ApiResponse.ok("기존 정보가 없습니다.");
         }
-        return ApiResponse.ok(vendorUpdateReq);
+        return ApiResponse.ok(vendorPrev);
     }
 
     /* 수정 */
@@ -144,11 +147,8 @@ public class VendorController {
             @RequestBody List<VendorUpdateDto> vendorUpdateDtoList,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
 
-        // 3) id 반환
-        String loginId = loginUser.getUserId();
-
         // 5) 반려 함수 실행
-        vendorService.rejectVendor(vendorUpdateDtoList, loginId);
+        vendorService.rejectVendor(vendorUpdateDtoList, loginUser);
         return ApiResponse.ok("반려 처리 되었습니다.");
     }
 

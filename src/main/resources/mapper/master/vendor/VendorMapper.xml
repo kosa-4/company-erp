@@ -89,7 +89,7 @@
                 AND VENDORS.vendorName LIKE CONCAT('%', #{vendorName}, '%')
             </if>
             <if test="industry != null and industry != ''">
-                AND VENDORS.industry = LIKE CONCAT('%', #{industry}, '%')
+                AND VENDORS.industry LIKE CONCAT('%', #{industry}, '%')
             </if>
             <if test="businessType != null and businessType != ''">
                 AND VENDORS.businessType = #{businessType}
@@ -430,6 +430,8 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
+            FAX_NO AS fax,
+            FOUNDATION_DATE AS foundationDate,
             V.PROGRESS_CD AS status,
             RMK AS remark,
             V.EMAIL AS email
@@ -473,6 +475,8 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
+            FAX_NO AS fax,
+            FOUNDATION_DATE AS foundationDate,
             PROGRESS_CD AS status,
             RMK AS remark,
             EMAIL AS email

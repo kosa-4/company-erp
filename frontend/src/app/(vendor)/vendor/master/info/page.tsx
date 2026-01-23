@@ -1,7 +1,7 @@
-'use client';
+"use client"
 
-import React, { useState, useEffect } from 'react';
-import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle, Lock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building2, Save, Search, MapPin, Phone, FileText, AlertCircle, Lock, UploadCloud, Paperclip, X } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
 import { Can } from '@/auth/Can';
 import { toast } from 'sonner';
@@ -25,18 +25,20 @@ export default function VendorInfoChangePage() {
     vendorCode: '',
     vendorName: '',
     vendorNameEng: '',   // DTO: vendorNameEng
-    businessType: '',    // DTO: businessType (A 또는 B)
-    businessNo: '',      // DTO: businessNo
+    businessType: '',    // DTO: businessType
+    businessNo: '',      // [추가됨] 사업자번호
     ceoName: '',         // DTO: ceoName
     zipCode: '',         // DTO: zipCode
     address: '',         // DTO: address
     addressDetail: '',   // DTO: addressDetail
     tel: '',             // DTO: tel
+    fax: '',             // [추가됨] 팩스번호
+    email: '',           // DTO: email
     industry: '',        // DTO: industry
+    foundationDate: '',  // [추가됨] 설립일자
     remark: '',          // DTO: remark
     status: '',
     editable: true,
-    email: '',
   });
 
   const [changeReason, setChangeReason] = useState(''); // 변경 사유(remark에 담김)
@@ -45,35 +47,48 @@ export default function VendorInfoChangePage() {
   // 원본 저장
   const [originalData, setOriginalData] = useState<typeof formData | null>(null);
 
-  // 2. 초기 데이터 패치
-  useEffect(() => {
-    const fetchVendorData = async () => {
-      try {
-        const response = await fetch('/api/v1/vendor-portal/info', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-
-          // DTO 필드명과 일치하므로 데이터 그대로 세팅
-          setFormData(prev => ({ ...prev, ...data }));
-          // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
-          setOriginalData(JSON.parse(JSON.stringify(data))); // 깊은 복사
-          if(data.remark) setChangeReason(data.remark);
-        } else {
-          alert('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
-        }
-      } catch (error) {
-        console.error('Fetch error:', error);
-        alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
-      } finally {
-        setLoading(false);
+  // [2] 초기 데이터 로드 수정
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      // 1. 내 업체 정보 가져오기
+      const infoRes = await fetch('/api/v1/vendor-portal/info');
+      if (!infoRes.ok) throw new Error('정보 조회 실패');
+      
+      const infoData = await infoRes.json();
+      
+      // formData 업데이트
+      setFormData(prev => ({ ...prev, ...infoData }));
+      
+      // ⭐ 핵심 1: textarea와 연결된 changeReason 상태도 같이 업데이트해줘야 비고가 보입니다.
+      if (infoData.remark) {
+        setChangeReason(infoData.remark);
       }
-    };
-    fetchVendorData();
-  }, []);
+
+      // ⭐ 핵심 2: vendorCode 필드명이 정확한지 확인 (vendorCode vs vendorCd)
+      // 만약 백엔드 DTO가 vendorCd를 사용한다면 infoData.vendorCd로 바꿔야 합니다.
+      const vCode = infoData.vendorCode || infoData.vendorCd; 
+
+      if (vCode) {
+        // 백엔드 컨트롤러 경로: /api/v1/vendor-portal/info/{vendorCode}/files
+        const fileRes = await fetch(`/api/v1/vendor-portal/info/${vCode}/files`);
+        
+        if (fileRes.ok) {
+          const fileResult = await fileRes.json();
+          // ApiResponse.ok(files)로 보냈으므로 .data 안에 리스트가 들어있습니다.
+          setAttachedFiles(fileResult.data || []);
+        }
+      } 
+    } catch (err) {
+      console.error("데이터 로딩 에러:", err);
+      toast.error('데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  loadInitialData();
+}, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -109,17 +124,19 @@ export default function VendorInfoChangePage() {
   const handleRequestChange = async () => {
     if (!formData.editable) return;
     if (!changeReason.trim()) {
-      alert('변경 사유를 입력해주세요.');
+      toast.warning('변경 사유를 입력해주세요.');
       return;
     }
 
-    // DTO 구조와 동일하게 전달
+    setLoading(true);
+
     const requestBody = {
       ...formData,
-      remark: changeReason // 상세 사유를 remark 필드에 담아 전송
+      remark: changeReason 
     };
     
     try {
+      // 1. 정보 수정 신청 전송 (이것만 성공하면 됨)
       const response = await fetch('/api/v1/vendor-portal/info/change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,15 +144,75 @@ export default function VendorInfoChangePage() {
         credentials: 'include',
       });
   
-      if (response.ok) {
-        alert('협력업체 변경 신청이 접수되었습니다.');
-        window.location.reload();
-      } else {
-        alert('신청 처리 중 오류가 발생했습니다.');
+      if (!response.ok) {
+        throw new Error('정보 변경 신청에 실패했습니다.');
       }
-    } catch (error) {
-      alert('네트워크 오류가 발생했습니다.');
+
+      // 2. 정보 신청이 성공했다면 파일 업로드 시도
+      if (selectedFiles.length > 0) {
+        try {
+          await uploadFiles(formData.vendorCode);
+        } catch (fileErr) {
+          // 파일 업로드는 실패해도 에러만 띄우고 프로세스는 계속 진행 (새로고침으로 넘어감)
+          console.error("파일 업로드 실패:", fileErr);
+          toast.error('변경 신청은 완료되었으나, 증빙 서류 업로드에 실패했습니다. 관리자에게 별도로 제출해주세요.');
+        }
+      }
+
+      // 3. 최종 처리: 파일 성공/실패 여부와 상관없이 정보 신청이 성공했다면 무조건 새로고침
+      toast.success('변경 신청이 접수되었습니다.');
+      
+      // 즉시 새로고침하여 DB의 바뀐 상태(editable: false)를 불러와 수정을 막음
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
+    } catch (error: any) {
+      // 텍스트 정보 전송 자체가 실패했을 때만 새로고침을 안 하고 멈춤
+      toast.error(error.message || '네트워크 오류가 발생했습니다.');
+      setLoading(false);
     }
+  };
+
+  // 파일 관련
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<any[]>([]);
+
+  // --- 파일 핸들러 (동일 파일 재선택 버그 수정) ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      
+      // 기존 선택된 파일들과 중복 체크를 하고 싶다면 여기서 로직 추가 가능
+      setSelectedFiles(prev => [...prev, ...filesArray]);
+
+      // [중요] input의 value를 초기화해야 동일한 파일을 다시 올릴 때 onChange가 발생함
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    
+    // 혹시 모를 상황을 대비해 ref를 통해서도 한 번 더 비워줌
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // --- 파일 업로드 실행 함수 ---
+  const uploadFiles = async (vendorCode: string) => {
+    const fileFormData = new FormData();
+    selectedFiles.forEach(file => fileFormData.append('file', file));
+
+    // 파일 업로드 API (백엔드 경로에 맞춰 수정 필요)
+    const response = await fetch(`/api/v1/vendor-portal/info/files/${vendorCode}`, {
+      method: 'POST',
+      body: fileFormData,
+    });
+    
+    if (!response.ok) throw new Error('파일 업로드에 실패했습니다.');
   };
 
   if (loading) return <div className="p-10 text-center">데이터 로딩 중...</div>;
@@ -147,142 +224,314 @@ export default function VendorInfoChangePage() {
       {/* Header & Banner 생략 (기존과 동일) */}
 
       <Card className={`overflow-hidden ${!formData.editable ? 'opacity-85' : ''}`}>
-        <div className="p-6 space-y-8">
+        <div className="p-8 space-y-8">
+          
+          {/* 1. 기본 정보 섹션 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-gray-900 rounded-full"/> 기본 정보
+            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              기본 정보
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">협력사명 *</label>
+              <div className="space-y-1">
+                <label className={labelClassName}>협력사명 *</label>
                 <Input
                   name="vendorName"
                   value={formData.vendorName || ''}
                   onChange={handleChange}
                   disabled={!formData.editable}
+                  className="font-medium"
                 />
-
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">협력사명 (영문)</label>
+              <div className="space-y-1">
+                <label className={labelClassName}>협력사명 (영문)</label>
                 <Input
-                  name="vendorNameEng" // DTO 필드명 일치
+                  name="vendorNameEng"
                   value={formData.vendorNameEng || ''}
                   onChange={handleChange}
                   disabled={!formData.editable}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">사업형태 *</label>
+              <div className="space-y-1">
+                <label className={labelClassName}>사업형태 *</label>
                 <select
-                  name="businessType" // DTO 필드명 일치
+                  name="businessType"
                   value={formData.businessType || ''}
                   onChange={handleChange}
                   disabled={!formData.editable}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:bg-gray-100"
+                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 transition-all outline-none"
                 >
                   <option value="">선택</option>
-                  <option value="개인">개인</option>
-                  <option value="법인">법인</option>
+                  <option value="INDIVIDUAL">개인</option>
+                  <option value="CORP">법인</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">대표자명 *</label>
+              
+              {/* [수정됨] 사업자 번호: 수정 불가(Read Only) 처리 */}
+              <div className="space-y-1">
+                <label className={labelClassName}>
+                  사업자등록번호
+                  <span className="text-[10px] text-gray-400 font-normal ml-auto">(수정 불가)</span>
+                </label>
                 <Input
-                  name="ceoName" // DTO 필드명 일치
+                  name="businessNo"
+                  value={formData.businessNo || ''}
+                  readOnly
+                  disabled={true} 
+                  className="bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className={labelClassName}>대표자명 *</label>
+                <Input
+                  name="ceoName"
                   value={formData.ceoName || ''}
                   onChange={handleChange}
                   disabled={!formData.editable}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">전화번호 *</label>
+              
+              <div className="space-y-1">
+                <label className={labelClassName}>
+                  설립일자
+                  <span className="text-[10px] text-gray-400 font-normal ml-auto"> (수정 불가)</span>
+                </label>
                 <Input
-                  name="tel" // DTO 필드명 일치 (phone -> tel)
-                  value={formData.tel || ''}
-                  onChange={handleChange}
-                  disabled={!formData.editable}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">이메일 *</label>
-                <Input
-                  name="email" // DTO 필드명 일치 (email -> email)
-                  value={formData.email || ''}
-                  onChange={handleChange}
-                  disabled={!formData.editable}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">업종 *</label>
-                <Input
-                  name="industry" // DTO 필드명 일치
-                  value={formData.industry || ''}
-                  onChange={handleChange}
-                  disabled={!formData.editable}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* 3. 주소 섹션 (디자인 개선 및 검색 연동) */}
-          <section className="space-y-4 pt-4 border-t border-slate-100">
-            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-emerald-500 rounded-full"/> 사업장 소재지
-            </h3>
-            <div className="space-y-3">
-              <label className={labelClassName}>주소 *</label>
-              <div className="flex gap-2 max-w-sm">
-                <Input
-                  name="zipCode"
-                  value={formData.zipCode || ''}
+                  type="date"
+                  name="foundationDate"
+                  // T00:00:00 포맷 대응을 위해 잘라내기 유지
+                  value={(formData.foundationDate || '').substring(0, 10)}
                   readOnly
-                  placeholder="우편번호"
-                  className="bg-slate-50 border-slate-200"
+                  disabled={true} 
+                  className="bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
                 />
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm" 
-                  disabled={!formData.editable}
-                  onClick={handleAddressSearch}
-                  className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 shrink-0"
-                >
-                  <Search className="w-4 h-4 mr-1" />
-                  주소 검색
-                </Button>
               </div>
-              <Input
-                name="address"
-                value={formData.address || ''}
-                readOnly
-                placeholder="기본 주소"
-                className="bg-slate-50 border-slate-200"
-              />
-              <Input
-                name="addressDetail"
-                value={formData.addressDetail || ''}
-                onChange={handleChange}
-                disabled={!formData.editable}
-                placeholder="상세 주소를 입력하세요"
-              />
             </div>
           </section>
 
-          {/* 변경 사유 */}
-          
-          <section className="pt-6 border-t border-gray-100">
-            <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-1 h-4 bg-blue-600 rounded-full"/> 변경 사유 입력
+          {/* 2. 연락처 및 업종 */}
+          <section className="pt-2">
+             <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2 pb-2 border-b border-gray-100">
+              <span className="text-blue-600">#</span> 연락처 및 상세
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                    <label className={labelClassName}>전화번호 *</label>
+                    <Input
+                      name="tel"
+                      value={formData.tel || ''}
+                      onChange={handleChange}
+                      disabled={!formData.editable}
+                      placeholder="02-0000-0000"
+                    />
+                </div>
+                {/* [수정됨] 팩스 번호 불러오기 */}
+                <div className="space-y-1">
+                    <label className={labelClassName}>팩스번호</label>
+                    <Input
+                      name="fax"
+                      value={formData.fax || ''}
+                      onChange={handleChange}
+                      disabled={!formData.editable}
+                      placeholder="02-0000-0000"
+                    />
+                </div>
+                <div className="space-y-1">
+                    <label className={labelClassName}>이메일 *</label>
+                    <Input
+                      name="email"
+                      value={formData.email || ''}
+                      onChange={handleChange}
+                      disabled={!formData.editable}
+                      type="email"
+                    />
+                </div>
+                <div className="space-y-1">
+                    <label className={labelClassName}>업종 *</label>
+                    <Input
+                      name="industry"
+                      value={formData.industry || ''}
+                      onChange={handleChange}
+                      disabled={!formData.editable}
+                    />
+                </div>
+            </div>
+          </section>
+
+          {/* 3. 주소 섹션 (디자인 개선) */}
+          <section className="pt-2">
+            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2 pb-2 border-b border-gray-100">
+              <MapPin className="w-5 h-5 text-blue-600" />
+              사업장 소재지
+            </h3>
+            <div className="space-y-4 bg-gray-50/50 p-5 rounded-xl border border-gray-100">
+              <div className="flex flex-col space-y-1">
+                <label className={labelClassName}>우편번호 *</label>
+                <div className="flex gap-2 max-w-md">
+                  <Input
+                    name="zipCode"
+                    value={formData.zipCode || ''}
+                    readOnly
+                    placeholder="00000"
+                    className="bg-white border-gray-300 w-32 text-center"
+                  />
+                  {/* [수정됨] 주소 검색 버튼 디자인 */}
+                  <Button 
+                    type="button"
+                    disabled={!formData.editable}
+                    onClick={handleAddressSearch}
+                    className={`
+                      shrink-0 flex items-center gap-1.5 px-4
+                      ${!formData.editable 
+                        ? 'bg-gray-200 text-gray-400 border-gray-200' 
+                        : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 shadow-sm'}
+                      transition-all duration-200
+                    `}
+                  >
+                    <Search className="w-4 h-4" />
+                    주소 검색
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-1">
+                  <label className={labelClassName}>기본주소</label>
+                  <Input
+                    name="address"
+                    value={formData.address || ''}
+                    readOnly
+                    placeholder="주소 검색 시 자동 입력"
+                    className="bg-gray-100 border-gray-200 text-gray-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className={labelClassName}>상세주소</label>
+                  <Input
+                    name="addressDetail"
+                    value={formData.addressDetail || ''}
+                    onChange={handleChange}
+                    disabled={!formData.editable}
+                    placeholder="동, 호수 등 상세 주소를 입력하세요"
+                    className="bg-white border-gray-300 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+          {/* 4. 증빙 서류 관리 섹션 (구분형) */}
+          <section className="pt-2">
+            <h3 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2 pb-2 border-b border-gray-100">
+              <Paperclip className="w-5 h-5 text-blue-600" /> 증빙 서류 관리
+            </h3>
+
+            <div className="space-y-6 bg-slate-50/50 p-6 rounded-xl border border-slate-200">
+              
+              {/* (1) 기존 등록 서류 그룹 */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-bold text-slate-700">기본 등록 서류</span>
+                  <span className="text-[10px] text-slate-400 font-normal">이미 서버에 업로드된 파일입니다.</span>
+                </div>
+                
+                {attachedFiles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {attachedFiles.map((file, idx) => (
+                      <div key={`attached-${idx}`} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+                          <div className="p-2 bg-slate-100 rounded-md text-slate-400 shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-slate-600 truncate">
+                              {file.originName}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-tight">Verified (기본)</span>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 shrink-0">
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                    등록된 기본 서류가 없습니다.
+                  </div>
+                )}
+              </div>
+
+              <hr className="border-slate-200" />
+
+              {/* (2) 신규 첨부 서류 그룹 */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-blue-700">추가 첨부 서류</span>
+                    <span className="text-[10px] text-blue-400 font-normal">변경 사항을 증빙할 신규 파일입니다.</span>
+                  </div>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline" 
+                    disabled={!formData.editable} 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-white hover:bg-blue-50 text-blue-600 border-blue-200 shadow-sm h-8"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 mr-1.5" /> 파일 추가
+                  </Button>
+                  <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileChange} />
+                </div>
+
+                {selectedFiles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedFiles.map((file, index) => (
+                      <div key={`selected-${index}`} className="flex items-center justify-between p-3 bg-blue-50/30 border border-blue-200 rounded-lg shadow-sm group animate-in fade-in slide-in-from-bottom-1 overflow-hidden">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+                          <div className="p-2 bg-blue-100 rounded-md text-blue-500 shrink-0">
+                            <UploadCloud className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-blue-900 truncate">
+                              {file.name}
+                            </span>
+                            <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tight">New (신규)</span>
+                          </div>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => removeFile(index)} 
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-sm text-slate-400 border-2 border-dashed border-slate-200 rounded-lg bg-white/50">
+                    새로 첨부할 파일을 선택해주세요.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* 5. 변경 사유 */}
+          <section className="pt-2">
+            <h3 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2">
+               변경 사유 입력 (필수)
             </h3>
             <textarea
                 name="remark"
                 value={changeReason}
                 onChange={(e) => setChangeReason(e.target.value)}
-                placeholder="변경 사유를 입력하세요."
+                placeholder="변경 사유를 구체적으로 입력하세요. (예: 본점 소재지 이전, 대표자 변경 등)"
                 rows={3}
                 disabled={!formData.editable}
-                className="flex w-full rounded-md border border-input px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                className="flex w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow resize-none bg-white"
             />
           </section>
         </div>

@@ -16,6 +16,7 @@ import {
   Badge
 } from '@/components/ui';
 import { ColumnDef } from '@/types';
+import { FileText } from 'lucide-react';
 
 interface Vendor {
   askNum:string;
@@ -48,6 +49,7 @@ interface AttFile {
   originName: string;
   fileSize: number;
   filePath: string;
+  refNo: string;
 }
 
 interface Window {
@@ -165,37 +167,33 @@ export default function VendorPage() {
   const [originalVendor, setOriginalVendor] = useState<Vendor | null>(null);
 
   const handleRowClick = async (vendor: Vendor) => {
-  // 1. 클릭한 행 데이터(VNCH 데이터가 포함된 목록 데이터)를 즉시 세팅
-  // SQL에서 COALESCE로 가져온 '수정 후' 값이 여기에 담겨 있습니다.
-  setSelectedVendor(vendor); 
-  setOriginalVendor(null); // 초기화
-  setAttachedFiles([]);
-  latestVendorCodeRef.current = vendor.vendorCode;
+    // 1. [변경 후] 리스트 데이터는 이미 최종본(COALESCE)이므로 바로 세팅
+    setSelectedVendor(vendor); 
+    setOriginalVendor(null); // 초기화
+    setAttachedFiles([]);
+    latestVendorCodeRef.current = vendor.vendorCode;
 
-  // 2. 상태가 'C'(변경 대기)일 때만 마스터 테이블(VNGL)의 '수정 전' 데이터를 가져옴
-  if (vendor.status === 'C') {
-    try {
-      // 마스터 데이터를 가져오는 전용 경로
-      const clickedCode = vendor.vendorCode;
-      const response = await fetch(`/api/v1/vendors/${clickedCode}`);
-      if (!response.ok) throw new Error('마스터 데이터 조회 실패');
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        // 백엔드에서 온 순수 마스터(VNGL) 데이터만 세팅
-        if (latestVendorCodeRef.current !== clickedCode) return;
-        setOriginalVendor(result.data); 
+    // 2. [변경 전] 'C' 상태일 때만 방금 만드신 컨트롤러 호출
+    if (vendor.status === 'C') {
+      try {
+        const clickedCode = vendor.vendorCode;
+        // 작성하신 @GetMapping("/master/{vendorCode}") 호출
+        const response = await fetch(`/api/v1/vendors/master/${clickedCode}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          if (latestVendorCodeRef.current !== clickedCode) return;
+          // 마스터 테이블의 순수 과거 데이터가 여기에 담깁니다.
+          setOriginalVendor(result.data); 
+        }
+      } catch (error) {
+        console.error("기존 정보 로드 실패:", error);
       }
-    } catch (error) {
-      console.error("마스터 데이터 로드 실패:", error);
     }
-  }
 
-  // 3. 파일 목록 및 모달 오픈
-  fetchVendorFiles(vendor.vendorCode);
-  setIsDetailModalOpen(true);
-};
-
+    fetchVendorFiles(vendor.vendorCode);
+    setIsDetailModalOpen(true);
+  };
 
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
@@ -488,53 +486,78 @@ export default function VendorPage() {
     setIsRejectModalOpen(true);
   };
   
-  /* 반려 확정 실행 함수 */
-const rejectVendor = async (reason: string, targets: Vendor[] = selectedVendors) => {
-  // 1. 사유 입력 여부 최종 체크
-  if (!reason.trim()) {
-    return alert("반려 사유를 입력해주세요.");
-  }
-  const updatedTargets = selectedVendors.map(v => ({
-    ...v,
-    rejectRemark: rejectReason, // 변수에 담긴 텍스트를 그대로 전달
-    status: 'R'
-  }));
+  /* 반려 확정 실행 함수 수정 */
+  const [attachedFiles, setAttachedFiles] = useState<AttFile[]>([]);
 
-  // 2. 진행 확인
+  // 체크 후 수정 버튼 클릭
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editVendorData, setEditVendorData] = useState<Vendor | null>(null);
+
+  // 1. 비교의 기준이 되는 현재 업체 신청 번호
+  const currentAskNum = String(selectedVendor?.askNum || '').trim();
+
+  // 2. 기존 마스터 파일: refNo가 현재 신청번호와 "다른" 모든 파일
+  const masterFiles = attachedFiles.filter(f => {
+    const fileRef = String(f.refNo || '').trim();
+    // 신청번호가 없거나, 현재 열려있는 신청건과 번호가 다르면 -> 기존 파일
+    return fileRef === '' || fileRef !== currentAskNum;
+  });
+
+  // 3. 이번 변경 요청 파일: refNo가 현재 신청번호와 "정확히 일치하는" 파일
+  const requestFiles = attachedFiles.filter(f => {
+    const fileRef = String(f.refNo || '').trim();
+    // 현재 신청번호와 똑같으면 -> 이번에 새로 추가된 파일
+    return fileRef !== '' && fileRef === currentAskNum;
+  });
+
+  const rejectVendor = async (reason: string, targets: Vendor[] = selectedVendors) => {
+  if (!reason.trim()) return alert("반려 사유를 입력해주세요.");
+
   if (!confirm(`선택한 ${targets.length}건을 정말 반려하시겠습니까?`)) return;
 
+  // 1. 서버 DTO 구조에 맞게 데이터 재구성
+  const updatedTargets = targets.map(v => {
+    // ⭐ 핵심 수정: f.askNum 대신 f.refNo를 사용하여 비교
+    // f.refNo가 현재 반려하려는 업체의 v.askNum과 같은 것만 필터링
+    const filesOnlyForThisRequest = attachedFiles
+      .filter(f => {
+        const fileRefNo = String(f.refNo || '').trim();
+        const vendorAskNum = String(v.askNum || '').trim();
+        
+        // 두 번호가 일치하는 파일(신규 파일)만 골라냅니다.
+        return fileRefNo !== '' && fileRefNo === vendorAskNum;
+      })
+      .map(f => f.fileNum);
+
+    return {
+      askNum: v.askNum,
+      vendorCode: v.vendorCode,
+      rejectRemark: reason,
+      status: 'R',
+      fileNums: filesOnlyForThisRequest // 👈 이제 '이번에 추가된 파일'의 PK만 정확히 전달됩니다.
+    };
+  });
+
   try {
-    // 1. API 요청 (사유와 대상 목록을 같이 전송)
     const response = await fetch(`/api/v1/vendors/reject`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // 서버에서 받기 편하도록 사유와 대상을 하나의 객체로 묶음
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedTargets),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '협력업체 반려에 실패했습니다.');
-    }
+    if (!response.ok) throw new Error('반려 처리 중 오류가 발생했습니다.');
 
-    // 2. 처리 성공 시 알림 및 상태 초기화
     alert('선택한 협력업체가 반려되었습니다.');
-
-    // 3. 후속 작업
-    setIsRejectModalOpen(false); // 반려 모달 닫기
-    setRejectReason('');        // 입력값 초기화
-    setSelectedVendors([]);     // 체크박스 선택 해제
-    fetchVendors();            // 목록 최신화
+    setIsRejectModalOpen(false);
+    setRejectReason('');
+    setSelectedVendors([]);
+    fetchVendors();
 
   } catch (error: any) {
-    // 4. 오류 처리
-    console.error("협력업체 반려 중 오류 발생:", error);
-    alert(error.message || '네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+    console.error("반려 에러:", error);
+    alert(error.message);
   }
 };
-
   /* 파일 첨부 */
  
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // 단일 파일에서 배열로 변경
@@ -586,7 +609,7 @@ const rejectVendor = async (reason: string, targets: Vendor[] = selectedVendors)
       }
   };
 
-  const [attachedFiles, setAttachedFiles] = useState<AttFile[]>([]);
+
 
 // 특정 업체의 파일 목록을 가져오는 함수
 const fetchVendorFiles = async (vendorCode: string) => {
@@ -647,10 +670,9 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
     }
   };
   /* 수정 */
-  // 체크 후 수정 버튼 클릭
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editVendorData, setEditVendorData] = useState<Vendor | null>(null);
+
   // 체크 후 수정 버튼 클릭 함수 업데이트
+  /* 수정 버튼 클릭 함수 수정 */
   const handleEditVendor = async () => {
     // 1. 한 건 선택 여부 체크
     if (selectedVendors.length !== 1) {
@@ -659,19 +681,24 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
 
     const vendor = selectedVendors[0];
 
-    // 2. 상태 체크
+    // 2. ⭐ [중요] 이전 데이터 싹 지우기 (잔상 및 로딩 오류 방지)
+    setEditVendorData(null);    // 기존 데이터 초기화
+    setAttachedFiles([]);      // 기존 파일 목록 초기화
+    setSelectedFiles([]);      // 새로 추가하려던 로컬 파일 초기화
+    
+    // 3. ⭐ [중요] 현재 작업 중인 코드를 Ref에 즉시 저장
+    latestVendorCodeRef.current = vendor.vendorCode;
+
+    // 4. 상태 체크
     if (vendor.status !== 'A' && vendor.status !== 'R') {
       return alert("승인(A) 또는 반려(R) 상태인 업체만 수정할 수 있습니다.");
     }
 
-    // 3. 데이터 세팅
-    setSelectedFiles([]); // 새 파일 목록 초기화
-    setEditVendorData({ ...vendor }); // 수정 데이터 세팅
-    
-    // [추가됨] 기존 파일 목록을 서버에서 가져오기
+    // 5. 새 데이터 세팅 및 파일 로드
+    setEditVendorData({ ...vendor }); 
     await fetchVendorFiles(vendor.vendorCode);
     
-    // 4. 모달 오픈
+    // 6. 모든 준비가 끝난 후 모달 오픈
     setIsEditModalOpen(true);
   };
   /* 협력사 정보 수정 요청 (변경/재신청) */
@@ -815,172 +842,111 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
       >
         {selectedVendor && (
           <div className="space-y-6">
-            {/* 1. 헤더 (업체명 + 뱃지) */}
-            <div className="flex items-center justify-between pb-4 border-b">
-              <div className="flex items-center gap-3">
-                <h3 className="text-xl font-bold text-gray-800">{selectedVendor.vendorName}</h3>
-                {getStatusBadge(selectedVendor.status)}
-              </div>
-              <div className="text-sm text-gray-500">
-                신청일: {selectedVendor.createdAt ? selectedVendor.createdAt.substring(0, 10) : '-'}
-              </div>
-            </div>
-
-            {/* 2. 반려 사유 (반려 상태일 때만 표시) */}
-            {selectedVendor.status === 'R' && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-bold text-red-700">⚠️ 반려 사유 안내</span>
-                </div>
-                <div className="text-sm text-red-600 bg-white p-3 rounded border border-red-100">
-                  {selectedVendor.rejectReason || '입력된 사유가 없습니다.'}
-                </div>
-              </div>
-            )}
-
-            {/* 3. 상세 정보 표시 영역 */}
+            
+            {/* [CASE 1] 변경 대기('C') 상태: 대조 폼 출력 */}
             {selectedVendor.status === 'C' ? (
-              /* ================================================= */
-              /* [CASE 1] 변경 대기(C) 상태: 변경 전/후 비교 뷰 */
-              /* ================================================= */
               <div className="space-y-4">
-                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-xs font-bold text-center">
-                  왼쪽(회색)은 기존 정보이며, 오른쪽(파란색)은 변경 요청된 정보입니다.
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-[11px] font-bold text-center">
+                  정보 변경 요청건입니다. 기존 마스터 정보와 비교하세요.
                 </div>
                 
-                {/* 비교 필드 정의 */}
                 {[
-                  { label: "협력사명", curr: originalVendor?.vendorName, orig: selectedVendor.vendorName },
-                  { label: "협력사명(영문)", curr: originalVendor?.vendorNameEng, orig: selectedVendor.vendorNameEng },
-                  { label: "사업형태", curr: originalVendor?.businessType === 'CORP' ? '법인' : '개인', orig: selectedVendor.businessType === 'CORP' ? '법인' : '개인' },
-                  { label: "사업자번호", curr: originalVendor?.businessNo, orig: selectedVendor.businessNo },
-                  { label: "대표자명", curr: originalVendor?.ceoName, orig: selectedVendor.ceoName },
-                  { label: "전화번호", curr: originalVendor?.tel, orig: selectedVendor.tel },
-                  { label: "팩스번호", curr: originalVendor?.fax, orig: selectedVendor.fax },
-                  { label: "이메일", curr: originalVendor?.email, orig: selectedVendor.email },
-                  { label: "설립일자", curr: originalVendor?.foundationDate, orig: selectedVendor.foundationDate },
-                  { label: "업종", curr: originalVendor?.industry, orig: selectedVendor.industry },
+                  { label: "협력사명", master: originalVendor?.vendorName, req: selectedVendor.vendorName },
+                  { label: "대표자명", master: originalVendor?.ceoName, req: selectedVendor.ceoName },
+                  { label: "사업자번호", master: originalVendor?.businessNo, req: selectedVendor.businessNo },
+                  { label: "전화번호", master: originalVendor?.tel, req: selectedVendor.tel },
+                  { label: "주소", master: originalVendor?.address, req: selectedVendor.address },
                 ].map((field, idx) => (
                   <div key={idx} className="grid grid-cols-2 gap-4 border-b pb-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-gray-400 font-bold">[기존 정보]</span>
-                      <Input label={field.label} value={field.orig || '데이터 없음'} readOnly className="bg-gray-100 text-gray-500" />
+                      <span className="text-[10px] text-gray-400 font-bold">기존 정보</span>
+                      <div className="p-2 bg-gray-100 text-gray-500 rounded text-xs border">{field.master || '데이터 없음'}</div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-blue-500 font-bold">[변경 요청]</span>
-                      <Input label={field.label} value={field.curr || '-'} readOnly className="bg-blue-50 border-blue-200 font-bold" />
+                      <span className="text-[10px] text-blue-500 font-bold">변경 요청</span>
+                      <div className="p-2 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200 font-bold">{field.req || '-'}</div>
                     </div>
                   </div>
                 ))}
-
-                {/* 주소 대조 */}
-                <div className="grid grid-cols-2 gap-4 border-b pb-2">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-gray-400 font-bold">[기존 주소]</span>
-                    <Input label="우편번호" value={selectedVendor.zipCode || ''} readOnly className="bg-gray-100 text-gray-500 mb-2" />
-                    <Input value={selectedVendor.address || ''} readOnly className="bg-gray-100 text-gray-500 mb-2" />
-                    <Input value={selectedVendor.addressDetail || ''} readOnly className="bg-gray-100 text-gray-500" />
+                {/* 변경 대기 시 파일 구분 출력 */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-slate-500">📌 기존 마스터 파일</span>
+                    {masterFiles.length > 0 ? masterFiles.map(f => (
+                      <div key={f.fileNum} className="flex justify-between p-2 bg-gray-50 border rounded text-[11px]">
+                        <span className="truncate flex-1 mr-2">{f.originName}</span>
+                        <button onClick={() => handleFileDownload(f.fileNum, f.originName)} className="text-blue-600 font-bold shrink-0">받기</button>
+                      </div>
+                    )) : <p className="text-[10px] text-gray-400 italic pl-1">파일 없음</p>}
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-blue-500 font-bold">[변경 주소]</span>
-                    <Input label="우편번호" value={originalVendor?.zipCode || ''} readOnly className="bg-blue-50 border-blue-200 font-bold mb-2" />
-                    <Input value={originalVendor?.address || ''} readOnly className="bg-blue-50 border-blue-200 font-bold mb-2" />
-                    <Input value={originalVendor?.addressDetail || ''} readOnly className="bg-blue-50 border-blue-200 font-bold" />
-                  </div>
-                </div>
-                
-                {/* 비고 대조 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-gray-400 font-bold">[기존 비고]</span>
-                    <Textarea value={selectedVendor.remark || ''} readOnly rows={2} className="bg-gray-100 text-gray-500" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-blue-500 font-bold">[변경 비고]</span>
-                    <Textarea value={originalVendor?.remark || ''} readOnly rows={2} className="bg-blue-50 border-blue-200 font-bold" />
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-blue-600">📎 신규 추가 파일</span>
+                    {requestFiles.length > 0 ? requestFiles.map(f => (
+                      <div key={f.fileNum} className="flex justify-between p-2 bg-blue-50 border border-blue-100 rounded text-[11px]">
+                        <span className="truncate flex-1 mr-2 text-blue-700 font-medium">{f.originName}</span>
+                        <button onClick={() => handleFileDownload(f.fileNum, f.originName)} className="text-blue-600 font-bold shrink-0">받기</button>
+                      </div>
+                    )) : <p className="text-[10px] text-blue-400 italic pl-1">파일 없음</p>}
                   </div>
                 </div>
               </div>
+              
             ) : (
-              /* ================================================= */
-              /* [CASE 2] 일반 상태(N, A, R): 전체 정보 상세 보기 */
-              /* ================================================= */
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">기본 정보</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input label="협력사코드" value={selectedVendor.vendorCode} readOnly className="bg-gray-100" />
-                    <Input label="협력사명" value={selectedVendor.vendorName} readOnly />
-                    <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly />
-                    <Input 
-                      label="사업형태" 
-                      value={selectedVendor.businessType === 'CORP' ? '법인' : selectedVendor.businessType === 'INDIVIDUAL' ? '개인' : '-'} 
-                      readOnly 
-                    />
-                    <Input label="사업자등록번호" value={selectedVendor.businessNo} readOnly />
-                    <Input label="대표자명" value={selectedVendor.ceoName} readOnly />
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">연락처 및 주소</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input label="전화번호" value={selectedVendor.tel || '-'} readOnly />
-                    <Input label="팩스번호" value={selectedVendor.fax || '-'} readOnly />
-                    <Input label="이메일" value={selectedVendor.email} readOnly />
-                    
-                    <div className="md:col-span-3 grid grid-cols-4 gap-4">
-                       <div className="col-span-1">
-                          <Input label="우편번호" value={selectedVendor.zipCode || '-'} readOnly />
-                       </div>
-                       <div className="col-span-3">
-                          <Input label="기본주소" value={selectedVendor.address || '-'} readOnly />
-                       </div>
-                       <div className="col-span-4">
-                          <Input label="상세주소" value={selectedVendor.addressDetail || '-'} readOnly />
-                       </div>
+              /* [CASE 2] 그 외 상태(승인 'A' 등): 최신 정보 상세 출력 */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-lg border border-slate-200">
+                {[
+                  { label: "협력사코드", value: selectedVendor.vendorCode },
+                  { label: "협력사명", value: selectedVendor.vendorName },
+                  { label: "사업자등록번호", value: selectedVendor.businessNo },
+                  { label: "대표자명", value: selectedVendor.ceoName },
+                  { label: "전화번호", value: selectedVendor.tel || '-' },
+                  { label: "이메일", value: selectedVendor.email },
+                  { label: "업종", value: selectedVendor.industry || '-' },
+                  { label: "설립일자", value: selectedVendor.foundationDate?.substring(0, 10) || '-' },
+                  { label: "주소", value: `${selectedVendor.address} ${selectedVendor.addressDetail || ''}`, full: true },
+                  { label: "비고", value: selectedVendor.remark || '-', full: true },
+                ].map((field, idx) => (
+                  <div key={idx} className={`flex flex-col gap-1 ${field.full ? 'md:col-span-2' : ''}`}>
+                    <span className="text-[11px] font-bold text-slate-500">{field.label}</span>
+                    <div className="p-2.5 bg-white rounded border border-slate-200 text-sm text-slate-800 font-medium">
+                      {field.value}
                     </div>
                   </div>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">기타 정보</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <Input label="설립일자" value={selectedVendor.foundationDate || '-'} readOnly />
-                     <Input label="업종" value={selectedVendor.industry || '-'} readOnly className="md:col-span-2" />
-                     <div className="md:col-span-3">
-                        <Textarea label="비고" value={selectedVendor.remark} readOnly rows={3} />
-                     </div>
-                  </div>
-                </div>
+                ))}
               </div>
             )}
 
-            {/* 4. 첨부파일 (공통) */}
-            <div className="pt-4 border-t">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                첨부파일
-              </label>
-              <div className="mt-2">
-                {attachedFiles.length > 0 ? (
-                  <ul className="space-y-2">
-                    {attachedFiles.map((file) => (
-                      <li key={file.fileNum} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700 font-medium">{file.originName}</span>
-                          <span className="text-xs text-gray-400">({(file.fileSize / 1024).toFixed(1)} KB)</span>
-                        </div>
-                        <Button variant="secondary" size="sm" onClick={() => handleFileDownload(file.fileNum, file.originName)}>
-                          다운로드
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : <div className="text-sm text-gray-400 italic p-2">첨부된 파일이 없습니다.</div>}
+            {/* [공통] 첨부파일 목록 섹션 */}
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-gray-700">📎 첨부된 증빙 서류</h4>
+                <span className="text-[11px] text-gray-400">총 {attachedFiles.length}건</span>
               </div>
+              
+              {attachedFiles.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {attachedFiles.map((file) => (
+                    <div key={file.fileNum} className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded shadow-sm">
+                      <div className="flex flex-col min-w-0 flex-1 mr-3">
+                        <span className="text-xs font-medium text-gray-700 truncate">{file.originName}</span>
+                        <span className="text-[10px] text-gray-400">{(file.fileSize / 1024).toFixed(1)} KB</span>
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="shrink-0 h-7 text-[10px]"
+                        onClick={() => handleFileDownload(file.fileNum, file.originName)}
+                      >
+                        다운로드
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed text-gray-400 text-xs">
+                  첨부된 파일이 없습니다.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1009,12 +975,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
 
             {/* 입력 폼 그리드 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input 
-                label="협력사코드" 
-                value={editVendorData.vendorCode} 
-                readOnly 
-                className="bg-gray-100" 
-              />
+              <Input label="협력사코드" value={editVendorData.vendorCode} readOnly className="bg-gray-100" />
               <Input 
                 label="협력사명" 
                 value={editVendorData.vendorName}
@@ -1038,12 +999,7 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                   { value: 'INDIVIDUAL', label: '개인' },
                 ]}
               />
-              <Input 
-                label="사업자등록번호" 
-                value={editVendorData.businessNo} 
-                readOnly 
-                className="bg-gray-100" 
-              />
+              <Input label="사업자등록번호" value={editVendorData.businessNo} readOnly className="bg-gray-100" />
               <Input 
                 label="대표자명" 
                 value={editVendorData.ceoName}
@@ -1053,23 +1009,13 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
 
               {/* 주소 필드 */}
               <div className="flex gap-2">
-                <Input 
-                    label="우편번호" 
-                    value={editVendorData.zipCode} 
-                    readOnly 
-                    required 
-                />
+                <Input label="우편번호" value={editVendorData.zipCode} readOnly required />
                 <div className="flex items-end">
                   <Button onClick={handleEditAddressSearch} variant="secondary" className="h-[42px]">검색</Button>
                 </div>
               </div>
               <div className="col-span-2">
-                <Input 
-                    label="주소" 
-                    value={editVendorData.address} 
-                    readOnly 
-                    required 
-                />
+                <Input label="주소" value={editVendorData.address} readOnly required />
               </div>
               <Input 
                 label="상세주소" 
@@ -1099,15 +1045,12 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
                 required 
               />
               
-              {/* [수정됨] 설립일자 (날짜 초기화 버그 수정) */}
               <DatePicker 
                 label="설립일자" 
-                // 값 표시: 시간이 포함되어 있을 수 있으므로 앞 10자리만 자름
                 value={(editVendorData.foundationDate || '').substring(0, 10)}
-                // 변경 핸들러: 함수형 업데이트 사용
                 onChange={(e: any) => {
-                    const newVal = (e && e.target) ? e.target.value : e;
-                    setEditVendorData(prev => prev ? ({...prev, foundationDate: newVal}) : null);
+                  const newVal = (e && e.target) ? e.target.value : e;
+                  setEditVendorData(prev => prev ? ({...prev, foundationDate: newVal}) : null);
                 }}
               />
               
@@ -1119,88 +1062,56 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
               />
             </div>
             
-            {/* 파일 관리 섹션 */}
+           {/* 수정 모달 내부 - 파일 관리 섹션 */}
             <div className="space-y-4 pt-4 border-t">
-              
-              {/* 1. 기존 업로드된 파일 목록 (보기 및 다운로드) */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">기존 첨부파일</label>
+                <label className="text-sm font-bold text-slate-700">
+                  저장된 파일 목록
+                </label>
+                
                 {attachedFiles.length > 0 ? (
-                  <ul className="space-y-2">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {attachedFiles.map((file) => (
-                      <li key={file.fileNum} className="flex items-center justify-between p-2 bg-blue-50/50 rounded-md border border-blue-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-blue-600">[기존]</span>
-                          <span className="text-sm text-gray-700">{file.originName}</span>
+                      <li 
+                        key={file.fileNum} 
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200 overflow-hidden"
+                      >
+                        <div className="flex flex-col min-w-0 flex-1 mr-3">
+                          <span className="text-xs text-gray-700 font-medium truncate">
+                            {file.originName}
+                          </span>
+                          <span className="text-[10px] text-gray-400">
+                            {(file.fileSize / 1024).toFixed(1)} KB
+                          </span>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => handleFileDownload(file.fileNum, file.originName)}>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="shrink-0 h-8 text-[11px]" 
+                          onClick={() => handleFileDownload(file.fileNum, file.originName)}
+                        >
                           다운로드
                         </Button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <div className="text-sm text-gray-400 italic">기존에 업로드된 파일이 없습니다.</div>
-                )}
-              </div>
-
-              {/* 2. 새로운 파일 추가 */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">파일 추가 (기존 파일은 유지됩니다)</label>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      type="button" 
-                      variant="secondary" 
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      파일 추가
-                    </Button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      className="hidden" 
-                      multiple 
-                      onChange={handleFileChange}
-                    />
+                  <div className="text-xs text-gray-400 italic py-4 bg-gray-50 rounded border border-dashed text-center">
+                    현재 저장된 파일이 없습니다.
                   </div>
-                  
-                  {/* 새로 선택된 파일 목록 */}
-                  {selectedFiles.length > 0 && (
-                    <ul className="bg-gray-50 border rounded-md divide-y divide-gray-200">
-                      {selectedFiles.map((file, index) => (
-                        <li key={index} className="flex items-center justify-between p-2 px-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-green-600">[신규]</span>
-                            <span className="text-sm text-gray-600 truncate max-w-[250px]">{file.name}</span>
-                            <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
             {/* 비고 (Remark) */}
             <div className="w-full">
-                <Textarea 
-                  label="수정 사유 / 비고" 
-                  value={editVendorData.remark || ''}
-                  onChange={(e) => setEditVendorData(prev => prev ? ({...prev, remark: e.target.value}) : null)}
-                  rows={3} 
-                  placeholder="정보 변경 사유 등을 입력하세요."
-                />
+              <Textarea 
+                label="수정 사유 / 비고" 
+                value={editVendorData.remark || ''}
+                onChange={(e) => setEditVendorData(prev => prev ? ({...prev, remark: e.target.value}) : null)}
+                rows={3} 
+                placeholder="정보 변경 사유 등을 입력하세요."
+              />
             </div>
           </div>
         )}
