@@ -30,6 +30,7 @@ public interface VendorUserMapper {
     // 1. 마스터 테이블 저장
     void insertUserVN_USER(VendorUserRegisterDto vendorUserRegisterDto);
 
+
     /* 수정 */
     // 1. 대기 테이블 업데이트
     void updateVNCH_USByAskUserNum(VendorUserUpdateDto vendorUserUpdateDto);

@@ -26,6 +26,7 @@ import { Router } from 'lucide-react';
 import { Category } from './TreeItem';
 import { Can } from '@/auth/Can';
 import { User } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ItemDetail{
   itemCode: string,

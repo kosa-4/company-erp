@@ -157,9 +157,15 @@ export default function VendorUserPage() {
 
     const user = selectedRows[0];
 
-    // 2. 상태 체크 (정상 'A' 또는 반려 'R'인 경우만 수정 가능)
-    if (user.status !== 'A' && user.status !== 'R') {
-      return alert("정상(A) 또는 반려(R) 상태인 사용자만 수정할 수 있습니다.");
+    // [수정됨] 2-1. 반려(R) 상태 체크: 수정 불가 처리
+    if (user.status === 'R') {
+      return alert("반려된 사용자는 수정이 불가능합니다.");
+    }
+
+    // [수정됨] 2-2. 상태 체크: 이제 '정상(A)' 상태만 수정 가능
+    // (기존에는 A와 R이 가능했으나, R은 위에서 막혔으므로 A만 허용)
+    if (user.status !== 'A') {
+      return alert("정상(A) 상태인 사용자만 수정할 수 있습니다.\n(신규/변경 신청 건은 승인 또는 반려 처리를 해주세요.)");
     }
 
     // 3. 데이터 복사 및 모달 오픈
