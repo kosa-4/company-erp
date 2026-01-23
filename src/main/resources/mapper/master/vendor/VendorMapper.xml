@@ -285,6 +285,9 @@
             <if test="remark != null and remark != ''">
                 RMK = #{remark},
             </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email}
+            </if>
         </set>
         WHERE
             VENDOR_CD = #{vendorCode}
@@ -358,6 +361,7 @@
                 V.TEL_NO AS tel,
                 V.PROGRESS_CD AS status,
                 V.RMK AS remark,
+                V.EMAIL AS email,
                 ROW_NUMBER() OVER (
                     PARTITION BY V.VENDOR_CD
                     ORDER BY V.REG_DATE DESC, V.ASK_NUM DESC
@@ -393,7 +397,8 @@
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
             V.PROGRESS_CD AS status,
-            RMK AS remark
+            RMK AS remark,
+            V.EMAIL AS email
         FROM
             VNGL V
         INNER JOIN
@@ -435,7 +440,8 @@
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
             PROGRESS_CD AS status,
-            RMK AS remark
+            RMK AS remark,
+            EMAIL AS email
         FROM
             VNCH
         WHERE
@@ -486,6 +492,9 @@
             </if>
             <if test="address != null and address != ''">
                 ADDR = #{address},
+            </if>
+            <if test="email != null and email != ''">
+                EMAIL = #{email},
             </if>
             <if test="remark != null and remark != ''">
                 RMK = #{remark},

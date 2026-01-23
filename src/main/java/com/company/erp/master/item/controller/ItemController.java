@@ -80,8 +80,10 @@ public class ItemController {
 
     // 품목 수정
     @PutMapping("/update")
-    public ApiResponse updateItem(@RequestBody ItemDetailDto itemDetailDto){
-        itemService.updateItem(itemDetailDto);
+    public ApiResponse updateItem(
+            @RequestBody ItemDetailDto itemDetailDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser){
+        itemService.updateItem(itemDetailDto, loginUser);
         return ApiResponse.ok("수정 완료");
     }
 

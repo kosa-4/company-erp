@@ -32,6 +32,9 @@ interface ItemDetail{
   itemName: string,
   itemNameEn: string,
   itemType: string,
+  categoryL: string,
+  categoryM: string,
+  categoryS: string, 
   spec: string,
   unit: string,
   unitPrice: number,
@@ -41,7 +44,8 @@ interface ItemDetail{
   createdAt: string,
   createdBy: string,
   remark: string,
-  editable: boolean
+  editable: boolean,
+  useYn: string
 }
 
 
@@ -71,10 +75,39 @@ export default function ItemPage() {
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // [추가] 1-4. 체크박스 선택 상태 관리
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // [추가] 전체 선택/해제 핸들러
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      // 현재 페이지의 모든 itemCode를 선택
+      const allIds = items.map((item) => item.itemCode);
+      setSelectedIds(allIds);
+    } else {
+      // 전체 해제
+      setSelectedIds([]);
+    }
+  };
+
+  // [추가] 개별 행 선택/해제 핸들러
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        // 이미 있으면 제거
+        return prev.filter((item) => item !== id);
+      } else {
+        // 없으면 추가
+        return [...prev, id];
+      }
+    });
+  };
   
   // 2. 품목 조회
   const fetchItems = async () => {
     setLoading(true);
+    setSelectedIds([]);
     try {
       
       // 2-1. searchParams에 입력된 page 값이 없을 시 1로 초기화
@@ -152,11 +185,36 @@ export default function ItemPage() {
 
   // 5. 컬럼 정의
   const columns: ColumnDef<ItemDetail>[] = [ // response 키와 일치 필요
+    {
+      key: 'selection', // 데이터에는 없는 키지만 컬럼 구분을 위해 지정
+      header: (
+        <input
+          type="checkbox"
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          // 데이터가 있고, 선택된 개수와 전체 개수가 같으면 체크
+          checked={items.length > 0 && selectedIds.length === items.length}
+          onChange={handleSelectAll}
+        />
+      ),
+      width: 5,
+      align: 'center',
+      render: (_, row) => ( // 두 번째 인자로 row 데이터가 들어온다고 가정
+        <div onClick={(e) => e.stopPropagation()}> 
+          {/* 부모인 RowClick 이벤트 전파 방지 */}
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            checked={selectedIds.includes(row.itemCode)}
+            onChange={() => handleSelectRow(row.itemCode)}
+          />
+        </div>
+      ),
+    },
     
     {
       key: 'itemCode',
       header: '품목코드',
-      width: 80,
+      width: 15,
       align: 'center',
       render: (value) => (
         <span className="text-blue-600 hover:underline cursor-pointer font-medium">
@@ -211,26 +269,46 @@ export default function ItemPage() {
 
   /* 품목 상세 정보 */
 
-  // 1. 행 클릭 시 실행
   const handleRowClick = async (item: ItemDetail) => {
-  // DataGrid 내부에서 map을 사용해 전달한 data를 쪼개서 각 row에 입력
-  // onRowClick?: (row: T) => void; 함수에 담아 실행
-    try{
-      // 1-1. 품목 코드 추출
-      const code = item.itemCode;
-      
-      // 1-2. 품목 상세 데이터 요청
-      const response = await fetch(`/api/v1/items/${code}`)
-      
-      // 1-3. 네트워크 오류 체크
-      if(!response.ok) throw new Error("서버 응답 오류");
+  setIsEditMode(false);
   
+  try {
+    const code = item.itemCode;
+    const response = await fetch(`/api/v1/items/${code}`);
+    if (!response.ok) throw new Error("서버 응답 오류");
+
+    const data = await response.json();
+    setSelectedItem(data);
+
+    // [핵심] selectedPath 배열을 UI 순서에 맞춰 강제로 생성합니다.
+    // index 0: 품목 분류, index 1: 대분류, index 2: 중분류, index 3: 소분류
+    const newPath:any = [
+      { itemClsNm: data.itemType || '' },     // index 0 (품목 분류)
+      { itemClsNm: data.categoryL || '' },    // index 1 (대분류)
+      { itemClsNm: data.categoryM || '' },    // index 2 (중분류)
+      { itemClsNm: data.categoryS || '' }     // index 3 (소분류)
+    ];
+
+    setSelectedPath(newPath);
+    setIsDetailModalOpen(true);
+
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+    alert("상세 정보를 조회할 수 없습니다.");
+  }
+};
+  
+
+  const fetchDetailItem = async (code: string) => {
+    try {
+      const response = await fetch(`/api/v1/items/${code}`);
+      if (!response.ok) throw new Error("서버 응답 오류");
+
       const data = await response.json();
-      
-      // 1-4. 데이터 상태 저장 및 모달 오픈
       setSelectedItem(data);
-      setIsDetailModalOpen(true);     
-    } catch(error){
+      setOriginalItem(data); // 원본 데이터 복사본 저장
+      setIsDetailModalOpen(true);
+    } catch (error) {
       console.error("데이터를 가져오는 중 오류 발생:", error);
       alert("데이터 로드에 실패했습니다.");
     }
@@ -287,6 +365,8 @@ export default function ItemPage() {
   };
 
   /* 수정 */
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [originalItem, setOriginalItem] = useState<ItemDetail | null>(null);
 
   // 1. 품목 수정
   const updateItem = async () => {
@@ -296,8 +376,22 @@ export default function ItemPage() {
       return
     }
     // 1-2. form 데이터 저장
-    const formData = new FormData(saveForm.current);    
+    const formData = new FormData(saveForm.current);
+    const currentData = Object.fromEntries(formData.entries()); 
     const data = Object.fromEntries(formData.entries());
+    delete data.createdAt; // createdAt를 서버로 보내지 않음
+
+    // 변경 여부 체크 (중요한 필드들만 비교)
+    const isChanged = 
+      currentData.itemName !== originalItem?.itemName ||
+      currentData.itemNameEn !== originalItem?.itemNameEn ||
+      currentData.remark !== originalItem?.remark ||
+      currentData.useYn !== originalItem?.useYn
+
+    if (!isChanged) {
+      alert("수정된 내용이 없습니다.");
+      return; // 함수 종료 (서버에 요청 안 보냄)
+    }
     
     try{
       // 2-3. form 데이터 전송
@@ -323,6 +417,23 @@ export default function ItemPage() {
       console.error("데이터 수정 중 오류 발생:", error);
     }
   }
+
+  // 2. 수정 버튼
+  const handleEditButton = () => {
+    // 1. 선택된 항목 개수 확인
+    if (selectedIds.length === 0) {
+      alert("수정할 품목을 선택해주세요.");
+      return;
+    }
+    if (selectedIds.length > 1) {
+      alert("수정은 한 번에 하나의 품목만 가능합니다.");
+      return;
+    }
+
+    setIsEditMode(true); // 수정 모드로 설정
+    // 2. 선택된 1개의 ID로 상세 조회 및 모달 오픈
+    fetchDetailItem(selectedIds[0]);
+  };
   
   /* 카테고리 영역 */
 
@@ -488,10 +599,17 @@ export default function ItemPage() {
         padding={false}
         actions={
             <Can roles={['ADMIN','BUYER']}>
+              {/* [신규] 수정 버튼: 등록 버튼 옆에 생성 */}
+              <Button 
+                variant="secondary" // 등록(Primary)과 구분하기 위해 secondary 사용 추천
+                onClick={handleEditButton}
+                // 선택된 항목이 없으면 비활성화
+                disabled={selectedIds.length === 0} 
+              >
+
+                수정
+              </Button>
               <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
                 등록
               </Button>
             </Can>
@@ -509,42 +627,185 @@ export default function ItemPage() {
         />        
       </Card>
 
-      {/* 상세/수정 모달 */}
+      {/* [수정됨] 상세/수정 모달 */}
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title="품목 상세"
+        // 모드에 따라 타이틀 변경 (선택사항)
+        title={isEditMode ? "품목 수정" : "품목 상세"}
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-            <Can roles={['ADMIN', 'BUYER']}>
-              <Button variant="primary" onClick={updateItem}>수정</Button>
-            </Can>
+            <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>
+              {isEditMode ? "취소" : "닫기"}
+            </Button>
+            
+            {/* 수정 모드일 때만 저장(수정) 버튼 노출 */}
+            {isEditMode && (
+              <Can roles={['ADMIN', 'BUYER']}>
+                <Button variant="primary" onClick={updateItem}>저장</Button>
+              </Can>
+            )}
           </>
         }
       >
-        
         {selectedItem && (
-
-          <form ref={saveForm}>
+          <form ref={saveForm} key={selectedItem.itemCode}>
             <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">               
-                  <Input name='itemCode' label="품목코드" value={selectedItem.itemCode} readOnly />
-                  <Input name='itemName' label="품목명" defaultValue={selectedItem.itemName || ''} />
-                  <Input name='itemNameEn' label="품목명(영문)" defaultValue={selectedItem.itemNameEn || ''} />
-                  <Input name='itemType'label="품목 종류" value={selectedItem.itemType || ''} readOnly/>
-                  
-                  <Input name='spec' label="규격" value={selectedItem.spec || ''} readOnly/>
-                  <Input name='unit' label="단위" value={selectedItem.unit || ''} readOnly/>
-                  
-                  {/* <Input label="제조사코드" value={selectedItem.manufacturerCode || ''} readOnly/> */}
-                  <Input name='manufacturerName' label="제조사명" value={selectedItem.manufacturerName || ''} readOnly/>
-                  <Input name='modelNo' label="제조모델번호" value={selectedItem.modelNo || ''} readOnly/>
-                  <Input name='createdAt' label="등록일자" value={selectedItem.createdAt ? selectedItem.createdAt.substring(0, 10) : ""} readOnly />
-                  <Input name='createdBy' label="등록자" value={selectedItem.createdBy} readOnly />
+              <div className="grid grid-cols-2 gap-4">
+                
+                {/* 1. 품목코드 (수정 불가) */}
+                <Input 
+                  name='itemCode' 
+                  label="품목코드" 
+                  value={selectedItem.itemCode} 
+                  readOnly={true} 
+                />
+
+                {/* 2. 품목명 (수정 가능) */}
+                <Input 
+                  name='itemName' 
+                  label="품목명" 
+                  defaultValue={selectedItem.itemName || ''} 
+                  readOnly={!isEditMode}
+                  required // 필수값 표시
+                />
+
+                {/* 3. 영문 품목명 (수정 가능) */}
+                <Input 
+                  name='itemNameEn' 
+                  label="품목명(영문)" 
+                  defaultValue={selectedItem.itemNameEn || ''} 
+                  readOnly={!isEditMode} 
+                />
+
+                {/* 4. 품목 분류 (수정 모드일 때만 클릭 가능) */}
+                {/* 로직: 새로 선택한 경로가 있으면 그걸 보여주고(selectedPath), 없으면 기존 DB값(selectedItem) 보여줌 */}
+                <Input 
+                  name='itemType' 
+                  label="품목 분류" 
+                  placeholder="품목 분류" 
+                  value={selectedPath[0] ? selectedPath[0].itemClsNm : ''}
+                  readOnly={true} // 직접 타이핑 방지 (모달 선택 방식이므로)
+                />
+
+                {/* 5. 대/중/소분류 (자동 입력 필드) */}
+                {/* 주의: 상세 조회 시 서버에서 대/중/소분류 명칭을 따로 안 주면 빈카드로 나올 수 있음. 
+                    수정 시에는 selectedPath 값으로 채워짐 */}
+                <Input 
+                  name='categoryL' 
+                  label="품목 대분류" 
+                  placeholder="품목 대분류"
+                  value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
+                  readOnly={true}
+                />
+                <Input 
+                  name='categoryM' 
+                  label="품목 중분류" 
+                  placeholder="품목 중분류"
+                  value={selectedPath[2] ? selectedPath[2].itemClsNm : ''} 
+                  readOnly={true}
+                />
+                <Input 
+                  name='categoryS' 
+                  label="품목 소분류" 
+                  placeholder="품목 소분류"
+                  value={selectedPath[3] ? selectedPath[3].itemClsNm : ''} 
+                  readOnly={true}
+                />
+
+                {/* 6. 등록일자 (수정 불가) */}
+                <Input 
+                  name='createdAt' 
+                  label="등록 일자" 
+                  value={selectedItem.createdAt ? selectedItem.createdAt.substring(0, 10) : ""} 
+                  readOnly={true}
+                />
+
+                {/* 7. 규격 (수정 불가) */}
+                <Input 
+                  name='spec' 
+                  label="규격" 
+                  defaultValue={selectedItem.spec || ''} 
+                  readOnly={true} 
+                />
+
+                {/* 8. 단위 (Select 박스, 수정 불가) */}
+                <Select
+                  name='unit'
+                  label="단위"
+                  placeholder="선택"
+                  defaultValue={selectedItem.unit || ''} // 기존 값 선택
+                  disabled={true} // 수정 모드 아닐 땐 비활성화
+                  required
+                  options={[
+                    { value: 'EA', label: 'EA (개)' },
+                    { value: 'SET', label: 'SET (세트)' },
+                    { value: 'BOX', label: 'BOX (박스)' },
+                  ]}
+                />
+
+                {/* 9. 제조사명 (수정 불가) */}
+                <Input 
+                  name='manufacturerName' 
+                  label="제조사명" 
+                  defaultValue={selectedItem.manufacturerName || ''} 
+                  readOnly={true} 
+                />
+
+                {/* 10. 모델번호 (수정 불가) */}
+                <Input 
+                  name='modelNo' 
+                  label="제조모델번호" 
+                  defaultValue={selectedItem.modelNo || ''} 
+                  readOnly={true} 
+                />
+
+                {/* 11. 등록자 (수정 불가) */}
+                <Input 
+                  name='createdBy' 
+                  label="등록자" 
+                  value={selectedItem.createdBy || ''} 
+                  readOnly={true} 
+                />
+              </div>
+              {/* 12. 사용 여부 필드 */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700">사용 여부</label>
+                <div className="flex items-center gap-6 h-10"> {/* 높이를 Input과 맞춤 */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="useYn"
+                      value="Y"
+                      defaultChecked={selectedItem.useYn === 'Y'}
+                      disabled={!isEditMode}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                    />
+                    <span className={`text-sm ${!isEditMode ? 'text-gray-500' : 'text-gray-900'}`}>사용</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="useYn"
+                      value="N"
+                      defaultChecked={selectedItem.useYn === 'N'}
+                      disabled={!isEditMode}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                    />
+                    <span className={`text-sm ${!isEditMode ? 'text-gray-500' : 'text-gray-900'}`}>미사용</span>
+                  </label>
                 </div>
-                <Textarea name='remark' label="비고" defaultValue={selectedItem.remark || ''} rows={3}/>
+              </div>
+
+              {/* 13. 비고 (수정 가능) */}
+              <Textarea 
+                name='remark' 
+                label="비고" 
+                defaultValue={selectedItem.remark || ''} 
+                rows={3} 
+                readOnly={!isEditMode} 
+              />
             </div>
           </form>
         )}
@@ -571,7 +832,7 @@ export default function ItemPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               
-              <Input name='itemCode' label="품목코드" value="-" readOnly />
+              <Input name='itemCode' label="품목코드" value="-" readOnly disabled/>
               <Input name='itemName' label="품목명" placeholder="품목명 입력" required />
               <Input name='itemNameEn' label="품목명(영문)" placeholder="영문 품목명 입력" />              
               <Input 
@@ -601,7 +862,7 @@ export default function ItemPage() {
               placeholder="품목 소분류 입력" 
               value={selectedPath[3] ? selectedPath[3].itemClsNm : ''}  
               readOnly/>
-              <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/>
+              {/* <Input name='createdAt' label="등록 일자" placeholder="등록 일자" readOnly/> */}
               <Input name='spec' label="규격" placeholder="규격 입력" />
               <Select
                 name='unit'
@@ -616,9 +877,9 @@ export default function ItemPage() {
               />              
               <Input name='manufacturerName' label="제조사명" placeholder="제조사명 입력" />
               <Input name='modelNo' label="제조모델번호" placeholder="모델번호 입력" />
-              <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/>
+              {/* <Input name='createdBy' label="등록자" placeholder="등록자 입력" readOnly/> */}
             </div>
-            <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} readOnly/>
+            {/* <Textarea name='stopReason' label="중지 사유" placeholder="중지 사유" rows={3} readOnly/> */}
             <Textarea name='remark' label="비고" placeholder="비고 입력" rows={3} />
           </div>
         </form>
