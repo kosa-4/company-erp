@@ -118,10 +118,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
     try {
       if (formData.password !== formData.passwordConfirm) {
-        const msg = '비밀번호가 일치하지 않습니다.';
-        setError(msg);
-        toast.error(msg);
-        return;
+        throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
       const response = await fetch('/api/v1/signup', {

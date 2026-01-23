@@ -60,6 +60,9 @@ export default function LandingPage() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 모달이 열려 있으면 키보드 네비게이션 비활성화
+      if (isAuthModalOpen) return;
+
       if (e.key === 'ArrowRight' || e.key === ' ') {
         setCurrentSlide(prev => Math.min(prev + 1, TOTAL_SLIDES - 1));
       } else if (e.key === 'ArrowLeft') {
@@ -69,7 +72,7 @@ export default function LandingPage() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isAuthModalOpen]);
 
   const nextSlide = () => setCurrentSlide(prev => Math.min(prev + 1, TOTAL_SLIDES - 1));
   const prevSlide = () => setCurrentSlide(prev => Math.max(prev - 1, 0));
