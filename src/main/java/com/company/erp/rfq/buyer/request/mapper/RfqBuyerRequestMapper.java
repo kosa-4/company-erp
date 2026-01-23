@@ -25,7 +25,7 @@ public interface RfqBuyerRequestMapper {
         List<Integer> selectPrItemLineNos(@Param("prNum") String prNum);
 
         // [신규] PR 기반 초기화 데이터 조회
-        RfqDetailResponse.Header selectRfqInitHeader(@Param("prNum") String prNum);
+        RfqDetailResponse.Header selectRfqInitHeader(@Param("prNum") String prNum, @Param("ctrlUserId") String ctrlUserId);
 
         List<RfqDetailResponse.Item> selectRfqInitItems(@Param("prNum") String prNum);
 

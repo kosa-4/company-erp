@@ -61,8 +61,8 @@
                c.CODE_NAME AS pcTypeNm,
                NULL      AS reqCloseDate,
                NULL      AS rmk,
-               NULL      AS ctrlUserId,
-               NULL      AS ctrlUserNm
+               #{ctrlUserId}      AS ctrlUserId,
+               (SELECT b.USER_NM FROM by_user b WHERE b.USER_ID = #{ctrlUserId})   AS ctrlUserNm
         FROM PRHD h
         JOIN CODD c
           ON c.CODE = h.PC_TYPE
@@ -113,10 +113,19 @@
     </insert>
 
     <!-- 6. 저장: Header 수정 (2중 방어 - 상태 + Owner 체크) -->
-    <update id="updateRfqHeader"> UPDATE RFQHD SET RFQ_SUBJECT = #{req.rfqSubject}, RFQ_TYPE =
-        #{req.rfqType}, REQ_CLOSE_DATE = #{req.reqCloseDate}, RMK = #{req.rmk}, MOD_DATE = NOW(),
-        MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{req.rfqNum} AND PROGRESS_CD = 'T' AND
-        CTRL_USER_ID = #{loginUserId} AND DEL_FLAG = 'N' </update>
+    <update id="updateRfqHeader">
+        UPDATE RFQHD
+        SET RFQ_SUBJECT    = #{req.rfqSubject},
+            RFQ_TYPE       = #{req.rfqType},
+            REQ_CLOSE_DATE = #{req.reqCloseDate},
+            RMK            = #{req.rmk},
+            MOD_DATE       = NOW(),
+            MOD_USER_ID    = #{loginUserId},
+            CTRL_USER_ID    = #{loginUserId}
+        WHERE RFQ_NUM = #{req.rfqNum}
+          AND PROGRESS_CD = 'T'
+          AND DEL_FLAG = 'N'
+        </update>
 
     <!-- 6. 저장: Items 동기화 (물리 삭제) -->
     <delete id="deleteRfqItems"> DELETE FROM RFQDT WHERE RFQ_NUM = #{rfqNum} </delete>
@@ -139,9 +148,17 @@
     </insert>
 
     <!-- 8. 전송: Header 상태 전환 (T -> RFQS) -->
-    <update id="updateRfqStatusToSend"> UPDATE RFQHD SET PROGRESS_CD = 'RFQS', RFQ_DATE = NOW(),
-        MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD =
-        'T' AND DEL_FLAG = 'N' AND CTRL_USER_ID = #{loginUserId} </update>
+    <update id="updateRfqStatusToSend">
+        UPDATE RFQHD
+        SET PROGRESS_CD = 'RFQS',
+            RFQ_DATE    = NOW(),
+            MOD_DATE    = NOW(),
+            MOD_USER_ID = #{loginUserId},
+            CTRL_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND PROGRESS_CD = 'T'
+          AND DEL_FLAG = 'N'
+        </update>
 
     <!-- 9. 전송: Vendor 상태 전환 (T -> RFQS) -->
     <update id="updateRfqVendorsStatusToSend"> UPDATE RFQVN SET PROGRESS_CD = 'RFQS', SEND_DATE =

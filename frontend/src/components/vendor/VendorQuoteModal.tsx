@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Send, X, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
-import { Modal, Card, Button, Input } from '@/components/ui';
+import { Modal, Card, Button, Input, DatePicker } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { formatNumber } from '@/lib/utils';
 
@@ -277,8 +277,13 @@ export default function VendorQuoteModal({
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
                         {formatNumber(item.quoteAmt)}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-600">
-                        {item.delyDate || '-'}
+                      <td className="px-4 py-3">
+                        <DatePicker
+                          value={item.delyDate || ''}
+                          onChange={(e) =>
+                            handleItemChange(item.lineNo, 'delyDate', e.target.value)
+                          }
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <Input

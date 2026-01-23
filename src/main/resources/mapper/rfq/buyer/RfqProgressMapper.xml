@@ -53,12 +53,20 @@
         u.USER_NM LIKE CONCAT('%', #{req.ctrlUserNm}, '%') </if> ORDER BY h.REG_DATE DESC,
         v.VENDOR_CD ASC </select>
 
-    <update id="updateRfqStatus"> UPDATE RFQHD SET PROGRESS_CD = #{statusCd}, MOD_DATE = NOW(),
-        MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND DEL_FLAG = 'N' AND CTRL_USER_ID =
-        #{loginUserId} <if
-            test='statusCd == "RFQS"'> AND PROGRESS_CD = 'T' </if>
-          <if
-            test='statusCd == "M"'> AND PROGRESS_CD IN ('RFQS', 'RFQC') </if>
+    <update id="updateRfqStatus">
+        UPDATE RFQHD
+        SET PROGRESS_CD = #{statusCd},
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{loginUserId},
+            CTRL_USER_ID = #{loginUserId}
+        WHERE RFQ_NUM = #{rfqNum}
+          AND DEL_FLAG = 'N'
+        <if
+                test='statusCd == "RFQS"'>AND PROGRESS_CD = 'T'
+        </if>
+        <if
+                test='statusCd == "M"'>AND PROGRESS_CD IN ('RFQS', 'RFQC')
+        </if>
     </update>
 
     <update id="updateAllVendorStatus"> UPDATE RFQVN SET PROGRESS_CD = #{statusCd}, <if

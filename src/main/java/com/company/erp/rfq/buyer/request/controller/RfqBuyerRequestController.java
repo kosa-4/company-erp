@@ -43,8 +43,9 @@ public class RfqBuyerRequestController {
      * PR 기반 견적 초안 데이터 조회
      */
     @GetMapping("/init/{prNum}")
-    public ResponseEntity<ApiResponse<RfqDetailResponse>> getRfqInit(@PathVariable String prNum) {
-        return ResponseEntity.ok(ApiResponse.ok(service.getRfqInitFromPr(prNum)));
+    public ResponseEntity<ApiResponse<RfqDetailResponse>> getRfqInit(@PathVariable String prNum, HttpSession session) {
+        String userId = loginUserId(session);
+        return ResponseEntity.ok(ApiResponse.ok(service.getRfqInitFromPr(prNum, userId)));
     }
 
     /**

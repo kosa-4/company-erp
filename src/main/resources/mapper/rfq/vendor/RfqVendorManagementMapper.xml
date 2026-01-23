@@ -37,7 +37,7 @@
             v.SELECT_YN as selectYn,
             (SELECT COUNT(*) FROM rfqdt WHERE RFQ_NUM = h.RFQ_NUM AND DEL_FLAG = 'N') as itemCount
         FROM rfqhd h
-        INNER JOIN rfqvn v ON h.RFQ_NUM = v.RFQ_NUM
+        JOIN rfqvn v ON h.RFQ_NUM = v.RFQ_NUM
         WHERE v.VENDOR_CD = #{vendorCd}
           AND h.DEL_FLAG = 'N'
           AND v.DEL_FLAG = 'N'
