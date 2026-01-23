@@ -21,12 +21,20 @@ public class ItemService {
     DocNumService docNumService;
 
     /* 조회 */
-    public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto) {
-        // 1. 총 품목 수 계산
+    public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto, String loginId) {
+
+        // 1. 날짜 형식 변환
+        if(searchDto.getDate() != null){
+            LocalDateTime start = searchDto.getDate().atStartOfDay();
+            LocalDateTime end = searchDto.getDate().atTime(23, 59, 59);
+            searchDto.setStartDate(start);
+            searchDto.setEndDate(end);
+        }
+        // 2. 총 품목 수 계산
         int totalCount = itemMapper.countItemList(searchDto);
-        // 2. 총 페이지 계산
+        // 3. 총 페이지 계산
         int totalPage = (int)Math.ceil((double) totalCount / searchDto.getPageSize());
-        // 3. Dto 반환
+        // 4. Dto 반환
         return new ItemResponseDto<ItemDetailDto>(
                 itemMapper.selectItemList(searchDto),
                 searchDto.getPage(),
@@ -62,12 +70,12 @@ public class ItemService {
         // 2-3. 품목 마스터 등록
         itemMapper.insertItemMTGL(itemDetailDto);
         // 2-4. 품목 카테고리 등록
-//        itemMapper.insertItemMTGC(itemDetailDto);
+        itemMapper.insertItemMTGC(itemDetailDto);
     }
 
     /* 수정 */
     @Transactional
-    public void updateItem(ItemDetailDto itemDetailDto) {
+    public void updateItem(ItemDetailDto itemDetailDto, SessionUser loginUser) {
         // 품목 존재 여부 확인
         ItemDetailDto item = itemMapper.selectItemByCode(itemDetailDto.getItemCode());
         if(item == null){
@@ -79,6 +87,8 @@ public class ItemService {
         if("A".equals(status)){
             throw new IllegalStateException("승인 완료된 품목으로 수정이 불가합니다.");
         }
+        itemDetailDto.setModifiedAt(LocalDateTime.now());
+        itemDetailDto.setModifiedBy(loginUser.getUserId());
         
         // 업데이트
         itemMapper.updateItem(itemDetailDto);

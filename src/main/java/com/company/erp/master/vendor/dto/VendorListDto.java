@@ -24,9 +24,11 @@ public class VendorListDto {
     private String zipCode;
     private String tel;
     private String fax;
+    private String email;
     private String remark;
     private LocalDate foundationDate;
     private boolean editable;
+    private String rejectReason;
 }
 
 /*

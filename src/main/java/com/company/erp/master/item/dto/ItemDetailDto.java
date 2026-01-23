@@ -29,7 +29,7 @@ public class ItemDetailDto{
     private String categoryM; // 중분류
     private String categoryS; // 소분류
     private int unitPrice;
-    private String deleteYn;
+
 }
 /*
     ITEM_CD	품목번호	VARCHAR2(50)	PRIMARY KEY

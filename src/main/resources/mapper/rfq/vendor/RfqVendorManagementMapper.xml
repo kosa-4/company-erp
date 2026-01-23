@@ -48,11 +48,9 @@
             <if test="search.progressCd != null and search.progressCd != ''">
                 AND v.PROGRESS_CD = #{search.progressCd}
             </if>
-            <if test="search.startDate != null and search.startDate != ''">
-                AND h.RFQ_DATE >= #{search.startDate}
-            </if>
-            <if test="search.endDate != null and search.endDate != ''">
-                AND h.RFQ_DATE &lt;= #{search.endDate}
+            <if test="search.reqCloseDate != null and search.reqCloseDate != ''">
+                AND h.REQ_CLOSE_DATE &gt;= CONCAT(#{search.reqCloseDate}, ' 00:00:00')
+                AND h.REQ_CLOSE_DATE &lt;= CONCAT(#{search.reqCloseDate}, ' 23:59:59')
             </if>
         </if>
         ORDER BY h.RFQ_DATE DESC, h.RFQ_NUM DESC

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Building2, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +40,7 @@ interface VendorFormData {
   industry: string;
   userName: string;
   userId: string;
-  userEmail: string;
+  email: string;
   password: string;
   passwordConfirm: string;
 }
@@ -69,7 +69,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     industry: '',
     userName: '',
     userId: '',
-    userEmail: '',
+    email: '',
     password: '',
     passwordConfirm: '',
   });
@@ -96,31 +96,122 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }
   };
 
-  const handleSignup = async () => {
-    try{
-      const response = await fetch('/api/v1/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      console.log('Signup response:', formData);
-      if (!response.ok) {
-        let errorMessage = '회원가입에 실패했습니다.';
-        try {
-         const errorData = await response.json();
-         errorMessage = errorData.message || errorMessage;
-       } catch {
-         // JSON 파싱 실패 시 기본 메시지 사용
-       }
-       throw new Error(errorMessage);
+  
+   // 파일 첨부
+  // 1. 파일 관련 상태 및 Ref 추가
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 2. 파일 핸들러
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...filesArray]); // 파일 누적
+      e.target.value = '';
+    }
+  };
+  // 특정 파일 제거 기능
+  const removeFile = (index: number) => {
+    // 인덱스가 일치하지 않는 파일들만 걸러서(filter) 새로운 배열로 세팅
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault(); // 폼 제출 시 새로고침 방지
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 0. 비밀번호 확인
+      if (formData.password !== formData.passwordConfirm) {
+        throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
-      alert('회원가입이 완료되었습니다.');
+      // --- [STEP 1] 회원가입 데이터 전송 (JSON) ---
+      // 결과값으로 백엔드가 생성한 vendorCode(VN...)를 받습니다.
+      const response = await fetch('/api/v1/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      // 1. 일단 무조건 텍스트로 받습니다.
+      const resultText = await response.text();
+
+      // 2. 에러가 났을 때만! 텍스트를 JSON으로 바꿔서 메시지를 깹니다.
+      if (!response.ok) {
+        let serverMsg = resultText;
+        try {
+          // 이 안에서만 JSON 파싱을 합니다.
+          const errorJson = JSON.parse(resultText);
+          // 상세 에러(data)가 있으면 그거 쓰고, 없으면 기본 메시지(message)
+          serverMsg = errorJson.data ? Object.values(errorJson.data)[0] : errorJson.message;
+        } catch {
+          // JSON이 아니면 원문 유지
+        }
+        throw new Error(serverMsg);
+      }
+
+      // 3. 여기까지 내려왔으면 성공입니다. resultText가 바로 코드입니다.
+      const generatedVendorCode = resultText.trim();
+      if (!generatedVendorCode) {
+        throw new Error('업체코드를 확인할 수 없습니다.');
+      }
+
+      // --- [STEP 2] 파일이 있으면 업로드 실행 ---
+      let fileUploadFailed = false;
+      if (selectedFiles.length > 0 && generatedVendorCode) {
+        try {
+          const fileFormData = new FormData();
+          
+          // 백엔드 @RequestPart("file") 키값과 일치시킴
+          selectedFiles.forEach(file => {
+            fileFormData.append('file', file);
+          });
+
+          // URL 경로에 vendorCode를 넣어서 전송 (백엔드 @PathVariable 매칭)
+          const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
+            method: 'POST',
+            body: fileFormData, // Content-Type 헤더는 브라우저가 자동 생성하게 둡니다.
+          });
+
+          if (!fileRes.ok) {
+            throw new Error('서류 업로드 중 오류가 발생했습니다.');
+          }
+        } catch (fileErr: any) {
+          // 가입은 성공했으나 파일만 실패한 경우
+          console.error('파일 업로드 오류:', fileErr);
+          alert('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+          fileUploadFailed = true;
+        }
+      }
+
+      // --- [STEP 3] 최종 완료 ---
+      // 파일 업로드 실패 알림과 중복되지 않도록 조건부 알림
+      if (!fileUploadFailed) {
+        alert(`회원가입 신청이 완료되었습니다.\n업체코드: ${generatedVendorCode}`);
+      }
+      
+      // 상태 초기화
+      setFormData({
+        vendorName: '', vendorNameEn: '', businessType: '', businessNo: '',
+        ceoName: '', zipCode: '', address: '', addressDetail: '',
+        phone: '', industry: '', userName: '', userId: '',
+        email: '', password: '', passwordConfirm: '',
+      });
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // 로그인 화면으로 전환
       onSwitchMode('login');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+
+    } catch (err: any) {
+      setError(err.message);
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -151,6 +242,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       }
     }).open();
   };
+
+ 
 
   const inputClassName = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent block p-2.5 transition-all outline-none";
   const labelClassName = "block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
@@ -364,6 +457,57 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     />
                   </div>
                 </div>
+                {/* 증빙 서류 첨부 섹션 */}
+                <div className="space-y-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <label className="text-sm font-medium text-slate-700">첨부파일 (다중 선택 가능)</label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-4">
+                      {/* 1. 파일 선택 버튼 (VendorPage 스타일) */}
+                      <button 
+                        type="button" 
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded-md transition-colors font-medium"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        파일 추가
+                      </button>
+
+                      {/* 2. 숨겨진 Input */}
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        className="hidden" 
+                        multiple 
+                        onChange={handleFileChange}
+                      />
+                      
+                      <p className="text-xs text-slate-500">
+                        사업자등록증 등 필수 서류를 첨부해주세요.
+                      </p>
+                    </div>
+
+                    {/* 3. 선택된 파일 목록 (VendorPage 로직 그대로 사용) */}
+                    {selectedFiles.length > 0 && (
+                      <ul className="bg-white border rounded-md divide-y divide-slate-200 shadow-sm">
+                        {selectedFiles.map((file, index) => (
+                          <li key={index} className="flex items-center justify-between p-2 px-3">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="text-sm text-slate-600 truncate max-w-[200px]">{file.name}</span>
+                              <span className="text-xs text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              {/* Lucide X 아이콘 대신 텍스트나 기본 SVG 사용 가능 */}
+                              <X className="w-4 h-4" /> 
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
 
                 {/* 계정 정보 섹션 */}
                 <div className="bg-slate-50 rounded-xl p-4 space-y-4">
@@ -401,9 +545,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                     <div className="md:col-span-2">
                       <label className={labelClassName}>이메일 *</label>
                       <input 
-                        type="userEmail"
-                        name="userEmail"
-                        value={formData.userEmail}
+                        type="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleInputChange}
                         className={inputClassName}
                         placeholder="example@company.com"

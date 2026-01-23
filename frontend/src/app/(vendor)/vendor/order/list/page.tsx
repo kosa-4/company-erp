@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, Check, Eye, Calendar, Search, X, FileText, ArrowRight } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { Card, Button, Input, Badge } from '@/components/ui';
 
 interface OrderItem {
@@ -128,8 +128,7 @@ export default function VendorOrderListPage() {
 
   return (
     <div className="space-y-6">
-      <Toaster position="top-center" richColors />
-      
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -181,9 +180,9 @@ export default function VendorOrderListPage() {
               if (selectedOrder && selectedOrder.checkFlag === 'N') {
                 handleConfirm(selectedOrder.poNo);
               } else if (!selectedOrder) {
-                alert('수신확인할 발주서를 선택해주세요.');
+                toast.warning('수신확인할 발주서를 선택해주세요.');
               } else {
-                alert('이미 확인된 발주서입니다.');
+                toast.warning('이미 확인된 발주서입니다.');
               }
             }}
             icon={<Check className="w-4 h-4" />}

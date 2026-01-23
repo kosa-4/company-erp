@@ -10,10 +10,10 @@ import java.time.LocalDateTime;
 
 @Data
 public class VendorUserRegisterDto {
-    // --- validation group ---
+    // --- validation group --- //
     public interface OnCreate{}
     public interface OnUpdate{}
-    // ------------------------
+    // ------------------------ //
 
     private String askUserNum;
     private String vendorCode;
@@ -21,20 +21,20 @@ public class VendorUserRegisterDto {
     private String createdBy;
     private LocalDateTime modifiedAt;
     private String modifiedBy;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(message = "아이디는 필수입니다.")
     private String userId;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(message = "이름은 필수입니다.")
     private String userName;
     private String userNameEng;
     private String status;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(message = "전화번호는 필수 입력 사항입니다.")
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "전화번호 형식이 올바르지 않습니다.")
     private String phone;
     private String fax;
-    @NotBlank(groups = OnCreate.class, message = "필수 입력 사항입니다.")
+    @NotBlank(groups = OnCreate.class, message = "이메일은 필수 입력 사항입니다.")
     @Email(message = "이메일 형식이 올바르지 않습니다")
     private String email;
-    @NotBlank(message = "필수 입력 사항입니다.")
+    @NotBlank(message = "비밀번호는 필수 입력 사항입니다.")
     @Size(min = 8, message = "비밀번호는 8자리 이상입니다.")
     private String password;
     private String comType;

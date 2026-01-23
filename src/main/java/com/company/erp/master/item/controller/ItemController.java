@@ -1,15 +1,14 @@
 package com.company.erp.master.item.controller;
 
+import com.company.erp.common.auth.RequireRole;
 import com.company.erp.common.docNum.dto.DocNumDTO;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.exception.ApiResponse;
-import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.item.dto.ItemDetailDto;
-import com.company.erp.master.item.dto.ItemDto;
 
 import com.company.erp.master.item.dto.ItemResponseDto;
 import com.company.erp.master.item.dto.ItemSearchDto;
@@ -23,10 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-//@CrossOrigin(origins = "http://localhost:3000")
-@SessionIgnore
 @RestController
 @RequestMapping("/api/v1/items")
+@RequireRole({ "BUYER", "ADMIN", "USER" })
 public class ItemController {
     @Autowired
     ItemService itemService;
@@ -36,10 +34,14 @@ public class ItemController {
     // 품목 현황 조회 및 검색
     @GetMapping
     // ModelAttribute - get에서 사용 (url 파라미터 자동으로 mapping)
-    public ResponseEntity<ItemResponseDto<ItemDetailDto>> getItemList(@ModelAttribute ItemSearchDto searchDto){
+    public ResponseEntity<ItemResponseDto<ItemDetailDto>> getItemList(
+            @ModelAttribute ItemSearchDto searchDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser){
+
+        String loginId = loginUser.getUserId();
         try{
             // 검색 조건이 많을수록 dto가 유리
-            ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto);
+            ItemResponseDto<ItemDetailDto> items = itemService.getItemList(searchDto, loginId);
 
             return ResponseEntity.ok().body(items);
         } catch (Exception e) {
@@ -76,8 +78,10 @@ public class ItemController {
 
     // 품목 수정
     @PutMapping("/update")
-    public ApiResponse updateItem(@RequestBody ItemDetailDto itemDetailDto){
-        itemService.updateItem(itemDetailDto);
+    public ApiResponse updateItem(
+            @RequestBody ItemDetailDto itemDetailDto,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser){
+        itemService.updateItem(itemDetailDto, loginUser);
         return ApiResponse.ok("수정 완료");
     }
 

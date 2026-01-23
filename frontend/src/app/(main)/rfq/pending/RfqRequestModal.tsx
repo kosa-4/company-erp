@@ -165,44 +165,53 @@ export default function RfqRequestModal({
         if (!detail || !rfqNum) return;
 
         if (!detail.vendors || detail.vendors.length === 0) {
-            alert('협력사를 선택해주세요.');
+            toast.warning('협력사를 선택해주세요.');
             return;
         }
 
-        if (!confirm('협력사로 견적 요청을 전송하시겠습니까?\n전송 후에는 품목 수정이 불가능합니다.')) {
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const vendorCodes = detail.vendors?.map(v => v.vendorCd) || [];
-            await rfqApi.sendRfq(rfqNum, vendorCodes);
-            toast.success('협력사 전송이 완료되었습니다.');
-            onSaveSuccess?.();
-            onClose();
-        } catch (error) {
-            toast.error(getErrorMessage(error));
-        } finally {
-            setLoading(false);
-        }
+        toast('협력사로 견적 요청을 전송하시겠습니까?\n전송 후에는 품목 수정이 불가능합니다.', {
+            action: {
+                label: '전송',
+                onClick: async () => {
+                    try {
+                        setLoading(true);
+                        const vendorCodes = detail.vendors?.map(v => v.vendorCd) || [];
+                        await rfqApi.sendRfq(rfqNum, vendorCodes);
+                        toast.success('협력사 전송이 완료되었습니다.');
+                        onSaveSuccess?.();
+                        onClose();
+                    } catch (error) {
+                        toast.error(getErrorMessage(error));
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            }
+        });
     };
 
     // 삭제 처리
     const handleDelete = async () => {
         if (!rfqNum) return;
-        if (!confirm('정말 이 견적 요청을 삭제하시겠습니까?')) return;
-
-        setLoading(true);
-        try {
-            await rfqApi.deleteRfq(rfqNum);
-            toast.success('삭제되었습니다.');
-            onSaveSuccess?.();
-            onClose();
-        } catch (error) {
-            toast.error(getErrorMessage(error));
-        } finally {
-            setLoading(false);
-        }
+        
+        toast('정말 이 견적 요청을 삭제하시겠습니까?', {
+            action: {
+                label: '삭제',
+                onClick: async () => {
+                    try {
+                        setLoading(true);
+                        await rfqApi.deleteRfq(rfqNum);
+                        toast.success('삭제되었습니다.');
+                        onSaveSuccess?.();
+                        onClose();
+                    } catch (error) {
+                        toast.error(getErrorMessage(error));
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            }
+        });
     };
 
     const handleHeaderChange = (field: string, value: any) => {
@@ -244,18 +253,21 @@ export default function RfqRequestModal({
             return;
         }
 
-        if (!confirm(`선택한 ${selectedDetailVendors.length}개 협력사를 목록에서 삭제하시겠습니까?\n(저장 시 반영됩니다)`)) {
-            return;
-        }
-
-        const deleteVendorCds = selectedDetailVendors.map(v => v.vendorCd);
-        const newVendors = (detail.vendors || []).filter(v => !deleteVendorCds.includes(v.vendorCd));
-
-        setDetail({
-            ...detail,
-            vendors: newVendors
+        toast(`선택한 ${selectedDetailVendors.length}개 협력사를 목록에서 삭제하시겠습니까?\n(저장 시 반영됩니다)`, {
+            action: {
+                label: '삭제',
+                onClick: () => {
+                    const deleteVendorCds = selectedDetailVendors.map(v => v.vendorCd);
+                    const newVendors = (detail.vendors || []).filter(v => !deleteVendorCds.includes(v.vendorCd));
+            
+                    setDetail({
+                        ...detail,
+                        vendors: newVendors
+                    });
+                    setSelectedDetailVendors([]);
+                }
+            }
         });
-        setSelectedDetailVendors([]);
     };
 
     const isEditable = !rfqNum || detail?.header.progressCd === 'T';

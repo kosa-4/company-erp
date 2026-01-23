@@ -8,9 +8,13 @@
             i.ITEM_CD AS itemCode,
             i.ITEM_NM AS itemName,
             (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
+            (SELECT ITEM_CLS1 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryL,
+            (SELECT ITEM_CLS2 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryM,
+            (SELECT ITEM_CLS3 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryS,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
-            i.MAKER_NM AS manufacturerName
+            i.MAKER_NM AS manufacturerName,
+            i.REG_DATE AS createdAt
         FROM
             MTGL i
         <where>
@@ -23,6 +27,9 @@
             </if>
             <if test="useYn != null and useYn != ''">
                 AND i.USE_FLAG = #{useYn}
+            </if>
+            <if test="date != null">
+                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
@@ -65,11 +72,8 @@
             <if test="useYn != null and useYn != ''">
                 AND USE_FLAG = #{useYn}
             </if>
-            <if test="startDate != null">
-                AND REG_DATE <![CDATA[>=]]> #{startDate}
-            </if>
-            <if test="endDate != null">
-                AND REG_DATE <![CDATA[<=]]> #{endDate}
+            <if test="date != null">
+                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
@@ -84,6 +88,9 @@
             i.ITEM_NM AS itemName,
             i.ITEM_NM_ENG AS itemNameEn,
             (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
+            (SELECT ITEM_CLS1 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryL,
+            (SELECT ITEM_CLS2 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryM,
+            (SELECT ITEM_CLS3 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryS,
             i.ITEM_SPEC AS spec,
             i.UNIT_CD AS unit,
             i.MAKER_NM AS manufacturerName,
@@ -91,8 +98,7 @@
             i.USE_FLAG AS useYn,
             i.RMK AS remark,
             i.REG_DATE AS createdAt,
-            i.REG_USER_ID AS createdBy,
-            i.RMK AS remark
+            i.REG_USER_ID AS createdBy
         FROM
             MTGL i
         WHERE
@@ -158,16 +164,16 @@
             )
         VALUES(
                 #{itemCode},
-                now(),
-                "임시 추후 수정",
+                #{createdAt},
+                #{createdBy},
                 NULL,
                 NULL,
-                #{deleteYn},
+                'N',
                 #{itemType},
                 #{categoryL},
                 #{categoryM},
                 #{categoryS},
-                #{useYn}
+                'Y'
             )
     </insert>
 
@@ -176,16 +182,19 @@
         UPDATE
         MTGL
         <set>
-            MOD_DATE = NOW(),
-            MOD_USER_ID = "추후 수정"
-            <if test="itemName != null"> <!--앞 쉼표 추천-->
-                , ITEM_NM = #{itemName}
+            MOD_DATE = #{modifiedAt},
+            MOD_USER_ID = #{modifiedBy},
+            <if test="itemName != null">
+                ITEM_NM = #{itemName},
             </if>
             <if test="itemNameEn != null">
-                , ITEM_NM_ENG = #{itemNameEn}
+                ITEM_NM_ENG = #{itemNameEn},
             </if>
             <if test="remark != null">
-                , RMK = #{remark}
+                RMK = #{remark},
+            </if>
+            <if test="useYn != null">
+                USE_FLAG = #{useYn}
             </if>
         </set>
         WHERE

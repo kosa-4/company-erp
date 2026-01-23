@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { noticeApi, NoticeListResponse, NoticeDetailResponse, FileListItemResponse } from '@/lib/api/notice';
 import { Notice } from '@/types';
+import { toast } from 'sonner';
 
 
 
@@ -57,7 +58,7 @@ export default function VendorNoticePage() {
       setNotices(transformedNotices);
     } catch (error: any) {
       console.error('공지사항 목록 조회 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function VendorNoticePage() {
       setAttachedFiles(detail.files || []);
     } catch (error: any) {
       console.error('공지사항 상세 조회 실패:', error);
-      alert(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
+      toast.error(error?.data?.error || error?.message || '공지사항 상세를 불러오는데 실패했습니다.');
       setIsDetailModalOpen(false);
       setAttachedFiles([]);
     }
@@ -239,7 +240,7 @@ export default function VendorNoticePage() {
             <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gray-50/50">
               <div>
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                   <Badge variant="outline" className="text-xs font-normal text-gray-500 border-gray-300">
+                   <Badge variant="gray" className="text-xs font-normal text-gray-500 border-gray-300">
                       {selectedNotice.noticeNo}
                    </Badge>
                    <span className="text-xs text-gray-400">|</span>

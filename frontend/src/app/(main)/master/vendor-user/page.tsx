@@ -103,31 +103,112 @@ export default function VendorUserPage() {
   // 승인/반려 공통 처리 (앞서 만든 배열 전송 로직 유지)
   const handleAction = async (type: 'approve' | 'reject') => {
     if (selectedRows.length === 0) return alert('항목을 선택해주세요.');
+
+    // 1. 상태 검증: 승인(A)이나 반려(R) 상태인 '이미 처리가 끝난' 데이터가 있는지 확인
+    const invalidUser = selectedRows.find(u => u.status === 'A' || u.status === 'R');
+
+    if (invalidUser) {
+      const statusText = invalidUser.status === 'A' ? '이미 승인된' : '이미 반려된';
+      const actionText = type === 'approve' ? '승인' : '반려';
+      
+      // 여기서 return을 하기 때문에 아래 confirm 창은 절대 뜨지 않습니다.
+      return alert(
+        `[작업 불가]\n\n` +
+        `선택하신 [${invalidUser.userName}]님은 ${statusText} 상태입니다.\n` +
+        `이미 처리가 완료된 요청이 섞여 있어 일괄 ${actionText}이 불가능합니다.\n` +
+        `대기 중인(신규/변경) 항목만 다시 선택해주세요.`
+      );
+    }
+
+    // 2. 모든 데이터가 검증을 통과했을 때만 실행
+    const actionLabel = type === 'approve' ? '승인' : '반려';
+    if (!confirm(`선택한 ${selectedRows.length}건을 정말로 ${actionLabel}하시겠습니까?`)) return;
     
-    // 신규(N) 또는 변경(C) 건만 필터링
-    const targets = selectedRows.filter(u => u.status === 'C' || u.status === 'N');
-    if (targets.length === 0) return alert('승인/반려 가능한 상태가 없습니다.');
 
     try {
       const response = await fetch(`/api/v1/vendor-users/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(targets),
+        body: JSON.stringify(selectedRows),
       });
 
-      if (response.ok) {
-        alert('처리가 완료되었습니다.');
-        // 처리된 항목을 목록에서 제거
-        const processedKeys = new Set(
-          targets.map(t => `${t.userId}::${t.askUserNum}`)
-        );
-        setVendorUsers(prev =>
-          prev.filter(user => !processedKeys.has(`${user.userId}::${user.askUserNum}`))
-        );
-        setSelectedRows([]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '처리에 실패했습니다.');
       }
-    } catch (e) {
-      alert('처리 중 오류가 발생했습니다.');
+      alert('처리가 완료되었습니다.');
+      await fetchVendorUsers();
+      setSelectedRows([]);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  /* 수정*/
+  // 컴포넌트 내부 상단에 추가
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editUserData, setEditUserData] = useState<VendorUser | null>(null);
+
+  const handleEditClick = () => {
+    // 1. 체크박스 선택 개수 체크
+    if (selectedRows.length !== 1) {
+      return alert("수정할 항목을 한 건만 선택해주세요.");
+    }
+
+    const user = selectedRows[0];
+
+    // 2. 상태 체크 (정상 'A' 또는 반려 'R'인 경우만 수정 가능)
+    if (user.status !== 'A' && user.status !== 'R') {
+      return alert("정상(A) 또는 반려(R) 상태인 사용자만 수정할 수 있습니다.");
+    }
+
+    // 3. 데이터 복사 및 모달 오픈
+    setEditUserData({ ...user });
+    setIsEditModalOpen(true);
+  };
+  const updateVendorUser = async () => {
+    // 1. 데이터 존재 확인
+    if (!editUserData) return;
+
+    // 2. 간단한 유효성 검사 (이름이나 전화번호 등)
+    if (!editUserData.userName.trim()) return alert("담당자명은 필수 입력 항목입니다.");
+    if (!editUserData.email.trim()) return alert("이메일은 필수 입력 항목입니다.");
+
+    // 3. 진행 확인
+    if (!confirm("입력하신 정보로 담당자 정보를 수정하시겠습니까?")) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/v1/vendor-users/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // 수정된 editUserData 객체를 그대로 전송
+        body: JSON.stringify(editUserData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '정보 수정에 실패했습니다.');
+      }
+
+      // 4. 성공 처리
+      alert('정보 수정 요청이 완료되었습니다.');
+      
+      // 모달 닫고 상태 초기화
+      setIsEditModalOpen(false);
+      setEditUserData(null);
+      setSelectedRows([]); // 체크박스 선택 해제
+      
+      // 목록 다시 불러오기
+      await fetchVendorUsers();
+
+    } catch (error: any) {
+      console.error("수정 중 오류 발생:", error);
+      alert(error.message || '네트워크 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,6 +221,8 @@ export default function VendorUserPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <Input label="담당자ID" value={searchParams.userId} onChange={v => setSearchParams(p => ({...p, userId: v}))} />
           <Input label="담당자명" value={searchParams.userName} onChange={v => setSearchParams(p => ({...p, userName: v}))} />
+          <Input label="협력 업체 코드" value={searchParams.vendorCode} onChange={v => setSearchParams(p => ({...p, vendorCode: v}))} />
+          <Input label="협력 업체명" value={searchParams.vendorName} onChange={v => setSearchParams(p => ({...p, vendorName: v}))} />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">BLOCK여부</label>
             <select 
@@ -152,9 +235,6 @@ export default function VendorUserPage() {
               <option value="N">N</option>
             </select>
           </div>
-          <Input label="전화번호" value={searchParams.phone} onChange={v => setSearchParams(p => ({...p, phone: v}))} />
-          <Input label="시작일" type="date" value={searchParams.startDate} onChange={v => setSearchParams(p => ({...p, startDate: v}))} />
-          <Input label="종료일" type="date" value={searchParams.endDate} onChange={v => setSearchParams(p => ({...p, endDate: v}))} />
         </div>
         <div className="flex gap-2 justify-end">
           <button onClick={handleReset} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">초기화</button>
@@ -167,8 +247,15 @@ export default function VendorUserPage() {
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <h2 className="font-bold text-gray-700">사용자 목록 ({vendorUsers.length}건)</h2>
           <div className="flex gap-2">
-            <button onClick={() => handleAction('approve')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">일괄승인</button>
-            <button onClick={() => handleAction('reject')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700">일괄반려</button>
+            <button 
+              onClick={handleEditClick} 
+              className="px-3 py-1.5 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
+              disabled={selectedRows.length !== 1} // 한 건이 아닐 때 시각적 비활성화
+            >
+              수정
+            </button>
+            <button onClick={() => handleAction('approve')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">승인</button>
+            <button onClick={() => handleAction('reject')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700">반려</button>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -213,21 +300,121 @@ export default function VendorUserPage() {
           )}
         </div>
       </div>
+      {/* 담당자 정보 수정 모달 */}
+      {isEditModalOpen && editUserData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden border border-gray-200">
+            {/* Header */}
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <h2 className="font-bold text-gray-700">담당자 정보 수정</h2>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              {/* 반려 상태일 경우 안내 (선택 사항) */}
+              {editUserData.status === 'R' && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-sm">
+                  {/* <strong>반려 사유:</strong> {editUserData.rejectRemark || '사유 없음'} */}
+                </div>
+              )}
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  
+                  <Input 
+                    label="담당자ID" 
+                    value={editUserData.userId} 
+                    onChange={() => {}} 
+                    readOnly={true} 
+                    className="bg-gray-100" 
+                  />
+                  <Input 
+                    label="담당자명" 
+                    value={editUserData.userName} 
+                    onChange={v => setEditUserData(p => p ? ({...p, userName: v}) : null)} 
+                  />
+                  <Input 
+                    label="전화번호" 
+                    value={editUserData.phone} 
+                    onChange={v => setEditUserData(p => p ? ({...p, phone: v}) : null)} 
+                  />
+                  <Input 
+                    label="이메일" 
+                    value={editUserData.email} 
+                    onChange={v => setEditUserData(p => p ? ({...p, email: v}) : null)} 
+                  />
+                  
+                  {/* [핵심] blockFlag 선택 박스 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">차단여부(BLOCK)</label>
+                    <select 
+                      className="w-full px-3 py-2 border rounded-md outline-none focus:ring-1 focus:ring-blue-500"
+                      value={editUserData.blockFlag}
+                      onChange={e => setEditUserData(p => p ? ({...p, blockFlag: e.target.value as 'Y' | 'N'}) : null)}
+                    >
+                      <option value="N">N (정상)</option>
+                      <option value="Y">Y (차단)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer (검색 패널 버튼 스타일 참고) */}
+            <div className="p-4 border-t bg-gray-50 flex gap-2 justify-end">
+              <button 
+                onClick={() => setIsEditModalOpen(false)} 
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                취소
+              </button>
+              <button 
+                onClick={updateVendorUser} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                수정 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+    
   );
+  
 }
 
 // 재사용 가능한 입력 컴포넌트
-function Input({ label, value, onChange, type = "text" }: { label: string, value: string, onChange: (v: string) => void, type?: string }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input 
-        type={type}
-        className="w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 outline-none" 
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
-      />
-    </div>
-  );
-}
+// 컴포넌트 하단에 있는 Input 함수를 이 코드로 덮어쓰세요
+function Input({ 
+    label, 
+    value, 
+    onChange, 
+    type = "text", 
+    readOnly = false, // 새로 추가
+    className = ""    // 새로 추가
+  }: { 
+    label: string; 
+    value: string; 
+    onChange: (v: string) => void; 
+    type?: string; 
+    readOnly?: boolean; // 타입 정의 추가
+    className?: string; // 타입 정의 추가
+  }) {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <input 
+          type={type}
+          readOnly={readOnly} // 여기에 적용
+          className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 outline-none 
+            ${readOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'} 
+            ${className}`} // 여기에 적용
+          value={value || ''} 
+          onChange={e => !readOnly && onChange(e.target.value)} 
+        />
+      </div>
+    );
+  }

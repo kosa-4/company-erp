@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy, Edit } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import { Card, Button, Badge, Input, SearchPanel, DatePicker, Select } from '@/components/ui';
 import { rfqApi } from '@/lib/api/rfq';
 import { getErrorMessage } from '@/lib/api/error';
@@ -16,8 +16,7 @@ export default function VendorRfqSubmitPage() {
   const [searchParams, setSearchParams] = useState({
     rfqNo: '',
     rfqName: '',
-    startDate: '',
-    endDate: '',
+    reqCloseDate: '',
     submitStatus: '',
   });
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -41,8 +40,7 @@ export default function VendorRfqSubmitPage() {
       const data = await rfqApi.getVendorRfqList({
         searchText: searchText,
         progressCd: progressCd,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        reqCloseDate: searchParams.reqCloseDate || undefined,
       });
 
       if (filterStatus === 'DONE') {
@@ -72,8 +70,7 @@ export default function VendorRfqSubmitPage() {
     setSearchParams({
       rfqNo: '',
       rfqName: '',
-      startDate: '',
-      endDate: '',
+      reqCloseDate: '',
       submitStatus: '',
     });
   };
@@ -184,7 +181,6 @@ export default function VendorRfqSubmitPage() {
 
   return (
     <div className="space-y-6">
-      <Toaster position="top-center" richColors />
 
       {/* Page Header */}
       <div className="flex flex-col gap-6">
@@ -217,21 +213,16 @@ export default function VendorRfqSubmitPage() {
           value={searchParams.rfqNo}
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
         />
-        <DatePicker
-          label="견적일자 시작"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        />
-        <DatePicker
-          label="견적일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, endDate: e.target.value }))}
-        />
         <Input
-          label="견적명"
-          placeholder="견적명 입력"
-          value={searchParams.rfqName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+            label="견적명"
+            placeholder="견적명 입력"
+            value={searchParams.rfqName}
+            onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+        />
+        <DatePicker
+          label="마감일자"
+          value={searchParams.reqCloseDate}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, reqCloseDate: e.target.value }))}
         />
         <Select
           label="제출상태"

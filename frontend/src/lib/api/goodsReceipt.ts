@@ -44,6 +44,7 @@ export interface PendingPODTO {
   ctrlUserName?: string;
   vendorName?: string;
   vendorCode?: string;
+  remark?: string;
   items?: Array<{
     itemCode?: string;
     itemName?: string;
