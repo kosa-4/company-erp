@@ -161,7 +161,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           }
 
           toast.success('서류 업로드 완료');
-        } catch (fileErr: any) {
+        } catch (fileErr) {
           console.error('파일 업로드 오류:', fileErr);
           toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
           fileUploadFailed = true;
@@ -196,8 +196,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       onSwitchMode('login');
-    } catch (err: any) {
-      const msg = err?.message || '가입 중 오류가 발생했습니다.';
+    } catch (err: unknown) {
+      let msg = '가입 중 오류가 발생했습니다.';
+      if (err instanceof Error) {
+        msg = err.message;
+      }
       setError(msg);
       toast.error(msg);
     } finally {

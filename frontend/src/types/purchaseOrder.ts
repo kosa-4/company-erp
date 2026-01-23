@@ -14,6 +14,7 @@ export interface PurchaseOrderItemDTO {
     remark?: string;
     vendorCode?: string;
     vendorName?: string;
+    receivedQuantity?: number;
   }
   
   // PurchaseOrderDTO는 나중에 정의 (PurchaseOrderItemDTO 참조)
