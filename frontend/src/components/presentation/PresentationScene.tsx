@@ -86,7 +86,6 @@ const AutoFitCamera = () => {
 const SlideWrapper = ({ url, isActive, targetPosition, targetRotation }: any) => {
     const meshRef = useRef<THREE.Group>(null);
     const texture = useTexture(url);
-    const { pointer } = useThree();
     const thickness = 0.2; 
 
     useFrame((state, delta) => {
@@ -98,17 +97,9 @@ const SlideWrapper = ({ url, isActive, targetPosition, targetRotation }: any) =>
         meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, targetPosition[2], delta * 4);
         
         // Rotation lerp
-        let targetRotY = targetRotation[1];
-        let targetRotX = 0;
-
-        // Mouse Tilt Interaction for Active Slide
-        if (isActive) {
-            targetRotX = pointer.y * 0.1; // Tilt up/down
-            targetRotY += pointer.x * 0.1; // Tilt left/right
-        }
-
-        meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetRotX, delta * 4);
-        meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, targetRotY, delta * 4);
+        // No mouse tilt, just clean interpolation to target state
+        meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetRotation[0], delta * 4);
+        meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, targetRotation[1], delta * 4);
     });
 
     return (
