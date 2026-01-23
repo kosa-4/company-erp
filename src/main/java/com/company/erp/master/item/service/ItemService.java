@@ -70,12 +70,12 @@ public class ItemService {
         // 2-3. 품목 마스터 등록
         itemMapper.insertItemMTGL(itemDetailDto);
         // 2-4. 품목 카테고리 등록
-//        itemMapper.insertItemMTGC(itemDetailDto);
+        itemMapper.insertItemMTGC(itemDetailDto);
     }
 
     /* 수정 */
     @Transactional
-    public void updateItem(ItemDetailDto itemDetailDto) {
+    public void updateItem(ItemDetailDto itemDetailDto, SessionUser loginUser) {
         // 품목 존재 여부 확인
         ItemDetailDto item = itemMapper.selectItemByCode(itemDetailDto.getItemCode());
         if(item == null){
@@ -87,6 +87,8 @@ public class ItemService {
         if("A".equals(status)){
             throw new IllegalStateException("승인 완료된 품목으로 수정이 불가합니다.");
         }
+        itemDetailDto.setModifiedAt(LocalDateTime.now());
+        itemDetailDto.setModifiedBy(loginUser.getUserId());
         
         // 업데이트
         itemMapper.updateItem(itemDetailDto);

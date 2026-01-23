@@ -6,6 +6,19 @@ import { Card, Button, Input } from '@/components/ui';
 import { Can } from '@/auth/Can';
 import { toast } from 'sonner';
 
+interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          roadAddress: string;
+          jibunAddress: string;
+          buildingName: string;
+        }) => void;
+      }) => { open: () => void };
+    };
+  }
+
 export default function VendorInfoChangePage() {
   // 1. DTO 필드명과 100% 일치시킨 초기 상태
   const [formData, setFormData] = useState({
@@ -23,6 +36,7 @@ export default function VendorInfoChangePage() {
     remark: '',          // DTO: remark
     status: '',
     editable: true,
+    email: '',
   });
 
   const [changeReason, setChangeReason] = useState(''); // 변경 사유(remark에 담김)
@@ -42,11 +56,11 @@ export default function VendorInfoChangePage() {
         });
         if (response.ok) {
           const data = await response.json();
+
           // DTO 필드명과 일치하므로 데이터 그대로 세팅
-          setFormData(data);
+          setFormData(prev => ({ ...prev, ...data }));
           // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
           setOriginalData(JSON.parse(JSON.stringify(data))); // 깊은 복사
-          if(data.remark) setChangeReason(data.remark);
           if(data.remark) setChangeReason(data.remark);
         } else {
           alert('정보를 불러오지 못했습니다. 다시 로그인해주세요.');
@@ -60,11 +74,37 @@ export default function VendorInfoChangePage() {
     };
     fetchVendorData();
   }, []);
-  console.log("originalData " , originalData);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // 2. 주소 검색 핸들러 (AuthModal 로직 적용)
+  const handleAddressSearch = () => {
+    if (!window.daum?.Postcode) {
+      alert('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        let fullAddress = data.roadAddress || (data as any).autoRoadAddress || data.jibunAddress;
+        if (data.buildingName) {
+          fullAddress += ` (${data.buildingName})`;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          zipCode: data.zonecode,
+          address: fullAddress,
+        }));
+        
+        // 주소 입력 후 상세주소 칸으로 포커스 이동을 원할 경우 사용
+        // document.getElementsByName('addressDetail')[0]?.focus();
+      }
+    }).open();
+  };
+  
 
   const handleRequestChange = async () => {
     if (!formData.editable) return;
@@ -99,6 +139,8 @@ export default function VendorInfoChangePage() {
   };
 
   if (loading) return <div className="p-10 text-center">데이터 로딩 중...</div>;
+
+  const labelClassName = "text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide";
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -163,6 +205,15 @@ export default function VendorInfoChangePage() {
                 />
               </div>
               <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500">이메일 *</label>
+                <Input
+                  name="email" // DTO 필드명 일치 (email -> email)
+                  value={formData.email || ''}
+                  onChange={handleChange}
+                  disabled={!formData.editable}
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500">업종 *</label>
                 <Input
                   name="industry" // DTO 필드명 일치
@@ -174,53 +225,66 @@ export default function VendorInfoChangePage() {
             </div>
           </section>
 
-          {/* 주소 섹션 */}
-          <section className="space-y-4">
-             <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-500">주소 *</label>
-                <div className="flex gap-2 w-full max-w-sm">
-                    <Input
-                        name="zipCode" // DTO 필드명 일치
-                        value={formData.zipCode || ''}
-                        readOnly
-                        className="bg-gray-50"
-                    />
-                    <Button variant="outline" size="sm" disabled={!formData.editable}>검색</Button>
-                </div>
+          {/* 3. 주소 섹션 (디자인 개선 및 검색 연동) */}
+          <section className="space-y-4 pt-4 border-t border-slate-100">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-emerald-500 rounded-full"/> 사업장 소재지
+            </h3>
+            <div className="space-y-3">
+              <label className={labelClassName}>주소 *</label>
+              <div className="flex gap-2 max-w-sm">
                 <Input
-                    name="address" // DTO 필드명 일치
-                    value={formData.address || ''}
-                    onChange={handleChange}
-                    disabled={!formData.editable}
-                    className="mt-2"
+                  name="zipCode"
+                  value={formData.zipCode || ''}
+                  readOnly
+                  placeholder="우편번호"
+                  className="bg-slate-50 border-slate-200"
                 />
-                <Input
-                    name="addressDetail" // DTO 필드명 일치
-                    value={formData.addressDetail || ''}
-                    onChange={handleChange}
-                    disabled={!formData.editable}
-                    className="mt-2"
-                />
-             </div>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm" 
+                  disabled={!formData.editable}
+                  onClick={handleAddressSearch}
+                  className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 shrink-0"
+                >
+                  <Search className="w-4 h-4 mr-1" />
+                  주소 검색
+                </Button>
+              </div>
+              <Input
+                name="address"
+                value={formData.address || ''}
+                readOnly
+                placeholder="기본 주소"
+                className="bg-slate-50 border-slate-200"
+              />
+              <Input
+                name="addressDetail"
+                value={formData.addressDetail || ''}
+                onChange={handleChange}
+                disabled={!formData.editable}
+                placeholder="상세 주소를 입력하세요"
+              />
+            </div>
           </section>
 
           {/* 변경 사유 */}
-          {formData.editable && (
-            <section className="pt-6 border-t border-gray-100">
-              <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-blue-600 rounded-full"/> 변경 사유 입력
-              </h3>
-              <textarea
-                  name="remark"
-                  value={changeReason}
-                  onChange={(e) => setChangeReason(e.target.value)}
-                  placeholder="변경 사유를 입력하세요."
-                  rows={3}
-                  className="flex w-full rounded-md border border-input px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              />
-            </section>
-          )}
-
+          
+          <section className="pt-6 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-1 h-4 bg-blue-600 rounded-full"/> 변경 사유 입력
+            </h3>
+            <textarea
+                name="remark"
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                placeholder="변경 사유를 입력하세요."
+                rows={3}
+                disabled={!formData.editable}
+                className="flex w-full rounded-md border border-input px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            />
+          </section>
         </div>
 
         <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end">

@@ -141,7 +141,7 @@ public class VendorService {
                     throw new IllegalStateException("승인 가능한 상태가 아닙니다.");
             }
 
-            // 6) 대기 테이블 업데이트
+            // 6) 대기 테이블 업데이트 ('A' 상태로 내역 남기기)
             VendorUpdateDto vendorUpdateDto = new VendorUpdateDto(); // 상황에 따라 필요한 값이 다르므로 di 불가
             vendorUpdateDto.setModifiedAt(LocalDateTime.now());
             vendorUpdateDto.setModifiedBy(loginId);
