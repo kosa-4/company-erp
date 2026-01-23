@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // 개발 모드 우측 하단 뱃지 제거 (Next.js 16 호환성)
+  // @ts-ignore
+  devIndicators: {
+    buildActivity: false,
+    appIsrStatus: false,
+  },
 };
 
 export default nextConfig;
