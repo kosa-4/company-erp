@@ -75,11 +75,11 @@ export default function LandingPage() {
   const prevSlide = () => setCurrentSlide(prev => Math.max(prev - 1, 0));
 
   return (
-    <div className="relative w-full h-screen bg-white overflow-hidden">
+    <div className="relative w-full h-screen bg-[#f5f5f5] overflow-hidden">
       {/* 3D Canvas */}
       <div className="absolute inset-0 z-0">
         <Canvas shadows flat camera={{ position: [0, 0, 8], fov: 45 }}>
-            <color attach="background" args={['#ffffff']} />
+            <color attach="background" args={['#f5f5f5']} />
             <Suspense fallback={null}>
                 <PresentationScene currentSlide={currentSlide} />
             </Suspense>
@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       {/* R3F Default Loader */}
       <Loader 
-        containerStyles={{ background: '#ffffff' }} 
+        containerStyles={{ background: '#f5f5f5' }} 
         innerStyles={{ background: '#e0e7ff', width: '200px', height: '4px' }} 
         barStyles={{ background: '#4f46e5', height: '100%' }}
         dataInterpolation={(p) => `Loading Presentation ${p.toFixed(0)}%`} 
