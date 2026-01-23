@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/api/error";
 interface ReceivingTargetItem {
   id: string; // 고유 ID (poNo + itemCode)
   rfqNo: string;
-  prNo: string; // PR번호 추가
+  prNo: string; // 구매요청번호 추가
   poNo: string;
   poName: string;
   buyer: string;
@@ -93,15 +93,15 @@ export default function ReceivingTargetPage() {
   const [selectedRfqDetail, setSelectedRfqDetail] = useState<any>(null);
 
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await goodsReceiptApi.getPendingPOList({
-        poNo: searchParams.poNo || undefined,
-        poName: searchParams.poName || undefined,
-        vendorName: searchParams.vendor || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        poNo: params.poNo || undefined,
+        poName: params.poName || undefined,
+        vendorName: params.vendor || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -132,7 +132,7 @@ export default function ReceivingTargetPage() {
           flatItems.push({
             id: `${po.poNo}_${item.itemCode}`,
             rfqNo: po.rfqNo || "",
-            prNo: (po as any).prNo || "", // PR번호 추가
+            prNo: (po as any).prNo || "", // 구매요청번호 추가
             poNo: po.poNo || "",
             poName: po.poName || "",
             poDate: po.poDate || "",
@@ -171,14 +171,16 @@ export default function ReceivingTargetPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       poNo: "",
       poName: "",
       vendor: "",
       startDate: "",
       endDate: "",
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
   // 아이템 선택/해제
@@ -307,14 +309,14 @@ export default function ReceivingTargetPage() {
       if (rfqNo) {
         // RFQ 상세 조회 - ApiResponse로 감싸져 있음
         const response = await fetch(`/api/v1/buyer/rfqs/${rfqNo}`);
-        if (!response.ok) throw new Error("RFQ 상세 조회 실패");
+        if (!response.ok) throw new Error("견적 상세 조회 실패");
         const apiResponse = await response.json();
         // ApiResponse에서 data 추출
         detail = apiResponse.data;
       } else if (prNo) {
         // PR 상세 조회 - 직접 PrDetailResponse 반환
         const response = await fetch(`/api/v1/pr/${prNo}/detail`);
-        if (!response.ok) throw new Error("PR 상세 조회 실패");
+        if (!response.ok) throw new Error("구매요청 상세 조회 실패");
         detail = await response.json();
       }
       setSelectedRfqDetail(detail);
@@ -432,8 +434,8 @@ export default function ReceivingTargetPage() {
         loading={loading}
       >
         <Input
-          label="PO번호"
-          placeholder="PO번호 입력"
+          label="발주번호"
+          placeholder="발주번호 입력"
           value={searchParams.poNo}
           onChange={(e) =>
             setSearchParams((prev) => ({ ...prev, poNo: e.target.value }))
@@ -482,10 +484,10 @@ export default function ReceivingTargetPage() {
                     <span className="sr-only">선택</span>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
-                    PO번호
+                    발주번호
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
-                    RFQ/PR번호
+                    견적/구매요청번호
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
                     발주일자
@@ -830,7 +832,7 @@ export default function ReceivingTargetPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedPoDetail.poNo}</p>
               </div>
               <div>
@@ -906,7 +908,7 @@ export default function ReceivingTargetPage() {
       <Modal
         isOpen={isRfqDetailOpen}
         onClose={() => setIsRfqDetailOpen(false)}
-        title={selectedRfqDetail?.header?.rfqNum ? "RFQ 상세" : "구매요청 상세"}
+        title={selectedRfqDetail?.header?.rfqNum ? "견적 상세" : "구매요청 상세"}
         size="lg"
         footer={
           <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
@@ -919,7 +921,7 @@ export default function ReceivingTargetPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-500">
-                  {selectedRfqDetail.header?.rfqNum ? "RFQ번호" : "PR번호"}
+                  {selectedRfqDetail.header?.rfqNum ? "견적번호" : "구매요청번호"}
                 </label>
                 <p className="font-medium">
                   {selectedRfqDetail.header?.rfqNum || selectedRfqDetail.prNum}

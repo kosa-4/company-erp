@@ -77,15 +77,15 @@ export default function ReceivingListPage() {
   const [cancelReason, setCancelReason] = useState('');
 
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await goodsReceiptApi.getList({
-        grNo: searchParams.grNo || undefined,
-        vendorName: searchParams.vendor || undefined,
-        status: searchParams.status || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        grNo: params.grNo || undefined,
+        vendorName: params.vendor || undefined,
+        status: params.status || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -137,27 +137,32 @@ export default function ReceivingListPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       grNo: '',
       vendor: '',
       startDate: '',
       endDate: '',
       status: '',
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
-  // 아이템 선택/해제
+  // 아이템 선택/해제 (라디오 버튼 방식 - 단일 선택)
   const toggleSelectItem = (id: string, grNo: string) => {
-    // 단일 선택만 허용 (조정을 위해)
-    // 물론 다중 선택 취소 등을 구현할 수도 있지만, 조정은 개별 품목 단위가 안전함
-    const newSelected = new Set<string>();
-    if (selectedItemIds.has(id)) {
-      // 해제
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedItemIds(newSelected);
+    // 단일 선택: 무조건 새로 선택한 것으로 교체
+    // 만약 이미 선택된 것을 다시 클릭했다면 해제할 것인가?
+    // 보통 라디오 버튼은 해제가 안 되지만, 여기서는 토글이 편할 수 있음.
+    // 하지만 "Radio form" 요청이므로 단일 선택 강제를 따르되, 같은거 클릭시 유지는 radio standard.
+    // 사용자가 체크박스 동작(토글)을 원하면 click logic에서 처리.
+    // 여기서는 "checkbox 동작과 모양을 전부 radio 형태로" 라고 했으므로
+    // 동작도 radio(하나만 선택)로 변경.
+    
+    // 이미 선택된 것이면 동작 없음 (Radio standard) 혹은 토글?
+    // "Radio form" usually implies selecting one.
+    // Let's implement strict single selection.
+    setSelectedItemIds(new Set([id]));
   };
 
   const getStatusBadge = (status: string) => {
@@ -379,7 +384,7 @@ export default function ReceivingListPage() {
                     <span className="sr-only">선택</span>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고번호</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고상태</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">품목명</th>
@@ -429,10 +434,10 @@ export default function ReceivingListPage() {
                     >
                       <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <input
-                          type="checkbox"
+                          type="radio"
                           checked={selectedItemIds.has(item.id)}
                           onChange={() => toggleSelectItem(item.id, item.grNo)}
-                          className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                          className="w-4 h-4 text-teal-600 border-stone-300 rounded-full focus:ring-teal-500"
                         />
                       </td>
                       <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
@@ -506,7 +511,7 @@ export default function ReceivingListPage() {
                 <p className="font-medium">{targetItem.grNo}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{targetItem.poNo}</p>
               </div>
               <div>
@@ -571,7 +576,7 @@ export default function ReceivingListPage() {
                 <p className="font-medium">{selectedGrDetail.grNo}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedGrDetail.poNo}</p>
               </div>
               <div>
@@ -635,7 +640,7 @@ export default function ReceivingListPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedPoDetail.poNo}</p>
               </div>
               <div>

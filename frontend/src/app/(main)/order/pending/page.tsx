@@ -69,6 +69,7 @@ export default function OrderPendingPage() {
     items: [] as Array<{
       itemCode: string;
       itemName: string;
+      specification: string;
       unit: string;
       orderQuantity: number;
       unitPrice: number;
@@ -79,16 +80,16 @@ export default function OrderPendingPage() {
   });
 
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await purchaseOrderApi.getRfqSelectedList({
-        rfqNo: searchParams.rfqNo || undefined,
-        rfqName: searchParams.rfqName || undefined,
-        vendorName: searchParams.vendorName || undefined,
-        purchaseType: searchParams.purchaseType || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        rfqNo: params.rfqNo || undefined,
+        rfqName: params.rfqName || undefined,
+        vendorName: params.vendorName || undefined,
+        purchaseType: params.purchaseType || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -140,15 +141,17 @@ export default function OrderPendingPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       rfqNo: '',
       rfqName: '',
       vendorName: '',
       purchaseType: '',
       startDate: '',
       endDate: '',
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
   // RFQ 행 펼치기/접기
@@ -201,7 +204,7 @@ export default function OrderPendingPage() {
     }
   }, [isVendorSearchOpen, selectedRfqNo]);
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!selectedRfqNo) {
       toast.warning('발주할 견적을 선택해주세요.');
       return;
@@ -209,6 +212,37 @@ export default function OrderPendingPage() {
 
     const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
     if (!selectedGroup) return;
+
+    // 상세 정보에서 납기일 조회
+    const itemDateMap = new Map<string, string>();
+    try {
+      if (['E', 'C'].includes(selectedGroup.purchaseType) && selectedGroup.prNo) {
+        // PR 상세 (긴급/단가계약)
+        const res = await fetch(`/api/v1/pr/${selectedGroup.prNo}/detail`);
+        if (res.ok) {
+          const data = await res.json();
+          (data.items || []).forEach((i: any) => {
+            const date = i.dlvyHopeDate || i.dlvyHopeDt || i.reqDlvyDate || '';
+            const code = i.itemCd || i.itemCode;
+            if (date && code) itemDateMap.set(code, date);
+          });
+        }
+      } else {
+        // RFQ 상세 (일반)
+        const res = await fetch(`/api/v1/buyer/rfqs/${selectedGroup.rfqNo}`);
+        if (res.ok) {
+          const json = await res.json();
+          (json.data?.items || []).forEach((i: any) => {
+            // RFQ 상세의 날짜 필드
+            const date = i.deliveryDate || i.dlvyHopeDate || i.dlvyHopeDt || '';
+            const code = i.itemCd || i.itemCode;
+            if (date && code) itemDateMap.set(code, date);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('납기일 조회 실패:', error);
+    }
     
     // 폼 초기화
     setOrderForm({
@@ -218,11 +252,12 @@ export default function OrderPendingPage() {
       items: selectedGroup.items.map(item => ({
         itemCode: item.itemCode || '',
         itemName: item.itemName || '',
+        specification: item.specification || '',
         unit: item.unit || 'EA',
         orderQuantity: Number(item.quantity) || 0,
         unitPrice: Number(item.unitPrice) || 0,
         amount: Number(item.amount) || 0,
-        deliveryDate: item.deliveryDate || '',
+        deliveryDate: itemDateMap.get(item.itemCode || '') || item.deliveryDate || '',
         storageLocation: item.storageLocation || '본사 창고',
       })),
     });
@@ -292,6 +327,7 @@ export default function OrderPendingPage() {
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
           itemName: item.itemName,
+          specification: item.specification,
           unit: item.unit,
           orderQuantity: item.orderQuantity,
           unitPrice: item.unitPrice,
@@ -433,8 +469,8 @@ export default function OrderPendingPage() {
 
       <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
         <Input
-          label="RFQ번호"
-          placeholder="RFQ번호 입력"
+          label="견적번호"
+          placeholder="견적번호 입력"
           value={searchParams.rfqNo}
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
         />
@@ -484,7 +520,7 @@ export default function OrderPendingPage() {
                   <th className="w-12 px-4 py-3.5 whitespace-nowrap">
                     {/* 선택 체크박스 헤더 */}
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">견적번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">견적명</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">담당자</th>
@@ -542,10 +578,10 @@ export default function OrderPendingPage() {
                         {/* 선택 체크박스 */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
-                            type="checkbox"
+                            type="radio"
                             checked={selectedRfqNo === group.rfqNo}
                             onChange={() => handleSelectRfq(group.rfqNo)}
-                            className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                            className="w-4 h-4 text-teal-600 border-stone-300 rounded-full focus:ring-teal-500"
                           />
                         </td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
@@ -724,7 +760,6 @@ export default function OrderPendingPage() {
                         <span className="font-medium text-gray-900">
                           {formatNumber(item.orderQuantity)}
                         </span>
-                        <span className="ml-1 text-xs text-gray-900">{item.unit}</span>
                       </td>
                       <td className="p-3 text-right font-medium">₩{formatNumber(item.amount)}</td>
                       <td className="p-3 text-center">{item.deliveryDate}</td>

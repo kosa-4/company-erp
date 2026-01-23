@@ -182,7 +182,7 @@ export default function VendorOrderListPage() {
               } else if (!selectedOrder) {
                 toast.warning('수신확인할 발주서를 선택해주세요.');
               } else {
-                toast.warning('이미 확인된 발주서입니다.');
+                toast.warning('이미 수신확인 되었습니다.');
               }
             }}
             icon={<Check className="w-4 h-4" />}
