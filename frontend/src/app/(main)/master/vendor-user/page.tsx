@@ -293,7 +293,9 @@ export default function VendorUserPage() {
                   <td className="p-3 text-center">{user.userName}</td>
                   <td className="p-3 text-center">{user.phone}</td>
                   <td className="p-3">{user.email}</td>
-                  <td className="p-3 text-center text-gray-500">{user.createdAt}</td>
+                  <td className="p-3 text-center text-gray-500">
+                    {user.createdAt ? user.createdAt.substring(0, 10) : '-'}
+                  </td>
                   <td className="p-3 text-center">
                     <span className={user.blockFlag === 'Y' ? 'text-red-600 font-bold' : 'text-gray-400'}>{user.blockFlag}</span>
                   </td>

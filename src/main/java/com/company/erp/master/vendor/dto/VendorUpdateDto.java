@@ -33,6 +33,9 @@ public class VendorUpdateDto {
     private String remark;
     private String email;
     private LocalDateTime signDate;
+
+    // 반려 시
+    private String rejectRemark;
 }
 
 // VNCH

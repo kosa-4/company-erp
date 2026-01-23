@@ -4,80 +4,97 @@
 <mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
     <!--협력사 조회-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto">
-        SELECT
-            CH.ASK_NUM AS askNum,
-            COALESCE(CH.PROGRESS_CD, GL.PROGRESS_CD) AS status,
-            COALESCE(CH.REG_DATE, GL.REG_DATE) AS createdAt,
-            CH.REJECT_RMK AS rejectReason,
+        SELECT * FROM (
+            <!--대기 테이블과 마스터 테이블 병합-->
+            SELECT
+                CH.ASK_NUM AS askNum,
+                COALESCE(CH.PROGRESS_CD, GL.PROGRESS_CD) AS status,
+                COALESCE(CH.REG_DATE, GL.REG_DATE) AS createdAt,
+                CH.REJECT_RMK AS rejectReason,
 
-            GL.VENDOR_CD AS vendorCode,
-            COALESCE(CH.VENDOR_NM, GL.VENDOR_NM) AS vendorName,
-            COALESCE(CH.VENDOR_ENG_NM, GL.VENDOR_ENG_NM) AS vendorNameEng,
-            COALESCE(CH.REG_TYPE, GL.REG_TYPE) AS businessType,
-            COALESCE(CH.CEO_USER_NM, GL.CEO_USER_NM) AS ceoName,
-            COALESCE(CH.ADDR, GL.ADDR) AS address,
-            COALESCE(CH.INDUSTRY_TYPE, GL.INDUSTRY_TYPE) AS industry,
-            COALESCE(CH.IRS_NO, GL.IRS_NO) AS businessNo,
-            COALESCE(CH.TEL_NO, GL.TEL_NO) AS tel,
-            COALESCE(CH.FAX_NO, GL.FAX_NO) AS fax,
-            COALESCE(CH.EMAIL, GL.EMAIL) AS email,
-            COALESCE(CH.ZIP_CD, GL.ZIP_CD) AS zipCode,
-            COALESCE(CH.ADDR_DT, GL.ADDR_DT) AS addressDetail,
-            COALESCE(CH.FOUNDATION_DATE, GL.FOUNDATION_DATE) AS foundationDate,
-            COALESCE(CH.RMK, GL.RMK) AS remark
-        FROM VNGL GL
-                 LEFT JOIN (
-            SELECT *
+                GL.VENDOR_CD AS vendorCode,
+                COALESCE(CH.VENDOR_NM, GL.VENDOR_NM) AS vendorName,
+                COALESCE(CH.VENDOR_ENG_NM, GL.VENDOR_ENG_NM) AS vendorNameEng,
+                COALESCE(CH.REG_TYPE, GL.REG_TYPE) AS businessType,
+                COALESCE(CH.CEO_USER_NM, GL.CEO_USER_NM) AS ceoName,
+                COALESCE(CH.ADDR, GL.ADDR) AS address,
+                COALESCE(CH.INDUSTRY_TYPE, GL.INDUSTRY_TYPE) AS industry,
+                COALESCE(CH.IRS_NO, GL.IRS_NO) AS businessNo,
+                COALESCE(CH.TEL_NO, GL.TEL_NO) AS tel,
+                COALESCE(CH.FAX_NO, GL.FAX_NO) AS fax,
+                COALESCE(CH.EMAIL, GL.EMAIL) AS email,
+                COALESCE(CH.ZIP_CD, GL.ZIP_CD) AS zipCode,
+                COALESCE(CH.ADDR_DT, GL.ADDR_DT) AS addressDetail,
+                COALESCE(CH.FOUNDATION_DATE, GL.FOUNDATION_DATE) AS foundationDate,
+                COALESCE(CH.RMK, GL.RMK) AS remark
+            FROM VNGL GL
+                     LEFT JOIN (
+                SELECT *
+                FROM (
+                         SELECT
+                             C.*,
+                             ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
+                         FROM VNCH C
+                         WHERE C.DEL_FLAG = 'N'
+                     ) T
+                WHERE T.rn = 1
+            ) CH
+                               ON CH.VENDOR_CD = GL.VENDOR_CD
+            WHERE GL.DEL_FLAG = 'N'
+
+            UNION ALL
+            <!--마스터 테이블에 없는 대기 테이블 건만 조회-->
+            SELECT
+                CH.ASK_NUM AS askNum,
+                CH.PROGRESS_CD AS status,
+                CH.REG_DATE AS createdAt,
+                CH.REJECT_RMK AS rejectReason,
+
+                CH.VENDOR_CD AS vendorCode,
+                CH.VENDOR_NM AS vendorName,
+                CH.VENDOR_ENG_NM AS vendorNameEng,
+                CH.REG_TYPE AS businessType,
+                CH.CEO_USER_NM AS ceoName,
+                CH.ADDR AS address,
+                CH.INDUSTRY_TYPE AS industry,
+                CH.IRS_NO AS businessNo,
+                CH.TEL_NO AS tel,
+                CH.FAX_NO AS fax,
+                CH.EMAIL AS email,
+                CH.ZIP_CD AS zipCode,
+                CH.ADDR_DT AS addressDetail,
+                CH.FOUNDATION_DATE AS foundationDate,
+                CH.RMK AS remark
             FROM (
-                     SELECT
-                         C.*,
-                         ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
-                     FROM VNCH C
-                     WHERE C.DEL_FLAG = 'N'
-                 ) T
-            WHERE T.rn = 1
-        ) CH
-                           ON CH.VENDOR_CD = GL.VENDOR_CD
-        WHERE GL.DEL_FLAG = 'N'
-
-        UNION ALL
-
-        SELECT
-            CH.ASK_NUM AS askNum,
-            CH.PROGRESS_CD AS status,
-            CH.REG_DATE AS createdAt,
-            CH.REJECT_RMK AS rejectReason,
-
-            CH.VENDOR_CD AS vendorCode,
-            CH.VENDOR_NM AS vendorName,
-            CH.VENDOR_ENG_NM AS vendorNameEng,
-            CH.REG_TYPE AS businessType,
-            CH.CEO_USER_NM AS ceoName,
-            CH.ADDR AS address,
-            CH.INDUSTRY_TYPE AS industry,
-            CH.IRS_NO AS businessNo,
-            CH.TEL_NO AS tel,
-            CH.FAX_NO AS fax,
-            CH.EMAIL AS email,
-            CH.ZIP_CD AS zipCode,
-            CH.ADDR_DT AS addressDetail,
-            CH.FOUNDATION_DATE AS foundationDate,
-            CH.RMK AS remark
-        FROM (
-                 SELECT *
-                 FROM (
-                          SELECT
-                              C.*,
-                              ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
-                          FROM VNCH C
-                          WHERE C.DEL_FLAG = 'N'
-                      ) T
-                 WHERE T.rn = 1
-             ) CH
-                 LEFT JOIN VNGL GL
-                           ON GL.VENDOR_CD = CH.VENDOR_CD
-                               AND GL.DEL_FLAG = 'N'
-        WHERE GL.VENDOR_CD IS NULL
+                     SELECT *
+                     FROM (
+                              SELECT
+                                  C.*,
+                                  ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
+                              FROM VNCH C
+                              WHERE C.DEL_FLAG = 'N'
+                          ) T
+                     WHERE T.rn = 1
+                 ) CH
+                     LEFT JOIN VNGL GL
+                               ON GL.VENDOR_CD = CH.VENDOR_CD
+                                   AND GL.DEL_FLAG = 'N'
+            WHERE GL.VENDOR_CD IS NULL
+        ) VENDORS
+        <where>
+            <if test="vendorCode != null and vendorCode != ''">
+                AND VENDORS.vendorCode LIKE CONCAT('%', #{vendorCode}, '%')
+            </if>
+            <if test="vendorName != null and vendorName != ''">
+                AND VENDORS.vendorName LIKE CONCAT('%', #{vendorName}, '%')
+            </if>
+            <if test="industry != null and industry != ''">
+                AND VENDORS.industry = LIKE CONCAT('%', #{industry}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND VENDORS.businessType = #{businessType}
+            </if>
+        </where>
 
         ORDER BY createdAt DESC;
 

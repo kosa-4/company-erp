@@ -743,16 +743,6 @@ const handleFileDownload = async (fileNo: string, fileName: string) => {
           value={searchParams.vendorName}
           onChange={(e) => setSearchParams(prev => ({ ...prev, vendorName: e.target.value }))}
         />
-        <Select
-          label="사용여부"
-          value={searchParams.useYn}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, useYn: e.target.value }))}
-          options={[
-            { value: '', label: '전체' },
-            { value: 'Y', label: '사용' },
-            { value: 'N', label: '미사용' },
-          ]}
-        />
         
         <Select
           label="사업형태"
