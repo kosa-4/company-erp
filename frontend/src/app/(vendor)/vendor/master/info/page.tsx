@@ -58,7 +58,7 @@ export default function VendorInfoChangePage() {
           const data = await response.json();
 
           // DTO 필드명과 일치하므로 데이터 그대로 세팅
-          setFormData(data);
+          setFormData(prev => ({ ...prev, ...data }));
           // 기존에 적혀있던 remark(비고)가 있다면 사유 칸에 미리 보여줄 수도 있음
           setOriginalData(JSON.parse(JSON.stringify(data))); // 깊은 복사
           if(data.remark) setChangeReason(data.remark);
@@ -88,7 +88,7 @@ export default function VendorInfoChangePage() {
 
     new window.daum.Postcode({
       oncomplete: (data) => {
-        let fullAddress = data.roadAddress;
+        let fullAddress = data.roadAddress || (data as any).autoRoadAddress || data.jibunAddress;
         if (data.buildingName) {
           fullAddress += ` (${data.buildingName})`;
         }
