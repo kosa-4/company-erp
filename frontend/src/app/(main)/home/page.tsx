@@ -156,10 +156,11 @@ export default function DashboardPage() {
       href: '/rfq/pending', title: '견적대기', description: '견적 요청 대기목록',
       icon: <Clipboard className="w-full h-full" />, badge: dashboardData?.stats.pendingProcessCount
     },
+    // TODO: 발주대기 건수 집계 API 추가 필요 (현재 더미 데이터)
     {
       href: '/order/pending', title: '발주대기', description: '발주 대기목록',
       icon: <Package className="w-full h-full" />, badge: 3
-    }, // PO 대기는 별도 집계 필요 (현재 dummy)
+    },
     {
       href: '/inventory/receiving-target', title: '입고대상', description: '입고 처리 대상',
       icon: <Warehouse className="w-full h-full" />
@@ -269,7 +270,7 @@ export default function DashboardPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900 truncate">{notice.subject}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{notice.regDate.substring(0, 10)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{notice.regDate?.substring(0, 10) || '-'}</p>
                   </div>
                 </div>
               </Link>

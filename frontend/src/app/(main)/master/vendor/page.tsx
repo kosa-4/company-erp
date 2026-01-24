@@ -534,7 +534,6 @@ export default function VendorPage() {
 
     // 1. 서버 DTO 구조에 맞게 데이터 재구성
     const updatedTargets = targets.map(v => {
-      // ⭐ 핵심 수정: f.askNum 대신 f.refNo를 사용하여 비교
       // f.refNo가 현재 반려하려는 업체의 v.askNum과 같은 것만 필터링
       const filesOnlyForThisRequest = attachedFiles
         .filter(f => {
@@ -724,16 +723,17 @@ export default function VendorPage() {
     setSelectedFiles([]);
     latestVendorCodeRef.current = currentListVendor.vendorCode;
 
-    // 4. ⭐ [핵심] 마스터 데이터(최신 원본) 조회 후 세팅
+    // 4. 마스터 데이터(최신 원본) 조회 후 세팅
     // 리스트에 있는 정보는 Staging 정보일 수 있으므로, 수정 시에는 Master 정보를 가져옴
     const masterData = await fetchMasterVendor(currentListVendor.vendorCode);
 
     if (masterData) {
-      // 마스터 데이터가 있으면 그것으로 수정 폼 초기화
-      // 단, status는 리스트의 현재 상태(R 등)를 유지해야 할 수도 있으나,
-      // 보통 '정보 수정'은 Master 데이터를 기반으로 하므로 Master를 우선함.
-      // 반려 사유 등을 유지하고 싶다면 병합: { ...masterData, status: currentListVendor.status, rejectReason: currentListVendor.rejectReason }
-      setEditVendorData(masterData);
+      // 마스터 데이터를 기반으로 하되, 리스트의 상태/반려사유를 병합하여 데이터 손실 방지
+      setEditVendorData({
+        ...masterData,
+        status: currentListVendor.status,
+        rejectReason: currentListVendor.rejectReason
+      });
     } else {
       // 마스터가 없으면 리스트 데이터 사용 (Fallback)
       setEditVendorData({ ...currentListVendor });
