@@ -74,4 +74,10 @@ public interface PrMapper {
                     @Param("unitPrc") java.math.BigDecimal unitPrc,
                     @Param("prAmt") java.math.BigDecimal prAmt);
 
+    // 구매요청 상태를 임시저장으로 변경
+    int updatePrProgressToTemp(@Param("prNum") String prNum);
+
+    // 부서 목록 조회 (숫자 제거, 중복 제거)
+    List<String> selectDeptNameList(@Param("userDeptCd") String userDeptCd, @Param("isBuyerDept") Boolean isBuyerDept);
+
 }

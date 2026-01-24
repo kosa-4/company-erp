@@ -359,4 +359,29 @@
         AND DEL_FLAG = 'N'
     </update>
 
+    <!-- 구매요청 상태를 임시저장으로 변경 -->
+    <update id="updatePrProgressToTemp">
+        UPDATE PRHD
+        SET PROGRESS_CD = (
+            SELECT CODE FROM CODD
+            WHERE CODE_GROUP = 'PROGRESS_CD'
+            AND CODE_NAME = '임시저장'
+            AND USE_YN = 'Y'
+            LIMIT 1
+        )
+        WHERE PR_NUM = #{prNum}
+        AND DEL_FLAG = 'N'
+    </update>
+
+    <!-- 부서 목록 조회 (숫자 제거, 중복 제거) -->
+    <select id="selectDeptNameList" resultType="String">
+        SELECT DISTINCT REGEXP_REPLACE(D.DEPT_NM, '[0-9]', '') AS deptName
+        FROM DEPT D
+        WHERE D.DEL_FLAG = 'N'
+        <if test="isBuyerDept == null or isBuyerDept == false">
+            AND D.DEPT_CD = #{userDeptCd}
+        </if>
+        ORDER BY deptName
+    </select>
+
 </mapper>

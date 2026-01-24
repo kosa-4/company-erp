@@ -1,4 +1,5 @@
 import api from './client';
+import { FileListItemResponse } from './notice';
 
 /**
  * 구매요청 품목 정보 DTO
@@ -239,4 +240,28 @@ export const prApi = {
 
         return response.json();
     },
+
+    /**
+     * 부서 목록 조회 (숫자 제거된 부서명 목록)
+     */
+    getDeptNameList: () => api.get<string[]>('/v1/pr/dept/list'),
+
+    /**
+     * 구매요청 첨부파일 목록 조회
+     */
+    getFileList: (prNum: string) => 
+        api.get<FileListItemResponse[]>('/files', { refType: 'PR', refNo: prNum }),
+    
+    /**
+     * 파일 다운로드
+     */
+    downloadFile: (fileNum: string) => {
+        window.open(`/api/files/${fileNum}`, '_blank');
+    },
+
+    /**
+     * 파일 삭제
+     */
+    deleteFile: (fileNum: string) => 
+        api.delete<{ message: string }>(`/files/${fileNum}`),
 };

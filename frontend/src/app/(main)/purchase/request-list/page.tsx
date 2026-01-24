@@ -20,6 +20,8 @@ import { ColumnDef, StatusType } from '@/types';
 import { formatNumber } from '@/lib/utils';
 import { prApi, PrListResponse, PrDtDTO } from '@/lib/api/pr';
 import { useAuth } from '@/contexts/AuthContext';
+import { FileText, Download, Upload, X } from 'lucide-react';
+import { FileListItemResponse } from '@/lib/api/notice';
 
 interface PurchaseRequest {
   prNo: string;
@@ -132,6 +134,12 @@ export default function PurchaseRequestListPage() {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [deptNameList, setDeptNameList] = useState<string[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<FileListItemResponse[]>([]);
+  const [originalAttachedFiles, setOriginalAttachedFiles] = useState<FileListItemResponse[]>([]);
+  const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
+  const [deletedFileNums, setDeletedFileNums] = useState<string[]>([]);
+  const [isEditDragging, setIsEditDragging] = useState(false);
 
   // 목록 조회
   const fetchData = async () => {
@@ -176,6 +184,19 @@ export default function PurchaseRequestListPage() {
     }
   };
 
+  // 부서 목록 조회
+  useEffect(() => {
+    const loadDeptNameList = async () => {
+      try {
+        const deptNames = await prApi.getDeptNameList();
+        setDeptNameList(deptNames);
+      } catch (error) {
+        console.error('부서 목록 조회 실패:', error);
+      }
+    };
+    loadDeptNameList();
+  }, []);
+
   // 초기 로드 및 페이지 변경 시 재조회
   useEffect(() => {
     fetchData();
@@ -191,8 +212,8 @@ export default function PurchaseRequestListPage() {
     setCurrentPage(page);
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const resetParams = {
       prNo: '',
       prName: '',
       startDate: '',
@@ -201,7 +222,44 @@ export default function PurchaseRequestListPage() {
       department: '',
       purchaseType: '',
       status: '',
-    });
+    };
+    setSearchParams(resetParams);
+    setCurrentPage(1); // 초기화 시 1페이지로 이동
+    
+    // 초기화된 파라미터로 직접 조회
+    try {
+      setLoading(true);
+      const params = {
+        prNum: resetParams.prNo || undefined,
+        prSubject: resetParams.prName || undefined,
+        pcType: resetParams.purchaseType || undefined,
+        requester: resetParams.requester || undefined,
+        deptName: resetParams.department || undefined,
+        progressCd: resetParams.status || undefined,
+        requestDate: resetParams.startDate || undefined,
+        page: 1,
+        pageSize: pageSize,
+      };
+
+      const response = await prApi.getList(params);
+      
+      if (!response || !response.items || response.items.length === 0) {
+        setData([]);
+        setTotalCount(0);
+        setTotalPages(0);
+        return;
+      }
+      
+      const transformedData = transformPrListResponse(response.items);
+      setData(transformedData);
+      setTotalCount(response.totalCount || 0);
+      setTotalPages(response.totalPages || 0);
+    } catch (error) {
+      console.error('구매요청 목록 조회 실패:', error);
+      toast.error('구매요청 목록을 불러오는데 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 행 클릭 시 품목 목록 펼치기/접기
@@ -252,10 +310,22 @@ export default function PurchaseRequestListPage() {
       const detailList = detail.items || [];
       setPrDetailItems(detailList);
       setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+      
+      // 첨부파일 목록 조회
+      try {
+        const files = await prApi.getFileList(row.prNo);
+        setAttachedFiles(files || []);
+        setOriginalAttachedFiles(files || []);
+      } catch (fileError) {
+        console.error('첨부파일 목록 조회 실패:', fileError);
+        setAttachedFiles([]);
+        setOriginalAttachedFiles([]);
+      }
     } catch (error: any) {
       toast.error('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
       setPrDetailItems([]);
       setEditPrItems([]);
+      setAttachedFiles([]);
     } finally {
       setLoadingDetail(false);
     }
@@ -285,10 +355,50 @@ export default function PurchaseRequestListPage() {
     return typeMap[purchaseType] || purchaseType;
   };
 
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // 파일 검증 함수
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    // 확장자 검증
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `${file.name}: 허용되지 않는 파일 형식입니다. (PDF, DOC, XLSX, 이미지 파일만 가능)`
+      };
+    }
+
+    // 파일 크기 검증 (10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `${file.name}: 파일 크기가 10MB를 초과합니다. (현재: ${formatFileSize(file.size)})`
+      };
+    }
+
+    return { valid: true };
+  };
+
   // 목록에서 수정 버튼 클릭 핸들러
   const handleEditFromList = async () => {
     if (selectedRows.length === 0) {
       toast.warning('수정할 구매요청을 선택해주세요.');
+      return;
+    }
+
+    // 여러 개 선택 시 알림 표시
+    if (selectedRows.length > 1) {
+      toast.warning('수정은 1건만 가능합니다.');
       return;
     }
 
@@ -317,11 +427,23 @@ export default function PurchaseRequestListPage() {
       const detailList = detail.items || [];
       setPrDetailItems(detailList);
       setEditPrItems(detailList.map(item => ({ ...item }))); // 복사본 생성
+      
+      // 첨부파일 목록 조회
+      try {
+        const files = await prApi.getFileList(firstRow.prNo);
+        setAttachedFiles(files || []);
+        setOriginalAttachedFiles(files || []);
+      } catch (fileError) {
+        console.error('첨부파일 목록 조회 실패:', fileError);
+        setAttachedFiles([]);
+        setOriginalAttachedFiles([]);
+      }
     } catch (error: any) {
       console.error('구매요청 상세 정보 조회 실패:', error);
       toast.error('구매요청 상세 정보를 불러오는데 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
       setPrDetailItems([]);
       setEditPrItems([]);
+      setAttachedFiles([]);
     } finally {
       setLoadingDetail(false);
     }
@@ -333,14 +455,83 @@ export default function PurchaseRequestListPage() {
   };
 
   const handleCancelEdit = () => {
+    setIsDetailModalOpen(false);
     setIsEditing(false);
-    if (selectedPr) {
-      setEditFormData({
-        prName: selectedPr.prName,
-        purchaseType: selectedPr.purchaseType,
+    setEditUploadedFiles([]);
+    setDeletedFileNums([]);
+    setPrDetailItems([]);
+    setSelectedPr(null);
+    setAttachedFiles([]);
+    setOriginalAttachedFiles([]);
+  };
+
+  // 수정 모드에서 기존 파일 삭제 핸들러
+  const handleDeleteExistingFile = (fileNum: string) => {
+    setDeletedFileNums(prev => [...prev, fileNum]);
+    setAttachedFiles(prev => prev.filter(file => file.fileNum !== fileNum));
+  };
+
+  // 수정 모드 파일 선택 핸들러
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+    
+    files.forEach(file => {
+      const validation = validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        toast.error(validation.error);
+      }
+    });
+
+    if (validFiles.length > 0) {
+      setEditUploadedFiles(prev => [...prev, ...validFiles]);
+    }
+    
+    // input 초기화 (같은 파일을 다시 선택할 수 있도록)
+    e.target.value = '';
+  };
+
+  // 수정 모드 파일 제거 핸들러
+  const handleEditFileRemove = (index: number) => {
+    setEditUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 드래그 앤 드롭 핸들러 (수정 모달)
+  const handleEditDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(true);
+  };
+
+  const handleEditDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+  };
+
+  const handleEditDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      const validFiles: File[] = [];
+      
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          toast.error(validation.error);
+        }
       });
-      // 품목 목록도 원래대로 복원
-      setEditPrItems(prDetailItems.map(item => ({ ...item })));
+
+      if (validFiles.length > 0) {
+        setEditUploadedFiles(prev => [...prev, ...validFiles]);
+      }
     }
   };
 
@@ -384,9 +575,56 @@ export default function PurchaseRequestListPage() {
         prDtList: prDtList,
       });
 
+      // 2. 삭제된 파일 논리적 삭제 처리
+      if (deletedFileNums.length > 0) {
+        console.log('삭제할 파일 개수:', deletedFileNums.length);
+        for (const fileNum of deletedFileNums) {
+          try {
+            await prApi.deleteFile(fileNum);
+            console.log('파일 삭제 완료:', fileNum);
+          } catch (error: any) {
+            console.error('파일 삭제 실패:', error);
+            toast.error(`파일 삭제에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+          }
+        }
+      }
+      
+      // 3. 새로 추가된 파일 업로드
+      if (editUploadedFiles.length > 0) {
+        console.log('업로드할 파일 개수:', editUploadedFiles.length);
+        for (const file of editUploadedFiles) {
+          try {
+            await prApi.uploadFile(selectedPr.prNo, file);
+            console.log('파일 업로드 완료:', file.name);
+          } catch (error: any) {
+            console.error('파일 업로드 실패:', error);
+            toast.error(`${file.name} 업로드에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+          }
+        }
+      }
+
       toast.success('구매요청이 수정되었습니다.');
       setIsEditing(false);
       setIsDetailModalOpen(false);
+      setEditUploadedFiles([]);
+      setDeletedFileNums([]);
+      setIsEditDragging(false);
+      setSelectedRows([]); // 체크박스 해제
+      
+      // 상세 정보 새로고침
+      const detail = await prApi.getDetail(selectedPr.prNo);
+      const detailList = detail.items || [];
+      setPrDetailItems(detailList);
+      
+      // 첨부파일 목록 새로고침
+      try {
+        const files = await prApi.getFileList(selectedPr.prNo);
+        setAttachedFiles(files || []);
+        setOriginalAttachedFiles(files || []);
+      } catch (fileError) {
+        console.error('첨부파일 목록 조회 실패:', fileError);
+      }
+      
       await fetchData();
 
     } catch (error: any) {
@@ -544,8 +782,20 @@ export default function PurchaseRequestListPage() {
       return;
     }
 
-    // 승인 상태인 항목은 반려 불가
-    const rejectableRows = selectedRows.filter(row => row.status !== 'APPROVED');
+    // 이미 반려된 문서 확인
+    const rejectedRows = selectedRows.filter(row => row.status === 'REJECTED');
+    if (rejectedRows.length > 0) {
+      // 반려된 문서만 선택된 경우
+      if (rejectedRows.length === selectedRows.length) {
+        toast.warning('이미 반려된 문서입니다.');
+        return;
+      }
+      // 반려된 문서와 다른 상태의 문서가 함께 선택된 경우
+      toast.warning('이미 반려된 문서는 제외됩니다.');
+    }
+
+    // 승인 상태인 항목은 반려 불가, 반려된 항목도 제외
+    const rejectableRows = selectedRows.filter(row => row.status !== 'APPROVED' && row.status !== 'REJECTED');
     if (rejectableRows.length === 0) {
       toast.warning('반려 가능한 항목이 없습니다.');
       return;
@@ -629,10 +879,7 @@ export default function PurchaseRequestListPage() {
               onChange={(e) => setSearchParams(prev => ({ ...prev, department: e.target.value }))}
               options={[
                 { value: '', label: '전체' },
-                { value: '개발팀', label: '개발팀' },
-                { value: '구매팀', label: '구매팀' },
-                { value: '영업팀', label: '영업팀' },
-                { value: '기획팀', label: '기획팀' },
+                ...deptNameList.map(deptName => ({ value: deptName, label: deptName }))
               ]}
           />
           <Select
@@ -921,6 +1168,11 @@ export default function PurchaseRequestListPage() {
               setPrDetailItems([]);
               setSelectedPr(null);
               setIsEditing(false);
+              setAttachedFiles([]);
+              setOriginalAttachedFiles([]);
+              setEditUploadedFiles([]);
+              setDeletedFileNums([]);
+              setIsEditDragging(false);
             }}
             title="구매요청 상세"
             size="lg"
@@ -939,6 +1191,11 @@ export default function PurchaseRequestListPage() {
                       setPrDetailItems([]);
                       setSelectedPr(null);
                       setIsEditing(false);
+                      setAttachedFiles([]);
+                      setOriginalAttachedFiles([]);
+                      setEditUploadedFiles([]);
+                      setDeletedFileNums([]);
+                      setIsEditDragging(false);
                     }}
                     cancelText="닫기"
                 />
@@ -1105,6 +1362,133 @@ export default function PurchaseRequestListPage() {
                 </span>
                   </div>
                 </div>
+
+                {/* 첨부파일 목록 */}
+                {isEditing ? (
+                  <>
+                    {/* 기존 첨부파일 목록 */}
+                    {attachedFiles.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">기존 첨부파일</label>
+                        <div className="space-y-2">
+                          {attachedFiles.map((file) => (
+                            <div
+                              key={file.fileNum}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{file.originName}</p>
+                                  <p className="text-xs text-gray-500">{formatFileSize(file.fileSize)}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => prApi.downloadFile(file.fileNum)}
+                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                  title="다운로드"
+                                >
+                                  <Download className="w-4 h-4 text-gray-500" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteExistingFile(file.fileNum)}
+                                  className="p-1 hover:bg-red-100 rounded transition-colors"
+                                  title="삭제"
+                                >
+                                  <X className="w-4 h-4 text-red-500" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 새 첨부파일 추가 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일 추가</label>
+                      <input
+                        type="file"
+                        id="edit-file-upload"
+                        className="hidden"
+                        multiple
+                        onChange={handleEditFileSelect}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+                      />
+                      <label
+                        htmlFor="edit-file-upload"
+                        onDragOver={handleEditDragOver}
+                        onDragLeave={handleEditDragLeave}
+                        onDrop={handleEditDrop}
+                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
+                          isEditDragging 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                          <Upload className="w-5 h-5 text-gray-500" />
+                        </div>
+                        <p className="text-sm text-gray-600">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
+                        <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLSX, 이미지 파일 (최대 10MB)</p>
+                      </label>
+                      
+                      {/* 선택된 파일 목록 */}
+                      {editUploadedFiles.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {editUploadedFiles.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleEditFileRemove(index)}
+                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                              >
+                                <X className="w-4 h-4 text-gray-500" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  attachedFiles.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
+                      <div className="space-y-2">
+                        {attachedFiles.map((file) => (
+                          <div
+                            key={file.fileNum}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                            onClick={() => prApi.downloadFile(file.fileNum)}
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{file.originName}</p>
+                                <p className="text-xs text-gray-500">{formatFileSize(file.fileSize)}</p>
+                              </div>
+                            </div>
+                            <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
           )}
         </Modal>
