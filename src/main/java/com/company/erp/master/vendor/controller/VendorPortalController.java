@@ -67,7 +67,7 @@ public class VendorPortalController {
         String loginId = loginUser.getUserId();
 
         String askNum = vendorPortalService.requestVendorChange(vendorRegisterDto, loginId);
-        return ApiResponse.ok("수정 요청이 완료되었습니다 [NEW_VER_1]", askNum);
+        return ApiResponse.ok("수정 요청이 완료되었습니다", askNum);
     }
     
     // 3. 첨부 파일 조회

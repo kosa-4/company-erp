@@ -172,7 +172,7 @@ export default function VendorPage() {
     latestVendorCodeRef.current = vendor.vendorCode;
     
     // 파일 목록 조회
-    fetchVendorFiles(vendor.vendorCode);
+    await fetchVendorFiles(vendor.vendorCode);
 
     // 2. 상태별 분기 처리
     if (vendor.status === 'C') {
@@ -888,7 +888,7 @@ const fetchMasterVendor = async (vendorCode: string) => {
             {selectedVendor.status === 'C' ? (
               <div className="space-y-6">
                 <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-[11px] font-bold text-center">
-                  정보 변경 요청건입니다. 기존 마스터 정보와 비교하세요.
+                  정보 변경 요청건입니다. 기존 정보와 비교하세요.
                 </div>
                 
                 {/* 데이터 비교 폼 영역 (기존 코드 유지) */}

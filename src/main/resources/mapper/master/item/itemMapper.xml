@@ -34,7 +34,7 @@
                 AND GL.USE_FLAG = #{useYn}
             </if>
             <if test="date != null">
-                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
+                AND GL.REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
                 AND GL.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')

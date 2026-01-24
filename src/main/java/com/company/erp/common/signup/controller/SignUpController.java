@@ -8,6 +8,7 @@ import com.company.erp.common.session.SessionConst;
 import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.common.signup.dto.SignUpDto;
+import com.company.erp.common.signup.dto.SignUpResponseDto;
 import com.company.erp.common.signup.service.SignUpService;
 import com.company.erp.master.vendoruser.service.VendorUserService;
 import jakarta.validation.Valid;
@@ -38,25 +39,29 @@ public class SignUpController {
     FileService fileService;
 
     @PostMapping("/signup")
-    public ResponseEntity<String> registerUser(@Valid @RequestBody SignUpDto signUpDto){
+    public ApiResponse<SignUpDto> registerUser(@Valid @RequestBody SignUpDto signUpDto){
         // global exception이 있으므로 try-catch 사용 안해도 됨
-        String vendorCode = signUpService.registerVendorWithManager(signUpDto);
-        return ResponseEntity.ok(vendorCode);
+        SignUpDto signUpInfo = signUpService.registerVendorWithManager(signUpDto);
+        SignUpResponseDto responseDto = new SignUpResponseDto();
+        responseDto.setVendorCode(signUpInfo.getVendorCode());
+        responseDto.setAskNum(signUpInfo.getAskNo());
+        responseDto.setUserId(signUpInfo.getUserId());
+
+        return ApiResponse.ok(responseDto);
     }
     // 4. 첨부 파일 저장
-    @PostMapping("/signup/files/{vendorCode}")
+    @PostMapping("/signup/files")
     public ApiResponse registerFile(
-            @PathVariable("vendorCode") String vendorCode,
-            @RequestPart("file") List<MultipartFile> files) {
-
+            @RequestPart(value = "data") SignUpResponseDto responseDto,
+            @RequestPart(value = "file") List<MultipartFile> files) {
+        String vendorCode = responseDto.getVendorCode();
+        String askNum = responseDto.getAskNum();
         if (files != null && !files.isEmpty()) {
 
             for (MultipartFile file : files) {
-                String file_num = docNumService.generateDocNumStr(DocKey.FL);
-                fileService.upload(file, "OV", file_num, vendorCode, null);
+                fileService.upload(file, "OV", askNum, vendorCode, null);
             }
         }
-
         return ApiResponse.ok(null);
     }
 

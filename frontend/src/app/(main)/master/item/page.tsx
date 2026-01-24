@@ -19,9 +19,7 @@ import { Item, ColumnDef } from '@/types';
 import TreeItem from './TreeItem';
 import { formatNumber } from '@/lib/utils';
 import { data } from 'framer-motion/client';
-import { Console } from 'console';
 import { useRouter } from 'next/navigation';
-import { register } from 'module';
 import { Router } from 'lucide-react';
 import { Category } from './TreeItem';
 import { Can } from '@/auth/Can';
@@ -729,36 +727,52 @@ export default function ItemPage() {
                 {/* 4. 품목 분류 (수정 모드일 때만 클릭 가능) */}
                 {/* 로직: 새로 선택한 경로가 있으면 그걸 보여주고(selectedPath), 없으면 기존 DB값(selectedItem) 보여줌 */}
                 <Input 
-                  name='itemType' 
                   label="품목 분류" 
                   placeholder="품목 분류" 
                   value={selectedPath[0] ? selectedPath[0].itemClsNm : ''}
-                  readOnly={true} // 직접 타이핑 방지 (모달 선택 방식이므로)
+                  readOnly={true}
+                />
+                <input
+                  type="hidden"
+                  name="itemType"
+                  value={selectedPath[0] ? selectedPath[0].itemCls : ''}
                 />
 
                 {/* 5. 대/중/소분류 (자동 입력 필드) */}
                 {/* 주의: 상세 조회 시 서버에서 대/중/소분류 명칭을 따로 안 주면 빈카드로 나올 수 있음. 
                     수정 시에는 selectedPath 값으로 채워짐 */}
                 <Input 
-                  name='categoryL' 
                   label="품목 대분류" 
                   placeholder="품목 대분류"
                   value={selectedPath[1] ? selectedPath[1].itemClsNm : ''} 
                   readOnly={true}
                 />
+                <input
+                  type="hidden"
+                  name="categoryL"
+                  value={selectedPath[1] ? selectedPath[1].itemCls : ''}
+                />
                 <Input 
-                  name='categoryM' 
                   label="품목 중분류" 
                   placeholder="품목 중분류"
                   value={selectedPath[2] ? selectedPath[2].itemClsNm : ''} 
                   readOnly={true}
                 />
+                <input
+                  type="hidden"
+                  name="categoryM"
+                  value={selectedPath[2] ? selectedPath[2].itemCls : ''}
+                />
                 <Input 
-                  name='categoryS' 
                   label="품목 소분류" 
                   placeholder="품목 소분류"
                   value={selectedPath[3] ? selectedPath[3].itemClsNm : ''} 
                   readOnly={true}
+                />
+                <input
+                  type="hidden"
+                  name="categoryS"
+                  value={selectedPath[3] ? selectedPath[3].itemCls : ''}
                 />
 
                 {/* 6. 등록일자 (수정 불가) */}

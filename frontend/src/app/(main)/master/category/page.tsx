@@ -224,7 +224,6 @@ export default function CategoryPage() {
                     itemCls: c.itemCls,
                     itemClsNm: c.itemClsNm,
                     useFlag: c.useFlag === true ? 'Y' : 'N',
-                    modifiedBy: 'ADMIN' // 필요시 수정
                 }));
 
                 const res = await fetch("/api/v1/categories/update", {

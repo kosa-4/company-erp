@@ -33,7 +33,7 @@ public class SignUpService {
     
     // 1. 회원 가입
     @Transactional
-    public String registerVendorWithManager(SignUpDto signUpDto) {
+    public SignUpDto registerVendorWithManager(SignUpDto signUpDto) {
 
         // 1. 중복 체크
         // 1-1. 아이디 중복 체크
@@ -82,7 +82,7 @@ public class SignUpService {
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
 
-        return vendorCode;
+        return signUpDto;
     }
     
 

@@ -28,6 +28,13 @@ interface AuthModalProps {
   onSwitchMode: (mode: 'login' | 'signup') => void;
 }
 
+// 서버 응답 데이터 타입 정의 (새로 추가됨)
+interface SignupResponse {
+  vendorCode: string;
+  askNum: string;
+  userId: string;
+}
+
 interface VendorFormData {
   vendorName: string;
   vendorNameEn: string;
@@ -119,6 +126,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     toast.message('파일이 제거되었습니다.');
   };
 
+  
+  // 회원가입 성공 데이터 상태 
+  const [signupSuccessData, setSignupSuccessData] = useState<SignupResponse | null>(null);
+
+  // 회원가입 처리 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -135,24 +147,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         body: JSON.stringify(formData),
       });
 
-      const resultText = await response.text();
+      // JSON으로 파싱
+      const jsonResponse = await response.json();
 
       if (!response.ok) {
-        let serverMsg = resultText;
-        try {
-          const errorJson = JSON.parse(resultText);
-          serverMsg = errorJson.data ? (Object.values(errorJson.data)[0] as string) : errorJson.message;
-        } catch {
-          // JSON이 아니면 원문 유지
-        }
-        throw new Error(serverMsg);
+        throw new Error(jsonResponse.message || '가입 중 오류가 발생했습니다.');
       }
 
-      const generatedVendorCode = resultText.trim();
-      if (!generatedVendorCode) {
-        throw new Error('업체코드를 확인할 수 없습니다.');
+      // 백엔드 ApiResponse 구조가 { data: { ... } } 라고 가정
+      // 만약 바로 객체가 온다면 jsonResponse를 사용하세요.
+      const resultData: SignupResponse = jsonResponse.data; 
+
+      if (!resultData || !resultData.vendorCode) {
+        throw new Error('응답 데이터에서 업체코드를 확인할 수 없습니다.');
       }
 
+      const generatedVendorCode = resultData.vendorCode;
+
+      // 파일 업로드 로직 (기존 유지)
       let fileUploadFailed = false;
       if (selectedFiles.length > 0) {
         try {
@@ -167,46 +179,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           if (!fileRes.ok) {
             throw new Error('서류 업로드 중 오류가 발생했습니다.');
           }
-
           toast.success('서류 업로드 완료');
         } catch (fileErr) {
           console.error('파일 업로드 오류:', fileErr);
-          toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+          toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다.');
           fileUploadFailed = true;
         }
       }
 
       if (!fileUploadFailed) {
         toast.success('회원가입 신청이 완료되었습니다.');
-      } else {
-        toast.message('회원가입 신청은 접수되었습니다.');
       }
 
-      setFormData({
-        vendorName: '',
-        vendorNameEn: '',
-        businessType: '',
-        businessNo: '',
-        ceoName: '',
-        zipCode: '',
-        address: '',
-        addressDetail: '',
-        phone: '',
-        industry: '',
-        userName: '',
-        userId: '',
-        email: '',
-        password: '',
-        passwordConfirm: '',
-        fax:'',
-        foundationDate:'',
-        remark:''
-      });
+      // 성공 상태 설정 (화면 전환용)
+      setSignupSuccessData(resultData);
 
+      // 폼 초기화
+      setFormData({
+        vendorName: '', vendorNameEn: '', businessType: '', businessNo: '', ceoName: '',
+        zipCode: '', address: '', addressDetail: '', phone: '', fax: '', email: '',
+        foundationDate: '', industry: '', remark: '', userName: '', userId: '',
+        password: '', passwordConfirm: ''
+      });
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      onSwitchMode('login');
     } catch (err: unknown) {
       let msg = '가입 중 오류가 발생했습니다.';
       if (err instanceof Error) {
