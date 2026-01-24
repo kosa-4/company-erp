@@ -208,7 +208,7 @@ export default function ReceivingTargetPage() {
     setSelectedItemIds(newSelected);
   };
 
-  const handleReceiving = async () => {
+  const handleReceiving = () => {
     if (selectedItemIds.size === 0) {
       toast.warning("입고 처리할 품목을 선택해주세요.");
       return;
@@ -230,63 +230,42 @@ export default function ReceivingTargetPage() {
       return;
     }
 
-    try {
-      setLoading(true);
-      // [Modified] 선택된 PO의 모든 품목 정보를 서버에서 다시 조회 (누락 방지)
-      const result = await goodsReceiptApi.getPendingPOList({ poNo: firstPoNo });
-      
-      if (!result || result.length === 0 || !result[0].items) {
-        toast.error("발주 정보를 불러올 수 없습니다.");
-        return;
-      }
+    setCurrentPoNo(firstPoNo);
 
-      const poData = result[0];
-      const items = poData.items || [];
-      
-      setCurrentPoNo(firstPoNo);
-      
-      // 기존 GR 저장위치 확인 (remark 활용)
-      let existingWh: string | undefined;
-      if (poData.remark && poData.remark.startsWith("EXISTING_WH:")) {
-        existingWh = poData.remark.replace("EXISTING_WH:", "");
-      }
-      setExistingWarehouse(existingWh || null);
+    // 기존 GR 저장위치 확인 (첫 번째 아이템에서)
+    const existingWh = selectedItemsList[0].existingWarehouse;
+    setExistingWarehouse(existingWh || null);
 
-      // 입고 폼 초기화
-      setGrDate(new Date().toISOString().split("T")[0]);
-      setRemark("");
-      setReceivingItems(
-        items
-          .filter(item => {
+    // 입고 폼 초기화
+    setGrDate(new Date().toISOString().split("T")[0]);
+    setRemark("");
+    setReceivingItems(
+      selectedItemsList
+        .filter(item => {
              const rem = item.remainingQuantity ?? item.orderQuantity ?? 0;
              return rem > 0;
           })
-          .map((item) => {
-             // 확실한 숫자 타입 보장
-             const sysRemaining = item.remainingQuantity ?? item.orderQuantity ?? 0;
-             const initialReceivedQty = sysRemaining;
+        .map((item) => {
+          // 확실한 숫자 타입 보장
+          const sysRemaining = item.remainingQuantity ?? item.orderQuantity ?? 0;
+          const initialReceivedQty = sysRemaining;
 
-             return {
-              itemCode: item.itemCode || "",
-              itemName: item.itemName || "",
-              spec: item.specification || "",
-              unit: item.unit || "",
-              unitPrice: Number(item.unitPrice || 0),
-              orderQuantity: item.orderQuantity || 0,
-              remainingQuantity: sysRemaining,
-              receivedQuantity: initialReceivedQty, 
-              receivedAmount: Number(item.unitPrice || 0) * initialReceivedQty,
-              storageLocation: existingWh || item.storageLocation || "본사 창고",
-            };
+          return {
+            itemCode: item.itemCode || "",
+            itemName: item.itemName || "",
+            spec: item.spec || "", // item.spec refers to flatItems prop
+            unit: item.unit || "",
+            unitPrice: Number(item.unitPrice || 0),
+            orderQuantity: item.orderQuantity || 0,
+            remainingQuantity: sysRemaining,
+            receivedQuantity: initialReceivedQty,
+            receivedAmount: Number(item.unitPrice || 0) * initialReceivedQty,
+            storageLocation: existingWh || item.storageLocation || "본사 창고",
+          };
         }),
-      );
+    );
 
-      setIsReceivingModalOpen(true);
-    } catch (error) {
-      toast.error("품목 상세 정보를 불러오는 중 오류가 발생했습니다: " + getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    setIsReceivingModalOpen(true);
   };
 
   // 수량 변경 시 금액 업데이트
