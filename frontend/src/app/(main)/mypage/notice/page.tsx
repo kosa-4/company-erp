@@ -344,6 +344,12 @@ export default function NoticePage() {
       return;
     }
     
+    // 여러 개 선택 시 알림 표시
+    if (selectedNotices.length > 1) {
+      toast.warning('수정은 1건만 가능합니다.');
+      return;
+    }
+    
     // 선택된 항목 중 첫 번째를 찾아서 상세 모달 열기
     const firstSelectedNoticeNo = selectedNotices[0];
     const notice = notices.find(n => n.noticeNo === firstSelectedNoticeNo);
@@ -467,6 +473,9 @@ export default function NoticePage() {
       // 공지사항 저장 성공 메시지 표시
       toast.success('공지사항이 등록되었습니다.');
       setIsCreateModalOpen(false);
+      
+      // 체크박스 선택 해제
+      setSelectedNotices([]);
       
       // 목록 새로고침
       await fetchNoticeList();
