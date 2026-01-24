@@ -4,7 +4,7 @@
 <mapper namespace="com.company.erp.master.item.mapper.ItemMapper">
     <!--조회-->
     <select id="selectItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="com.company.erp.master.item.dto.ItemDetailDto">
-        SELECT
+        SELECT DISTINCT
             GL.ITEM_CD AS itemCode,
             GL.ITEM_NM AS itemName,
             IFNULL(CA.ITEM_CLS_NM, '없음') AS itemType,
@@ -132,6 +132,8 @@
             GC.ITEM_CLS3 = CA_S.ITEM_CLS
         WHERE
             GL.ITEM_CD = #{code}
+        AND
+            GL.DEL_FLAG = 'N'
     </select>
 
     <!--품목 마스터 테이블 저장-->

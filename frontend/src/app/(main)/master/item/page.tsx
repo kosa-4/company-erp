@@ -75,6 +75,16 @@ export default function ItemPage() {
     manufacturerName: '',
     page: "1",
   });
+  
+  // 1-3. 입력 폼 상태 (사용자가 타이핑 중인 값 저장용)
+  // 초기값은 searchParams와 동일하게 설정
+  const [formParams, setFormParams] = useState({
+    itemCode: '',
+    itemName: '',
+    useYn: '',
+    date: '',
+    manufacturerName: '',
+  });
 
   // 1-3. 모달 및 상세 페이지 관련 상태
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
@@ -161,26 +171,31 @@ export default function ItemPage() {
 
   // 3-3. 검색 시 1페이지로 이동
   const handleSearchList = () => {
-    // setPage(1);
-    setSearchParams(prev => ({...prev, page: "1"}));
+    // 조회 버튼을 누르면 formParams(입력된 값)을 searchParams(실제 쿼리)로 복사
+    // 페이지는 1페이지로 초기화
+    setSearchParams({
+      ...formParams,
+      page: "1"
+    });
   }
   // 3-4. 목록 초기화
   const handleReset = () => {
-    // 1) 검색 파라미터 초기화
-    setSearchParams({
+    const emptyParams = {
       itemCode: '',
       itemName: '',
       useYn: '',
       date: '',
       manufacturerName: '',
-      page: '',
-    });
+    };
+
+    // 입력폼과 실제 검색 조건 모두 초기화
+    setFormParams(emptyParams);
+    setSearchParams({ ...emptyParams, page: "1" });
   };
 
-  // 4. 검색 파라미터 변경 시 목록 재조회
+  // 4. 검색 파라미터 확정 시에만 목록 재조회
   useEffect(() => {
     fetchItems();
-    
   }, [searchParams]); 
 
   // 5. 컬럼 정의
@@ -579,49 +594,42 @@ export default function ItemPage() {
         <Input
           label="품목코드"
           placeholder="품목코드 입력"
-          value={searchParams.itemCode}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, itemCode: e.target.value }))}
+          value={formParams.itemCode} // formParams 사용
+          onChange={(e) => setFormParams(prev => ({ ...prev, itemCode: e.target.value }))}
         />
         <Input
           label="품목명"
           placeholder="품목명 입력"
-          value={searchParams.itemName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, itemName: e.target.value }))}
+          value={formParams.itemName} // formParams 사용
+          onChange={(e) => setFormParams(prev => ({ ...prev, itemName: e.target.value }))}
         />
         <Select
           label="사용여부"
-          value={searchParams.useYn}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, useYn: e.target.value }))}
+          value={formParams.useYn} // formParams 사용
+          onChange={(e) => setFormParams(prev => ({ ...prev, useYn: e.target.value }))}
           options={[
             { value: '', label: '전체' },
             { value: 'Y', label: '사용' },
             { value: 'N', label: '미사용' },
           ]}
         />
-        {/* <DatePicker
-          label="등록일자"
-          value={searchParams.startDate}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, startDate: e.target.value }))}
-        /> */}
         <DatePicker
           label="등록일자"
-          value={searchParams.date}
-          // (e) => e.target.value 가 아니라, 들어오는 값(date)을 그대로 넣어줍니다.
+          value={formParams.date} // formParams 사용
           onChange={(e) => {
-            const date = e.target.value;
-
-            setSearchParams(prev => ({ 
+            const date = e.target.value; // DatePicker 컴포넌트에 따라 e가 값일 수도 있습니다. 기존 로직 유지.
+            setFormParams(prev => ({ 
             ...prev, 
             date: date
           }))}}
         />
-
         <Input
           label="제조사"
           placeholder="제조사명 입력"
-          value={searchParams.manufacturerName}
-          onChange={(e) => setSearchParams(prev => ({ ...prev, manufacturerName: e.target.value }))}
+          value={formParams.manufacturerName} // formParams 사용
+          onChange={(e) => setFormParams(prev => ({ ...prev, manufacturerName: e.target.value }))}
         />
+
       </SearchPanel>
 
       <Card 
