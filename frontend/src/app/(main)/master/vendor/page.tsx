@@ -502,28 +502,21 @@ export default function VendorPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editVendorData, setEditVendorData] = useState<Vendor | null>(null);
 
-  // 1. 숫자만 추출하는 헬퍼 함수
-const extractNumber = (str: string) => str.replace(/[^0-9]/g, '');
+  // 1. 현재 보고 있는 상세창의 기준 번호 (문자열 그대로 사용)
+  const currentAskNum = selectedVendor?.askNum || '';
 
-// 2. 현재 상세창의 기준 숫자 (MD2601240000 -> 2601240000)
-const activeDetailNum = useMemo(() => 
-  extractNumber(selectedVendor?.askNum || ''), 
-  [selectedVendor]
-);
+  // 2. [오른쪽] 금번 신규 추가 서류 (refNo가 정확히 일치하는 경우)
+  const requestFiles = useMemo(() => {
+    if (!currentAskNum) return [];
+    // 문자열 단순 비교 (속도 빠름)
+    return attachedFiles.filter(f => f.refNo === currentAskNum);
+  }, [attachedFiles, currentAskNum]);
 
-// 3. [오른쪽] 금번 신규 추가 서류 (숫자가 일치하는 경우)
-const requestFiles = useMemo(() => {
-  if (!activeDetailNum) return [];
-  return attachedFiles.filter(f => extractNumber(f.refNo || '') === activeDetailNum);
-}, [attachedFiles, activeDetailNum]);
-
-// 4. [왼쪽] 기존 마스터 서류 (숫자가 다르거나 없는 경우)
-const masterFiles = useMemo(() => {
-  return attachedFiles.filter(f => {
-    const fileNum = extractNumber(f.refNo || '');
-    return fileNum === '' || fileNum !== activeDetailNum;
-  });
-}, [attachedFiles, activeDetailNum]);
+  // 3. [왼쪽] 기존 마스터 서류 (refNo가 다르거나 비어있는 경우)
+  const masterFiles = useMemo(() => {
+    // 기준 번호와 다른 모든 파일을 마스터(기존) 파일로 분류
+    return attachedFiles.filter(f => (f.refNo || '') !== currentAskNum);
+  }, [attachedFiles, currentAskNum]);
 
   const rejectVendor = async (reason: string, targets: Vendor[] = selectedVendors) => {
   if (!reason.trim()) return alert("반려 사유를 입력해주세요.");
