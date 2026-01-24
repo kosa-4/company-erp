@@ -88,6 +88,7 @@ public class SignUpService {
 
     // 2. 요청 번호와 회사 번호가 일치하는지 검사
     public void validateSignUpRequest(SignUpResponseDto responseDto){
+
         String askNum = responseDto.getAskNum();
         String vendorCode = responseDto.getVendorCode();
 
