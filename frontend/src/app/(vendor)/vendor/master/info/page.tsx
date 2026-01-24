@@ -168,7 +168,6 @@ useEffect(() => {
         }
       }
 
-      toast.success('변경 신청이 접수되었습니다.');
       
       // 4. 성공 후 새로고침
       if (!uploadOk) {
