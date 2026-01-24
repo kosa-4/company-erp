@@ -55,6 +55,7 @@ interface ReceivingFormItem {
   receivedQuantity: number;
   receivedAmount: number;
   storageLocation: string;
+  storageLocationDisabled: boolean; // 저장위치 선택 비활성화 여부 (입고번호 기준)
 }
 
 export default function ReceivingTargetPage() {
@@ -115,12 +116,6 @@ export default function ReceivingTargetPage() {
       result.forEach((po: PendingPODTO) => {
         if (!po.items || po.items.length === 0) return;
 
-        // 기존 GR 저장위치 확인 (remark에 EXISTING_WH: 형태로 저장됨)
-        let existingWh: string | undefined;
-        if (po.remark && po.remark.startsWith("EXISTING_WH:")) {
-          existingWh = po.remark.replace("EXISTING_WH:", "");
-        }
-
         po.items.forEach((item) => {
           // 잔여 수량이 0 이하면 목록에 표시하지 않음 (이미 완료된 경우)
           const remainingQty =
@@ -129,10 +124,13 @@ export default function ReceivingTargetPage() {
               : item.orderQuantity || 0;
           if (remainingQty <= 0) return;
 
+          // 기존 GR의 저장위치 확인 (별도 필드로 받음)
+          const existingGrWarehouse = item.existingGrWarehouse;
+
           flatItems.push({
             id: `${po.poNo}_${item.itemCode}`,
             rfqNo: po.rfqNo || "",
-            prNo: (po as any).prNo || "", // 구매요청번호 추가
+            prNo: po.prNo || "",
             poNo: po.poNo || "",
             poName: po.poName || "",
             poDate: po.poDate || "",
@@ -146,8 +144,8 @@ export default function ReceivingTargetPage() {
             orderQuantity: item.orderQuantity || 0,
             remainingQuantity: remainingQty,
             amount: Number(item.amount) || 0,
-            storageLocation: existingWh || item.storageLocation || "본사 창고",
-            existingWarehouse: existingWh, // 기존 GR 저장위치 고정
+            storageLocation: existingGrWarehouse || item.storageLocation || "본사 창고",
+            existingWarehouse: existingGrWarehouse || undefined, // 기존 GR이 있으면 해당 값, 없으면 undefined
           });
         });
       });
@@ -232,10 +230,6 @@ export default function ReceivingTargetPage() {
 
     setCurrentPoNo(firstPoNo);
 
-    // 기존 GR 저장위치 확인 (첫 번째 아이템에서)
-    const existingWh = selectedItemsList[0].existingWarehouse;
-    setExistingWarehouse(existingWh || null);
-
     // 입고 폼 초기화
     setGrDate(new Date().toISOString().split("T")[0]);
     setRemark("");
@@ -250,20 +244,29 @@ export default function ReceivingTargetPage() {
           const sysRemaining = item.remainingQuantity ?? item.orderQuantity ?? 0;
           const initialReceivedQty = sysRemaining;
 
+          // 품목별로 기존 GR 저장위치 확인 (입고번호 기준)
+          const existingWh = item.existingWarehouse;
+          const storageLocation = existingWh || item.storageLocation || "본사 창고";
+
           return {
             itemCode: item.itemCode || "",
             itemName: item.itemName || "",
-            spec: item.spec || "", // item.spec refers to flatItems prop
+            spec: item.spec || "",
             unit: item.unit || "",
             unitPrice: Number(item.unitPrice || 0),
             orderQuantity: item.orderQuantity || 0,
             remainingQuantity: sysRemaining,
             receivedQuantity: initialReceivedQty,
             receivedAmount: Number(item.unitPrice || 0) * initialReceivedQty,
-            storageLocation: existingWh || item.storageLocation || "본사 창고",
+            storageLocation: storageLocation,
+            storageLocationDisabled: !!existingWh, // 기존 GR이 있으면 비활성화
           };
         }),
     );
+
+    // 기존 GR 안내 메시지를 위한 상태 업데이트 (적어도 하나의 품목에 기존 GR이 있는지)
+    const hasExistingWarehouse = selectedItemsList.some(item => item.existingWarehouse);
+    setExistingWarehouse(hasExistingWarehouse ? " exist" : null);
 
     setIsReceivingModalOpen(true);
   };
@@ -702,12 +705,11 @@ export default function ReceivingTargetPage() {
       >
         <div className="space-y-6">
           {/* 기존 GR 안내 메시지 */}
-          {existingWarehouse && (
+          {receivingItems.some(item => item.storageLocationDisabled) && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                <strong>안내:</strong> 이 발주에 이미 입고 처리된 건이 있습니다.
-                저장위치가 <strong>'{existingWarehouse}'</strong>(으)로
-                고정됩니다.
+                <strong>안내:</strong> 일부 품목은 이미 입고 처리된 건이 있어 저장위치가 고정됩니다.
+                품목별로 입고번호에 따라 저장위치가 자동 설정됩니다.
               </p>
             </div>
           )}
@@ -802,14 +804,14 @@ export default function ReceivingTargetPage() {
                       </td>
                       <td className="p-3">
                         <select
-                          className={`px-2 py-1 border rounded text-sm ${existingWarehouse ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          className={`px-2 py-1 border rounded text-sm ${item.storageLocationDisabled ? "bg-gray-100 cursor-not-allowed" : ""}`}
                           value={item.storageLocation}
                           onChange={(e) =>
                             handleStorageChange(index, e.target.value)
                           }
-                          disabled={!!existingWarehouse}
+                          disabled={item.storageLocationDisabled}
                           title={
-                            existingWarehouse
+                            item.storageLocationDisabled
                               ? "기존 입고 건이 있어 저장위치가 고정됩니다."
                               : ""
                           }

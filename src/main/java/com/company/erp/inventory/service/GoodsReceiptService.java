@@ -53,15 +53,9 @@ public class GoodsReceiptService {
             if (po.getPoNo() != null) {
                 List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
 
-                // 기존 GR 정보 조회 (저장위치 제한용)
-                Map<String, Object> existingGr = goodsReceiptMapper.selectExistingGrByPoNo(po.getPoNo());
-                String existingWarehouse = null;
-                if (existingGr != null && existingGr.get("warehouseCode") != null) {
-                    existingWarehouse = (String) existingGr.get("warehouseCode");
-                }
-
-                // 각 품목별 남은 입고 수량 계산
+                // 각 품목별 남은 입고 수량 및 기존 GR 저장위치 계산 (품목별 개별 관리)
                 for (PurchaseOrderItemDTO item : items) {
+                    // 입고된 수량 조회
                     Integer receivedQty = goodsReceiptMapper.getReceivedQuantity(po.getPoNo(), item.getItemCode());
                     if (receivedQty == null)
                         receivedQty = 0;
@@ -69,18 +63,13 @@ public class GoodsReceiptService {
                     int remaining = item.getOrderQuantity() - receivedQty;
                     item.setRemainingQuantity(Math.max(0, remaining));
 
-                    // 기존 GR의 저장위치가 있으면 해당 위치로 고정
-                    if (existingWarehouse != null) {
-                        item.setStorageLocation(existingWarehouse);
-                    }
+                    // 품목별로 기존 GR 저장위치 조회 (입고번호 기준)
+                    String existingWarehouse = goodsReceiptMapper.selectWarehouseByPoAndItem(po.getPoNo(), item.getItemCode());
+                    // 기존 GR이 있으면 별도 필드에 저장 (storageLocation은 원래 값 유지)
+                    item.setExistingGrWarehouse(existingWarehouse);
                 }
 
                 po.setItems(items);
-
-                // 기존 GR 저장위치 정보를 PO에 설정 (프론트엔드에서 활용)
-                if (existingWarehouse != null) {
-                    po.setRemark("EXISTING_WH:" + existingWarehouse);
-                }
             }
         }
 
@@ -162,13 +151,9 @@ public class GoodsReceiptService {
 
         // 규격 매핑 정보 준비
         Map<String, String> poSpecMap = new HashMap<>();
-        try {
-            List<PurchaseOrderItemDTO> poItems = purchaseOrderMapper.selectItems(dto.getPoNo());
-            for (PurchaseOrderItemDTO poItem : poItems) {
-                poSpecMap.put(poItem.getItemCode(), poItem.getSpecification());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        List<PurchaseOrderItemDTO> poItems = purchaseOrderMapper.selectItems(dto.getPoNo());
+        for (PurchaseOrderItemDTO poItem : poItems) {
+            poSpecMap.put(poItem.getItemCode(), poItem.getSpecification());
         }
 
         // 2. 신규 입고 품목과 기존 입고(추가) 품목 분류

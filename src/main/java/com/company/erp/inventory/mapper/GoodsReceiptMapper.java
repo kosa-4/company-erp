@@ -113,4 +113,9 @@ public interface GoodsReceiptMapper {
          * PO 번호와 품목 코드로 기존 GR 번호 조회 (PO, Item 기준 유일한 활성 GR 찾기)
          */
         String selectExistingGrByPoAndItem(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
+
+        /**
+         * PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용)
+         */
+        String selectWarehouseByPoAndItem(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
 }

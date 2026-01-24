@@ -109,7 +109,7 @@
         purchaseType, vn.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName, h.CTRL_USER_ID AS
         ctrlUserId, u.USER_NM AS ctrlUserName, h.PR_NUM AS prNo, h.RMK AS remark FROM RFQHD h LEFT
         JOIN RFQVN vn ON h.RFQ_NUM = vn.RFQ_NUM AND vn.SELECT_YN = 'Y' LEFT JOIN VNGL v ON
-        vn.VENDOR_CD = v.VENDOR_CD LEFT JOIN by_user u ON h.CTRL_USER_ID = u.USER_ID LEFT JOIN POHD
+        vn.VENDOR_CD = v.VENDOR_CD LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID LEFT JOIN POHD
         po ON h.RFQ_NUM = po.RFQ_NUM WHERE h.PROGRESS_CD = 'J' AND h.DEL_FLAG = 'N' AND po.PO_NUM IS
         NULL <if test="rfqNo != null and rfqNo != ''"> AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNo}, '%') </if>
         <if

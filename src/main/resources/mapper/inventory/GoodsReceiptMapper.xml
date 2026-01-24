@@ -75,6 +75,20 @@
         d.ITEM_CD = #{itemCode} AND h.DEL_FLAG = 'N' AND d.DEL_FLAG = 'N' AND d.STATUS_CD = 'N' AND
         h.PROGRESS_CD != 'GRX' LIMIT 1 </select>
 
+    <!-- PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용) -->
+    <select id="selectWarehouseByPoAndItem" parameterType="map" resultType="String">
+        SELECT d.WH_CD
+        FROM GRHD h
+        INNER JOIN GRDT d ON h.GR_NUM = d.GR_NUM
+        WHERE h.PO_NUM = #{poNo}
+          AND d.ITEM_CD = #{itemCode}
+          AND h.PROGRESS_CD != 'GRX'
+          AND h.DEL_FLAG = 'N'
+          AND d.DEL_FLAG = 'N'
+          AND d.STATUS_CD = 'N'
+        LIMIT 1
+    </select>
+
     <!-- 입고 헤더 등록 -->
     <insert id="insertHeader"> INSERT INTO GRHD ( GR_NUM, PO_NUM, GR_DATE, GR_AMT, PROGRESS_CD,
         CTRL_USER_ID, CTRL_DEPT_CD, RMK, REG_DATE, REG_USER_ID, DEL_FLAG ) VALUES ( #{dto.grNo},
