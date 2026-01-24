@@ -3,12 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
-import { 
-  Package, FileText, Users, Building2, Bell, ChevronRight, 
+import {
+  Package, FileText, Users, Building2, Bell, ChevronRight,
   Circle, Square, Triangle, Hexagon, Warehouse, LayoutGrid, Clipboard
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { vendorMypageApi } from '@/lib/api/vendorMypage';
+import { dashboardApi, VendorDashboardData } from '@/lib/api/dashboard';
+import { toast } from 'sonner';
+import { noticeApi, NoticeListResponse } from '@/lib/api/notice';
 
 // 대시보드 통계 카드 (심플 버전)
 const StatCard: React.FC<{
@@ -24,10 +27,9 @@ const StatCard: React.FC<{
         <p className="text-sm text-gray-500">{title}</p>
         <p className="text-2xl font-semibold text-gray-900 mt-1">{value}</p>
         {change && (
-          <div className={`flex items-center gap-1 mt-1.5 text-xs ${
-            changeType === 'positive' ? 'text-green-600' : 
+          <div className={`flex items-center gap-1 mt-1.5 text-xs ${changeType === 'positive' ? 'text-green-600' :
             changeType === 'negative' ? 'text-red-500' : 'text-gray-500'
-          }`}>
+            }`}>
             <span>{change}</span>
           </div>
         )}
@@ -90,64 +92,82 @@ const ActivityItem: React.FC<{
 export default function VendorHomePage() {
   const { user } = useAuth();
   const [userName, setUserName] = React.useState<string>('');
-  
+  const [dashboardData, setDashboardData] = React.useState<VendorDashboardData | null>(null);
+  const [notices, setNotices] = React.useState<NoticeListResponse[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
   React.useEffect(() => {
-    const loadUserName = async () => {
+    const loadData = async () => {
       if (user) {
+        setLoading(true);
         try {
-          const response = await vendorMypageApi.getUserInfo();
-          if (response && response.userName) {
-            setUserName(response.userName);
-          } else {
-            console.warn('협력사 사용자 정보를 가져올 수 없습니다.');
-            setUserName('');
+          const [userInfo, dbData, noticeData] = await Promise.all([
+            vendorMypageApi.getUserInfo(),
+            dashboardApi.getVendorData(),
+            noticeApi.getList()
+          ]);
+
+          if (userInfo && userInfo.userName) {
+            setUserName(userInfo.userName);
           }
+          setDashboardData(dbData);
+          setNotices(noticeData.slice(0, 2));
         } catch (error) {
-          console.error('사용자 정보 로드 실패:', error);
-          setUserName('');
+          console.error('데이터 로드 실패:', error);
+          toast.error('데이터를 불러오는데 실패했습니다.');
+        } finally {
+          setLoading(false);
         }
       }
     };
-    loadUserName();
+    loadData();
   }, [user]);
-  
+
   const stats = [
-    { title: '미확인 발주', value: '3', change: '+2 건', changeType: 'negative' as const, // 미확인은 negative(빨강) 등 주의 필요
-      icon: <Package className="w-full h-full" /> },
-    { title: '진행중 견적', value: '5', change: '+1 건', changeType: 'neutral' as const,
-      icon: <FileText className="w-full h-full" /> },
-    { title: '이번 달 낙찰', value: '2', change: '+2 건', changeType: 'positive' as const,
-      icon: <Circle className="w-full h-full" /> },
-    { title: '납품 예정', value: '1', change: 'D-3', changeType: 'neutral' as const,
-      icon: <Warehouse className="w-full h-full" /> },
+    {
+      title: '답변 대기 견적', value: dashboardData?.stats.waitingRfqCount ?? '0', change: '신규 요청', changeType: 'neutral' as const,
+      icon: <FileText className="w-full h-full" />
+    },
+    {
+      title: '제출 완료', value: dashboardData?.stats.submittedRfqCount ?? '0', change: '제출 완료', changeType: 'positive' as const,
+      icon: <Circle className="w-full h-full" />
+    },
+    {
+      title: '수신 발주', value: dashboardData?.stats.receivedPoCount ?? '0', change: '발주 대기', changeType: 'positive' as const,
+      icon: <Package className="w-full h-full" />
+    },
+    {
+      title: '낙찰 건수', value: dashboardData?.stats.selectedRfqCount ?? '0', change: '최종 선정', changeType: 'positive' as const,
+      icon: <Warehouse className="w-full h-full" />
+    },
   ];
 
   const quickLinks = [
-    { 
-      href: '/vendor/order/list', 
-      title: '발주서 조회', 
-      description: '수신된 발주서 확인', 
+    {
+      href: '/vendor/order/list',
+      title: '발주서 조회',
+      description: '수신된 발주서 확인',
       icon: <Package className="w-full h-full" />,
-      badge: 3
+      badge: dashboardData?.stats.receivedPoCount ?? undefined
     },
-    { 
-      href: '/vendor/rfq/submit', 
-      title: '견적현황', 
-      description: '견적 요청 및 제출', 
+    {
+      href: '/vendor/rfq/submit',
+      title: '견적현황',
+      description: '견적 요청 및 제출',
       icon: <FileText className="w-full h-full" />,
-      badge: 2 
+      badge: dashboardData?.stats.waitingRfqCount ?? undefined
     },
-    { 
-      href: '/vendor/master/users', 
-      title: '담당자관리', 
-      description: '소속 담당자 관리', 
-      icon: <Users className="w-full h-full" /> 
+    {
+      href: '/vendor/master/users',
+      title: '담당자관리',
+      description: '소속 담당자 관리',
+      icon: <Users className="w-full h-full" />
     },
-    { 
-      href: '/vendor/master/info', 
-      title: '정보변경', 
-      description: '업체 정보 변경 신청', 
-      icon: <Building2 className="w-full h-full" /> 
+    {
+      href: '/vendor/master/info',
+      title: '정보변경',
+      description: '업체 정보 변경 신청',
+      icon: <Building2 className="w-full h-full" />
     },
   ];
 
@@ -166,11 +186,11 @@ export default function VendorHomePage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-center px-4 py-2 bg-gray-50 rounded-lg">
-              <p className="text-lg font-semibold text-gray-900">1</p>
+              <p className="text-lg font-semibold text-gray-900">{dashboardData?.stats.pendingActionCount ?? 0}</p>
               <p className="text-xs text-gray-500">견적 요청</p>
             </div>
             <div className="text-center px-4 py-2 bg-gray-50 rounded-lg">
-              <p className="text-lg font-semibold text-gray-900">3</p>
+              <p className="text-lg font-semibold text-gray-900">{dashboardData?.stats.receivedPoCount ?? 0}</p>
               <p className="text-xs text-gray-500">발주 대기</p>
             </div>
           </div>
@@ -225,25 +245,19 @@ export default function VendorHomePage() {
             </Link>
           </div>
           <div className="divide-y divide-gray-50">
-            {[
-              { title: '시스템 점검 안내', date: '2024.12.30', type: '공지' },
-              { title: '신규 기능 업데이트', date: '2024.12.24', type: '일반' },
-            ].map((notice, index) => (
+            {notices.map((notice) => (
               <Link
-                key={index}
+                key={notice.noticeNum}
                 href="/vendor/mypage/notice"
                 className="block p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-start gap-2">
-                   <span className={`px-1.5 py-0.5 text-xs rounded ${
-                    notice.type === '공지' ? 'bg-gray-200 text-gray-700' : 
-                    'bg-gray-100 text-gray-500'
-                  }`}>
-                    {notice.type}
+                  <span className="px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-500">
+                    일반
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{notice.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{notice.date}</p>
+                    <p className="text-sm text-gray-900 truncate">{notice.subject}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{notice.regDate.substring(0, 10)}</p>
                   </div>
                 </div>
               </Link>

@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
-import { 
+import {
   FileText, Package, Clipboard, Warehouse, Building2, LayoutGrid,
   TrendingUp, TrendingDown, Bell, ChevronRight, Circle, Square, Triangle, Hexagon, Octagon, Pentagon
 } from 'lucide-react';
 import { mypageApi } from '@/lib/api/mypage';
 import { useAuth } from '@/contexts/AuthContext';
+import { dashboardApi, DashboardData } from '@/lib/api/dashboard';
+import { toast } from 'sonner';
+import { noticeApi, NoticeListResponse } from '@/lib/api/notice';
 
 // 대시보드 통계 카드 (심플 버전)
 const StatCard: React.FC<{
@@ -24,10 +27,9 @@ const StatCard: React.FC<{
         <p className="text-sm text-gray-500">{title}</p>
         <p className="text-2xl font-semibold text-gray-900 mt-1">{value}</p>
         {change && (
-          <div className={`flex items-center gap-1 mt-1.5 text-xs ${
-            changeType === 'positive' ? 'text-green-600' : 
+          <div className={`flex items-center gap-1 mt-1.5 text-xs ${changeType === 'positive' ? 'text-green-600' :
             changeType === 'negative' ? 'text-red-500' : 'text-gray-500'
-          }`}>
+            }`}>
             {changeType === 'positive' && <TrendingUp className="w-3 h-3" />}
             {changeType === 'negative' && <TrendingDown className="w-3 h-3" />}
             <span>{change}</span>
@@ -95,48 +97,81 @@ const ActivityItem: React.FC<{
 export default function DashboardPage() {
   const { user } = useAuth();
   const [userName, setUserName] = useState<string>('');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [notices, setNotices] = useState<NoticeListResponse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 사용자 정보 로드
-  useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        const myInfo = await mypageApi.getInitData();
-        setUserName(myInfo.userNameKo || '');
-      } catch (error) {
-        console.error('사용자 정보 로드 실패:', error);
-        setUserName('');
-      }
-    };
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [userData, dbData, noticeData] = await Promise.all([
+        mypageApi.getInitData(),
+        dashboardApi.getBuyerData(),
+        noticeApi.getList()
+      ]);
 
-    if (user) {
-      loadUserInfo();
+      setUserName(userData.userNameKo || '');
+      setDashboardData(dbData);
+      setNotices(noticeData.slice(0, 3));
+    } catch (error) {
+      console.error('데이터 로드 실패:', error);
+      toast.error('데이터를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
+
+  // 구매사 전용 통계 매핑
   const stats = [
-    { title: '이번 달 구매요청', value: '156', change: '12% 증가', changeType: 'positive' as const,
-      icon: <Circle className="w-full h-full" /> },
-    { title: '진행중 견적', value: '23', change: '전월대비 5건', changeType: 'neutral' as const,
-      icon: <Square className="w-full h-full" /> },
-    { title: '발주 완료', value: '89', change: '목표 대비 92%', changeType: 'positive' as const,
-      icon: <Triangle className="w-full h-full" /> },
-    { title: '입고 대기', value: '17', change: '3건 지연', changeType: 'negative' as const,
-      icon: <Hexagon className="w-full h-full" /> },
+    {
+      title: '이번 달 구매요청', value: dashboardData?.stats.prCount ?? '0', change: dashboardData?.stats.prChange || '0% 증가', changeType: 'positive' as const,
+      icon: <Circle className="w-full h-full" />
+    },
+    {
+      title: '진행중 견적', value: dashboardData?.stats.activeRfqCount ?? '0', change: dashboardData?.stats.rfqChange || '전월대비 0건', changeType: 'neutral' as const,
+      icon: <Square className="w-full h-full" />
+    },
+    {
+      title: '발주 완료', value: dashboardData?.stats.poCompletedCount ?? '0', change: dashboardData?.stats.poChange || '목표 대비 100%', changeType: 'positive' as const,
+      icon: <Triangle className="w-full h-full" />
+    },
+    {
+      title: '입고 대기', value: dashboardData?.stats.grWaitingCount ?? '0', change: dashboardData?.stats.grChange || '지연 없음', changeType: 'negative' as const,
+      icon: <Hexagon className="w-full h-full" />
+    },
   ];
 
   const quickLinks = [
-    { href: '/purchase/request', title: '구매요청', description: '새 구매요청 등록', 
-      icon: <FileText className="w-full h-full" /> },
-    { href: '/rfq/pending', title: '견적대기', description: '견적 요청 대기목록', 
-      icon: <Clipboard className="w-full h-full" />, badge: 5 },
-    { href: '/order/pending', title: '발주대기', description: '발주 대기목록', 
-      icon: <Package className="w-full h-full" />, badge: 3 },
-    { href: '/inventory/receiving-target', title: '입고대상', description: '입고 처리 대상', 
-      icon: <Warehouse className="w-full h-full" /> },
-    { href: '/master/item', title: '품목관리', description: '품목 현황 조회', 
-      icon: <LayoutGrid className="w-full h-full" /> },
-    { href: '/master/vendor', title: '협력업체', description: '협력업체 관리', 
-      icon: <Building2 className="w-full h-full" /> },
+    {
+      href: '/purchase/request', title: '구매요청', description: '새 구매요청 등록',
+      icon: <FileText className="w-full h-full" />
+    },
+    {
+      href: '/rfq/pending', title: '견적대기', description: '견적 요청 대기목록',
+      icon: <Clipboard className="w-full h-full" />
+    },
+    {
+      href: '/order/pending', title: '발주대기', description: '발주 대기목록',
+      icon: <Package className="w-full h-full" />
+    },
+    {
+      href: '/inventory/receiving-target', title: '입고대상', description: '입고 처리 대상',
+      icon: <Warehouse className="w-full h-full" />
+    },
+    {
+      href: '/master/item', title: '품목관리', description: '품목 현황 조회',
+      icon: <LayoutGrid className="w-full h-full" />
+    },
+    {
+      href: '/master/vendor', title: '협력업체', description: '협력업체 관리',
+      icon: <Building2 className="w-full h-full" />
+    },
   ];
 
   return (
@@ -154,11 +189,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-center px-4 py-2 bg-gray-50 rounded-lg">
-              <p className="text-lg font-semibold text-gray-900">12</p>
+              <p className="text-lg font-semibold text-gray-900">{dashboardData?.stats.pendingProcessCount ?? 0}</p>
               <p className="text-xs text-gray-500">처리 대기</p>
             </div>
             <div className="text-center px-4 py-2 bg-gray-50 rounded-lg">
-              <p className="text-lg font-semibold text-gray-900">5</p>
+              <p className="text-lg font-semibold text-gray-900">{dashboardData?.stats.pendingApprovalCount ?? 0}</p>
               <p className="text-xs text-gray-500">승인 대기</p>
             </div>
           </div>
@@ -189,10 +224,19 @@ export default function DashboardPage() {
         {/* 최근 활동 */}
         <Card title="최근 활동" className="lg:col-span-2" padding={false}>
           <div className="divide-y divide-gray-50">
-            <ActivityItem type="request" title="구매요청 PR-2024-0156 등록" description="노트북 외 3건 - 김철수" time="5분 전" />
-            <ActivityItem type="rfq" title="견적서 제출 완료" description="(주)테크솔루션 - RFQ-2024-0089" time="1시간 전" />
-            <ActivityItem type="order" title="발주 승인 완료" description="PO-2024-0234 - 총 ₩15,000,000" time="2시간 전" />
-            <ActivityItem type="receiving" title="입고 처리 완료" description="GR-2024-0178 - 모니터 20대" time="3시간 전" />
+            {!dashboardData?.activities || dashboardData.activities.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">최근 활동이 없습니다.</div>
+            ) : (
+              dashboardData.activities.map((activity, idx) => (
+                <ActivityItem
+                  key={idx}
+                  type={activity.type}
+                  title={activity.title}
+                  description={activity.description}
+                  time={activity.time || activity.regDate?.substring(0, 10) || ''}
+                />
+              ))
+            )}
           </div>
           <div className="p-3 border-t border-gray-100">
             <Button variant="ghost" fullWidth size="sm">
@@ -213,27 +257,19 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="divide-y divide-gray-50">
-            {[
-              { title: '연말 결산 관련 구매 마감 안내', date: '2024.12.27', type: '중요' },
-              { title: '시스템 정기점검 안내 (12/30)', date: '2024.12.26', type: '공지' },
-              { title: '신규 협력업체 등록 절차 변경', date: '2024.12.24', type: '일반' },
-            ].map((notice, index) => (
+            {notices.map((notice) => (
               <Link
-                key={index}
+                key={notice.noticeNum}
                 href="/mypage/notice"
                 className="block p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-start gap-2">
-                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                    notice.type === '중요' ? 'bg-gray-700 text-white' : 
-                    notice.type === '공지' ? 'bg-gray-200 text-gray-700' : 
-                    'bg-gray-100 text-gray-500'
-                  }`}>
-                    {notice.type}
+                  <span className="px-1.5 py-0.5 text-xs rounded bg-gray-100 text-gray-500">
+                    일반
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{notice.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{notice.date}</p>
+                    <p className="text-sm text-gray-900 truncate">{notice.subject}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{notice.regDate?.substring(0, 10) || '-'}</p>
                   </div>
                 </div>
               </Link>

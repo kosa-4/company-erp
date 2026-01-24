@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 const vendorPathNames: Record<string, string> = {
   '/vendor': '홈',
   '/vendor/mypage': 'My Page',
-  '/vendor/mypage/profile': '프로필',
+  '/vendor/mypage/profile': '내 정보 수정',
   '/vendor/mypage/notice': '공지사항',
   '/vendor/master': '기준정보',
   '/vendor/master/info': '협력업체 변경신청',

@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Plus, Calendar, User, FileText, Upload, Eye, Trash2, X, Download } from 'lucide-react';
-import { 
-  Card, 
-  Button, 
-  Input, 
+import {
+  Card,
+  Button,
+  Input,
   DatePicker,
   Textarea,
   DataGrid,
@@ -59,7 +59,7 @@ export default function NoticePage() {
   const [isEditDragging, setIsEditDragging] = useState(false);
 
   // 공지사항 목록 조회
-  const fetchNoticeList = async () => {
+  const fetchNoticeList = React.useCallback(async () => {
     try {
       setLoading(true);
       console.log('공지사항 목록 조회 시작:', searchParams);
@@ -68,9 +68,9 @@ export default function NoticePage() {
         endDate: searchParams.endDate || undefined,
         subject: searchParams.title || undefined,
       });
-      
+
       console.log('공지사항 목록 응답:', response);
-      
+
       // NoticeListResponse를 Notice 타입으로 변환
       const transformedNotices: Notice[] = response.map((item: NoticeListResponse) => ({
         noticeNo: item.noticeNum,
@@ -83,25 +83,22 @@ export default function NoticePage() {
         createdByName: item.regUserName || '',
         viewCnt: item.viewCnt || 0,
       }));
-      
+
       console.log('변환된 공지사항 목록:', transformedNotices);
       setNotices(transformedNotices);
     } catch (error: any) {
       console.error('공지사항 목록 조회 실패:', error);
-      console.error('에러 상세:', {
-        status: error?.status,
-        message: error?.message,
-        data: error?.data
-      });
       toast.error(error?.data?.error || error?.message || '공지사항 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]);
 
-  const handleSearch = async () => {
-    await fetchNoticeList();
-  };
+  useEffect(() => {
+    fetchNoticeList();
+  }, [fetchNoticeList]);
+
+  const handleSearch = () => fetchNoticeList();
 
   const handleReset = () => {
     setSearchParams({
@@ -117,7 +114,7 @@ export default function NoticePage() {
       setIsEditing(false);
       // 상세 조회 API 호출
       const detail = await noticeApi.getDetail(notice.noticeNo);
-      
+
       // NoticeDetailResponse를 Notice 타입으로 변환
       const noticeDetail: Notice = {
         noticeNo: detail.noticeNum,
@@ -131,21 +128,21 @@ export default function NoticePage() {
         modDate: detail.modDate,
         viewCnt: detail.viewCnt || 0,
       };
-      
+
       setSelectedNotice(noticeDetail);
       setEditFormData({
         subject: detail.subject,
         content: detail.content,
       });
-      
+
       // 첨부파일 목록 설정
       const files = detail.files || [];
       setAttachedFiles(files);
       setOriginalAttachedFiles(files);
-      
+
       // 목록의 조회수도 업데이트
-      setNotices(prev => prev.map(n => 
-        n.noticeNo === noticeDetail.noticeNo 
+      setNotices(prev => prev.map(n =>
+        n.noticeNo === noticeDetail.noticeNo
           ? { ...n, viewCnt: detail.viewCnt || 0 }
           : n
       ));
@@ -155,7 +152,7 @@ export default function NoticePage() {
       setIsDetailModalOpen(false);
     }
   };
-  
+
   const handleContentClick = () => {
     if (!isBuyer) return;
     setIsEditing(true);
@@ -169,7 +166,7 @@ export default function NoticePage() {
     setDeletedFileNums([]);
     setEditUploadedFiles([]);
   };
-  
+
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditUploadedFiles([]);
@@ -190,16 +187,16 @@ export default function NoticePage() {
     setDeletedFileNums(prev => [...prev, fileNum]);
     setAttachedFiles(prev => prev.filter(file => file.fileNum !== fileNum));
   };
-  
+
   const handleUpdate = async () => {
     if (!selectedNotice) return;
-    
+
     // 유효성 검사
     if (!editFormData.subject || !editFormData.content) {
       toast.error('제목과 내용을 입력해주세요.');
       return;
     }
-    
+
     try {
       setSaving(true);
       console.log('공지사항 수정 시작:', {
@@ -208,7 +205,7 @@ export default function NoticePage() {
         deletedFiles: deletedFileNums.length,
         newFiles: editUploadedFiles.length
       });
-      
+
       // 1. 공지사항 내용 수정
       await noticeApi.update(selectedNotice.noticeNo, {
         subject: editFormData.subject,
@@ -228,7 +225,7 @@ export default function NoticePage() {
           }
         }
       }
-      
+
       // 3. 새로 추가된 파일 업로드
       if (editUploadedFiles.length > 0) {
         console.log('업로드할 파일 개수:', editUploadedFiles.length);
@@ -242,12 +239,12 @@ export default function NoticePage() {
           }
         }
       }
-      
+
       toast.success('공지사항이 수정되었습니다.');
       setIsEditing(false);
       setEditUploadedFiles([]);
       setDeletedFileNums([]);
-      
+
       // 상세 정보 새로고침
       const detail = await noticeApi.getDetail(selectedNotice.noticeNo);
       const noticeDetail: Notice = {
@@ -264,7 +261,7 @@ export default function NoticePage() {
       };
       setSelectedNotice(noticeDetail);
       setAttachedFiles(detail.files || []);
-      
+
       // 목록 새로고침
       await fetchNoticeList();
     } catch (error: any) {
@@ -274,13 +271,13 @@ export default function NoticePage() {
       setSaving(false);
     }
   };
-  
+
   const handleDelete = async (noticeNum: string, e?: React.MouseEvent) => {
     if (!isBuyer) return;
     if (e) {
       e.stopPropagation();
     }
-    
+
     toast('정말 삭제하시겠습니까?', {
       action: {
         label: '삭제',
@@ -297,7 +294,7 @@ export default function NoticePage() {
       }
     });
   };
-  
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedNotices(notices.map(n => n.noticeNo));
@@ -305,7 +302,7 @@ export default function NoticePage() {
       setSelectedNotices([]);
     }
   };
-  
+
   const handleSelectNotice = (noticeNo: string, checked: boolean) => {
     if (checked) {
       setSelectedNotices(prev => [...prev, noticeNo]);
@@ -313,19 +310,19 @@ export default function NoticePage() {
       setSelectedNotices(prev => prev.filter(n => n !== noticeNo));
     }
   };
-  
+
   const handleDeleteSelected = async () => {
     if (!isBuyer) return;
     if (selectedNotices.length === 0) {
       toast.warning('삭제할 공지사항을 선택해주세요.');
       return;
     }
-    
+
     toast(`선택한 ${selectedNotices.length}개의 공지사항을 삭제하시겠습니까?`, {
       action: {
         label: '삭제',
         onClick: async () => {
-           try {
+          try {
             await Promise.all(selectedNotices.map(noticeNum => noticeApi.delete(noticeNum)));
             toast.success('선택한 공지사항이 삭제되었습니다.');
             setSelectedNotices([]);
@@ -346,17 +343,17 @@ export default function NoticePage() {
       toast.error('수정할 공지사항을 선택해주세요.');
       return;
     }
-    
+
     // 여러 개 선택 시 알림 표시
     if (selectedNotices.length > 1) {
       toast.warning('수정은 1건만 가능합니다.');
       return;
     }
-    
+
     // 선택된 항목 중 첫 번째를 찾아서 상세 모달 열기
     const firstSelectedNoticeNo = selectedNotices[0];
     const notice = notices.find(n => n.noticeNo === firstSelectedNoticeNo);
-    
+
     if (notice) {
       await handleRowClick(notice);
       // 상세 모달이 열리면 수정 모드로 전환
@@ -364,9 +361,9 @@ export default function NoticePage() {
     }
   };
 
-  // 초기 목록 로드
+  // 초기 목록 로드 (useEffect dependency 패턴 적용으로 handleSearch 생략 가능)
   useEffect(() => {
-    fetchNoticeList();
+    // fetchNoticeList()는 위 useCallback dependency에 의해 자동 실행됨
   }, []);
 
   // 공지사항 등록 모달 열릴 때 초기 데이터 로드
@@ -413,7 +410,7 @@ export default function NoticePage() {
   const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles: File[] = [];
-    
+
     files.forEach(file => {
       const validation = validateFile(file);
       if (validation.valid) {
@@ -426,7 +423,7 @@ export default function NoticePage() {
     if (validFiles.length > 0) {
       setEditUploadedFiles(prev => [...prev, ...validFiles]);
     }
-    
+
     // input 초기화 (같은 파일을 다시 선택할 수 있도록)
     e.target.value = '';
   };
@@ -450,7 +447,7 @@ export default function NoticePage() {
     // 확장자 검증
     const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip'];
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    
+
     if (!allowedExtensions.includes(fileExtension)) {
       return {
         valid: false,
@@ -491,7 +488,7 @@ export default function NoticePage() {
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       const validFiles: File[] = [];
-      
+
       files.forEach(file => {
         const validation = validateFile(file);
         if (validation.valid) {
@@ -528,7 +525,7 @@ export default function NoticePage() {
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       const validFiles: File[] = [];
-      
+
       files.forEach(file => {
         const validation = validateFile(file);
         if (validation.valid) {
@@ -560,7 +557,7 @@ export default function NoticePage() {
         startDate: formData.startDate,
         endDate: formData.endDate,
       });
-      
+
       // 공지사항 번호 가져오기
       const noticeNum = (response as any).noticeNum;
 
@@ -587,17 +584,17 @@ export default function NoticePage() {
           }
         }
       }
-      
+
       // 공지사항 저장 성공 메시지 표시
       toast.success('공지사항이 등록되었습니다.');
       setIsCreateModalOpen(false);
-      
+
       // 체크박스 선택 해제
       setSelectedNotices([]);
-      
+
       // 목록 새로고침
       await fetchNoticeList();
-      
+
       // 폼 초기화
       setFormData({
         subject: '',
@@ -629,7 +626,7 @@ export default function NoticePage() {
       width: 50,
       align: 'center',
       render: (_, notice) => (
-        <div 
+        <div
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           className="flex items-center justify-center w-full h-full"
@@ -726,7 +723,7 @@ export default function NoticePage() {
     : baseColumns.filter(col => col.key !== 'checkbox' && col.key !== 'actions');
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -763,7 +760,7 @@ export default function NoticePage() {
       </SearchPanel>
 
       {/* Data Grid */}
-      <Card 
+      <Card
         title="공지사항 목록"
         padding={false}
         actions={
@@ -771,16 +768,16 @@ export default function NoticePage() {
             {isBuyer && (
               <>
                 <Button
-                  variant="primary" 
+                  variant="primary"
                   onClick={() => setIsCreateModalOpen(true)}
                   icon={<Plus className="w-4 h-4" />}
                 >
                   등록
                 </Button>
                 <Button
-                    variant="outline"
-                    disabled={selectedNotices.length === 0}
-                    onClick={handleEdit}
+                  variant="outline"
+                  disabled={selectedNotices.length === 0}
+                  onClick={handleEdit}
                 >
                   수정
                 </Button>
@@ -848,21 +845,21 @@ export default function NoticePage() {
           <div className="space-y-6">
             {isEditing ? (
               <>
-                <Input 
-                  label="공지명" 
-                  placeholder="공지명을 입력하세요" 
+                <Input
+                  label="공지명"
+                  placeholder="공지명을 입력하세요"
                   value={editFormData.subject}
                   onChange={(e) => setEditFormData(prev => ({ ...prev, subject: e.target.value }))}
-                  required 
+                  required
                 />
-                
-                <Textarea 
-                  label="공지내용" 
-                  rows={10} 
-                  placeholder="공지 내용을 입력하세요" 
+
+                <Textarea
+                  label="공지내용"
+                  rows={10}
+                  placeholder="공지 내용을 입력하세요"
                   value={editFormData.content}
                   onChange={(e) => setEditFormData(prev => ({ ...prev, content: e.target.value }))}
-                  required 
+                  required
                 />
 
                 {/* 기존 첨부파일 목록 */}
@@ -922,11 +919,10 @@ export default function NoticePage() {
                     onDragOver={handleEditDragOver}
                     onDragLeave={handleEditDragLeave}
                     onDrop={handleEditDrop}
-                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
-                      isEditDragging 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${isEditDragging
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                       <Upload className="w-5 h-5 text-gray-500" />
@@ -934,7 +930,7 @@ export default function NoticePage() {
                     <p className="text-sm text-gray-600">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
                     <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLSX, 이미지 파일 (최대 10MB)</p>
                   </label>
-                  
+
                   {/* 선택된 파일 목록 */}
                   {editUploadedFiles.length > 0 && (
                     <div className="mt-4 space-y-2">
@@ -970,10 +966,9 @@ export default function NoticePage() {
                     <FileText className="w-5 h-5 text-gray-600" />
                   </div>
                   <div className="flex-1">
-                    <h2 
-                      className={`text-lg font-semibold text-gray-900 transition-colors ${
-                        isBuyer ? 'cursor-pointer hover:text-blue-600' : ''
-                      }`}
+                    <h2
+                      className={`text-lg font-semibold text-gray-900 transition-colors ${isBuyer ? 'cursor-pointer hover:text-blue-600' : ''
+                        }`}
                       onClick={isBuyer ? handleTitleClick : undefined}
                       title={isBuyer ? '클릭하여 수정' : undefined}
                     >
@@ -1005,10 +1000,9 @@ export default function NoticePage() {
                   </span>
                 </div>
 
-                <div 
-                  className={`bg-stone-50 rounded-2xl p-6 min-h-[200px] transition-colors ${
-                    isBuyer ? 'cursor-pointer hover:bg-stone-100' : ''
-                  }`}
+                <div
+                  className={`bg-stone-50 rounded-2xl p-6 min-h-[200px] transition-colors ${isBuyer ? 'cursor-pointer hover:bg-stone-100' : ''
+                    }`}
                   onClick={isBuyer ? handleContentClick : undefined}
                   title={isBuyer ? '클릭하여 수정' : undefined}
                 >
@@ -1066,26 +1060,26 @@ export default function NoticePage() {
         }
       >
         <div className="space-y-5">
-          <Input 
-            label="공지명" 
-            placeholder="공지명을 입력하세요" 
+          <Input
+            label="공지명"
+            placeholder="공지명을 입력하세요"
             value={formData.subject}
             onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-            required 
+            required
           />
-          
+
           <div className="grid grid-cols-2 gap-4">
-            <DatePicker 
-              label="공지 시작일" 
+            <DatePicker
+              label="공지 시작일"
               value={formData.startDate}
               onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-              required 
+              required
             />
-            <DatePicker 
-              label="공지 종료일" 
+            <DatePicker
+              label="공지 종료일"
               value={formData.endDate}
               onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-              required 
+              required
             />
           </div>
 
@@ -1094,70 +1088,69 @@ export default function NoticePage() {
             <Input label="등록자명" value={regUserName} readOnly />
           </div>
 
-          <Textarea 
-            label="공지내용" 
-            rows={8} 
-            placeholder="공지 내용을 입력하세요" 
+          <Textarea
+            label="공지내용"
+            rows={8}
+            placeholder="공지 내용을 입력하세요"
             value={formData.content}
             onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-            required 
+            required
           />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
-              <input
-                type="file"
-                id="file-upload"
-                className="hidden"
-                multiple
-                onChange={handleFileSelect}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
-              />
-              <label
-                htmlFor="file-upload"
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
-                  isDragging 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-200 hover:border-gray-300'
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">첨부파일</label>
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              multiple
+              onChange={handleFileSelect}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+            />
+            <label
+              htmlFor="file-upload"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${isDragging
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
                 }`}
-              >
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Upload className="w-5 h-5 text-gray-500" />
-                </div>
-                <p className="text-sm text-gray-600">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
-                <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLSX, 이미지 파일 (최대 10MB)</p>
-              </label>
-              
-              {/* 선택된 파일 목록 */}
-              {uploadedFiles.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                        </div>
+            >
+              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <Upload className="w-5 h-5 text-gray-500" />
+              </div>
+              <p className="text-sm text-gray-600">클릭하여 파일을 선택하거나 드래그하여 업로드</p>
+              <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLSX, 이미지 파일 (최대 10MB)</p>
+            </label>
+
+            {/* 선택된 파일 목록 */}
+            {uploadedFiles.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleFileRemove(index)}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors"
-                      >
-                        <X className="w-4 h-4 text-gray-500" />
-                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => handleFileRemove(index)}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
     </motion.div>

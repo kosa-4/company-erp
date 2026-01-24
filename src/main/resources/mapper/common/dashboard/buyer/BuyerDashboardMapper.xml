@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.company.erp.common.dashboard.buyer.mapper.BuyerDashboardMapper">
+
+    <select id="getDashboardStats" resultType="com.company.erp.common.dashboard.buyer.dto.response.BuyerDashboardStatsResponse">
+        SELECT
+            (SELECT COUNT(*) FROM prhd WHERE REG_DATE >= DATE_FORMAT(NOW(), '%Y-%m-01') AND DEL_FLAG = 'N') as prCount,
+            (SELECT COUNT(*) FROM rfqhd WHERE PROGRESS_CD IN ('RFQS', 'RFQC') AND DEL_FLAG = 'N') as activeRfqCount,
+            (SELECT COUNT(*) FROM pohd WHERE PROGRESS_CD IN ('D', 'S', 'C', 'E') AND DEL_FLAG = 'N') as poCompletedCount,
+            (SELECT COUNT(*) FROM pohd p
+             WHERE p.PROGRESS_CD IN ('D', 'S')
+               AND p.DEL_FLAG = 'N'
+               AND NOT EXISTS (SELECT 1 FROM grhd g WHERE g.PO_NUM = p.PO_NUM AND g.PROGRESS_CD = 'GRE')) as grWaitingCount,
+            (SELECT COUNT(*) FROM prhd ph
+             WHERE ph.DEL_FLAG = 'N'
+               AND ph.PROGRESS_CD = 'A'
+               AND ph.PC_TYPE NOT IN ('C', 'E')
+               AND NOT EXISTS (SELECT 1 FROM rfqhd r WHERE r.PR_NUM = ph.PR_NUM AND r.DEL_FLAG = 'N')) as rfqPendingCount,
+            (SELECT COUNT(*) FROM rfqhd h
+             LEFT JOIN pohd po ON h.RFQ_NUM = po.RFQ_NUM
+             WHERE h.PROGRESS_CD = 'J'
+               AND h.DEL_FLAG = 'N'
+               AND po.PO_NUM IS NULL) as poPendingCount,
+            (SELECT COUNT(*) FROM prhd WHERE PROGRESS_CD = 'T' AND DEL_FLAG = 'N') as pendingProcessCount,
+            (SELECT COUNT(*) FROM rfqhd WHERE PROGRESS_CD = 'N' AND DEL_FLAG = 'N') as pendingApprovalCount
+    </select>
+
+    <select id="getRecentActivities" resultType="com.company.erp.common.dashboard.buyer.dto.response.RecentActivityResponse">
+        SELECT * FROM (
+            (SELECT 'request' as type, 
+                   PR_SUBJECT as title, 
+                   CONCAT(REG_USER_ID, ' 등록') as description, 
+                   REG_DATE as regDate 
+            FROM prhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
+            UNION ALL
+            (SELECT 'rfq' as type, 
+                   RFQ_SUBJECT as title, 
+                   CONCAT('RFQ 번호: ', RFQ_NUM) as description, 
+                   RFQ_DATE as regDate 
+            FROM rfqhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY RFQ_DATE DESC
+            LIMIT 10)
+            UNION ALL
+            (SELECT 'order' as type, 
+                   PO_SUBJECT as title, 
+                   CONCAT('업체코드: ', VENDOR_CD) as description, 
+                   REG_DATE as regDate 
+            FROM pohd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
+            UNION ALL
+            (SELECT 'receiving' as type, 
+                   CONCAT('입고 현황: ', GR_NUM) as title, 
+                   '입고 완료' as description, 
+                   REG_DATE as regDate 
+            FROM grhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
+        ) activities
+        ORDER BY regDate DESC
+        LIMIT 5
+    </select>
+
+</mapper>

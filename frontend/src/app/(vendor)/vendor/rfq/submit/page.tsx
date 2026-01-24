@@ -210,7 +210,7 @@ export default function VendorRfqSubmitPage() {
               <FileText className="w-5 h-5 text-gray-600" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">견적관리</h1>
+              <h1 className="text-xl font-semibold text-gray-900">견적현황</h1>
               <p className="text-sm text-gray-500">견적 요청을 확인하고 견적서를 작성합니다.</p>
             </div>
           </div>
