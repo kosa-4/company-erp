@@ -364,6 +364,31 @@ export default function PurchaseRequestListPage() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  // 파일 검증 함수
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    // 확장자 검증
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `${file.name}: 허용되지 않는 파일 형식입니다. (PDF, DOC, XLSX, 이미지 파일만 가능)`
+      };
+    }
+
+    // 파일 크기 검증 (10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return {
+        valid: false,
+        error: `${file.name}: 파일 크기가 10MB를 초과합니다. (현재: ${formatFileSize(file.size)})`
+      };
+    }
+
+    return { valid: true };
+  };
+
   // 목록에서 수정 버튼 클릭 핸들러
   const handleEditFromList = async () => {
     if (selectedRows.length === 0) {
@@ -449,7 +474,23 @@ export default function PurchaseRequestListPage() {
   // 수정 모드 파일 선택 핸들러
   const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setEditUploadedFiles(prev => [...prev, ...files]);
+    const validFiles: File[] = [];
+    
+    files.forEach(file => {
+      const validation = validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        toast.error(validation.error);
+      }
+    });
+
+    if (validFiles.length > 0) {
+      setEditUploadedFiles(prev => [...prev, ...validFiles]);
+    }
+    
+    // input 초기화 (같은 파일을 다시 선택할 수 있도록)
+    e.target.value = '';
   };
 
   // 수정 모드 파일 제거 핸들러
@@ -477,7 +518,20 @@ export default function PurchaseRequestListPage() {
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setEditUploadedFiles(prev => [...prev, ...files]);
+      const validFiles: File[] = [];
+      
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          toast.error(validation.error);
+        }
+      });
+
+      if (validFiles.length > 0) {
+        setEditUploadedFiles(prev => [...prev, ...validFiles]);
+      }
     }
   };
 
