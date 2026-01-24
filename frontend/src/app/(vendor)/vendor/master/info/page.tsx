@@ -153,6 +153,13 @@ useEffect(() => {
 
       // ⭐ [핵심 수정] 서버가 준 askNum (MD26...)을 받습니다.
       const askNum = result.data;
+
+      // 선택한 파일은 존재하나 요청 번호가 없을 시 예외 처리
+      if (selectedFiles.length > 0 && !askNum) {
+        toast.error('파일 업로드용 신청 번호를 받지 못했습니다. 잠시 후 다시 시도해주세요.');
+        setLoading(false);
+        return;
+      }
       console.log("생성된 신청 번호:", askNum);
 
       // 3. 파일 업로드 시도 (askNum 사용)

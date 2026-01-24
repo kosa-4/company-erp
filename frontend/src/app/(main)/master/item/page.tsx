@@ -137,7 +137,7 @@ export default function ItemPage() {
       setItems(data.items);
       
       // [수정] totalPage 안전하게 파싱 (API 키값 확인 필요!)
-      const serverTotalPage = Number(data.totalPages || data.totalPages || 1);
+      const serverTotalPage = Number(data.totalPages || 1);
       setTotalPage(serverTotalPage);
 
       // [핵심] 현재 페이지 상태를 URL 파라미터와 동기화
@@ -460,6 +460,7 @@ export default function ItemPage() {
       fetchItems(); 
     } catch(error){
       console.error("데이터 수정 중 오류 발생:", error);
+      alert("수정 중 오류가 발생했습니다.");
     }
   }
 

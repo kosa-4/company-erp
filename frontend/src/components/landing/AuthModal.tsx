@@ -159,9 +159,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       // 백엔드 응답 구조에 따라 jsonResponse.data 혹은 jsonResponse 자체일 수 있음
       const resultData: SignupResponse = jsonResponse.data || jsonResponse;
 
-      if (!resultData || !resultData.vendorCode) {
-        throw new Error('응답 데이터에서 업체코드를 확인할 수 없습니다.');
+      if (!resultData || !resultData.vendorCode || !resultData.askNum) {
+       throw new Error('응답 데이터에서 업체코드/요청번호를 확인할 수 없습니다.');
       }
+
 
       // 3. [2차 요청] 파일 업로드 (Multipart/form-data)
       let fileUploadFailed = false;
