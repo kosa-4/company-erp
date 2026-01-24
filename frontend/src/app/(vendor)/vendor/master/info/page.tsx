@@ -156,11 +156,13 @@ useEffect(() => {
       console.log("생성된 신청 번호:", askNum);
 
       // 3. 파일 업로드 시도 (askNum 사용)
+      let uploadOk = true;
       if (selectedFiles.length > 0 && askNum) {
         try {
           // 🚀 formData.vendorCode가 아니라 'askNum'을 넘깁니다!
           await uploadFiles(askNum);
         } catch (fileErr) {
+          uploadOk = false;
           console.error("파일 업로드 실패:", fileErr);
           toast.error('변경 신청은 완료되었으나, 파일 업로드에 실패했습니다.');
         }
@@ -169,6 +171,12 @@ useEffect(() => {
       toast.success('변경 신청이 접수되었습니다.');
       
       // 4. 성공 후 새로고침
+      if (!uploadOk) {
+        setLoading(false);
+        return;
+      }
+
+      toast.success('변경 신청이 접수되었습니다.');
       setTimeout(() => {
         window.location.reload();
       }, 1000);

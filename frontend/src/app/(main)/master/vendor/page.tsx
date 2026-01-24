@@ -203,6 +203,7 @@ export default function VendorPage() {
 
     setIsDetailModalOpen(true);
   };
+  
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
