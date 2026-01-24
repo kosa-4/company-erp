@@ -218,6 +218,18 @@ public class PrController {
         return ResponseEntity.ok().body(response);
     }
 
+    //부서 목록 조회 (숫자 제거, 중복 제거)
+    @GetMapping("/dept/list")
+    public ResponseEntity<List<String>> getDeptNameList(HttpSession httpSession){
+        SessionUser user = getSessionUser(httpSession);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        List<String> deptNameList = prService.selectDeptNameList(user);
+        return ResponseEntity.ok(deptNameList);
+    }
+
     //세션에서 로그인한 사용자 정보를 가져오는 메서드
     private SessionUser getSessionUser(HttpSession session) {
         if (session == null) {
