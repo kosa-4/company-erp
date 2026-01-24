@@ -55,6 +55,8 @@ export default function NoticePage() {
   const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
   const [deletedFileNums, setDeletedFileNums] = useState<string[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isEditDragging, setIsEditDragging] = useState(false);
 
   // 공지사항 목록 조회
   const fetchNoticeList = async () => {
@@ -172,6 +174,7 @@ export default function NoticePage() {
     setIsEditing(false);
     setEditUploadedFiles([]);
     setDeletedFileNums([]);
+    setIsEditDragging(false);
     // 첨부파일 목록을 원본 상태로 복원
     setAttachedFiles([...originalAttachedFiles]);
     if (selectedNotice) {
@@ -424,6 +427,54 @@ export default function NoticePage() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // 드래그 앤 드롭 핸들러 (등록 모달)
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setUploadedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  // 드래그 앤 드롭 핸들러 (수정 모달)
+  const handleEditDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(true);
+  };
+
+  const handleEditDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+  };
+
+  const handleEditDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setEditUploadedFiles(prev => [...prev, ...files]);
+    }
   };
 
   // 공지사항 저장 핸들러
@@ -698,6 +749,7 @@ export default function NoticePage() {
           setIsEditing(false);
           setEditUploadedFiles([]);
           setDeletedFileNums([]);
+          setIsEditDragging(false);
           // 모달 닫을 때도 첨부파일 상태 복원
           if (selectedNotice) {
             setAttachedFiles([...originalAttachedFiles]);
@@ -718,6 +770,7 @@ export default function NoticePage() {
               onClose={() => {
                 setIsDetailModalOpen(false);
                 setIsEditing(false);
+                setIsEditDragging(false);
               }}
               cancelText="닫기"
             />
@@ -799,7 +852,14 @@ export default function NoticePage() {
                   />
                   <label
                     htmlFor="edit-file-upload"
-                    className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors block"
+                    onDragOver={handleEditDragOver}
+                    onDragLeave={handleEditDragLeave}
+                    onDrop={handleEditDrop}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
+                      isEditDragging 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                       <Upload className="w-5 h-5 text-gray-500" />
@@ -921,12 +981,18 @@ export default function NoticePage() {
       {/* Create Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setIsDragging(false);
+        }}
         title="공지사항 등록"
         size="lg"
         footer={
           <ModalFooter
-            onClose={() => setIsCreateModalOpen(false)}
+            onClose={() => {
+              setIsCreateModalOpen(false);
+              setIsDragging(false);
+            }}
             onConfirm={handleSave}
             confirmText="저장"
           />
@@ -982,7 +1048,14 @@ export default function NoticePage() {
               />
               <label
                 htmlFor="file-upload"
-                className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors block"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
+                  isDragging 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
               >
                 <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                   <Upload className="w-5 h-5 text-gray-500" />

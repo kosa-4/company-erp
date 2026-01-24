@@ -139,6 +139,7 @@ export default function PurchaseRequestListPage() {
   const [originalAttachedFiles, setOriginalAttachedFiles] = useState<FileListItemResponse[]>([]);
   const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
   const [deletedFileNums, setDeletedFileNums] = useState<string[]>([]);
+  const [isEditDragging, setIsEditDragging] = useState(false);
 
   // 목록 조회
   const fetchData = async () => {
@@ -456,6 +457,30 @@ export default function PurchaseRequestListPage() {
     setEditUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // 드래그 앤 드롭 핸들러 (수정 모달)
+  const handleEditDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(true);
+  };
+
+  const handleEditDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+  };
+
+  const handleEditDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setEditUploadedFiles(prev => [...prev, ...files]);
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!selectedPr) return;
 
@@ -529,6 +554,7 @@ export default function PurchaseRequestListPage() {
       setIsDetailModalOpen(false);
       setEditUploadedFiles([]);
       setDeletedFileNums([]);
+      setIsEditDragging(false);
       
       // 상세 정보 새로고침
       const detail = await prApi.getDetail(selectedPr.prNo);
@@ -1091,6 +1117,7 @@ export default function PurchaseRequestListPage() {
               setOriginalAttachedFiles([]);
               setEditUploadedFiles([]);
               setDeletedFileNums([]);
+              setIsEditDragging(false);
             }}
             title="구매요청 상세"
             size="lg"
@@ -1113,6 +1140,7 @@ export default function PurchaseRequestListPage() {
                       setOriginalAttachedFiles([]);
                       setEditUploadedFiles([]);
                       setDeletedFileNums([]);
+                      setIsEditDragging(false);
                     }}
                     cancelText="닫기"
                 />
@@ -1337,7 +1365,14 @@ export default function PurchaseRequestListPage() {
                       />
                       <label
                         htmlFor="edit-file-upload"
-                        className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-300 transition-colors block"
+                        onDragOver={handleEditDragOver}
+                        onDragLeave={handleEditDragLeave}
+                        onDrop={handleEditDrop}
+                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors block ${
+                          isEditDragging 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
                       >
                         <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                           <Upload className="w-5 h-5 text-gray-500" />
