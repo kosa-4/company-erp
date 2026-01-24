@@ -309,9 +309,6 @@ export default function ProfilePage() {
 
         {/* Submit Buttons */}
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" icon={<X className="w-4 h-4" />}>
-            취소
-          </Button>
           <Button type="submit" variant="primary" loading={isSaving} icon={<Save className="w-4 h-4" />}>
             저장
           </Button>
