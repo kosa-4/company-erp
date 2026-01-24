@@ -534,6 +534,7 @@ useEffect(() => {
                         <button 
                           type="button" 
                           onClick={() => removeFile(index)} 
+                          aria-label={`파일 삭제: ${file.name}`}
                           className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shrink-0"
                         >
                           <X className="w-4 h-4" />
