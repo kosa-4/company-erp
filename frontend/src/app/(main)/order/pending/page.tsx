@@ -416,6 +416,7 @@ export default function OrderPendingPage() {
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
           itemName: item.itemName,
+          specification: item.specification,
           unit: item.unit,
           orderQuantity: item.orderQuantity,
           unitPrice: item.unitPrice,
@@ -743,6 +744,7 @@ export default function OrderPendingPage() {
                   <tr>
                     <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
                     <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-center font-semibold text-gray-600">규격</th>
                     <th className="p-3 text-right font-semibold text-gray-600">단가</th>
                     <th className="p-3 text-right font-semibold text-gray-600">발주수량</th>
                     <th className="p-3 text-right font-semibold text-gray-600">금액</th>
@@ -755,6 +757,7 @@ export default function OrderPendingPage() {
                     <tr key={item.itemCode} className="border-t">
                       <td className="p-3">{item.itemCode}</td>
                       <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-center">{item.specification || '-'}</td>
                       <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
                       <td className="p-3 text-right">
                         <span className="font-medium text-gray-900">

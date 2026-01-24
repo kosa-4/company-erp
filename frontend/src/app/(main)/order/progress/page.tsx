@@ -753,6 +753,7 @@ export default function OrderProgressPage() {
                   <tr>
                     <th className="p-3 text-left text-sm font-semibold text-gray-600">품목코드</th>
                     <th className="p-3 text-left text-sm font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-center text-sm font-semibold text-gray-600">규격</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">수량</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">단가</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">금액</th>
@@ -763,6 +764,7 @@ export default function OrderProgressPage() {
                     <tr key={index} className="border-t">
                       <td className="p-3 text-sm">{item.itemCode}</td>
                       <td className="p-3 text-sm">{item.itemName}</td>
+                      <td className="p-3 text-sm text-center">{item.specification || '-'}</td>
                       <td className="p-3 text-sm text-right">{formatNumber(item.orderQuantity)}</td>
                       <td className="p-3 text-sm text-right">₩{formatNumber(Number(item.unitPrice))}</td>
                       <td className="p-3 text-sm text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
