@@ -89,9 +89,18 @@ public class SignUpService {
     // 2. 요청 번호와 회사 번호가 일치하는지 검사
     public void validateSignUpRequest(SignUpResponseDto responseDto){
 
+        // 1. 입력값 검증
+        if (responseDto == null
+                || responseDto.getAskNum() == null || responseDto.getAskNum().isBlank()
+                || responseDto.getVendorCode() == null || responseDto.getVendorCode().isBlank()) {
+            throw new IllegalArgumentException("요청 정보가 비어 있습니다.");
+            }
+
+        // 2. 요청 번호 및 회사 코드 저장
         String askNum = responseDto.getAskNum();
         String vendorCode = responseDto.getVendorCode();
-
+        
+        // 3. 요청 번호 / 회사 코드 일치 여부 검증
         int count = signUpMapper.countVNCHByAskNumAndVendorCode(askNum, vendorCode);
         if(count == 0){
             throw new IllegalStateException("잘못된 접근입니다 (요청 정보 불일치).");
