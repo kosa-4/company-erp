@@ -38,6 +38,7 @@ interface PoGroup {
   remark: string;
   items: PurchaseOrderItemDTO[];
   receivedQuantity: number;
+  totalOrderQuantity: number;
   checkFlag: string;
 }
 
@@ -112,17 +113,17 @@ export default function OrderProgressPage() {
   };
 
   // API로 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await purchaseOrderApi.getList({
-        poNo: searchParams.poNo || undefined,
-        poName: searchParams.poName || undefined,
-        purchaseManager: searchParams.buyer || undefined,
-        vendorName: searchParams.vendor || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
-        status: searchParams.status || undefined,
+        poNo: params.poNo || undefined,
+        poName: params.poName || undefined,
+        purchaseManager: params.buyer || undefined,
+        vendorName: params.vendor || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || params.startDate || undefined,
+        status: params.status || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -137,6 +138,9 @@ export default function OrderProgressPage() {
           po.purchaseType === 'C' ? '단가계약' : 
           po.purchaseType === 'E' ? '긴급' : 
           po.purchaseType || '';
+
+        // 발주수량 합계 계산
+        const totalOrderQuantity = po.items?.reduce((sum, item) => sum + (item.orderQuantity || 0), 0) || 0;
 
         return {
           poNo: po.poNo || '',
@@ -155,6 +159,7 @@ export default function OrderProgressPage() {
           remark: po.remark || '',
           items: po.items || [],
           receivedQuantity: Number(po.receivedQuantity) || 0,
+          totalOrderQuantity,
           checkFlag: po.checkFlag || 'N',
         };
       });
@@ -177,8 +182,8 @@ export default function OrderProgressPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       poNo: '',
       poName: '',
       buyer: '',
@@ -186,7 +191,9 @@ export default function OrderProgressPage() {
       startDate: '',
       endDate: '',
       status: '',
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
   // PO 행 펼치기/접기
@@ -452,8 +459,8 @@ export default function OrderProgressPage() {
 
       <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
         <Input
-          label="PO번호"
-          placeholder="PO번호 입력"
+          label="발주번호"
+          placeholder="발주번호 입력"
           value={searchParams.poNo}
           onChange={(e) =>
             setSearchParams((prev) => ({ ...prev, poNo: e.target.value }))
@@ -484,17 +491,10 @@ export default function OrderProgressPage() {
           }
         />
         <DatePicker
-          label="발주일자 시작"
+          label="발주일자"
           value={searchParams.startDate}
           onChange={(e) =>
             setSearchParams((prev) => ({ ...prev, startDate: e.target.value }))
-          }
-        />
-        <DatePicker
-          label="발주일자 종료"
-          value={searchParams.endDate}
-          onChange={(e) =>
-            setSearchParams((prev) => ({ ...prev, endDate: e.target.value }))
           }
         />
         <Select
@@ -549,7 +549,7 @@ export default function OrderProgressPage() {
                 <tr className="bg-stone-50 border-b border-stone-200">
                   <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
                   <th className="w-12 px-4 py-3.5 whitespace-nowrap"></th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">발주명</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주담당자</th>
@@ -609,10 +609,10 @@ export default function OrderProgressPage() {
                         {/* 선택 체크박스 */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
-                            type="checkbox"
+                            type="radio"
                             checked={selectedPoNo === group.poNo}
-                            onChange={() => handleSelectPo(group.poNo)}
-                            className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                            onChange={() => setSelectedPoNo(selectedPoNo === group.poNo ? null : group.poNo)}
+                            className="w-4 h-4 text-teal-600 border-stone-300 rounded-full focus:ring-teal-500"
                           />
                         </td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => handleViewDetail(group.poNo)}>
@@ -628,13 +628,17 @@ export default function OrderProgressPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
-                          {group.status === 'C' ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              입고완료
+                          {['T', 'D', 'A'].includes(group.status) ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                              -
                             </span>
                           ) : group.status === 'S' && group.checkFlag === 'N' ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                               미확인
+                            </span>
+                          ) : group.receivedQuantity >= group.totalOrderQuantity && group.receivedQuantity > 0 ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              입고완료
                             </span>
                           ) : group.receivedQuantity > 0 ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
@@ -726,7 +730,7 @@ export default function OrderProgressPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedPo.poNo}</p>
               </div>
               <div>
@@ -749,6 +753,7 @@ export default function OrderProgressPage() {
                   <tr>
                     <th className="p-3 text-left text-sm font-semibold text-gray-600">품목코드</th>
                     <th className="p-3 text-left text-sm font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-center text-sm font-semibold text-gray-600">규격</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">수량</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">단가</th>
                     <th className="p-3 text-right text-sm font-semibold text-gray-600">금액</th>
@@ -759,6 +764,7 @@ export default function OrderProgressPage() {
                     <tr key={index} className="border-t">
                       <td className="p-3 text-sm">{item.itemCode}</td>
                       <td className="p-3 text-sm">{item.itemName}</td>
+                      <td className="p-3 text-sm text-center">{item.specification || '-'}</td>
                       <td className="p-3 text-sm text-right">{formatNumber(item.orderQuantity)}</td>
                       <td className="p-3 text-sm text-right">₩{formatNumber(Number(item.unitPrice))}</td>
                       <td className="p-3 text-sm text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
@@ -799,7 +805,7 @@ export default function OrderProgressPage() {
           <div className="space-y-6">
             {/* 기본 정보 */}
             <div className="grid grid-cols-3 gap-4">
-              <Input label="PO번호" value={editingPo.poNo || ''} readOnly />
+              <Input label="발주번호" value={editingPo.poNo || ''} readOnly />
               <Input
                 label="발주명"
                 placeholder="발주명 입력"

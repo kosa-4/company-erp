@@ -241,6 +241,12 @@ export const rfqApi = {
         api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { ...params }),
 
     /**
+     * PR 목록 조회 (단건 상세 조회용으로도 사용)
+     */
+    getPrList: (params: { prNo?: string }) => 
+        api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { prNum: params.prNo }),
+
+    /**
      * RFQ 상세 조회
      */
     getRfqDetail: (rfqNum: string) =>

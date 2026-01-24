@@ -348,14 +348,7 @@ export default function RfqRequestModal({
                 </Badge>
             )
         },
-        {key: 'submitDate', header: '제출일시', width: 160, align: 'center'},
-        {
-            key: 'totalAmt',
-            header: '견적총액',
-            width: 130,
-            align: 'right',
-            render: (val) => val ? `₩${formatNumber(Number(val))}` : '-'
-        },
+        { key: 'submitDate', header: '제출일시', width: 160, align: 'center' },
     ];
 
     return (
