@@ -23,12 +23,12 @@ interface InputCategory {
 export default function CategoryPage() {
     // [핵심 2] rootList 상태 제거! 오직 cateMap만 믿습니다.
     const [cateMap, setCateMap] = useState<{ [key: string]: CategoryState }>({});
-    
+
     // 선택 상태 관리
-    const [selectedMainId, setSelectedMainId] = useState(""); 
-    const [selectedMidId, setSelectedMidId] = useState(""); 
-    const [selectedSubId, setSelectedSubId] = useState(""); 
-    
+    const [selectedMainId, setSelectedMainId] = useState("");
+    const [selectedMidId, setSelectedMidId] = useState("");
+    const [selectedSubId, setSelectedSubId] = useState("");
+
     const selectedMainIdRef = useRef(selectedMainId);
     const selectedMidIdRef = useRef(selectedMidId);
     const selectedSubIdRef = useRef(selectedSubId);
@@ -48,12 +48,12 @@ export default function CategoryPage() {
             const data = await response.json();
 
             const tempMap: { [key: string]: CategoryState } = {};
-            
+
             // 1단계: 맵 생성
             data.forEach((c: any) => {
-                tempMap[c.itemCls] = { 
-                    ...c, 
-                    useFlag: c.useFlag === 'Y', 
+                tempMap[c.itemCls] = {
+                    ...c,
+                    useFlag: c.useFlag === 'Y',
                     children: [], // 이제 children 배열은 화면 렌더링에 안 씀 (useMemo로 대체)
                     isModified: false
                 };
@@ -63,14 +63,14 @@ export default function CategoryPage() {
             data.forEach((c: any) => {
                 const pId = c.parentItemCls;
                 if (pId && tempMap[pId]) {
-                    if(!tempMap[pId].children) tempMap[pId].children = [];
+                    if (!tempMap[pId].children) tempMap[pId].children = [];
                     tempMap[pId].children?.push(tempMap[c.itemCls]);
                 }
             });
 
             // [핵심 3] setRootList 삭제 -> cateMap만 업데이트하면 끝
             setCateMap(tempMap);
-            setInputDatas([]); 
+            setInputDatas([]);
 
             // 선택 상태 복구
             const nextMainId = tempMap[selectedMainIdRef.current] ? selectedMainIdRef.current : "";
@@ -93,7 +93,7 @@ export default function CategoryPage() {
     }, []);
 
     // [핵심 4] 리스트를 cateMap에서 실시간으로 생성 (입력 시 바로 반영됨)
-    
+
     // 1단 (Root)
     const rootList = useMemo(() => {
         return Object.values(cateMap)
@@ -155,7 +155,7 @@ export default function CategoryPage() {
     };
 
     const handleInputChange = (tempKey: number, field: keyof InputCategory, value: any) => {
-        setInputDatas(prev => prev.map(row => 
+        setInputDatas(prev => prev.map(row =>
             row.tempKey === tempKey ? { ...row, [field]: value } : row
         ));
     };
@@ -179,12 +179,12 @@ export default function CategoryPage() {
 
     const saveCategory = async (targetParentId: string) => {
         const currentParent = !targetParentId || targetParentId === "" ? null : targetParentId;
-        
+
         // A. 신규 데이터
         const newItemsToSave = inputDatas.filter(d => {
             const isSameParent = d.parentItemCls === currentParent;
             const isNameFilled = d.itemClsNm && d.itemClsNm.trim() !== '';
-            const isCodeFilled = d.itemLvl !== 0 || (d.itemCls && d.itemCls.trim() !== ''); 
+            const isCodeFilled = d.itemLvl !== 0 || (d.itemCls && d.itemCls.trim() !== '');
             return isSameParent && isNameFilled && isCodeFilled;
         });
 
@@ -235,7 +235,7 @@ export default function CategoryPage() {
             }
 
             alert("저장되었습니다.");
-            await fetchCategories(); 
+            await fetchCategories();
 
         } catch (err: any) {
             alert("오류 발생: " + err.message);
@@ -243,7 +243,7 @@ export default function CategoryPage() {
     };
 
     const handleDeleteCategory = async (itemCls: string) => {
-        if(!confirm("삭제하시겠습니까? 하위 분류가 있는 경우 삭제되지 않을 수 있습니다.")) return;
+        if (!confirm("삭제하시겠습니까? 하위 분류가 있는 경우 삭제되지 않을 수 있습니다.")) return;
         try {
             const response = await fetch(`/api/v1/categories/${itemCls}`, { method: "DELETE" });
             if (!response.ok) throw new Error("서버에서 삭제를 거부했습니다.");
@@ -254,10 +254,18 @@ export default function CategoryPage() {
 
     return (
         <div>
-            <PageHeader title="품목 분류" subtitle="품목 분류를 조회하고 관리합니다." />
+            <PageHeader
+                title="품목 분류"
+                subtitle="품목 분류를 조회하고 관리합니다."
+                icon={
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                }
+            />
             <div className="p-4 bg-gray-100 min-h-screen text-sm">
                 <div className="grid grid-cols-4 gap-2 h-[650px]">
-                    
+
                     {/* 1단 */}
                     <CategoryTable
                         title="품목 종류"
@@ -271,8 +279,8 @@ export default function CategoryPage() {
                         saveCategory={() => saveCategory("")}
                         handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
-                        parentCls="" fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="MAIN" childItemType="CLASS1" maxLength={2}
+                        parentCls="" fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="MAIN" childItemType="CLASS1" maxLength={2}
                     />
 
                     {/* 2단 */}
@@ -289,8 +297,8 @@ export default function CategoryPage() {
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS1" childItemType="CLASS2" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS1" childItemType="CLASS2" maxLength={2}
                     />
 
                     {/* 3단 */}
@@ -307,8 +315,8 @@ export default function CategoryPage() {
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS2" childItemType="CLASS3" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS2" childItemType="CLASS3" maxLength={2}
                     />
 
                     {/* 4단 */}
@@ -317,16 +325,16 @@ export default function CategoryPage() {
                         itemLvl={3}
                         categories={class3List}
                         inputDatas={inputDatas.filter(d => d.itemLvl === 3 && d.parentItemCls === (selectedSubId || null))}
-                        itemCls="" 
+                        itemCls=""
                         parentCls={selectedSubId}
-                        handleChildItemType={() => {}} 
+                        handleChildItemType={() => { }}
                         saveCategory={() => saveCategory(selectedSubId)}
                         handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS3" childItemType="" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS3" childItemType="" maxLength={2}
                     />
 
                 </div>
