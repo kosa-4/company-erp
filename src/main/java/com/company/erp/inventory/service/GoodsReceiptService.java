@@ -312,6 +312,17 @@ public class GoodsReceiptService {
             throw new IllegalArgumentException("취소 사유는 필수입니다.");
         }
 
+        // PO 상태 확인 (종결 상태인 경우 취소 불가)
+        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(existing.getPoNo());
+        if (poHeader == null) {
+            throw new NoSuchElementException("발주 정보를 찾을 수 없습니다: " + existing.getPoNo());
+        }
+
+        // PO가 종결 상태(E)인 경우 취소 불가
+        if (PoStatusCode.CLOSED.getCode().equals(poHeader.getStatus())) {
+            throw new IllegalStateException("종결된 발주 건은 입고 취소할 수 없습니다.");
+        }
+
         // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
 
@@ -372,6 +383,17 @@ public class GoodsReceiptService {
     // GR별로 입고 상태 업데이트 (GR 번호 기준)
     private void updateGrHeaderStatus(String grNo, String userId) {
         if (grNo == null || grNo.isEmpty()) {
+            return;
+        }
+
+        // 현재 헤더 상태 조회 (이미 취소된 문서는 상태 유지)
+        GoodsReceiptDTO currentHeader = goodsReceiptMapper.selectHeader(grNo);
+        if (currentHeader == null) {
+            return;
+        }
+
+        // 취소된 문서는 상태를 변경하지 않음
+        if (GoodsReceiptStatus.CANCELLED.equals(currentHeader.getStatus())) {
             return;
         }
 
