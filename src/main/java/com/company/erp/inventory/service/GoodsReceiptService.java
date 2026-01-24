@@ -375,6 +375,17 @@ public class GoodsReceiptService {
             return;
         }
 
+        // 현재 헤더 상태 조회 (이미 취소된 문서는 상태 유지)
+        GoodsReceiptDTO currentHeader = goodsReceiptMapper.selectHeader(grNo);
+        if (currentHeader == null) {
+            return;
+        }
+
+        // 취소된 문서는 상태를 변경하지 않음
+        if (GoodsReceiptStatus.CANCELLED.equals(currentHeader.getStatus())) {
+            return;
+        }
+
         // GR의 입고수량 합계 조회
         BigDecimal grAccumulatedQty = goodsReceiptMapper.selectGrAccumulatedQty(grNo);
 
