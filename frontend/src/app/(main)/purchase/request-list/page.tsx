@@ -555,6 +555,7 @@ export default function PurchaseRequestListPage() {
       setEditUploadedFiles([]);
       setDeletedFileNums([]);
       setIsEditDragging(false);
+      setSelectedRows([]); // 체크박스 해제
       
       // 상세 정보 새로고침
       const detail = await prApi.getDetail(selectedPr.prNo);
