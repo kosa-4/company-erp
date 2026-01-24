@@ -73,7 +73,9 @@ useEffect(() => {
         // 백엔드 컨트롤러 경로: /api/v1/vendor-portal/info/{vendorCode}/files
         const fileRes = await fetch(`/api/v1/vendor-portal/info/${vCode}/files`);
         
-        if (fileRes.ok) {
+        if (!fileRes.ok) {
+          toast.error('첨부 파일을 불러오지 못했습니다.');
+        } else {
           const fileResult = await fileRes.json();
           // ApiResponse.ok(files)로 보냈으므로 .data 안에 리스트가 들어있습니다.
           setAttachedFiles(fileResult.data || []);
