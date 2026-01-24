@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/v1/vendor-portal/info")
@@ -87,7 +88,19 @@ public class VendorPortalController {
             @PathVariable("askNum") String askNum,
             @RequestParam("file") List<MultipartFile> files,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
+        
+        // 1. 회사 코드 조회
         String vendorCode = vendorPortalService.getVendorCodeByAskNum(askNum);
+
+        // 2. 회사 코드 검증
+        if(vendorCode == null){
+            throw new NoSuchElementException("유효하지 않은 요청 번호입니다.");
+        }
+        
+        // 3. 동일 소속 검증
+        if(!loginUser.getVendorCd().equals(vendorCode)){
+            throw new IllegalStateException("본인 소속 업체의 파일만 업로드 가능합니다.");
+        }
 
         for (MultipartFile file : files) {
             fileService.upload(file, "VN", askNum, vendorCode, loginUser);

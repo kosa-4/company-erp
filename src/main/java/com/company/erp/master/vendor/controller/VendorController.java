@@ -162,6 +162,7 @@ public class VendorController {
         // 1. 파일 그룹 ID(Batch No) 생성
         // 이번 요청으로 함께 업로드된 파일들을 하나의 그룹(askNum)으로 묶어 관리함
         String askNum = docNumService.generateDocNumStr(DocKey.FL);
+
         for (MultipartFile file : files) {
             // 같은 askNum을 부여하여 동일한 업로드 건임을 표시
             fileService.upload(file, "VN", askNum, vendorCode, loginUser);
