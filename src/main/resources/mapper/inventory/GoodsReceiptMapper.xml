@@ -43,7 +43,7 @@
     <select id="selectList" parameterType="map"
         resultType="com.company.erp.inventory.dto.GoodsReceiptDTO"> SELECT h.GR_NUM AS grNo,
         h.PO_NUM AS poNo, h.GR_DATE AS grDate, h.GR_AMT AS totalAmount, h.PROGRESS_CD AS status,
-        h.RMK AS remark, v.VENDOR_NM AS vendorName, ( SELECT bu.USER_NM FROM BY_USER bu WHERE
+        h.RMK AS remark, v.VENDOR_NM AS vendorName, p.PROGRESS_CD AS poStatus, ( SELECT bu.USER_NM FROM BY_USER bu WHERE
         bu.USER_ID = h.CTRL_USER_ID LIMIT 1 ) AS ctrlUserName FROM GRHD h LEFT JOIN POHD p ON
         h.PO_NUM = p.PO_NUM LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD WHERE h.DEL_FLAG = 'N' <if
             test="grNo != null and grNo != ''"> AND h.GR_NUM LIKE CONCAT('%', #{grNo}, '%') </if>
@@ -61,7 +61,7 @@
     <select id="selectHeader" parameterType="String"
         resultType="com.company.erp.inventory.dto.GoodsReceiptDTO"> SELECT h.GR_NUM AS grNo,
         h.PO_NUM AS poNo, h.GR_DATE AS grDate, h.GR_AMT AS totalAmount, h.PROGRESS_CD AS status,
-        h.RMK AS remark, v.VENDOR_NM AS vendorName, ( SELECT bu.USER_NM FROM BY_USER bu WHERE
+        h.RMK AS remark, v.VENDOR_NM AS vendorName, p.PROGRESS_CD AS poStatus, ( SELECT bu.USER_NM FROM BY_USER bu WHERE
         bu.USER_ID = h.CTRL_USER_ID LIMIT 1 ) AS ctrlUserName FROM GRHD h LEFT JOIN POHD p ON
         h.PO_NUM = p.PO_NUM LEFT JOIN VNGL v ON p.VENDOR_CD = v.VENDOR_CD WHERE h.GR_NUM = #{grNo}
         AND h.DEL_FLAG = 'N' </select>

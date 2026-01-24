@@ -27,6 +27,7 @@ interface ReceivingRecord {
   grNo: string;
   poNo: string;
   status: string;
+  poStatus: string; // 발주 상태 (종결 'E' 확인용)
   receiver: string;
   vendorName: string;
   itemCode: string;
@@ -103,6 +104,7 @@ export default function ReceivingListPage() {
               grNo: gr.grNo || '',
               poNo: gr.poNo || '',
               status: gr.status || '',
+              poStatus: gr.poStatus || '',
               receiver: gr.ctrlUserName || '',
               vendorName: gr.vendorName || '',
               itemCode: item.itemCode || '',
@@ -299,6 +301,13 @@ export default function ReceivingListPage() {
   // 입고 취소
   const handleCancelItem = async () => {
     if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+
+    // PO가 종결 상태(E)인 경우 취소 불가
+    if (selectedGr.poStatus === 'E') {
+      toast.warning('종결된 발주 건은 입고 취소할 수 없습니다.');
+      return;
+    }
+
     setCancelReason('');
     setIsCancelModalOpen(true);
   };
@@ -493,7 +502,9 @@ export default function ReceivingListPage() {
             <Button variant="primary" onClick={handleSaveAdjust} disabled={loading}>
               {loading ? '저장 중...' : '수정'}
             </Button>
-            <Button variant="danger" onClick={handleCancelItem} disabled={loading}>입고 취소</Button>
+            <Button variant="danger" onClick={handleCancelItem} disabled={loading || selectedGr?.poStatus === 'E'}>
+              입고 취소
+            </Button>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
           </>
         }
@@ -551,7 +562,10 @@ export default function ReceivingListPage() {
 
             <div className="text-sm text-gray-500">
               * 조정 시 입고 금액은 (조정 수량 × 단가)로 자동 계산됩니다.<br/>
-              * '입고 취소' 버튼을 누르면 해당 품목의 입고 내역이 취소됩니다.
+              * '입고 취소' 버튼을 누르면 해당 품목의 입고 내역이 취소됩니다.<br/>
+              {selectedGr?.poStatus === 'E' && (
+                <span className="text-red-600 font-medium">* 종결된 발주 건은 입고 취소할 수 없습니다.</span>
+              )}
             </div>
           </div>
         )}

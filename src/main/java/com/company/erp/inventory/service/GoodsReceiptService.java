@@ -312,6 +312,17 @@ public class GoodsReceiptService {
             throw new IllegalArgumentException("취소 사유는 필수입니다.");
         }
 
+        // PO 상태 확인 (종결 상태인 경우 취소 불가)
+        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(existing.getPoNo());
+        if (poHeader == null) {
+            throw new NoSuchElementException("발주 정보를 찾을 수 없습니다: " + existing.getPoNo());
+        }
+
+        // PO가 종결 상태(E)인 경우 취소 불가
+        if (PoStatusCode.CLOSED.getCode().equals(poHeader.getStatus())) {
+            throw new IllegalStateException("종결된 발주 건은 입고 취소할 수 없습니다.");
+        }
+
         // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
 

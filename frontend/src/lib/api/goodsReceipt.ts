@@ -10,6 +10,7 @@ export interface GoodsReceiptDTO {
   remark?: string;
   vendorName?: string;
   ctrlUserName?: string;
+  poStatus?: string; // 발주 상태 (종결 여부 확인용)
   items?: GoodsReceiptItemDTO[];
 }
 
