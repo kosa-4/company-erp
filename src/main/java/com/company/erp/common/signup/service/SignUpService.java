@@ -4,6 +4,7 @@ import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.signup.dto.SignUpDto;
+import com.company.erp.common.signup.dto.SignUpResponseDto;
 import com.company.erp.common.signup.mapper.SignUpMapper;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
 import com.company.erp.master.vendor.mapper.VendorMapper;
@@ -84,7 +85,17 @@ public class SignUpService {
 
         return signUpDto;
     }
-    
+
+    // 2. 요청 번호와 회사 번호가 일치하는지 검사
+    public void validateSignUpRequest(SignUpResponseDto responseDto){
+        String askNum = responseDto.getAskNum();
+        String vendorCode = responseDto.getVendorCode();
+
+        int count = signUpMapper.countVNCHByAskNumAndVendorCode(askNum, vendorCode);
+        if(count == 0){
+            throw new IllegalStateException("잘못된 접근입니다 (요청 정보 불일치).");
+        }
+    }
 
 
     // 협력 업체 정보 매핑

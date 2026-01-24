@@ -55,6 +55,9 @@ public class SignUpController {
     public ApiResponse registerFile(
             @RequestPart(value = "data") SignUpResponseDto responseDto,
             @RequestPart(value = "file") List<MultipartFile> files) {
+
+        signUpService.validateSignUpRequest(responseDto);
+
         String vendorCode = responseDto.getVendorCode();
         String askNum = responseDto.getAskNum();
         if (files != null && !files.isEmpty()) {

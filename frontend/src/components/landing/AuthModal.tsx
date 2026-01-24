@@ -604,19 +604,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         </div>
                       )}
                     </div>
-
-                    {/* 비고 */}
-                    <div>
-                      <label className={labelClassName}>비고</label>
-                      <textarea 
-                        name="remark"
-                        value={formData.remark}
-                        onChange={handleInputChange}
-                        className={inputClassName}
-                        placeholder="특이사항 입력"
-                        rows={2}
-                      />
-                    </div>
+                    
                   </div>
                 </motion.div>
 
