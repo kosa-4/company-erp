@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Calendar, Building2, Search, Send, X, CheckCircle2, XCircle, Trophy, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, Button, Badge, Input, SearchPanel, DatePicker, Select } from '@/components/ui';
@@ -22,12 +22,13 @@ export default function VendorRfqSubmitPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [selectedRfqNum, setSelectedRfqNum] = useState<string | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   // 체크된 RFQ 번호 목록
   const [selectedRfqs, setSelectedRfqs] = useState<string[]>([]);
 
   // RFQ 목록 조회
-  const fetchRfqList = async () => {
+  const fetchRfqList = useCallback(async () => {
     try {
       setLoading(true);
       setSelectedRfqs([]); // 목록 조회 시 선택 초기화
@@ -54,11 +55,11 @@ export default function VendorRfqSubmitPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams, filterStatus]);
 
   useEffect(() => {
     fetchRfqList();
-  }, [filterStatus]);
+  }, [fetchRfqList]);
 
   // 검색
   const handleSearch = () => {
@@ -109,16 +110,24 @@ export default function VendorRfqSubmitPage() {
       return;
     }
 
-    if (!confirm(`선택한 ${selectedRfqs.length}건의 견적 요청을 접수하시겠습니까?`)) return;
-
-    try {
-      // 병렬 처리
-      await Promise.all(selectedRfqs.map(id => rfqApi.acceptRfq(id)));
-      toast.success('선택한 견적 요청을 접수했습니다.');
-      fetchRfqList();
-    } catch (error: any) {
-      toast.error(getErrorMessage(error) || '접수에 실패했습니다.');
-    }
+    toast(`선택한 ${selectedRfqs.length}건의 견적 요청을 접수하시겠습니까?`, {
+      action: {
+        label: '접수',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            await Promise.all(selectedRfqs.map(id => rfqApi.acceptRfq(id)));
+            toast.success('선택한 견적 요청을 접수했습니다.');
+            fetchRfqList();
+          } catch (error: any) {
+            toast.error(getErrorMessage(error) || '접수에 실패했습니다.');
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+      duration: 5000,
+    });
   };
 
   // 일괄 포기
@@ -128,29 +137,39 @@ export default function VendorRfqSubmitPage() {
       return;
     }
 
-    // 접수(RFQJ) 또는 임시저장(RFQT) 상태인 건만 포기 가능
+    // 접수(RFQJ) 또는 저장(RFQT) 상태인 건만 포기 가능
     const targetRfqs = rfqList.filter(r => selectedRfqs.includes(r.rfqNum));
     const invalidItems = targetRfqs.filter(r => r.vendorProgressCd !== 'RFQJ' && r.vendorProgressCd !== 'RFQT');
 
     if (invalidItems.length > 0) {
-      toast.error('포기 처리는 "접수" 또는 "임시저장" 상태인 건만 가능합니다.');
+      toast.error('포기 처리는 "접수" 또는 "저장" 상태인 건만 가능합니다.');
       return;
     }
 
-    if (!confirm(`선택한 ${selectedRfqs.length}건의 견적을 포기하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
-
-    try {
-      await Promise.all(selectedRfqs.map(id => rfqApi.rejectRfq(id)));
-      toast.success('선택한 견적을 포기했습니다.');
-      fetchRfqList();
-    } catch (error: any) {
-      toast.error(getErrorMessage(error) || '포기 처리에 실패했습니다.');
-    }
+    toast(`선택한 ${selectedRfqs.length}건의 견적을 포기하시겠습니까? 이 작업은 되돌릴 수 없습니다.`, {
+      action: {
+        label: '포기',
+        onClick: async () => {
+          try {
+            setLoading(true);
+            await Promise.all(selectedRfqs.map(id => rfqApi.rejectRfq(id)));
+            toast.success('선택한 견적을 포기했습니다.');
+            fetchRfqList();
+          } catch (error: any) {
+            toast.error(getErrorMessage(error) || '포기 처리에 실패했습니다.');
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+      duration: 5000,
+    });
   };
 
   // 견적 작성 모달 열기
-  const handleGoToQuote = (rfqNum: string) => {
+  const handleGoToQuote = (rfqNum: string, readOnly: boolean = false) => {
     setSelectedRfqNum(rfqNum);
+    setIsReadOnly(readOnly);
     setIsQuoteModalOpen(true);
   };
 
@@ -158,6 +177,7 @@ export default function VendorRfqSubmitPage() {
   const handleCloseQuoteModal = () => {
     setIsQuoteModalOpen(false);
     setSelectedRfqNum(null);
+    setIsReadOnly(false);
   };
 
   // 견적 제출 성공 시
@@ -214,10 +234,10 @@ export default function VendorRfqSubmitPage() {
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
         />
         <Input
-            label="견적명"
-            placeholder="견적명 입력"
-            value={searchParams.rfqName}
-            onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+          label="견적명"
+          placeholder="견적명 입력"
+          value={searchParams.rfqName}
+          onChange={(e) => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
         />
         <DatePicker
           label="마감일자"
@@ -232,7 +252,7 @@ export default function VendorRfqSubmitPage() {
             { value: '', label: '전체' },
             { value: 'RFQS', label: '요청' },
             { value: 'RFQJ', label: '접수' },
-            { value: 'RFQT', label: '임시저장' },
+            { value: 'RFQT', label: '저장' },
             { value: 'RFQC', label: '제출완료' },
             { value: 'F', label: '포기' },
           ]}
@@ -334,7 +354,28 @@ export default function VendorRfqSubmitPage() {
                           onChange={(e) => handleSelectRow(rfq.rfqNum, e.target.checked)}
                         />
                       </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{rfq.rfqNum}</td>
+                      <td className="px-6 py-4 font-medium">
+                        <span
+                          className={`cursor-pointer hover:underline ${rfq.vendorProgressCd === 'RFQT' || rfq.vendorProgressCd === 'RFQC' || resultStatus === 'WIN' || rfq.selectYn === 'Y'
+                            ? 'text-blue-600'
+                            : 'text-red-500'
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // 저장/제출건 혹은 선정된 건이 있으면 모달 오픈
+                            const hasQuoteData = rfq.vendorProgressCd === 'RFQT' || rfq.vendorProgressCd === 'RFQC' || rfq.selectYn === 'Y' || resultStatus === 'WIN';
+                            if (hasQuoteData) {
+                              // 제출했거나 선정/마감된 경우 읽기전용 모드
+                              const isReadOnlyMode = rfq.vendorProgressCd === 'RFQC' || rfq.selectYn === 'Y' || resultStatus === 'WIN' || ['M', 'G', 'J'].includes(rfq.progressCd);
+                              handleGoToQuote(rfq.rfqNum, isReadOnlyMode);
+                            } else {
+                              handleSelectRow(rfq.rfqNum, !selectedRfqs.includes(rfq.rfqNum));
+                            }
+                          }}
+                        >
+                          {rfq.rfqNum}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-gray-600">{rfq.rfqSubject}</td>
                       <td className="px-6 py-4 text-gray-600">{rfq.rfqTypeName || rfq.rfqType}</td>
                       <td className="px-6 py-4">
@@ -394,6 +435,7 @@ export default function VendorRfqSubmitPage() {
         onClose={handleCloseQuoteModal}
         rfqNum={selectedRfqNum}
         onSuccess={handleQuoteSuccess}
+        readOnly={isReadOnly}
       />
     </div>
   );

@@ -72,11 +72,9 @@ export default function RfqSelectionPage() {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [selectionReason, setSelectionReason] = useState('');
 
-  // ✅ RFQ 상세 모달 상태 (입고 화면 방식)
   const [isRfqDetailOpen, setIsRfqDetailOpen] = useState(false);
   const [selectedRfqDetail, setSelectedRfqDetail] = useState<any>(null);
 
-  // ✅ RFQ 상세 조회 (입고 화면 방식 그대로: ApiResponse.data)
   const handleViewRfqDetail = async (rfqNo: string, e: React.MouseEvent) => {
     e.stopPropagation(); // row 클릭(select+toggle) 방지
     if (!rfqNo) return;
@@ -445,7 +443,6 @@ export default function RfqSelectionPage() {
                               />
                             </td>
 
-                            {/* ✅ RFQ번호 클릭 시 상세 모달 */}
                             <td className="px-4 py-3 text-sm font-medium text-center">
                           <span
                               className="text-blue-600 hover:underline cursor-pointer"
@@ -608,7 +605,6 @@ export default function RfqSelectionPage() {
           </div>
         </Modal>
 
-        {/* ✅ RFQ 상세 모달 */}
         <Modal
             isOpen={isRfqDetailOpen}
             onClose={() => setIsRfqDetailOpen(false)}

@@ -67,7 +67,7 @@ export default function RfqCompareModal({
         return [...data.vendors].sort((a, b) => {
             const aWinner = a.selectYn === 'Y' ? 0 : 1;
             const bWinner = b.selectYn === 'Y' ? 0 : 1;
-            if (aWinner !== bWinner) return aWinner - bWinner; // ✅ Y가 먼저
+            if (aWinner !== bWinner) return aWinner - bWinner;
             return (a.vendorCd || '').localeCompare(b.vendorCd || ''); // 나머진 코드순(원하면 제거)
         });
     }, [data]);

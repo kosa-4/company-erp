@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class PrItemRow {
-    private String prNum; // ✅ 필수! groupingBy에서 사용
+    private String prNum; //
     private Integer lineNo;
     private String itemCd;
     private String itemDesc;

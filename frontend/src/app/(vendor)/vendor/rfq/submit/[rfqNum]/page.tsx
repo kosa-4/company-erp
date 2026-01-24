@@ -92,9 +92,9 @@ export default function VendorQuoteEditPage({
     try {
       setSaving(true);
       await rfqApi.saveVendorQuote(rfqNum, { items });
-      toast.success("견적이 임시저장되었습니다.");
+      toast.success("견적이 저장되었습니다.");
     } catch (error: any) {
-      toast.error(getErrorMessage(error) || "임시저장에 실패했습니다.");
+      toast.error(getErrorMessage(error) || "저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -188,7 +188,7 @@ export default function VendorQuoteEditPage({
             disabled={saving}
             icon={<Save className="w-4 h-4" />}
           >
-            임시저장
+            저장
           </Button>
           <Button
             variant="primary"

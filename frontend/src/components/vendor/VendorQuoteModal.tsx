@@ -26,6 +26,7 @@ interface VendorQuoteModalProps {
   onClose: () => void;
   rfqNum: string | null;
   onSuccess?: () => void;
+  readOnly?: boolean;
 }
 
 export default function VendorQuoteModal({
@@ -33,6 +34,7 @@ export default function VendorQuoteModal({
   onClose,
   rfqNum,
   onSuccess,
+  readOnly = false,
 }: VendorQuoteModalProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -98,23 +100,39 @@ export default function VendorQuoteModal({
     }, 0);
   };
 
-  // 임시저장
+  // 저장
   const handleSave = async () => {
     if (!rfqNum) return;
 
     try {
       setSaving(true);
       await rfqApi.saveVendorQuote(rfqNum, { items });
-      toast.success('견적이 임시저장되었습니다.');
+      toast.success('견적이 저장되었습니다.');
       onSuccess?.();
+      onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || '임시저장에 실패했습니다.');
+      toast.error(error.response?.data?.message || '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
   };
 
-  // 제출
+  // 제출 실행 로직
+  const doSubmit = async () => {
+    try {
+      setSaving(true);
+      await rfqApi.submitVendorQuote(rfqNum!, { items });
+      toast.success('견적이 제출되었습니다.');
+      onSuccess?.();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || '견적 제출에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 제출 버튼 핸들러 (검증 및 컨펌)
   const handleSubmit = async () => {
     if (!rfqNum) return;
 
@@ -131,27 +149,22 @@ export default function VendorQuoteModal({
       }
     }
 
-    if (!confirm('견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.'))
-      return;
-
-    try {
-      setSaving(true);
-      await rfqApi.submitVendorQuote(rfqNum, { items });
-      toast.success('견적이 제출되었습니다.');
-      onSuccess?.();
-      onClose();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || '견적 제출에 실패했습니다.');
-    } finally {
-      setSaving(false);
-    }
+    toast('견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.', {
+      action: {
+        label: '제출',
+        onClick: () => {
+          void doSubmit();
+        },
+      },
+      duration: 5000,
+    });
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`견적서 작성 ${quoteData ? `- ${quoteData.rfqNum}` : ''}`}
+      title={readOnly ? `견적서 확인 - ${quoteData?.rfqNum}` : `견적서 작성 ${quoteData ? `- ${quoteData.rfqNum}` : ''}`}
       size="full"
       footer={
         <div className="flex justify-between items-center w-full">
@@ -162,25 +175,29 @@ export default function VendorQuoteModal({
             </span>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
-              취소
+            <Button variant="secondary" onClick={onClose}>
+              {readOnly ? '닫기' : '취소'}
             </Button>
-            <Button
-              variant="secondary"
-              onClick={handleSave}
-              disabled={saving || loading}
-              icon={<Save className="w-4 h-4" />}
-            >
-              임시저장
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={saving || loading}
-              icon={<Send className="w-4 h-4" />}
-            >
-              제출하기
-            </Button>
+            {!readOnly && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={handleSave}
+                  disabled={saving || loading}
+                  icon={<Save className="w-4 h-4" />}
+                >
+                  저장
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSubmit}
+                  disabled={saving || loading}
+                  icon={<Send className="w-4 h-4" />}
+                >
+                  제출하기
+                </Button>
+              </>
+            )}
           </div>
         </div>
       }
@@ -205,10 +222,6 @@ export default function VendorQuoteModal({
               <div>
                 <p className="text-gray-500 mb-1">견적명</p>
                 <p className="font-medium">{quoteData.rfqSubject}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 mb-1">견적유형</p>
-                <p className="font-medium">{quoteData.rfqTypeName || quoteData.rfqType}</p>
               </div>
               <div>
                 <p className="text-gray-500 mb-1">마감일</p>
@@ -261,6 +274,7 @@ export default function VendorQuoteModal({
                           }
                           className="text-right"
                           placeholder="단가"
+                          disabled={readOnly}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -272,6 +286,7 @@ export default function VendorQuoteModal({
                           }
                           className="text-right"
                           placeholder="수량"
+                          disabled={readOnly}
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
@@ -283,6 +298,7 @@ export default function VendorQuoteModal({
                           onChange={(e) =>
                             handleItemChange(item.lineNo, 'delyDate', e.target.value)
                           }
+                          disabled={readOnly}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -293,6 +309,7 @@ export default function VendorQuoteModal({
                             handleItemChange(item.lineNo, 'rmk', e.target.value)
                           }
                           placeholder="비고"
+                          disabled={readOnly}
                         />
                       </td>
                     </tr>

@@ -28,7 +28,7 @@ public class RfqVendorQuoteService {
     private String cryptoKey;
 
     /**
-     * 견적 데이터 조회 (편집용)
+     * 견적 데이터 조회 (편집/조회 공용)
      */
     @Transactional
     public VendorQuoteResponse getQuoteForEdit(String rfqNum, String vendorCd) {
@@ -38,29 +38,25 @@ public class RfqVendorQuoteService {
             throw new IllegalArgumentException("해당 견적 요청을 찾을 수 없습니다.");
         }
 
-        // 상태 검증: RFQJ 또는 RFQT 상태만 편집 가능
         String vendorStatus = response.getVendorProgressCd();
-        if (!"RFQJ".equals(vendorStatus) && !"RFQT".equals(vendorStatus)) {
-            throw new IllegalStateException("접수 또는 임시저장 상태의 견적만 편집할 수 있습니다. 현재 상태: " + vendorStatus);
-        }
-
-        // RFQ 전체 상태 확인 (마감/개찰/선정 완료된 경우 편집 불가)
         String rfqHdStatus = response.getProgressCd();
-        if ("M".equals(rfqHdStatus) || "G".equals(rfqHdStatus) || "J".equals(rfqHdStatus)) {
-            throw new IllegalStateException("이미 마감되거나 처리 완료된 견적입니다.");
-        }
 
         // RFQVNDT 존재 여부 확인 및 초기 복사
         int vnDtCount = mapper.countRfqVndt(rfqNum, vendorCd);
         if (vnDtCount == 0) {
-            // 최초 진입: RFQDT에서 RFQVNDT로 복사
-            mapper.insertRfqVndtFromRfqdt(rfqNum, vendorCd, "SYSTEM");
+            // "최초 복사"는 편집 가능한 기간(구매사가 전송 후 마감 전)에만 수행하도록 제한을 둡니다.
+            boolean isProcessStatusReady = "RFQS".equals(vendorStatus) || "RFQJ".equals(vendorStatus);
+            boolean isHdStatusReady = !"M".equals(rfqHdStatus) && !"G".equals(rfqHdStatus) && !"J".equals(rfqHdStatus);
+
+            if (isProcessStatusReady && isHdStatusReady) {
+                mapper.insertRfqVndtFromRfqdt(rfqNum, vendorCd, "SYSTEM");
+            }
         }
 
-        // 품목 목록 조회
+        // 품목 목록 조회 (이미 제출된 건도 조회가 가능해야 하므로 여기서 IllegalStateException을 던지지 않습니다)
         List<VendorQuoteResponse.QuoteItemInfo> items = mapper.selectQuoteItems(rfqNum, vendorCd);
 
-        // 본인 견적이므로 항상 복호화
+        // 본인 견적이므로 항상 복호화하여 제공
         if (items != null) {
             for (VendorQuoteResponse.QuoteItemInfo item : items) {
                 if (item.getQuoteUnitPrc() != null) {
@@ -77,23 +73,20 @@ public class RfqVendorQuoteService {
     }
 
     /**
-     * 견적 임시저장 (RFQT)
+     * 견적 임시저장
      */
     @Transactional
     public void saveQuoteDraft(String rfqNum, String vendorCd, VendorQuoteRequest request, String userId) {
-        // 상태 검증
+        // 저장 시에는 반드시 편집 가능 상태인지 검증합니다.
         validateQuoteEditable(rfqNum, vendorCd);
 
-        // 품목별 금액 계산 및 업데이트
         BigDecimal totalAmt = BigDecimal.ZERO;
         for (VendorQuoteItemRequest item : request.getItems()) {
-            // 금액 계산: 단가 × 수량
             BigDecimal quoteAmt = item.getQuoteUnitPrc().multiply(item.getQuoteQt());
             item.setQuoteAmt(quoteAmt);
             totalAmt = totalAmt.add(quoteAmt);
 
-            // 품목 업데이트 (암호화)
-            int updated = mapper.updateRfqVndtItem(
+            mapper.updateRfqVndtItem(
                     rfqNum,
                     vendorCd,
                     item.getLineNo(),
@@ -103,31 +96,21 @@ public class RfqVendorQuoteService {
                     item.getDelyDate(),
                     item.getRmk(),
                     userId);
-            if (updated == 0) {
-                throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
-            }
         }
 
-        // RFQVN 상태 및 총액 업데이트 (RFQT) - 총액 암호화
-        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT",
+        mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQT",
                 AesCryptoUtil.encrypt(totalAmt.toString(), cryptoKey), userId);
-        if (updated == 0) {
-            throw new IllegalStateException("견적 상태 업데이트에 실패했습니다.");
-        }
     }
 
     /**
-     * 견적 제출 (RFQC)
+     * 견적 제출
      */
     @Transactional
     public void submitQuote(String rfqNum, String vendorCd, VendorQuoteRequest request, String userId) {
-        // 상태 검증
         validateQuoteEditable(rfqNum, vendorCd);
 
-        // 품목별 금액 계산 및 업데이트
         BigDecimal totalAmt = BigDecimal.ZERO;
         for (VendorQuoteItemRequest item : request.getItems()) {
-            // 필수 항목 검증
             if (item.getQuoteUnitPrc() == null || item.getQuoteUnitPrc().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("견적단가는 0보다 커야 합니다. (라인번호: " + item.getLineNo() + ")");
             }
@@ -135,13 +118,11 @@ public class RfqVendorQuoteService {
                 throw new IllegalArgumentException("견적수량은 0보다 커야 합니다. (라인번호: " + item.getLineNo() + ")");
             }
 
-            // 금액 계산: 단가 × 수량
             BigDecimal quoteAmt = item.getQuoteUnitPrc().multiply(item.getQuoteQt());
             item.setQuoteAmt(quoteAmt);
             totalAmt = totalAmt.add(quoteAmt);
 
-            // 품목 업데이트 (암호화)
-            int updated = mapper.updateRfqVndtItem(
+            mapper.updateRfqVndtItem(
                     rfqNum,
                     vendorCd,
                     item.getLineNo(),
@@ -151,40 +132,30 @@ public class RfqVendorQuoteService {
                     item.getDelyDate(),
                     item.getRmk(),
                     userId);
-            if (updated == 0) {
-                throw new IllegalStateException("품목 업데이트에 실패했습니다. (라인번호: " + item.getLineNo() + ")");
-            }
         }
 
-        // RFQVN 상태 및 총액 업데이트 (RFQC) - 총액 암호화
-        int updated = mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC",
+        mapper.updateRfqVnStatusAndAmount(rfqNum, vendorCd, "RFQC",
                 AesCryptoUtil.encrypt(totalAmt.toString(), cryptoKey), userId);
-        if (updated == 0) {
-            throw new IllegalStateException("견적 제출에 실패했습니다.");
-        }
     }
 
     /**
-     * 견적 편집 가능 여부 검증
+     * 견적 편집 가능 여부 검증 (저장/제출 용)
      */
     private void validateQuoteEditable(String rfqNum, String vendorCd) {
-        // RFQVN 상태 확인
         Map<String, Object> vnStatus = mapper.selectRfqVnStatus(rfqNum, vendorCd);
         if (vnStatus == null) {
             throw new IllegalArgumentException("해당 견적 요청을 찾을 수 없습니다.");
         }
 
         String currentStatus = (String) vnStatus.get("progressCd");
-
-        // 상태 검증: RFQJ, RFQT 상태만 편집 가능
+        // 상태 검증: 진행 중인 상태에서만 데이터 변경이 가능합니다.
         if (!"RFQJ".equals(currentStatus) && !"RFQT".equals(currentStatus)) {
-            throw new IllegalStateException("접수 또는 임시저장 상태의 견적만 편집할 수 있습니다. 현재 상태: " + currentStatus);
+            throw new IllegalStateException("데이터를 수정할 수 없는 상태입니다. (현재 상태: " + currentStatus + ")");
         }
 
-        // RFQ 전체 상태 확인
         String rfqHdStatus = mapper.selectRfqHdStatus(rfqNum);
         if ("M".equals(rfqHdStatus) || "G".equals(rfqHdStatus) || "J".equals(rfqHdStatus)) {
-            throw new IllegalStateException("이미 마감되거나 처리 완료된 견적입니다.");
+            throw new IllegalStateException("마감 처리된 견적은 수정할 수 없습니다.");
         }
     }
 }

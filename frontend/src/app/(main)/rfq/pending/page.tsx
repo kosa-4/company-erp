@@ -83,7 +83,6 @@ export default function RfqPendingPage() {
             subtitle="견적 작성이 필요한 구매요청 목록입니다."
         />
 
-        {/* ✅ ItemPage처럼: onSearch는 조회 호출이 아니라 “searchParams 갱신 트리거” */}
         <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
           <Input
               label="PR번호"

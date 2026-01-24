@@ -5,7 +5,7 @@
 
     <!-- 1. 조회: Header -->
     <select id="selectRfqHeader"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+            resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
         SELECT
                h.RFQ_NUM        AS rfqNum,
                h.RFQ_SUBJECT    AS rfqSubject,
@@ -20,61 +20,93 @@
                u.USER_NM        AS ctrlUserNm,
                h.PR_NUM         AS prNum,
                h.PC_TYPE        AS pcType
-        FROM RFQHD h
-                 LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'PROGRESS_CD' AND h.PROGRESS_CD = c1.CODE AND c1.USE_YN = 'Y'
-                 LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c2.CODE AND c2.USE_YN = 'Y'
-                 LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
-        WHERE h.RFQ_NUM = #{rfqNum}
-          AND h.DEL_FLAG = 'N'
+          FROM RFQHD h
+     LEFT JOIN CODD c1
+            ON c1.CODE_GROUP = 'PROGRESS_CD'
+           AND h.PROGRESS_CD = c1.CODE
+           AND c1.USE_YN = 'Y'
+     LEFT JOIN CODD c2
+            ON c2.CODE_GROUP = 'REQ_TYPE'
+           AND h.RFQ_TYPE = c2.CODE
+           AND c2.USE_YN = 'Y'
+     LEFT JOIN BY_USER u
+            ON h.CTRL_USER_ID = u.USER_ID
+         WHERE h.RFQ_NUM = #{rfqNum}
+           AND h.DEL_FLAG = 'N'
     </select>
 
     <!-- 2. 조회: Items -->
     <select id="selectRfqItems"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item"> SELECT
-        LINE_NO AS lineNo, ITEM_CD AS itemCd, ITEM_DESC AS itemDesc, ITEM_SPEC AS itemSpec, UNIT_CD
-        AS unitCd, RFQ_QT AS rfqQt, EST_UNIT_PRC AS estUnitPrc, EST_AMT AS estAmt, DELY_DATE AS
-        delyDate, WH_NM AS whNm, RMK AS rmk FROM RFQDT WHERE RFQ_NUM = #{rfqNum} AND DEL_FLAG = 'N'
-        ORDER BY LINE_NO </select>
+            resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
+        SELECT
+               LINE_NO      AS lineNo,
+               ITEM_CD      AS itemCd,
+               ITEM_DESC    AS itemDesc,
+               ITEM_SPEC    AS itemSpec,
+               UNIT_CD      AS unitCd,
+               RFQ_QT       AS rfqQt,
+               EST_UNIT_PRC AS estUnitPrc,
+               EST_AMT      AS estAmt,
+               DELY_DATE    AS delyDate,
+               WH_NM        AS whNm,
+               RMK          AS rmk
+          FROM RFQDT
+         WHERE RFQ_NUM = #{rfqNum}
+           AND DEL_FLAG = 'N'
+         ORDER BY LINE_NO
+    </select>
 
     <!-- 3. 조회: Vendors (PROGRESS_CD만 조회, 명칭은 서비스 매핑) -->
     <select id="selectRfqVendors"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Vendor"> SELECT
-        v.VENDOR_CD AS vendorCd, vn.VENDOR_NM AS vendorNm, v.PROGRESS_CD AS progressCd, v.SEND_DATE
-        AS sendDate, v.SUBMIT_DATE AS submitDate, v.TOTAL_AMT AS totalAmt, v.SELECT_YN AS selectYn
-        FROM RFQVN v INNER JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD AND vn.DEL_FLAG = 'N' AND
-        vn.USE_FLAG = 'Y' WHERE v.RFQ_NUM = #{rfqNum} AND v.DEL_FLAG = 'N' ORDER BY v.VENDOR_CD </select>
-
-    <!-- [신규] PR 기반 초기화 데이터 조회: Header -->
-    <select id="selectRfqInitHeader"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+            resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Vendor">
         SELECT
-               NULL      AS rfqNum,
-               NULL      AS rfqSubject,
-               NULL      AS rfqDate,
-               'T'       AS progressCd,
-               '임시저장'    AS
-                            progressNm,
-               'OC'      AS rfqType,
-               '수의계약'    AS rfqTypeNm,
-               h.PR_NUM  AS prNum,
-               h.PC_TYPE AS pcType,
-               c.CODE_NAME AS pcTypeNm,
-               NULL      AS reqCloseDate,
-               NULL      AS rmk,
-               #{ctrlUserId}      AS ctrlUserId,
-               (SELECT b.USER_NM FROM by_user b WHERE b.USER_ID = #{ctrlUserId})   AS ctrlUserNm
-        FROM PRHD h
-        JOIN CODD c
-          ON c.CODE = h.PC_TYPE
-         AND c.CODE_GROUP = 'PC_TYPE'
-        WHERE h.PR_NUM = #{prNum}
-          AND h.PROGRESS_CD = 'A'
-          AND h.DEL_FLAG = 'N'
-        </select>
+               v.VENDOR_CD    AS vendorCd,
+               vn.VENDOR_NM   AS vendorNm,
+               v.PROGRESS_CD  AS progressCd,
+               v.SEND_DATE    AS sendDate,
+               v.SUBMIT_DATE  AS submitDate,
+               v.TOTAL_AMT    AS totalAmt,
+               v.SELECT_YN    AS selectYn
+          FROM RFQVN v
+    INNER JOIN VNGL vn
+            ON v.VENDOR_CD = vn.VENDOR_CD
+           AND vn.DEL_FLAG = 'N'
+           AND vn.USE_FLAG = 'Y'
+         WHERE v.RFQ_NUM = #{rfqNum}
+           AND v.DEL_FLAG = 'N'
+         ORDER BY v.VENDOR_CD
+    </select>
 
-    <!-- [신규] PR 기반 초기화 데이터 조회: Items -->
+    <!-- PR 기반 초기화 데이터 조회: Header -->
+    <select id="selectRfqInitHeader"
+            resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Header">
+        SELECT
+               NULL        AS rfqNum,
+               NULL        AS rfqSubject,
+               NULL        AS rfqDate,
+               'T'         AS progressCd,
+               '임시저장'      AS progressNm,
+               'OC'        AS rfqType,
+               '수의계약'      AS rfqTypeNm,
+               h.PR_NUM    AS prNum,
+               h.PC_TYPE   AS pcType,
+               c.CODE_NAME AS pcTypeNm,
+               NULL        AS reqCloseDate,
+               NULL        AS rmk,
+               #{ctrlUserId} AS ctrlUserId,
+               (SELECT b.USER_NM FROM by_user b WHERE b.USER_ID = #{ctrlUserId}) AS ctrlUserNm
+          FROM PRHD h
+          JOIN CODD c
+            ON c.CODE = h.PC_TYPE
+           AND c.CODE_GROUP = 'PC_TYPE'
+         WHERE h.PR_NUM = #{prNum}
+           AND h.PROGRESS_CD = 'A'
+           AND h.DEL_FLAG = 'N'
+    </select>
+
+    <!-- PR 기반 초기화 데이터 조회: Items -->
     <select id="selectRfqInitItems"
-        resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
+            resultType="com.company.erp.rfq.buyer.request.dto.response.RfqDetailResponse$Item">
         SELECT
                ROW_NUMBER() OVER (ORDER BY pd.ITEM_CD) AS lineNo,
                pd.ITEM_CD   AS itemCd,
@@ -87,105 +119,168 @@
                pd.DELY_DATE AS delyDate,
                NULL         AS whNm,
                pd.RMK       AS rmk
-        FROM PRDT pd
-        WHERE pd.PR_NUM = #{prNum}
-          AND pd.DEL_FLAG = 'N'
-        ORDER BY pd.REG_DATE
+          FROM PRDT pd
+         WHERE pd.PR_NUM = #{prNum}
+           AND pd.DEL_FLAG = 'N'
+         ORDER BY pd.REG_DATE
     </select>
 
+    <select id="selectCodeNames" resultType="map">
+        SELECT
+               CODE      AS code,
+               CODE_NAME AS codeName
+          FROM CODD
+         WHERE CODE_GROUP = #{codeGroup}
+           AND USE_YN = 'Y'
+    </select>
 
-    <!-- [복구] 프로젝트 공통 방식(Map)에 따라 조회 -->
-    <select id="selectCodeNames" resultType="map"> SELECT CODE AS code, CODE_NAME AS codeName FROM
-        CODD WHERE CODE_GROUP = #{codeGroup} AND USE_YN = 'Y' </select>
-
-    <!-- 4. [추가] 원본 PR 필수 품목 라인번호 조회 -->
-    <select id="selectPrItemLineNos" resultType="int"> SELECT LINE_NO FROM PRDT WHERE PR_NUM =
-        #{prNum} AND DEL_FLAG = 'N' </select>
+    <select id="selectPrItemLineNos" resultType="int">
+        SELECT
+               LINE_NO
+          FROM PRDT
+         WHERE PR_NUM = #{prNum}
+           AND DEL_FLAG = 'N'
+    </select>
 
     <!-- 5. 생성: Header 신규 생성 -->
     <insert id="insertRfqHeader">
-        INSERT INTO RFQHD (RFQ_NUM, RFQ_SUBJECT, RFQ_DATE, PR_NUM,
-                           PROGRESS_CD, RFQ_TYPE, REQ_CLOSE_DATE, RMK, CTRL_USER_ID, PC_TYPE, DEL_FLAG, REG_DATE,
-                           REG_USER_ID)
-        VALUES (#{req.rfqNum}, #{req.rfqSubject}, NOW(), #{prNum}, 'T',
-                #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType}, 'N', NOW(),
-                #{loginUserId})
+        INSERT INTO RFQHD (
+            RFQ_NUM, RFQ_SUBJECT, RFQ_DATE, PR_NUM,
+            PROGRESS_CD, RFQ_TYPE, REQ_CLOSE_DATE, RMK, CTRL_USER_ID, PC_TYPE, DEL_FLAG, REG_DATE,
+            REG_USER_ID
+        ) VALUES (
+            #{req.rfqNum}, #{req.rfqSubject}, NOW(), #{prNum}, 'T',
+            #{req.rfqType}, #{req.reqCloseDate}, #{req.rmk}, #{loginUserId}, #{pcType}, 'N', NOW(),
+            #{loginUserId}
+        )
     </insert>
 
-    <!-- 6. 저장: Header 수정 (2중 방어 - 상태 + Owner 체크) -->
+    <!-- 6. 저장: Header 수정 -->
     <update id="updateRfqHeader">
         UPDATE RFQHD
-        SET RFQ_SUBJECT    = #{req.rfqSubject},
-            RFQ_TYPE       = #{req.rfqType},
-            REQ_CLOSE_DATE = #{req.reqCloseDate},
-            RMK            = #{req.rmk},
-            MOD_DATE       = NOW(),
-            MOD_USER_ID    = #{loginUserId},
-            CTRL_USER_ID    = #{loginUserId}
-        WHERE RFQ_NUM = #{req.rfqNum}
-          AND PROGRESS_CD = 'T'
-          AND DEL_FLAG = 'N'
-        </update>
+           SET RFQ_SUBJECT    = #{req.rfqSubject},
+               RFQ_TYPE       = #{req.rfqType},
+               REQ_CLOSE_DATE = #{req.reqCloseDate},
+               RMK            = #{req.rmk},
+               MOD_DATE       = NOW(),
+               MOD_USER_ID    = #{loginUserId},
+               CTRL_USER_ID    = #{loginUserId}
+         WHERE RFQ_NUM = #{req.rfqNum}
+           AND PROGRESS_CD = 'T'
+           AND DEL_FLAG = 'N'
+    </update>
 
-    <!-- 6. 저장: Items 동기화 (물리 삭제) -->
-    <delete id="deleteRfqItems"> DELETE FROM RFQDT WHERE RFQ_NUM = #{rfqNum} </delete>
+    <delete id="deleteRfqItems">
+        DELETE
+          FROM RFQDT
+         WHERE RFQ_NUM = #{rfqNum}
+    </delete>
 
-    <!-- 7. 저장/수정: Vendors 정리 및 생성 -->
-    <delete id="deleteRfqVendors"> DELETE FROM RFQVN WHERE RFQ_NUM = #{rfqNum} </delete>
+    <delete id="deleteRfqVendors">
+        DELETE
+          FROM RFQVN
+         WHERE RFQ_NUM = #{rfqNum}
+    </delete>
 
-    <insert id="insertRfqVendors"> INSERT INTO RFQVN (RFQ_NUM, VENDOR_CD, PROGRESS_CD, DEL_FLAG,
-        REG_DATE, REG_USER_ID) VALUES <foreach collection="vendorCodes" item="vendorCd"
-            separator=","> (#{rfqNum}, #{vendorCd}, 'T', 'N', NOW(), #{loginUserId}) </foreach>
+    <insert id="insertRfqVendors">
+        INSERT INTO RFQVN (
+            RFQ_NUM, VENDOR_CD, PROGRESS_CD, DEL_FLAG,
+            REG_DATE, REG_USER_ID
+        ) VALUES
+        <foreach collection="vendorCodes" item="vendorCd" separator=",">
+            (#{rfqNum}, #{vendorCd}, 'T', 'N', NOW(), #{loginUserId})
+        </foreach>
     </insert>
 
-    <!-- 7. 저장: Items 동기화 (Batch Insert) -->
-    <insert id="insertRfqItems"> INSERT INTO RFQDT (RFQ_NUM, LINE_NO, ITEM_CD, ITEM_DESC, ITEM_SPEC,
-        UNIT_CD, RFQ_QT, EST_UNIT_PRC, EST_AMT, DELY_DATE, WH_NM, RMK, DEL_FLAG, REG_DATE,
-        REG_USER_ID) VALUES <foreach collection="items" item="i" separator=","> (#{rfqNum},
-        #{i.lineNo}, #{i.itemCd}, #{i.itemDesc}, #{i.itemSpec}, #{i.unitCd}, #{i.rfqQt},
-        #{i.estUnitPrc}, #{i.estAmt}, #{i.delyDate}, #{i.whNm}, #{i.rmk}, 'N', NOW(),
-        #{loginUserId}) </foreach>
+    <insert id="insertRfqItems">
+        INSERT INTO RFQDT (
+            RFQ_NUM, LINE_NO, ITEM_CD, ITEM_DESC, ITEM_SPEC,
+            UNIT_CD, RFQ_QT, EST_UNIT_PRC, EST_AMT, DELY_DATE, WH_NM, RMK, DEL_FLAG, REG_DATE,
+            REG_USER_ID
+        ) VALUES
+        <foreach collection="items" item="i" separator=",">
+            (
+                #{rfqNum}, #{i.lineNo}, #{i.itemCd}, #{i.itemDesc}, #{i.itemSpec},
+                #{i.unitCd}, #{i.rfqQt}, #{i.estUnitPrc}, #{i.estAmt}, #{i.delyDate},
+                #{i.whNm}, #{i.rmk}, 'N', NOW(), #{loginUserId}
+            )
+        </foreach>
     </insert>
 
     <!-- 8. 전송: Header 상태 전환 (T -> RFQS) -->
     <update id="updateRfqStatusToSend">
         UPDATE RFQHD
-        SET PROGRESS_CD = 'RFQS',
-            RFQ_DATE    = NOW(),
-            MOD_DATE    = NOW(),
-            MOD_USER_ID = #{loginUserId},
-            CTRL_USER_ID = #{loginUserId}
-        WHERE RFQ_NUM = #{rfqNum}
-          AND PROGRESS_CD = 'T'
-          AND DEL_FLAG = 'N'
-        </update>
+           SET PROGRESS_CD = 'RFQS',
+               RFQ_DATE    = NOW(),
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{loginUserId},
+               CTRL_USER_ID = #{loginUserId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND PROGRESS_CD = 'T'
+           AND DEL_FLAG = 'N'
+    </update>
 
     <!-- 9. 전송: Vendor 상태 전환 (T -> RFQS) -->
-    <update id="updateRfqVendorsStatusToSend"> UPDATE RFQVN SET PROGRESS_CD = 'RFQS', SEND_DATE =
-        NOW(), MOD_DATE = NOW(), MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND
-        PROGRESS_CD = 'T' AND DEL_FLAG = 'N' </update>
+    <update id="updateRfqVendorsStatusToSend">
+        UPDATE RFQVN
+           SET PROGRESS_CD = 'RFQS',
+               SEND_DATE   = NOW(),
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{loginUserId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND PROGRESS_CD = 'T'
+           AND DEL_FLAG = 'N'
+    </update>
 
-
-    <!-- 10. 선정: Header 상태 전환 (Owner 체크 포함) -->
-    <update id="updateRfqStatusToSelected"> UPDATE RFQHD SET PROGRESS_CD = 'J', MOD_DATE = NOW(),
-        MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD = 'G' AND
-        CTRL_USER_ID = #{loginUserId} AND DEL_FLAG = 'N' </update>
+    <!-- 10. 선정: Header 상태 전환 -->
+    <update id="updateRfqStatusToSelected">
+        UPDATE RFQHD
+           SET PROGRESS_CD = 'J',
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{loginUserId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND PROGRESS_CD = 'G'
+           AND CTRL_USER_ID = #{loginUserId}
+           AND DEL_FLAG = 'N'
+    </update>
 
     <!-- 11. 선정: Vendors 선정 상태 초기화 -->
-    <update id="resetRfqVendorsSelection"> UPDATE RFQVN SET SELECT_YN = 'N' WHERE RFQ_NUM =
-        #{rfqNum} AND DEL_FLAG = 'N' </update>
+    <update id="resetRfqVendorsSelection">
+        UPDATE RFQVN
+           SET SELECT_YN = 'N'
+         WHERE RFQ_NUM = #{rfqNum}
+           AND DEL_FLAG = 'N'
+    </update>
 
     <!-- 12. 선정: 대상 Vendor 선정 -->
-    <update id="updateRfqVendorSelection"> UPDATE RFQVN SET SELECT_YN = 'Y', MOD_DATE = NOW(),
-        MOD_USER_ID = #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND VENDOR_CD = #{vendorCd} AND
-        DEL_FLAG = 'N' </update>
+    <update id="updateRfqVendorSelection">
+        UPDATE RFQVN
+           SET SELECT_YN   = 'Y',
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{loginUserId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
+    </update>
 
-    <select id="selectRfqVendorCodes" resultType="string"> SELECT VENDOR_CD FROM RFQVN WHERE RFQ_NUM
-        = #{rfqNum} AND DEL_FLAG = 'N' </select>
+    <select id="selectRfqVendorCodes" resultType="string">
+        SELECT
+               VENDOR_CD
+          FROM RFQVN
+         WHERE RFQ_NUM = #{rfqNum}
+           AND DEL_FLAG = 'N'
+    </select>
 
-    <!-- 13. 삭제: RFQ 논리 삭제 (임시저장 상태만 가능) -->
-    <update id="deleteRfq"> UPDATE RFQHD SET DEL_FLAG = 'Y', MOD_DATE = NOW(), MOD_USER_ID =
-        #{loginUserId} WHERE RFQ_NUM = #{rfqNum} AND PROGRESS_CD = 'T' AND DEL_FLAG = 'N' AND
-        CTRL_USER_ID = #{loginUserId} </update>
+    <!-- 13. 삭제: RFQ 논리 삭제 -->
+    <update id="deleteRfq">
+        UPDATE RFQHD
+           SET DEL_FLAG    = 'Y',
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{loginUserId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND PROGRESS_CD = 'T'
+           AND DEL_FLAG = 'N'
+           AND CTRL_USER_ID = #{loginUserId}
+    </update>
 
 </mapper>
