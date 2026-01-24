@@ -68,7 +68,7 @@ public class GoodsReceiptService {
 
                     int remaining = item.getOrderQuantity() - receivedQty;
                     item.setRemainingQuantity(Math.max(0, remaining));
-                    
+
                     // 기존 GR의 저장위치가 있으면 해당 위치로 고정
                     if (existingWarehouse != null) {
                         item.setStorageLocation(existingWarehouse);
@@ -76,7 +76,7 @@ public class GoodsReceiptService {
                 }
 
                 po.setItems(items);
-                
+
                 // 기존 GR 저장위치 정보를 PO에 설정 (프론트엔드에서 활용)
                 if (existingWarehouse != null) {
                     po.setRemark("EXISTING_WH:" + existingWarehouse);
@@ -155,10 +155,10 @@ public class GoodsReceiptService {
 
         // 기존 GR 조회 (중복채번 방지)
         Map<String, Object> existingGr = goodsReceiptMapper.selectExistingGrByPoNo(dto.getPoNo());
-        
+
         String grNo;
         boolean isNewGr = false;
-        
+
         if (existingGr != null && existingGr.get("grNo") != null) {
             // 기존 GR이 있으면 재사용
             grNo = (String) existingGr.get("grNo");
@@ -185,7 +185,7 @@ public class GoodsReceiptService {
         if (isNewGr) {
             // 초기 상태 설정 (부분입고로 시작, 이후 계산하여 업데이트)
             dto.setStatus(GoodsReceiptStatus.PARTIAL);
-            
+
             // 헤더 등록
             goodsReceiptMapper.insertHeader(dto, currentUserId, currentDeptCd);
         }
@@ -197,12 +197,39 @@ public class GoodsReceiptService {
         }
         String vendorCode = poHeader.getVendorCode();
 
-        // 품목 등록
+        // [Refactoring] 규격(Specification) 데이터 무결성 보장
+        // PO 품목 정보를 조회하여 규격 정보 매핑
+        Map<String, String> poSpecMap = new HashMap<>();
+        try {
+            List<PurchaseOrderItemDTO> poItems = purchaseOrderMapper.selectItems(dto.getPoNo());
+            for (PurchaseOrderItemDTO poItem : poItems) {
+                poSpecMap.put(poItem.getItemCode(), poItem.getSpecification());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 기존에 등록된 품목 확인 (중복 Insert 방지)
+        Map<String, GoodsReceiptItemDTO> existingItemMap = new HashMap<>();
+        if (!isNewGr) {
+            List<GoodsReceiptItemDTO> dbItems = goodsReceiptMapper.selectItems(grNo);
+            for (GoodsReceiptItemDTO dbItem : dbItems) {
+                existingItemMap.put(dbItem.getItemCode(), dbItem);
+            }
+        }
+
+        // 품목 등록 및 수정
         for (GoodsReceiptItemDTO item : dto.getItems()) {
             item.setGrNo(grNo);
             item.setVendorCode(vendorCode); // PO에서 조회한 협력사 코드 설정
             item.setCtrlUserId(currentUserId); // 담당자 설정
             item.setCtrlDeptCd(currentDeptCd); // 담당자 부서 설정
+
+            // DB(PO)에서 조회한 규격이 있으면 덮어씌움
+            if (poSpecMap.containsKey(item.getItemCode())) {
+                item.setItemSpec(poSpecMap.get(item.getItemCode()));
+            }
+
             // statusCode 기본값 'N' (정상입고)
             if (item.getStatusCode() == null || item.getStatusCode().isEmpty()) {
                 item.setStatusCode("N");
@@ -211,7 +238,24 @@ public class GoodsReceiptService {
             if (item.getGrDate() == null) {
                 item.setGrDate(LocalDateTime.now());
             }
-            goodsReceiptMapper.insertItem(item);
+
+            // 이미 존재하는 품목이면 Update, 아니면 Insert
+            if (existingItemMap.containsKey(item.getItemCode())) {
+                GoodsReceiptItemDTO existing = existingItemMap.get(item.getItemCode());
+
+                // [Modified] 부분입고 누적 계산
+                // 기존 수량/금액 + 입력된 수량/금액
+                BigDecimal newQty = existing.getGrQuantity().add(item.getGrQuantity());
+                BigDecimal newAmt = existing.getGrAmount().add(item.getGrAmount());
+
+                item.setGrQuantity(newQty);
+                item.setGrAmount(newAmt);
+
+                // 수량, 금액, 창고 등 업데이트
+                goodsReceiptMapper.updateItem(item, currentUserId);
+            } else {
+                goodsReceiptMapper.insertItem(item);
+            }
         }
 
         // PO의 입고 상태 계산 및 헤더 상태 업데이트
