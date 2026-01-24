@@ -51,6 +51,10 @@ export default function PurchaseRequestPage() {
 
   // 타이머 ID 관리 (중복 네비게이션 방지)
   const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // toast action 버튼 클릭 여부 추적
+  const actionClickedRef = useRef(false);
+  // toast 자동 reload 타이머
+  const reloadTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     prNo: "",
@@ -389,25 +393,44 @@ export default function PurchaseRequestPage() {
         }
       }
 
+      actionClickedRef.current = false;
+      
+      // 기존 타이머가 있으면 정리
+      if (reloadTimerRef.current) {
+        clearTimeout(reloadTimerRef.current);
+      }
+      
+      // toast가 자동으로 닫힐 때 reload하기 위한 타이머
+      reloadTimerRef.current = setTimeout(() => {
+        if (!actionClickedRef.current) {
+          window.location.reload();
+        }
+      }, 5000); // toast duration (5초) 후 reload
+      
       toast.success("구매요청 등록이 완료되었습니다.", {
         action: {
           label: "목록으로 이동",
           onClick: () => {
-            // 액션 클릭 시 타이머 취소 후 즉시 이동
-            if (navigationTimerRef.current) {
-              clearTimeout(navigationTimerRef.current);
-              navigationTimerRef.current = null;
+            actionClickedRef.current = true;
+            if (reloadTimerRef.current) {
+              clearTimeout(reloadTimerRef.current);
+              reloadTimerRef.current = null;
             }
             router.push("/purchase/request-list");
           },
         },
+        duration: 5000,
+        onDismiss: () => {
+          // action 버튼을 누르지 않고 toast가 닫힌 경우 reload
+          if (reloadTimerRef.current) {
+            clearTimeout(reloadTimerRef.current);
+            reloadTimerRef.current = null;
+          }
+          if (!actionClickedRef.current) {
+            window.location.reload();
+          }
+        },
       });
-
-      // 성공 후 1초 뒤 자동 이동 (액션 클릭 시 취소됨)
-      navigationTimerRef.current = setTimeout(() => {
-        router.push("/purchase/request-list");
-        navigationTimerRef.current = null;
-      }, 1000);
     } catch (error) {
       // 에러 객체에서 메시지 추출
       const errorMessage =
