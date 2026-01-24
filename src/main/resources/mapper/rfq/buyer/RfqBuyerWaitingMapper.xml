@@ -8,82 +8,91 @@
     <select id="selectPrHeaders" 
             parameterType="com.company.erp.rfq.buyer.waiting.dto.request.RfqWaitingSearchRequest"
             resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrHeaderRow">
-        SELECT 
-            ph.PR_NUM as prNum,
-            ph.PR_SUBJECT as prSubject,
-            DATE(ph.REG_DATE) as prDate,
-            u.USER_NM as requester,
-            d.DEPT_NM as reqDeptNm,
-            ph.PROGRESS_CD as progressCd,
-            c1.CODE_NAME as progressNm,
-            ph.PC_TYPE as pcType,
-            c2.CODE_NAME as pcTypeNm,
-            COUNT(pd.ITEM_CD) as itemCount,
-            ph.PR_AMT as totalAmount
-        FROM PRHD ph
-        LEFT JOIN PRDT pd ON pd.PR_NUM = ph.PR_NUM AND pd.DEL_FLAG = 'N'
-        LEFT JOIN BY_USER u ON u.USER_ID = ph.REG_USER_ID
-        LEFT JOIN DEPT d ON d.DEPT_CD = ph.DEPT_CD
-        LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'PROGRESS_CD' AND c1.CODE = ph.PROGRESS_CD
-        LEFT JOIN CODD c2 ON c2.CODE_GROUP = 'PC_TYPE' AND c2.CODE = ph.PC_TYPE
-        WHERE ph.DEL_FLAG = 'N'
-          AND ph.PROGRESS_CD = 'A'
-          AND ph.PC_TYPE NOT IN ('C', 'E')
-          AND NOT EXISTS (
-              SELECT 1 FROM RFQHD r 
-              WHERE r.PR_NUM = ph.PR_NUM 
-                AND r.DEL_FLAG = 'N'
-          )
+        SELECT
+               ph.PR_NUM         AS prNum,
+               ph.PR_SUBJECT     AS prSubject,
+               DATE(ph.REG_DATE) AS prDate,
+               u.USER_NM         AS requester,
+               d.DEPT_NM         AS reqDeptNm,
+               ph.PROGRESS_CD    AS progressCd,
+               c1.CODE_NAME      AS progressNm,
+               ph.PC_TYPE        AS pcType,
+               c2.CODE_NAME      AS pcTypeNm,
+               COUNT(pd.ITEM_CD) AS itemCount,
+               ph.PR_AMT         AS totalAmount
+          FROM PRHD ph
+     LEFT JOIN PRDT pd
+            ON pd.PR_NUM = ph.PR_NUM
+           AND pd.DEL_FLAG = 'N'
+     LEFT JOIN BY_USER u
+            ON u.USER_ID = ph.REG_USER_ID
+     LEFT JOIN DEPT d
+            ON d.DEPT_CD = ph.DEPT_CD
+     LEFT JOIN CODD c1
+            ON c1.CODE_GROUP = 'PROGRESS_CD'
+           AND c1.CODE = ph.PROGRESS_CD
+     LEFT JOIN CODD c2
+            ON c2.CODE_GROUP = 'PC_TYPE'
+           AND c2.CODE = ph.PC_TYPE
+         WHERE ph.DEL_FLAG = 'N'
+           AND ph.PROGRESS_CD = 'A'
+           AND ph.PC_TYPE NOT IN ('C', 'E')
+           AND NOT EXISTS (
+               SELECT
+                      1
+                 FROM RFQHD r 
+                WHERE r.PR_NUM = ph.PR_NUM 
+                  AND r.DEL_FLAG = 'N'
+           )
         <if test="prNum != null and prNum != ''">
-            AND ph.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
+           AND ph.PR_NUM LIKE CONCAT('%', #{prNum}, '%')
         </if>
         <if test="prSubject != null and prSubject != ''">
-            AND ph.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
+           AND ph.PR_SUBJECT LIKE CONCAT('%', #{prSubject}, '%')
         </if>
         <if test="reqDate != null">
-            AND DATE(ph.REG_DATE) = #{reqDate}
+           AND DATE(ph.REG_DATE) = #{reqDate}
         </if>
         <if test="reqDeptCd != null and reqDeptCd != ''">
-            AND ph.DEPT_CD = #{reqDeptCd}
+           AND ph.DEPT_CD = #{reqDeptCd}
         </if>
         <if test="reqUserNm != null and reqUserNm != ''">
-            AND u.USER_NM LIKE CONCAT('%', #{reqUserNm}, '%')
+           AND u.USER_NM LIKE CONCAT('%', #{reqUserNm}, '%')
         </if>
-        GROUP BY ph.PR_NUM, ph.PR_SUBJECT, DATE(ph.REG_DATE), u.USER_NM, d.DEPT_NM,
-                 ph.PROGRESS_CD, c1.CODE_NAME, ph.PC_TYPE, c2.CODE_NAME, ph.PR_AMT
-        ORDER BY MAX(ph.REG_DATE) DESC
+      GROUP BY ph.PR_NUM, ph.PR_SUBJECT, DATE(ph.REG_DATE), u.USER_NM, d.DEPT_NM,
+               ph.PROGRESS_CD, c1.CODE_NAME, ph.PC_TYPE, c2.CODE_NAME, ph.PR_AMT
+      ORDER BY MAX(ph.REG_DATE) DESC
     </select>
 
     <!-- PR 품목 목록 조회 -->
     <select id="selectPrItems" resultType="com.company.erp.rfq.buyer.waiting.dto.response.PrItemRow">
-        SELECT 
-            pd.PR_NUM as prNum,
-            ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD, pd.REG_DATE) as lineNo,
-            pd.ITEM_CD as itemCd,
-            pd.ITEM_DESC as itemDesc,
-            pd.ITEM_SPEC as itemSpec,
-            pd.UNIT_CD as unitCd,
-            pd.PR_QT as prQt,
-            pd.UNIT_PRC as unitPrc,
-            pd.PR_AMT as prAmt,
-            pd.DELY_DATE as delyDate,
-            pd.RMK as rmk
-        FROM PRDT pd
-        WHERE
+        SELECT
+               pd.PR_NUM    AS prNum,
+               ROW_NUMBER() OVER (PARTITION BY pd.PR_NUM ORDER BY pd.ITEM_CD, pd.REG_DATE) AS lineNo,
+               pd.ITEM_CD   AS itemCd,
+               pd.ITEM_DESC AS itemDesc,
+               pd.ITEM_SPEC AS itemSpec,
+               pd.UNIT_CD   AS unitCd,
+               pd.PR_QT     AS prQt,
+               pd.UNIT_PRC  AS unitPrc,
+               pd.PR_AMT    AS prAmt,
+               pd.DELY_DATE AS delyDate,
+               pd.RMK       AS rmk
+          FROM PRDT pd
+         WHERE
         <choose>
             <when test="prNums != null and !prNums.isEmpty()">
-                pd.PR_NUM IN
+               pd.PR_NUM IN
                 <foreach collection="prNums" item="prNum" open="(" separator="," close=")">
                     #{prNum}
                 </foreach>
             </when>
             <otherwise>
-                1=0
+               1 = 0
             </otherwise>
         </choose>
-          AND pd.DEL_FLAG = 'N'
-        ORDER BY pd.PR_NUM, pd.ITEM_CD
+           AND pd.DEL_FLAG = 'N'
+         ORDER BY pd.PR_NUM, pd.ITEM_CD
     </select>
-
 
 </mapper>

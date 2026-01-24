@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FileText, Save, Send, ArrowLeft, Calculator } from "lucide-react";
 import { toast } from "sonner";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button, Input, DatePicker } from "@/components/ui";
 import { rfqApi } from "@/lib/api/rfq";
 import { getErrorMessage } from "@/lib/api/error";
 import { useRouter } from "next/navigation";
@@ -35,7 +35,8 @@ export default function VendorQuoteEditPage({
   const [quoteData, setQuoteData] = useState<any>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
 
-  // 견적 데이터 조회
+  const submittingRef = useRef(false);
+
   const fetchQuoteData = async () => {
     try {
       setLoading(true);
@@ -43,10 +44,7 @@ export default function VendorQuoteEditPage({
       setQuoteData(data);
       setItems(data.items || []);
     } catch (error: any) {
-      toast.error(
-        getErrorMessage(error) || "견적 데이터 조회에 실패했습니다.",
-      );
-      console.error(error);
+      toast.error(getErrorMessage(error) || "견적 데이터 조회에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -56,77 +54,92 @@ export default function VendorQuoteEditPage({
     fetchQuoteData();
   }, [rfqNum]);
 
-  // 품목 데이터 변경
-  const handleItemChange = (lineNo: number, field: string, value: any) => {
+  const handleItemChange = (
+    lineNo: number,
+    field: keyof QuoteItem,
+    value: any,
+  ) => {
     setItems((prev) =>
       prev.map((item) => {
-        if (item.lineNo === lineNo) {
-          const updated = { ...item, [field]: value };
+        if (item.lineNo !== lineNo) return item;
 
-          // 금액 자동 계산
-          if (field === "quoteUnitPrc" || field === "quoteQt") {
-            const unitPrc =
-              field === "quoteUnitPrc"
-                ? parseFloat(value) || 0
-                : item.quoteUnitPrc;
-            const qt =
-              field === "quoteQt" ? parseFloat(value) || 0 : item.quoteQt;
-            updated.quoteAmt = unitPrc * qt;
-          }
+        const updated: QuoteItem = { ...item, [field]: value } as QuoteItem;
 
-          return updated;
+        if (field === "quoteUnitPrc" || field === "quoteQt") {
+          const unitPrc =
+            field === "quoteUnitPrc"
+              ? parseFloat(value) || 0
+              : Number(item.quoteUnitPrc) || 0;
+
+          const qt =
+            field === "quoteQt"
+              ? parseFloat(value) || 0
+              : Number(item.quoteQt) || 0;
+
+          updated.quoteAmt = unitPrc * qt;
         }
-        return item;
+
+        return updated;
       }),
     );
   };
 
-  // 총액 계산
   const calculateTotalAmount = () => {
     return items.reduce((sum, item) => sum + (item.quoteAmt || 0), 0);
   };
 
-  // 임시저장
   const handleSave = async () => {
     try {
       setSaving(true);
       await rfqApi.saveVendorQuote(rfqNum, { items });
-      toast.success("견적이 임시저장되었습니다.");
+      toast.success("견적이 저장되었습니다.");
     } catch (error: any) {
-      toast.error(getErrorMessage(error) || "임시저장에 실패했습니다.");
+      toast.error(getErrorMessage(error) || "저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
   };
 
-  // 제출
-  const handleSubmit = async () => {
-    // 필수 항목 검증
+  const doSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     for (const item of items) {
       if (!item.quoteUnitPrc || item.quoteUnitPrc <= 0) {
         toast.error(`라인 ${item.lineNo}: 견적단가를 입력해주세요.`);
+        submittingRef.current = false;
         return;
       }
       if (!item.quoteQt || item.quoteQt <= 0) {
         toast.error(`라인 ${item.lineNo}: 견적수량을 입력해주세요.`);
+        submittingRef.current = false;
         return;
       }
     }
-
-    if (!confirm("견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다."))
-      return;
 
     try {
       setSaving(true);
       await rfqApi.submitVendorQuote(rfqNum, { items });
       toast.success("견적이 제출되었습니다.");
-      setTimeout(() => {
-        router.push("/vendor/rfq/submit");
-      }, 1500);
+      setTimeout(() => router.push("/vendor/rfq/submit"), 800);
     } catch (error: any) {
       toast.error(getErrorMessage(error) || "견적 제출에 실패했습니다.");
+    } finally {
       setSaving(false);
+      submittingRef.current = false;
     }
+  };
+
+  const handleSubmit = () => {
+    toast("견적을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.", {
+      action: {
+        label: "제출",
+        onClick: () => {
+          void doSubmit();
+        },
+      },
+      duration: 8000,
+    });
   };
 
   if (loading) {
@@ -147,8 +160,6 @@ export default function VendorQuoteEditPage({
 
   return (
     <div className="space-y-6">
-
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
@@ -177,7 +188,7 @@ export default function VendorQuoteEditPage({
             disabled={saving}
             icon={<Save className="w-4 h-4" />}
           >
-            임시저장
+            저장
           </Button>
           <Button
             variant="primary"
@@ -190,7 +201,6 @@ export default function VendorQuoteEditPage({
         </div>
       </div>
 
-      {/* 총액 표시 */}
       <div className="bg-gray-900 text-white rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -205,7 +215,6 @@ export default function VendorQuoteEditPage({
         </div>
       </div>
 
-      {/* 품목 테이블 */}
       <Card padding={false} className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -223,27 +232,33 @@ export default function VendorQuoteEditPage({
                 <th className="px-4 py-3 font-medium">비고</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {items.map((item) => (
                 <tr key={item.lineNo} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-center text-gray-600">
                     {item.lineNo}
                   </td>
+
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">
                       {item.itemDesc}
                     </div>
                     <div className="text-xs text-gray-500">{item.itemCd}</div>
                   </td>
+
                   <td className="px-4 py-3 text-gray-600">
                     {item.itemSpec || "-"}
                   </td>
+
                   <td className="px-4 py-3 text-center text-gray-600">
                     {item.unitCd}
                   </td>
+
                   <td className="px-4 py-3 text-right text-gray-600">
                     {new Intl.NumberFormat("ko-KR").format(item.rfqQt)}
                   </td>
+
                   <td className="px-4 py-3">
                     <Input
                       type="number"
@@ -259,33 +274,38 @@ export default function VendorQuoteEditPage({
                       placeholder="단가"
                     />
                   </td>
+
                   <td className="px-4 py-3">
                     <Input
                       type="number"
                       value={item.quoteQt || ""}
                       onChange={(e) =>
-                        handleItemChange(item.lineNo, "quoteQt", e.target.value)
+                        handleItemChange(
+                          item.lineNo,
+                          "quoteQt",
+                          e.target.value,
+                        )
                       }
                       className="text-right"
                       placeholder="수량"
                     />
                   </td>
+
                   <td className="px-4 py-3 text-right font-medium text-gray-900">
-                    {new Intl.NumberFormat("ko-KR").format(item.quoteAmt || 0)}
+                    {new Intl.NumberFormat("ko-KR").format(
+                      item.quoteAmt || 0,
+                    )}
                   </td>
+
                   <td className="px-4 py-3">
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={item.delyDate || ""}
                       onChange={(e) =>
-                        handleItemChange(
-                          item.lineNo,
-                          "delyDate",
-                          e.target.value,
-                        )
+                        handleItemChange(item.lineNo, "delyDate", e.target.value)
                       }
                     />
                   </td>
+
                   <td className="px-4 py-3">
                     <Input
                       type="text"
@@ -303,7 +323,6 @@ export default function VendorQuoteEditPage({
         </div>
       </Card>
 
-      {/* 안내 메시지 */}
       <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
         <p className="text-sm text-blue-800">
           <strong>안내:</strong> 모든 품목의 견적단가와 수량을 입력한 후

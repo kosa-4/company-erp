@@ -68,7 +68,7 @@ public class RfqCompareService {
         // 혹시 평문 숫자 문자열로 저장된 경우도 방어
         if (enc.matches("^-?\\d+(\\.\\d+)?$")) return new BigDecimal(enc);
 
-        String plain = AesCryptoUtil.decrypt(enc, cryptoKey); // ✅ 너희 기존 방식 그대로
+        String plain = AesCryptoUtil.decrypt(enc, cryptoKey); //
         if (plain == null || plain.isBlank()) return null;
 
         // 복호화 결과가 "***" 같은 마스킹이면 null 처리

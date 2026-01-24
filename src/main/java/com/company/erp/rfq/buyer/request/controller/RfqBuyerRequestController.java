@@ -14,10 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/v1/buyer/rfqs") // 설계안이 /api/buyer/rfqs면 여기 v1 여부 통일 필요
+@RequestMapping("/api/v1/buyer/rfqs")
 @RequiredArgsConstructor
 public class RfqBuyerRequestController {
 
@@ -45,8 +43,9 @@ public class RfqBuyerRequestController {
      * PR 기반 견적 초안 데이터 조회
      */
     @GetMapping("/init/{prNum}")
-    public ResponseEntity<ApiResponse<RfqDetailResponse>> getRfqInit(@PathVariable String prNum) {
-        return ResponseEntity.ok(ApiResponse.ok(service.getRfqInitFromPr(prNum)));
+    public ResponseEntity<ApiResponse<RfqDetailResponse>> getRfqInit(@PathVariable String prNum, HttpSession session) {
+        String userId = loginUserId(session);
+        return ResponseEntity.ok(ApiResponse.ok(service.getRfqInitFromPr(prNum, userId)));
     }
 
     /**
