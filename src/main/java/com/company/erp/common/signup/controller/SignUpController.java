@@ -39,9 +39,10 @@ public class SignUpController {
     FileService fileService;
 
     @PostMapping("/signup")
-    public ApiResponse<SignUpDto> registerUser(@Valid @RequestBody SignUpDto signUpDto){
+    public ApiResponse<SignUpResponseDto> registerUser(@Valid @RequestBody SignUpDto signUpDto){
         // global exception이 있으므로 try-catch 사용 안해도 됨
         SignUpDto signUpInfo = signUpService.registerVendorWithManager(signUpDto);
+
         SignUpResponseDto responseDto = new SignUpResponseDto();
         responseDto.setVendorCode(signUpInfo.getVendorCode());
         responseDto.setAskNum(signUpInfo.getAskNo());

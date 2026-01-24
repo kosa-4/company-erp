@@ -137,61 +137,76 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     setError(null);
 
     try {
+      // 1. 비밀번호 확인
       if (formData.password !== formData.passwordConfirm) {
         throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
+      // 2. [1차 요청] 회원가입 정보 전송 (JSON)
       const response = await fetch('/api/v1/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
-      // JSON으로 파싱
       const jsonResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(jsonResponse.message || '가입 중 오류가 발생했습니다.');
       }
 
-      // 백엔드 ApiResponse 구조가 { data: { ... } } 라고 가정
-      // 만약 바로 객체가 온다면 jsonResponse를 사용하세요.
-      const resultData: SignupResponse = jsonResponse.data; 
+      // 백엔드에서 온 데이터 (vendorCode, askNum, userId 포함)
+      // 백엔드 응답 구조에 따라 jsonResponse.data 혹은 jsonResponse 자체일 수 있음
+      const resultData: SignupResponse = jsonResponse.data || jsonResponse;
 
       if (!resultData || !resultData.vendorCode) {
         throw new Error('응답 데이터에서 업체코드를 확인할 수 없습니다.');
       }
 
-      const generatedVendorCode = resultData.vendorCode;
-
-      // 파일 업로드 로직 (기존 유지)
+      // 3. [2차 요청] 파일 업로드 (Multipart/form-data)
       let fileUploadFailed = false;
+
       if (selectedFiles.length > 0) {
         try {
           const fileFormData = new FormData();
+
+          // (1) 파일 담기 (@RequestPart("file")에 대응)
           selectedFiles.forEach((file) => fileFormData.append('file', file));
 
-          const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
+          // (2) 가입 정보를 JSON Blob으로 담기 (@RequestPart("data")에 대응)
+          // 중요: 그냥 문자열이 아니라 type을 application/json으로 명시한 Blob이어야 함
+          const dtoBlob = new Blob([JSON.stringify(resultData)], {
+            type: 'application/json',
+          });
+          
+          fileFormData.append('data', dtoBlob);
+
+          // (3) 전송 (URL에 PathVariable 제거됨)
+          const fileRes = await fetch('/api/v1/signup/files', {
             method: 'POST',
             body: fileFormData,
+            // headers: Content-Type은 브라우저가 자동으로 'multipart/form-data'로 설정하므로 생략
           });
 
           if (!fileRes.ok) {
             throw new Error('서류 업로드 중 오류가 발생했습니다.');
           }
+
           toast.success('서류 업로드 완료');
         } catch (fileErr) {
           console.error('파일 업로드 오류:', fileErr);
-          toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다.');
+          // 가입은 성공했으나 파일만 실패한 경우
+          toast.warning('가입은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
           fileUploadFailed = true;
         }
       }
 
+      // 4. 결과 처리
       if (!fileUploadFailed) {
         toast.success('회원가입 신청이 완료되었습니다.');
       }
 
-      // 성공 상태 설정 (화면 전환용)
+      // 성공 화면 데이터 설정
       setSignupSuccessData(resultData);
 
       // 폼 초기화
