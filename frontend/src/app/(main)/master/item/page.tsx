@@ -61,8 +61,8 @@ export default function ItemPage() {
   // 1. 상태 정의
   // 1-1. 품목 목록 출력용 상태 변수
   const [items, setItems] = useState<ItemDetail[]>([]);
-  const [page, setPage] = useState("1");
-  const [totalPage, setTotalPage] = useState("");
+  const [page, setPage] = useState<number>(1);
+  const [totalPage, setTotalPage] = useState<number>(1);
   const [loading, setLoading] = useState(false);
 
   // 1-2. 검색 조건 상태 변수
@@ -103,64 +103,65 @@ export default function ItemPage() {
     setSelectedIds([id]);
   };
   
-  // 2. 품목 조회
+  // 2. 데이터 조회 함수 (동기화 로직 추가)
   const fetchItems = async () => {
     setLoading(true);
     setSelectedIds([]);
     try {
+      // searchParams의 page가 없으면 1로 취급
+      const currentPageFromParam = Number(searchParams.page || 1);
       
-      // 2-1. searchParams에 입력된 page 값이 없을 시 1로 초기화
       const initPageParam = {
           ...searchParams,
-          page: searchParams.page || "1" 
+          page: String(currentPageFromParam)
       };
 
-      // 2-2. API 요청
       const response = await fetch ("/api/v1/items?" +
         new URLSearchParams(initPageParam as any) 
       );
       
-      if (!response.ok) {
-
-        // 1) 오류 발생 시 catch로 이동
-        throw new Error(`조회 실패 ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`조회 실패 ${response.status}`);
   
-      // 2-3. 데이터 파싱
-      const data: {[k:string]: any} = await response.json(); // k = key
+      const data = await response.json();
 
-      // 2-4. 상태 업데이트
       setItems(data.items);
-      setTotalPage(data.totalPage);
+      
+      // [수정] totalPage 안전하게 파싱 (API 키값 확인 필요!)
+      const serverTotalPage = Number(data.totalPages || data.totalPages || 1);
+      setTotalPage(serverTotalPage);
+
+      // [핵심] 현재 페이지 상태를 URL 파라미터와 동기화
+      // 이 코드가 있어야 버튼의 disabled 상태가 올바르게 풀립니다.
+      setPage(currentPageFromParam);
 
     } catch(error: any){
-      console.error("데이터 가져오는 중 오류 발생", error);
-      alert(error.message || "데이터 로드에 실패하였습니다.");
+      console.error(error);
+      alert(error.message);
     } finally{
-
-      // 2-5. 검색 로딩 표시      
-      await new Promise(resolve => setTimeout(resolve, 500));
       setLoading(false);
     }    
-};
+  };
 
   // 3. 페이징 처리
   // 3-1. 이전 페이지
   const handlePrevPage = () => {
-    const prevPage = (Number(page) - 1).toString()
-    setPage(prevPage);  
-    setSearchParams(prev => ({...prev, page: prevPage}));
+    if (page <= 1) return;
+    const prevPage = page - 1;
+    // setPage(prevPage);
+    setSearchParams(prev => ({...prev, page: String(prevPage)}));
   }
 
   // 3-2. 다음 페이지
   const handleNextPage = () => {
-    const nextPage = (Number(page) + 1).toString()
-    setPage(nextPage);  
-    setSearchParams(prev => ({...prev, page: nextPage}));
+    if (page >= totalPage) return;
+    const nextPage = page + 1;
+    // setPage(nextPage);
+    setSearchParams(prev => ({...prev, page: String(nextPage)}));
   }
+
   // 3-3. 검색 시 1페이지로 이동
   const handleSearchList = () => {
-    setPage(String(1));
+    // setPage(1);
     setSearchParams(prev => ({...prev, page: "1"}));
   }
   // 3-4. 목록 초기화
@@ -1057,17 +1058,24 @@ export default function ItemPage() {
         <div className='flex justify-center gap-x-4'>
           <button
             onClick={handlePrevPage}
-            disabled={page === "1"}
+            disabled={page <= 1} // == 1 대신 <= 1 사용 권장
+            // 비활성화 시 흐릿하게 보이도록 스타일 추가 (Tailwind)
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             &lt;
           </button>
+          
+          <span className="self-center text-sm">
+              {page} / {totalPage}
+          </span>
+          
           <button
             onClick={handleNextPage}
-            disabled={page === totalPage}
+            disabled={page >= totalPage}
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             &gt;
           </button>
-            
         </div>
       </section>
     </div>
