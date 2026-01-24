@@ -1074,6 +1074,7 @@ const fetchMasterVendor = async (vendorCode: string) => {
                     <Input label="사업자번호" value={selectedVendor.businessNo} readOnly className="bg-white" />
                     <Input label="대표자명" value={selectedVendor.ceoName} readOnly className="bg-white" />
                     <Input label="전화번호" value={selectedVendor.tel || '-'} readOnly className="bg-white" />
+                    <Input label="팩스번호" value={selectedVendor.fax || '-'} readOnly className="bg-white" />
                     <Input label="이메일" value={selectedVendor.email} readOnly className="bg-white" />
                     <Input label="업종" value={selectedVendor.industry || '-'} readOnly className="bg-white" />
                     <Input label="설립일자" value={selectedVendor.foundationDate?.substring(0,10) || '-'} readOnly className="bg-white" />
