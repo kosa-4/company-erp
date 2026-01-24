@@ -43,6 +43,9 @@ public class BuyerDashboardService {
             return "알 수 없음";
         }
 
+        // 안전한 fallback 미리 계산
+        String safeFallback = regDateStr.length() >= 10 ? regDateStr.substring(0, 10) : regDateStr;
+
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             LocalDateTime regDate = LocalDateTime.parse(regDateStr, formatter);
@@ -62,11 +65,11 @@ public class BuyerDashboardService {
                 return days + "일 전";
             } else {
                 // 7일 이상이면 날짜 표시
-                return regDateStr.substring(0, 10);
+                return safeFallback;
             }
         } catch (Exception e) {
             // 파싱 실패 시 원본 날짜 반환
-            return regDateStr.substring(0, 10);
+            return safeFallback;
         }
     }
 }

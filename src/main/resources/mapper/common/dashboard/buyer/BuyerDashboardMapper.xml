@@ -27,29 +27,41 @@
 
     <select id="getRecentActivities" resultType="com.company.erp.common.dashboard.buyer.dto.response.RecentActivityResponse">
         SELECT * FROM (
-            SELECT 'request' as type, 
+            (SELECT 'request' as type, 
                    PR_SUBJECT as title, 
                    CONCAT(REG_USER_ID, ' 등록') as description, 
                    REG_DATE as regDate 
-            FROM prhd WHERE DEL_FLAG='N'
+            FROM prhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
             UNION ALL
-            SELECT 'rfq' as type, 
+            (SELECT 'rfq' as type, 
                    RFQ_SUBJECT as title, 
                    CONCAT('RFQ 번호: ', RFQ_NUM) as description, 
                    RFQ_DATE as regDate 
-            FROM rfqhd WHERE DEL_FLAG='N'
+            FROM rfqhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY RFQ_DATE DESC
+            LIMIT 10)
             UNION ALL
-            SELECT 'order' as type, 
+            (SELECT 'order' as type, 
                    PO_SUBJECT as title, 
                    CONCAT('업체코드: ', VENDOR_CD) as description, 
                    REG_DATE as regDate 
-            FROM pohd WHERE DEL_FLAG='N'
+            FROM pohd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
             UNION ALL
-            SELECT 'receiving' as type, 
+            (SELECT 'receiving' as type, 
                    CONCAT('입고 현황: ', GR_NUM) as title, 
                    '입고 완료' as description, 
                    REG_DATE as regDate 
-            FROM grhd WHERE DEL_FLAG='N'
+            FROM grhd 
+            WHERE DEL_FLAG='N'
+            ORDER BY REG_DATE DESC
+            LIMIT 10)
         ) activities
         ORDER BY regDate DESC
         LIMIT 5

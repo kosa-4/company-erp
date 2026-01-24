@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, Button } from '@/components/ui';
 import {
@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const [notices, setNotices] = useState<NoticeListResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [userData, dbData, noticeData] = await Promise.all([
@@ -119,13 +119,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (user) {
       loadData();
     }
-  }, [user]);
+  }, [user, loadData]);
 
   // 구매사 전용 통계 매핑
   const stats = [
