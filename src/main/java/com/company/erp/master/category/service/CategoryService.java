@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
@@ -35,7 +36,7 @@ public class CategoryService {
 
     /* 저장 */
     @Transactional
-    public void registerCategory(List<CategoryListDto> categoryListDto, SessionUser loginUser){
+    public void registerCategory(List<CategoryListDto> categoryListDtoList, SessionUser loginUser){
 
         // 1. 데이터 가공 (프론트에서도 가능하나 조작 위험 방지를 위해 서비스에서 가공)
         List<CategoryListDto> filteredList = new ArrayList<>();
@@ -44,7 +45,34 @@ public class CategoryService {
         // db에서 불러오면 insert 되기 전에 불러오므로 계속 같은 최댓값 반환
         Map<String, Integer> maxChildClassMap = new HashMap<>();
 
-        for(CategoryListDto dto: categoryListDto){
+        // ==========================================================
+        // [1. 최상위(Level 0) 코드 중복 검사] - 여기가 핵심입니다!
+        // ==========================================================
+        // 사용자가 직접 입력한 코드가 이미 살아있는지 확인해야 덮어쓰기를 막을 수 있습니다.
+
+        // Level 0인 것들만 추려냄 (자식 코드는 어차피 자동생성이라 중복 안 됨)
+        List<CategoryListDto> rootItems = categoryListDtoList.stream()
+                .filter(dto -> dto.getItemLvl() == 0)
+                .collect(Collectors.toList());
+
+        if (!rootItems.isEmpty()) {
+            int duplicateCount = categoryMapper.checkCodeDuplicate(rootItems);
+            if (duplicateCount > 0) {
+                // 살아있는 코드가 발견되면 즉시 에러 발생 -> 덮어쓰기 방지!
+                throw new IllegalStateException("이미 존재하는 카테고리 코드가 있습니다. (중복된 코드)");
+            }
+        }
+
+        // ==========================================================
+        // [2. 이름 중복 검사] (기존 로직)
+        // ==========================================================
+        int nameCount = categoryMapper.existsCategory(categoryListDtoList);
+        if (nameCount > 0) {
+            throw new IllegalStateException("이미 사용 중인 품목 분류 명칭이 포함되어 있습니다.");
+        }
+
+
+        for(CategoryListDto dto: categoryListDtoList){
 
             dto.setCreatedAt(LocalDateTime.now());
             dto.setCreatedBy(loginUser.getUserId());
@@ -129,4 +157,20 @@ public class CategoryService {
         categoryMapper.updateCategory(categoryUpdateDto);
     }
 
+    // 수정
+    @Transactional
+    public void updateCategory(List<CategoryUpdateDto> updateDtoList, SessionUser loginUser){
+
+        for(CategoryUpdateDto dto: updateDtoList){
+
+            dto.setModifiedAt(LocalDateTime.now());
+            dto.setModifiedBy(loginUser.getUserId());
+
+            int result = categoryMapper.updateCategory(dto);
+
+            if(result == 0){
+                throw new NoSuchElementException("수정할 카테고리가 존재하지 않거나 이미 삭제되었습니다. (Code: " + dto.getItemCls() + ")");
+            }
+        }
+    }
 }

@@ -20,12 +20,14 @@ public interface CategoryMapper {
     int existsCategory(List<CategoryListDto> categoryListDto);
     // 6. 자식 여부 조회
     boolean existsChildCate(String itemCls);
+    // 7. 품목 코드 중복 여부 조회
+    int checkCodeDuplicate(List<CategoryListDto> rootItems);
 
     /* 저장 */
     // 1. 복수 카테고리 저장
     void insertCategory(List<CategoryListDto> categoryListDto);
 
-    /* 삭제 */
-    void updateCategory(CategoryUpdateDto categoryUpdateDto);
+    /* 삭제 및 수정 */
+    int updateCategory(CategoryUpdateDto categoryUpdateDto);
     //boolean existsParentCategory(String parentCls);
 }

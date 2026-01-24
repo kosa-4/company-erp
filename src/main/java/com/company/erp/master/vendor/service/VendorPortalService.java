@@ -2,6 +2,7 @@ package com.company.erp.master.vendor.service;
 
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.common.signup.mapper.SignUpMapper;
 import com.company.erp.master.vendor.dto.VendorListDto;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
@@ -14,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
@@ -55,6 +58,13 @@ public class VendorPortalService {
         // 수정 요청 전 협력 업체 정보 보여줄 값
         return masterVendor;
     }
+    // 2. 회사 코드로 파일 번호 조회
+    public List<String> getFileNumByVendorCode(String vendorCode, SessionUser loginUser) {
+
+        List<String> fileNumList = vendorMapper.selectFileNumByVendorCode(vendorCode);
+
+        return (fileNumList != null) ?  fileNumList : new ArrayList<>();
+    }
 
     private boolean isEditable(String loginId, VendorListDto vendor) {
         // 1. 사용자 정보 조회
@@ -69,11 +79,19 @@ public class VendorPortalService {
         if(role == null) return false;
         return role.equals("VENDOR") && vendor != null;
     }
+    // 3. 요청 번호로 회사 코드 조회
+    public String getVendorCodeByAskNum(String askNum){
+        String vendorCode = vendorMapper.selectVendorCodeByAskNum(askNum);
+        if(vendorCode == null ||  vendorCode.isEmpty()){
+            throw new NoSuchElementException("회사가 존재하지 않습니다.");
+        }
+        return vendorCode;
+    }
 
     /* 변경 요청 */
     // 1. 협력 업체 변경 신청
     @Transactional
-    public void requestVendorChange(VendorRegisterDto vendorRegisterDto, String loginId) {
+    public String requestVendorChange(VendorRegisterDto vendorRegisterDto, String loginId) {
 
         HashMap<String, String> userInfo = vendorUserMapper.selectRoleAndVendorCodeByUserId(loginId);
 
@@ -116,5 +134,7 @@ public class VendorPortalService {
         if(inserted == 0){
             throw new IllegalStateException("이미 승인 대기 중인 상태 입니다.");
         }
+
+        return askNum;
     }
 }

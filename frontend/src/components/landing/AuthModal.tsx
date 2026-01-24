@@ -28,6 +28,13 @@ interface AuthModalProps {
   onSwitchMode: (mode: 'login' | 'signup') => void;
 }
 
+// 서버 응답 데이터 타입 정의 (새로 추가됨)
+interface SignupResponse {
+  vendorCode: string;
+  askNum: string;
+  userId: string;
+}
+
 interface VendorFormData {
   vendorName: string;
   vendorNameEn: string;
@@ -37,11 +44,16 @@ interface VendorFormData {
   zipCode: string;
   address: string;
   addressDetail: string;
-  phone: string;
+  phone: string; 
+  fax: string; // 추가
+  email: string;
+  foundationDate: string; // 추가
   industry: string;
+  remark: string; // 추가
+  
+  // 계정 정보
   userName: string;
   userId: string;
-  email: string;
   password: string;
   passwordConfirm: string;
 }
@@ -66,10 +78,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     address: '',
     addressDetail: '',
     phone: '',
+    fax: '',
+    email: '',
+    foundationDate: '',
     industry: '',
+    remark: '',
     userName: '',
     userId: '',
-    email: '',
     password: '',
     passwordConfirm: '',
   });
@@ -111,49 +126,67 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     toast.message('파일이 제거되었습니다.');
   };
 
+  
+  // 회원가입 성공 데이터 상태 
+  const [signupSuccessData, setSignupSuccessData] = useState<SignupResponse | null>(null);
+
+  // 회원가입 처리 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
+      // 1. 비밀번호 확인
       if (formData.password !== formData.passwordConfirm) {
         throw new Error('비밀번호가 일치하지 않습니다.');
       }
 
+      // 2. [1차 요청] 회원가입 정보 전송 (JSON)
       const response = await fetch('/api/v1/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
-      const resultText = await response.text();
+      const jsonResponse = await response.json();
 
       if (!response.ok) {
-        let serverMsg = resultText;
-        try {
-          const errorJson = JSON.parse(resultText);
-          serverMsg = errorJson.data ? (Object.values(errorJson.data)[0] as string) : errorJson.message;
-        } catch {
-          // JSON이 아니면 원문 유지
-        }
-        throw new Error(serverMsg);
+        throw new Error(jsonResponse.message || '가입 중 오류가 발생했습니다.');
       }
 
-      const generatedVendorCode = resultText.trim();
-      if (!generatedVendorCode) {
-        throw new Error('업체코드를 확인할 수 없습니다.');
+      // 백엔드에서 온 데이터 (vendorCode, askNum, userId 포함)
+      // 백엔드 응답 구조에 따라 jsonResponse.data 혹은 jsonResponse 자체일 수 있음
+      const resultData: SignupResponse = jsonResponse.data || jsonResponse;
+
+      if (!resultData || !resultData.vendorCode || !resultData.askNum) {
+       throw new Error('응답 데이터에서 업체코드/요청번호를 확인할 수 없습니다.');
       }
 
+
+      // 3. [2차 요청] 파일 업로드 (Multipart/form-data)
       let fileUploadFailed = false;
+
       if (selectedFiles.length > 0) {
         try {
           const fileFormData = new FormData();
+
+          // (1) 파일 담기 (@RequestPart("file")에 대응)
           selectedFiles.forEach((file) => fileFormData.append('file', file));
 
-          const fileRes = await fetch(`/api/v1/signup/files/${generatedVendorCode}`, {
+          // (2) 가입 정보를 JSON Blob으로 담기 (@RequestPart("data")에 대응)
+          // 중요: 그냥 문자열이 아니라 type을 application/json으로 명시한 Blob이어야 함
+          const dtoBlob = new Blob([JSON.stringify(resultData)], {
+            type: 'application/json',
+          });
+          
+          fileFormData.append('data', dtoBlob);
+
+          // (3) 전송 (URL에 PathVariable 제거됨)
+          const fileRes = await fetch('/api/v1/signup/files', {
             method: 'POST',
             body: fileFormData,
+            // headers: Content-Type은 브라우저가 자동으로 'multipart/form-data'로 설정하므로 생략
           });
 
           if (!fileRes.ok) {
@@ -163,39 +196,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           toast.success('서류 업로드 완료');
         } catch (fileErr) {
           console.error('파일 업로드 오류:', fileErr);
-          toast.warning('가입 신청은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
+          // 가입은 성공했으나 파일만 실패한 경우
+          toast.warning('가입은 완료되었으나 서류 업로드에 실패했습니다. 관리자에게 문의하세요.');
           fileUploadFailed = true;
         }
       }
 
+      // 4. 결과 처리
       if (!fileUploadFailed) {
         toast.success('회원가입 신청이 완료되었습니다.');
-      } else {
-        toast.message('회원가입 신청은 접수되었습니다.');
       }
 
-      setFormData({
-        vendorName: '',
-        vendorNameEn: '',
-        businessType: '',
-        businessNo: '',
-        ceoName: '',
-        zipCode: '',
-        address: '',
-        addressDetail: '',
-        phone: '',
-        industry: '',
-        userName: '',
-        userId: '',
-        email: '',
-        password: '',
-        passwordConfirm: '',
-      });
+      // 성공 화면 데이터 설정
+      setSignupSuccessData(resultData);
 
+      // 폼 초기화
+      setFormData({
+        vendorName: '', vendorNameEn: '', businessType: '', businessNo: '', ceoName: '',
+        zipCode: '', address: '', addressDetail: '', phone: '', fax: '', email: '',
+        foundationDate: '', industry: '', remark: '', userName: '', userId: '',
+        password: '', passwordConfirm: ''
+      });
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      onSwitchMode('login');
     } catch (err: unknown) {
       let msg = '가입 중 오류가 발생했습니다.';
       if (err instanceof Error) {
@@ -208,10 +232,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleInputChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+) => {
+  const { name, value } = e.target;
+  setFormData((prev) => ({ ...prev, [name]: value }));
+};
 
   // 다음 우편번호 검색
   const handleAddressSearch = () => {
@@ -298,20 +324,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={mode === 'login' ? handleLogin : handleSignup}>
+          <form className="space-y-6" onSubmit={mode === 'login' ? handleLogin : handleSignup}>
             {mode === 'signup' ? (
               <>
-                {/* 협력사 정보 섹션 */}
+                {/* 1. 기본 정보 섹션 */}
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                  className="bg-slate-50/50 rounded-xl p-5 space-y-4 border border-slate-200/60"
+                  className="bg-slate-50/50 rounded-xl p-5 border border-slate-200/60"
                 >
-                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-4 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
-                    협력사 정보
+                    기본 정보
                   </h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 협력사 코드 (시스템 채번) */}
+                    <div>
+                      <label className={labelClassName}>협력사코드</label>
+                      <input 
+                        type="text" 
+                        value="-" 
+                        className={`${inputClassName} text-slate-400 bg-slate-100`} 
+                        readOnly 
+                        disabled 
+                      />
+                    </div>
+
+                    {/* 협력사명 */}
                     <div>
                       <label className={labelClassName}>협력사명 *</label>
                       <input 
@@ -325,6 +364,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
+                    {/* 영문 협력사명 */}
                     <div>
                       <label className={labelClassName}>협력사명 (영문)</label>
                       <input 
@@ -337,6 +377,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
+                    {/* 사업 형태 */}
                     <div>
                       <label className={labelClassName}>사업형태 *</label>
                       <select 
@@ -346,14 +387,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         className={inputClassName}
                         required
                       >
-                        <option value="">선택해주세요</option>
-                        <option value="법인">법인</option>
-                        <option value="개인">개인</option>
-                        <option value="일반과세자">일반과세자</option>
-                        <option value="간이과세자">간이과세자</option>
+                        <option value="">선택</option>
+                        <option value="CORP">법인</option>
+                        <option value="INDIVIDUAL">개인</option>
                       </select>
                     </div>
 
+                    {/* 사업자 번호 */}
                     <div>
                       <label className={labelClassName}>사업자등록번호 *</label>
                       <input 
@@ -367,6 +407,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                       />
                     </div>
 
+                    {/* 대표자명 */}
                     <div>
                       <label className={labelClassName}>대표자명 *</label>
                       <input 
@@ -375,107 +416,163 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         value={formData.ceoName}
                         onChange={handleInputChange}
                         className={inputClassName}
-                        placeholder="홍길동"
+                        placeholder="대표자 성명"
+                        required
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* 2. 주소 및 상세 정보 섹션 */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+                  className="bg-slate-50/50 rounded-xl p-5 border border-slate-200/60"
+                >
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
+                    주소 및 상세 정보
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 주소 검색 */}
+                    <div className="md:col-span-2 space-y-3">
+                      <div className="flex gap-2">
+                         <div className="w-1/3">
+                            <label className={labelClassName}>우편번호 *</label>
+                            <input 
+                              type="text"
+                              name="zipCode"
+                              value={formData.zipCode}
+                              className={inputClassName}
+                              placeholder="00000"
+                              readOnly
+                              required
+                            />
+                         </div>
+                         <div className="flex items-end">
+                            <button 
+                              type="button"
+                              onClick={handleAddressSearch}
+                              className="h-[42px] px-4 bg-[#eef2ff] hover:bg-[#e0e7ff] text-[#6366f1] text-sm rounded-lg transition-colors flex items-center gap-1 font-medium border border-[#c7d2fe]"
+                            >
+                              <Search className="w-4 h-4" /> 주소 검색
+                            </button>
+                         </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="md:col-span-2">
+                           <input 
+                             type="text"
+                             name="address"
+                             value={formData.address}
+                             className={`${inputClassName} bg-slate-100`}
+                             placeholder="기본 주소"
+                             readOnly
+                             required
+                           />
+                        </div>
+                        <div>
+                           <input 
+                             type="text"
+                             name="addressDetail"
+                             value={formData.addressDetail}
+                             onChange={handleInputChange}
+                             className={inputClassName}
+                             placeholder="상세 주소 입력"
+                           />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 연락처 정보 */}
+                    <div>
+                      <label className={labelClassName}>전화번호 *</label>
+                      <input 
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="02-0000-0000"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className={labelClassName}>업종 *</label>
+                      <label className={labelClassName}>팩스번호</label>
+                      <input 
+                        type="text"
+                        name="fax"
+                        value={formData.fax}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="02-0000-0000"
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClassName}>이메일 *</label>
+                      <input 
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                        placeholder="company@email.com"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClassName}>설립일자</label>
+                      <input 
+                        type="date"
+                        name="foundationDate"
+                        value={formData.foundationDate}
+                        onChange={handleInputChange}
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className={labelClassName}>업종</label>
                       <input 
                         type="text"
                         name="industry"
                         value={formData.industry}
                         onChange={handleInputChange}
                         className={inputClassName}
-                        placeholder="제조업, IT서비스 등"
-                        required
+                        placeholder="주요 업종 입력"
                       />
                     </div>
-                  </div>
-
-                  {/* 주소 */}
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className={labelClassName}>우편번호 *</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="text"
-                            name="zipCode"
-                            value={formData.zipCode}
-                            onChange={handleInputChange}
-                            className={`${inputClassName} flex-1`}
-                            placeholder="00000"
-                            readOnly
-                          />
-                          <button 
-                            type="button"
-                            onClick={handleAddressSearch}
-                            className="px-4 py-2.5 bg-[#eef2ff] hover:bg-[#e0e7ff] text-[#6366f1] text-sm rounded-lg transition-colors flex items-center gap-1 font-medium border border-[#c7d2fe]"
-                          >
-                            <Search className="w-4 h-4" />
-                            검색
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelClassName}>기본주소 *</label>
-                      <input 
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        className={`${inputClassName} bg-slate-100 cursor-not-allowed`}
-                        placeholder="우편번호 검색 시 자동 입력됩니다"
-                        readOnly
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClassName}>상세주소</label>
-                      <input 
-                        type="text"
-                        name="addressDetail"
-                        value={formData.addressDetail}
-                        onChange={handleInputChange}
-                        className={inputClassName}
-                        placeholder="동/호수 등 상세주소를 입력해주세요"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 전화번호 */}
-                  <div>
-                    <label className={labelClassName}>전화번호 *</label>
-                    <input 
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className={inputClassName}
-                      placeholder="02-0000-0000"
-                      required
-                    />
                   </div>
                 </motion.div>
-                
-                {/* 증빙 서류 첨부 섹션 */}
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-                  className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-200/60"
-                >
-                  <label className="text-sm font-medium text-slate-700">첨부파일 (다중 선택 가능)</label>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-4">
-                      <button 
-                        type="button" 
-                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded-md transition-colors font-medium"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        파일 추가
-                      </button>
 
+                {/* 3. 첨부파일 및 비고 */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
+                  className="bg-slate-50/50 rounded-xl p-5 border border-slate-200/60"
+                >
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
+                    서류 및 기타
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* 파일 업로드 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                         <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">첨부파일 (다중 선택)</label>
+                         <button 
+                           type="button" 
+                           className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition-colors font-medium"
+                           onClick={() => fileInputRef.current?.click()}
+                         >
+                           + 파일 추가
+                         </button>
+                      </div>
+                      
                       <input 
                         type="file" 
                         ref={fileInputRef}
@@ -483,42 +580,43 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         multiple 
                         onChange={handleFileChange}
                       />
-                      
-                      <p className="text-xs text-slate-500">
-                        사업자등록증 등 필수 서류를 첨부해주세요.
-                      </p>
-                    </div>
 
-                    {selectedFiles.length > 0 && (
-                      <ul className="bg-white border rounded-md divide-y divide-slate-200 shadow-sm">
-                        {selectedFiles.map((file, index) => (
-                          <li key={index} className="flex items-center justify-between p-2 px-3">
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="text-sm text-slate-600 truncate max-w-[200px]">{file.name}</span>
-                              <span className="text-xs text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="text-slate-400 hover:text-red-500 transition-colors"
-                            >
-                              <X className="w-4 h-4" /> 
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                      {selectedFiles.length > 0 ? (
+                        <ul className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100">
+                          {selectedFiles.map((file, index) => (
+                            <li key={index} className="flex items-center justify-between p-2.5">
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <span className="text-sm text-slate-600 truncate max-w-[200px]">{file.name}</span>
+                                <span className="text-xs text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                              >
+                                <X className="w-4 h-4" /> 
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="text-center py-4 bg-slate-100/50 rounded-lg border border-dashed border-slate-300 text-xs text-slate-400">
+                           사업자등록증, 통장사본 등 필수 서류를 등록해주세요.
+                        </div>
+                      )}
+                    </div>
+                    
                   </div>
                 </motion.div>
 
-                {/* 계정 정보 섹션 */}
+                {/* 4. 계정 정보 섹션 */}
                 <motion.div 
-                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
-                  className="bg-slate-50/50 rounded-xl p-5 space-y-4 border border-slate-200/60"
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
+                  className="bg-slate-50/50 rounded-xl p-5 border border-slate-200/60"
                 >
-                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[#6366f1] border-b border-[#e0e7ff] pb-2 mb-4 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>
-                    계정 정보
+                    계정 생성
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -530,7 +628,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         value={formData.userName}
                         onChange={handleInputChange}
                         className={inputClassName}
-                        placeholder="홍길동"
+                        placeholder="담당자 성명"
                         required
                       />
                     </div>
@@ -543,20 +641,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
                         value={formData.userId}
                         onChange={handleInputChange}
                         className={inputClassName}
-                        placeholder="영문, 숫자 조합 6자 이상"
-                        required
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className={labelClassName}>이메일 *</label>
-                      <input 
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className={inputClassName}
-                        placeholder="example@company.com"
+                        placeholder="영문, 숫자 6자 이상"
                         required
                       />
                     </div>

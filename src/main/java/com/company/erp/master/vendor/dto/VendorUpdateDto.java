@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class VendorUpdateDto {
@@ -36,6 +37,7 @@ public class VendorUpdateDto {
 
     // 반려 시
     private String rejectRemark;
+    List<String> fileNums;
 }
 
 // VNCH
