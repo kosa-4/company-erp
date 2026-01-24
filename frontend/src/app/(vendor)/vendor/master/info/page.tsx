@@ -232,8 +232,10 @@ useEffect(() => {
     });
     
     if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`파일 업로드 실패: ${errText}`);
+      const errText = await response.text();
+      
+      console.error('파일 업로드 실패 상세:', errText);
+      throw new Error('파일 업로드에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
