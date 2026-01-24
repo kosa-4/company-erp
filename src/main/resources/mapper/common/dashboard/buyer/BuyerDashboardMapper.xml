@@ -11,6 +11,16 @@
              WHERE p.PROGRESS_CD IN ('D', 'S')
                AND p.DEL_FLAG = 'N'
                AND NOT EXISTS (SELECT 1 FROM grhd g WHERE g.PO_NUM = p.PO_NUM AND g.PROGRESS_CD = 'GRE')) as grWaitingCount,
+            (SELECT COUNT(*) FROM prhd ph
+             WHERE ph.DEL_FLAG = 'N'
+               AND ph.PROGRESS_CD = 'A'
+               AND ph.PC_TYPE NOT IN ('C', 'E')
+               AND NOT EXISTS (SELECT 1 FROM rfqhd r WHERE r.PR_NUM = ph.PR_NUM AND r.DEL_FLAG = 'N')) as rfqPendingCount,
+            (SELECT COUNT(*) FROM rfqhd h
+             LEFT JOIN pohd po ON h.RFQ_NUM = po.RFQ_NUM
+             WHERE h.PROGRESS_CD = 'J'
+               AND h.DEL_FLAG = 'N'
+               AND po.PO_NUM IS NULL) as poPendingCount,
             (SELECT COUNT(*) FROM prhd WHERE PROGRESS_CD = 'T' AND DEL_FLAG = 'N') as pendingProcessCount,
             (SELECT COUNT(*) FROM rfqhd WHERE PROGRESS_CD = 'N' AND DEL_FLAG = 'N') as pendingApprovalCount
     </select>

@@ -154,12 +154,11 @@ export default function DashboardPage() {
     },
     {
       href: '/rfq/pending', title: '견적대기', description: '견적 요청 대기목록',
-      icon: <Clipboard className="w-full h-full" />, badge: dashboardData?.stats.pendingProcessCount
+      icon: <Clipboard className="w-full h-full" />
     },
-    // TODO: 발주대기 건수 집계 API 추가 필요 (현재 더미 데이터)
     {
       href: '/order/pending', title: '발주대기', description: '발주 대기목록',
-      icon: <Package className="w-full h-full" />, badge: 3
+      icon: <Package className="w-full h-full" />
     },
     {
       href: '/inventory/receiving-target', title: '입고대상', description: '입고 처리 대상',
@@ -225,16 +224,16 @@ export default function DashboardPage() {
         {/* 최근 활동 */}
         <Card title="최근 활동" className="lg:col-span-2" padding={false}>
           <div className="divide-y divide-gray-50">
-            {dashboardData?.activities.length === 0 ? (
+            {!dashboardData?.activities || dashboardData.activities.length === 0 ? (
               <div className="p-8 text-center text-gray-400 text-sm">최근 활동이 없습니다.</div>
             ) : (
-              dashboardData?.activities.map((activity, idx) => (
+              dashboardData.activities.map((activity, idx) => (
                 <ActivityItem
                   key={idx}
                   type={activity.type}
                   title={activity.title}
                   description={activity.description}
-                  time={activity.regDate?.substring(0, 10) || ''}
+                  time={activity.time || activity.regDate?.substring(0, 10) || ''}
                 />
               ))
             )}

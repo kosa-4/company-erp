@@ -5,6 +5,8 @@ export interface DashboardStats {
     activeRfqCount: number;
     poCompletedCount: number;
     grWaitingCount: number;
+    rfqPendingCount: number;
+    poPendingCount: number;
     pendingProcessCount: number;
     pendingApprovalCount: number;
     prChange?: string;
