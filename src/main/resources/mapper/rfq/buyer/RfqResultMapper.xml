@@ -63,7 +63,7 @@
                h.CTRL_USER_ID   AS ctrlUserId,
                u.USER_NM        AS ctrlUserNm,
                h.REG_DATE       AS regDate,
-               v.MOD_DATE       AS selectDate
+               h.SELECT_DATE    AS selectDate
           FROM RFQHD h
     INNER JOIN RFQVN v
             ON h.RFQ_NUM = v.RFQ_NUM 
