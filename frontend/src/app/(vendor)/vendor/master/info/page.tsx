@@ -236,6 +236,7 @@ useEffect(() => {
     const response = await fetch(`/api/v1/vendor-portal/info/files/${askNum}`, {
       method: 'POST',
       body: fileFormData,
+      credentials: 'include',
     });
     
     if (!response.ok) {
