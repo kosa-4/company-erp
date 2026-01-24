@@ -158,10 +158,13 @@ public class VendorController {
             @PathVariable("vendorCode") String vendorCode,
             @RequestParam("file") List<MultipartFile> files,
             @SessionAttribute(name = SessionConst.LOGIN_USER) SessionUser loginUser) {
-        // 1. 공통 번호 체번
-        String file_num = docNumService.generateDocNumStr(DocKey.FL);
+
+        // 1. 파일 그룹 ID(Batch No) 생성
+        // 이번 요청으로 함께 업로드된 파일들을 하나의 그룹(askNum)으로 묶어 관리함
+        String askNum = docNumService.generateDocNumStr(DocKey.FL);
         for (MultipartFile file : files) {
-            fileService.upload(file, "VN", file_num, vendorCode, loginUser);
+            // 같은 askNum을 부여하여 동일한 업로드 건임을 표시
+            fileService.upload(file, "VN", askNum, vendorCode, loginUser);
         }
         return ApiResponse.ok(null);
     }
