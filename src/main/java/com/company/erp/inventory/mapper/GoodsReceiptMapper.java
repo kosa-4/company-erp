@@ -118,4 +118,14 @@ public interface GoodsReceiptMapper {
          * PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용)
          */
         String selectWarehouseByPoAndItem(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
+
+        /**
+         * 특정 GR의 입고수량 합계 조회 (정상 상태만)
+         */
+        BigDecimal selectGrAccumulatedQty(@Param("grNo") String grNo);
+
+        /**
+         * 특정 GR에 속한 품목들의 발주수량 합계 조회
+         */
+        BigDecimal selectGrOrderQty(@Param("grNo") String grNo);
 }
