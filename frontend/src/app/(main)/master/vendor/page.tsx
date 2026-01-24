@@ -166,6 +166,7 @@ export default function VendorPage() {
   const latestVendorCodeRef = useRef<string | null>(null);
   const [originalVendor, setOriginalVendor] = useState<Vendor | null>(null);
 
+  // 3. 상세 정보 조회
   const handleRowClick = async (vendor: Vendor) => {
     // 1. 공통 초기화
     setAttachedFiles([]);
@@ -204,6 +205,7 @@ export default function VendorPage() {
     setIsDetailModalOpen(true);
   };
   
+  // 4. 뱃지
   const getStatusBadge = (status: Vendor['status']) => {
     const config = {
       N: { variant: 'gray' as const, label: '신규' },
@@ -213,6 +215,20 @@ export default function VendorPage() {
     };
     const { variant, label } = config[status];
     return <Badge variant={variant}>{label}</Badge>;
+  };
+
+  const normalizeBusinessTypeLabel = (value?: string) => {
+    if (!value) return '-';
+    const v = String(value).trim();
+    if (v === 'CORP' || v === '법인') return '법인';
+    if (v === 'INDIVIDUAL' || v === '개인') return '개인';
+    return v;
+  };
+
+  const normalizeBusinessTypeCode = (value?: string) => {
+    if (value === '법인') return 'CORP';
+    if (value === '개인') return 'INDIVIDUAL';
+    return value as 'CORP' | 'INDIVIDUAL' | undefined;
   };
 
   const columns: ColumnDef<Vendor>[] = [
@@ -1051,7 +1067,7 @@ const fetchMasterVendor = async (vendorCode: string) => {
                     <Input label="협력사명(영문)" value={selectedVendor.vendorNameEng || '-'} readOnly className="bg-white" />
                     <Input 
                         label="사업형태" 
-                        value={selectedVendor.businessType === 'CORP' ? '법인' : '개인'} 
+                        value={normalizeBusinessTypeLabel(selectedVendor.businessType)}
                         readOnly 
                         className="bg-white" 
                     />
@@ -1115,7 +1131,7 @@ const fetchMasterVendor = async (vendorCode: string) => {
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>취소</Button>
-            <Button variant="primary" onClick={updateVendor}>수정 요청</Button>
+            <Button variant="primary" onClick={updateVendor}>수정</Button>
           </div>
         }
       >
@@ -1146,7 +1162,7 @@ const fetchMasterVendor = async (vendorCode: string) => {
               
               <Select
                 label="사업형태"
-                value={editVendorData.businessType}
+                value={normalizeBusinessTypeCode(editVendorData.businessType)}
                 onChange={(e) => setEditVendorData(prev => prev ? ({...prev, businessType: e.target.value as 'CORP' | 'INDIVIDUAL'}) : null)}
                 required
                 options={[
@@ -1203,10 +1219,9 @@ const fetchMasterVendor = async (vendorCode: string) => {
               <DatePicker 
                 label="설립일자" 
                 value={(editVendorData.foundationDate || '').substring(0, 10)}
-                onChange={(e: any) => {
-                  const newVal = (e && e.target) ? e.target.value : e;
-                  setEditVendorData(prev => prev ? ({...prev, foundationDate: newVal}) : null);
-                }}
+                readOnly={true}
+                className="bg-gray-100" // 회색 배경 처리
+                onChange={() => {}} // 읽기 전용이므로 변경 이벤트 무시
               />
               
               <Input 

@@ -551,6 +551,12 @@
             <if test="addressDetail != null and addressDetail != ''">
                 ADDR_DT = #{addressDetail},
             </if>
+            <if test="industry != null and industry != ''">
+                INDUSTRY_TYPE = #{industry},
+            </if>
+            <if test="businessType != null and businessType != ''">
+                REG_TYPE = #{businessType},
+            </if>
             <if test="remark != null and remark != ''">
                 RMK = #{remark},
             </if>
