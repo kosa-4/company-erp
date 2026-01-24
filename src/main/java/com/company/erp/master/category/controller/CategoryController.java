@@ -7,6 +7,7 @@ import com.company.erp.common.session.SessionIgnore;
 import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.category.dto.CategoryDto;
 import com.company.erp.master.category.dto.CategoryListDto;
+import com.company.erp.master.category.dto.CategoryUpdateDto;
 import com.company.erp.master.category.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -76,4 +77,13 @@ public class CategoryController {
         return ApiResponse.ok("카테고리가 삭제되었습니다.");
     }
 
+    // 수정
+    @PutMapping("/update")
+    public ApiResponse updateCategory(
+            @RequestBody List<CategoryUpdateDto> updateDtoList,
+            @SessionAttribute(name = SessionConst.LOGIN_USER)SessionUser loginUser
+    ){
+        categoryService.updateCategory(updateDtoList, loginUser);
+        return ApiResponse.ok("카테고리가 수정되었습니다.");
+    }
 }

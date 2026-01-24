@@ -425,6 +425,7 @@
         <set>
             MOD_DATE = #{modifiedAt},
             MOD_USER_ID = #{modifiedBy},
+            PROGRESS_CD = 'A',
             <if test="delFlag != null and delFlag != ''">
                 DEL_FLAG = #{delFlag},
             </if>
@@ -497,8 +498,6 @@
             VNCH_US
         WHERE
             ASK_USER_NUM = #{askUserNum}
-        AND
-            PROGRESS_CD IN ('N', 'C')
         AND
             DEL_FLAG = 'N'
     </select>

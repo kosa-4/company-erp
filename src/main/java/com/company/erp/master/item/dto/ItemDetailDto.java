@@ -28,6 +28,10 @@ public class ItemDetailDto{
     private String categoryL; // 대분류
     private String categoryM; // 중분류
     private String categoryS; // 소분류
+    private String itemTypeCode;
+    private String categoryLCode;
+    private String categoryMCode;
+    private String categorySCode;
     private int unitPrice;
 
 }

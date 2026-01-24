@@ -847,18 +847,8 @@ export default function OrderProgressPage() {
                           <input
                             type="number"
                             value={item.orderQuantity}
-                            className="w-20 px-2 py-1 border rounded text-right"
-                            onChange={(e) => {
-                              const newQuantity = parseInt(e.target.value) || 0;
-                              setEditForm(prev => ({
-                                ...prev,
-                                items: prev.items.map((it, i) =>
-                                  i === index
-                                    ? { ...it, orderQuantity: newQuantity, amount: newQuantity * it.unitPrice }
-                                    : it
-                                ),
-                              }));
-                            }}
+                            className="w-20 px-2 py-1 border rounded text-right bg-gray-100 text-stone-500 focus:outline-none"
+                            readOnly
                           />
                         </td>
                         <td className="p-3 text-right font-medium">₩{formatNumber(item.orderQuantity * item.unitPrice)}</td>

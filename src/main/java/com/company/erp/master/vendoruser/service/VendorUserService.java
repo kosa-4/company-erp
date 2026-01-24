@@ -41,15 +41,20 @@ public class VendorUserService {
     @Transactional
     public void updateVendorUser(VendorUserUpdateDto vendorUserupdateDto, String loginId){
         // 1. 존재 여부 체크
-        int vendorUser =  vendorUserMapper.countVendorUsersByUserId(vendorUserupdateDto.getUserId());
-        if(vendorUser == 0){
+        VendorUserListDto vendorUser =  vendorUserMapper.selectVendorUserByAskUserNum(vendorUserupdateDto.getAskUserNum());
+        if(vendorUser == null){
             throw new NoSuchElementException("사용자가 존재하지 않습니다");
+        }
+
+        // 2. 승인 상태만 수정 가능
+        if (!"A".equals(vendorUser.getStatus())) {
+            throw new IllegalStateException("정상 승인(A) 된 사용자만 정보를 수정할 수 있습니다.");
         }
 
         // 2. 존재 시
         vendorUserupdateDto.setModifiedBy(loginId);
         vendorUserupdateDto.setModifiedAt(LocalDateTime.now());
-        vendorUserupdateDto.setStatus("A");
+        vendorUserupdateDto.setUserId(vendorUser.getUserId()); // 변조 방지
 
         vendorUserMapper.updateVN_USERByUserId(vendorUserupdateDto);
         vendorUserMapper.updateVNCH_USByAskUserNum(vendorUserupdateDto);

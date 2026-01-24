@@ -4,39 +4,44 @@
 <mapper namespace="com.company.erp.master.item.mapper.ItemMapper">
     <!--조회-->
     <select id="selectItemList" parameterType="com.company.erp.master.item.dto.ItemSearchDto" resultType="com.company.erp.master.item.dto.ItemDetailDto">
-        SELECT
-            i.ITEM_CD AS itemCode,
-            i.ITEM_NM AS itemName,
-            (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
-            (SELECT ITEM_CLS1 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryL,
-            (SELECT ITEM_CLS2 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryM,
-            (SELECT ITEM_CLS3 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryS,
-            i.ITEM_SPEC AS spec,
-            i.UNIT_CD AS unit,
-            i.MAKER_NM AS manufacturerName,
-            i.REG_DATE AS createdAt
+        SELECT DISTINCT
+            GL.ITEM_CD AS itemCode,
+            GL.ITEM_NM AS itemName,
+            IFNULL(CA.ITEM_CLS_NM, '없음') AS itemType,
+            GL.ITEM_SPEC AS spec,
+            GL.UNIT_CD AS unit,
+            GL.MAKER_NM AS manufacturerName,
+            GL.REG_DATE AS createdAt
         FROM
-            MTGL i
+            MTGL GL
+        LEFT JOIN
+            MTGC GC
+        ON
+            GL.ITEM_CD = GC.ITEM_CD
+        LEFT JOIN
+            MTCA CA
+        ON
+            GC.ITEM_CLS = CA.ITEM_CLS
         <where>
-            i.DEL_FLAG = 'N'
+            GL.DEL_FLAG = 'N'
             <if test="itemCode != null and itemCode != ''">
-                AND i.ITEM_CD LIKE CONCAT('%', #{itemCode}, '%')
+                AND GL.ITEM_CD LIKE CONCAT('%', #{itemCode}, '%')
             </if>
             <if test="itemName != null and itemName != ''">
-                AND i.ITEM_NM LIKE CONCAT('%', #{itemName}, '%')
+                AND GL.ITEM_NM LIKE CONCAT('%', #{itemName}, '%')
             </if>
             <if test="useYn != null and useYn != ''">
-                AND i.USE_FLAG = #{useYn}
+                AND GL.USE_FLAG = #{useYn}
             </if>
             <if test="date != null">
-                AND REG_DATE BETWEEN #{startDate} AND #{endDate}
+                AND GL.REG_DATE BETWEEN #{startDate} AND #{endDate}
             </if>
             <if test="manufacturerName != null and manufacturerName != ''">
-                AND i.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
+                AND GL.MAKER_NM LIKE CONCAT('%', #{manufacturerName}, '%')
             </if>
         </where>
         ORDER BY
-            i.REG_DATE DESC
+            GL.REG_DATE DESC
         LIMIT #{pageSize}
         OFFSET #{offset} <!--알아서 get으로 호출-->
     </select>
@@ -84,25 +89,51 @@
     <!--상세 품목 조회-->
     <select id="selectItemByCode" parameterType="String" resultType="com.company.erp.master.item.dto.ItemDetailDto">
         SELECT
-            i.ITEM_CD AS itemCode,
-            i.ITEM_NM AS itemName,
-            i.ITEM_NM_ENG AS itemNameEn,
-            (SELECT ITEM_CLS FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS itemType,
-            (SELECT ITEM_CLS1 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryL,
-            (SELECT ITEM_CLS2 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryM,
-            (SELECT ITEM_CLS3 FROM MTGC WHERE ITEM_CD = i.ITEM_CD LIMIT 1) AS categoryS,
-            i.ITEM_SPEC AS spec,
-            i.UNIT_CD AS unit,
-            i.MAKER_NM AS manufacturerName,
-            i.MODEL_NO AS modelNo,
-            i.USE_FLAG AS useYn,
-            i.RMK AS remark,
-            i.REG_DATE AS createdAt,
-            i.REG_USER_ID AS createdBy
+            GL.ITEM_CD AS itemCode,
+            GL.ITEM_NM AS itemName,
+            GL.ITEM_NM_ENG AS itemNameEn,
+            IFNULL(CA_TYPE.ITEM_CLS_NM, '없음') AS itemType,
+            IFNULL(CA_L.ITEM_CLS_NM, '없음') AS categoryL,
+            IFNULL(CA_M.ITEM_CLS_NM, '없음') AS categoryM,
+            IFNULL(CA_S.ITEM_CLS_NM, '없음') AS categoryS,
+            CA_TYPE.ITEM_CLS    AS itemTypeCode,
+            CA_L.ITEM_CLS       AS categoryLCode,
+            CA_M.ITEM_CLS       AS categoryMCode,
+            CA_S.ITEM_CLS       AS categorySCode,
+            GL.ITEM_SPEC AS spec,
+            GL.UNIT_CD AS unit,
+            GL.MAKER_NM AS manufacturerName,
+            GL.MODEL_NO AS modelNo,
+            GL.USE_FLAG AS useYn,
+            GL.RMK AS remark,
+            GL.REG_DATE AS createdAt,
+            GL.REG_USER_ID AS createdBy
         FROM
-            MTGL i
+            MTGL GL
+        LEFT JOIN <!--카테고리가 삭제되더라도 표시되기 위해서-->
+            MTGC GC
+        ON
+            GL.ITEM_CD = GC.ITEM_CD
+        LEFT JOIN
+            MTCA CA_TYPE
+        ON
+            GC.ITEM_CLS = CA_TYPE.ITEM_CLS
+        LEFT JOIN
+            MTCA CA_L
+        ON
+            GC.ITEM_CLS1 = CA_L.ITEM_CLS
+        LEFT JOIN
+            MTCA CA_M
+        ON
+            GC.ITEM_CLS2 = CA_M.ITEM_CLS
+        LEFT JOIN
+            MTCA CA_S
+        ON
+            GC.ITEM_CLS3 = CA_S.ITEM_CLS
         WHERE
-            i.ITEM_CD = #{code}
+            GL.ITEM_CD = #{code}
+        AND
+            GL.DEL_FLAG = 'N'
     </select>
 
     <!--품목 마스터 테이블 저장-->
