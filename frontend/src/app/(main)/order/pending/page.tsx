@@ -693,7 +693,6 @@ export default function OrderPendingPage() {
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">단가</th>
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">금액</th>
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">납기희망일</th>
-                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">저장위치</th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-stone-100">
@@ -707,7 +706,6 @@ export default function OrderPendingPage() {
                                       <td className="px-3 py-2 text-xs text-right">₩{formatNumber(Number(item.unitPrice))}</td>
                                       <td className="px-3 py-2 text-xs text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
                                       <td className="px-3 py-2 text-xs text-center">{item.deliveryDate || '-'}</td>
-                                      <td className="px-3 py-2 text-xs text-left">{item.storageLocation || '-'}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -838,7 +836,21 @@ export default function OrderPendingPage() {
                       </td>
                       <td className="p-3 text-right font-medium">₩{formatNumber(item.amount)}</td>
                       <td className="p-3 text-center">{item.deliveryDate}</td>
-                      <td className="p-3">{item.storageLocation}</td>
+                      <td className="p-3">
+                        <Select
+                          value={item.storageLocation}
+                          onChange={(e) => {
+                            const newItems = [...orderForm.items];
+                            newItems[index].storageLocation = e.target.value;
+                            setOrderForm(prev => ({ ...prev, items: newItems }));
+                          }}
+                          options={[
+                            { value: '본사 창고', label: '본사 창고' },
+                            { value: '지사 창고', label: '지사 창고' },
+                          ]}
+                          className="text-sm"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

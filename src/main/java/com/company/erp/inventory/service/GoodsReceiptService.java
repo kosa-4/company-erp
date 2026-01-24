@@ -53,15 +53,9 @@ public class GoodsReceiptService {
             if (po.getPoNo() != null) {
                 List<PurchaseOrderItemDTO> items = purchaseOrderMapper.selectItems(po.getPoNo());
 
-                // 기존 GR 정보 조회 (저장위치 제한용)
-                Map<String, Object> existingGr = goodsReceiptMapper.selectExistingGrByPoNo(po.getPoNo());
-                String existingWarehouse = null;
-                if (existingGr != null && existingGr.get("warehouseCode") != null) {
-                    existingWarehouse = (String) existingGr.get("warehouseCode");
-                }
-
-                // 각 품목별 남은 입고 수량 계산
+                // 각 품목별 남은 입고 수량 및 기존 GR 저장위치 계산 (품목별 개별 관리)
                 for (PurchaseOrderItemDTO item : items) {
+                    // 입고된 수량 조회
                     Integer receivedQty = goodsReceiptMapper.getReceivedQuantity(po.getPoNo(), item.getItemCode());
                     if (receivedQty == null)
                         receivedQty = 0;
@@ -69,18 +63,13 @@ public class GoodsReceiptService {
                     int remaining = item.getOrderQuantity() - receivedQty;
                     item.setRemainingQuantity(Math.max(0, remaining));
 
-                    // 기존 GR의 저장위치가 있으면 해당 위치로 고정
-                    if (existingWarehouse != null) {
-                        item.setStorageLocation(existingWarehouse);
-                    }
+                    // 품목별로 기존 GR 저장위치 조회 (입고번호 기준)
+                    String existingWarehouse = goodsReceiptMapper.selectWarehouseByPoAndItem(po.getPoNo(), item.getItemCode());
+                    // 기존 GR이 있으면 별도 필드에 저장 (storageLocation은 원래 값 유지)
+                    item.setExistingGrWarehouse(existingWarehouse);
                 }
 
                 po.setItems(items);
-
-                // 기존 GR 저장위치 정보를 PO에 설정 (프론트엔드에서 활용)
-                if (existingWarehouse != null) {
-                    po.setRemark("EXISTING_WH:" + existingWarehouse);
-                }
             }
         }
 
@@ -104,11 +93,21 @@ public class GoodsReceiptService {
 
         List<GoodsReceiptDTO> list = goodsReceiptMapper.selectList(params);
 
-        // 각 입고 건에 대해 품목 상세 조회하여 추가
+        // 각 입고 건에 대해 품목 상세 조회 및 상태 재계산
         for (GoodsReceiptDTO gr : list) {
             if (gr.getGrNo() != null) {
                 List<GoodsReceiptItemDTO> items = goodsReceiptMapper.selectItems(gr.getGrNo());
                 gr.setItems(items);
+
+                // GR별로 상태 재계산 (GR 번호 기준)
+                String currentUserId = getCurrentUserId();
+                updateGrHeaderStatus(gr.getGrNo(), currentUserId);
+
+                // 재계산된 상태로 다시 조회
+                GoodsReceiptDTO updated = goodsReceiptMapper.selectHeader(gr.getGrNo());
+                if (updated != null) {
+                    gr.setStatus(updated.getStatus());
+                }
             }
         }
 
@@ -124,6 +123,16 @@ public class GoodsReceiptService {
 
         List<GoodsReceiptItemDTO> items = goodsReceiptMapper.selectItems(grNo);
         header.setItems(items);
+
+        // GR별로 상태 재계산 (GR 번호 기준)
+        String currentUserId = getCurrentUserId();
+        updateGrHeaderStatus(grNo, currentUserId);
+
+        // 재계산된 상태로 다시 조회
+        GoodsReceiptDTO updated = goodsReceiptMapper.selectHeader(grNo);
+        if (updated != null) {
+            header.setStatus(updated.getStatus());
+        }
 
         return header;
     }
@@ -162,13 +171,9 @@ public class GoodsReceiptService {
 
         // 규격 매핑 정보 준비
         Map<String, String> poSpecMap = new HashMap<>();
-        try {
-            List<PurchaseOrderItemDTO> poItems = purchaseOrderMapper.selectItems(dto.getPoNo());
-            for (PurchaseOrderItemDTO poItem : poItems) {
-                poSpecMap.put(poItem.getItemCode(), poItem.getSpecification());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        List<PurchaseOrderItemDTO> poItems = purchaseOrderMapper.selectItems(dto.getPoNo());
+        for (PurchaseOrderItemDTO poItem : poItems) {
+            poSpecMap.put(poItem.getItemCode(), poItem.getSpecification());
         }
 
         // 2. 신규 입고 품목과 기존 입고(추가) 품목 분류
@@ -348,18 +353,40 @@ public class GoodsReceiptService {
             return;
         }
 
-        // PO의 누적 입고수량 조회
+        // GR별로 상태 업데이트 (GR 번호 기준)
+        updateGrHeaderStatus(grNo, userId);
+
+        // PO 전체의 누적 입고수량 조회
         BigDecimal accumulatedQty = goodsReceiptMapper.selectAccumulatedQty(poNo);
 
         // PO의 발주수량 합계 조회
         BigDecimal orderQty = goodsReceiptMapper.selectOrderQty(poNo);
 
+        // PO의 입고완료 여부에 따라 PO 상태 업데이트
+        if (accumulatedQty.compareTo(orderQty) >= 0) {
+            // PO 전체가 입고완료되면 PO 상태를 'C'(완료)로 자동 변경
+            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.COMPLETED.getCode(), userId);
+        }
+    }
+
+    // GR별로 입고 상태 업데이트 (GR 번호 기준)
+    private void updateGrHeaderStatus(String grNo, String userId) {
+        if (grNo == null || grNo.isEmpty()) {
+            return;
+        }
+
+        // GR의 입고수량 합계 조회
+        BigDecimal grAccumulatedQty = goodsReceiptMapper.selectGrAccumulatedQty(grNo);
+
+        // GR에 속한 품목들의 발주수량 합계 조회
+        BigDecimal grOrderQty = goodsReceiptMapper.selectGrOrderQty(grNo);
+
         // 상태 결정
         String newStatus;
-        if (accumulatedQty.compareTo(BigDecimal.ZERO) == 0) {
-            // 입고수량이 0이면 미입고
+        if (grAccumulatedQty.compareTo(BigDecimal.ZERO) == 0) {
+            // 입고수량이 0이면 미입고 (모든 품목이 취소된 경우)
             newStatus = GoodsReceiptStatus.NOT_RECEIVED;
-        } else if (accumulatedQty.compareTo(orderQty) >= 0) {
+        } else if (grAccumulatedQty.compareTo(grOrderQty) >= 0) {
             // 입고수량 >= 발주수량: 입고완료
             newStatus = GoodsReceiptStatus.COMPLETED;
         } else {
@@ -367,15 +394,8 @@ public class GoodsReceiptService {
             newStatus = GoodsReceiptStatus.PARTIAL;
         }
 
-        // 헤더 상태 업데이트
-        // 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트 (취소 상태 제외)
-        // 이를 통해 부분입고였던 이전 GR 건들도 입고완료 시점에 일괄적으로 입고완료 처리됨
-        goodsReceiptMapper.updateAllHeadersStatusByPO(poNo, newStatus, userId);
-
-        // 입고완료(GRE) 상태가 되면 PO 상태를 'C'(완료)로 자동 변경
-        if (GoodsReceiptStatus.COMPLETED.equals(newStatus)) {
-            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.COMPLETED.getCode(), userId);
-        }
+        // 해당 GR 헤더 상태 업데이트
+        goodsReceiptMapper.updateHeaderStatus(grNo, newStatus, userId);
     }
 
     // 세션에서 로그인 사용자 정보 가져오기

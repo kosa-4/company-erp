@@ -3,22 +3,34 @@
 <mapper namespace="com.company.erp.inventory.mapper.GoodsReceiptMapper">
 
     <!-- ========== 입고대상조회 ========== -->
-    <!-- 발주전송(S) 상태이고, 입고완료(GRE)가 아닌 PO 목록 조회 -->
-    <select id="selectPendingPOList" parameterType="map"
-        resultType="com.company.erp.po.dto.PurchaseOrderDTO"> SELECT h.PO_NUM AS poNo, h.PO_SUBJECT
-        AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo, h.PR_NUM AS prNo, h.CTRL_USER_ID AS
-        ctrlUserName, v.VENDOR_NM AS vendorName FROM POHD h LEFT JOIN VNGL v ON h.VENDOR_CD =
-        v.VENDOR_CD WHERE h.PROGRESS_CD = 'S' AND h.CHECK_FLAG = 'Y' AND h.DEL_FLAG = 'N' AND NOT
-        EXISTS ( SELECT 1 FROM GRHD g WHERE g.PO_NUM = h.PO_NUM AND g.PROGRESS_CD = 'GRE' AND
-        g.DEL_FLAG = 'N' ) <if
-            test="poNo != null and poNo != ''"> AND h.PO_NUM LIKE CONCAT('%', #{poNo}, '%') </if>
-        <if
-            test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%',
-        #{vendorName}, '%') </if>
-        <if test="startDate != null and startDate != ''"> AND h.PO_DATE
-        &gt;= #{startDate} </if>
-        <if test="endDate != null and endDate != ''"> AND h.PO_DATE &lt;=
-        #{endDate} </if> ORDER BY h.PO_DATE DESC </select>
+    <!-- 발주전송(S) 상태이고, 미입고 수량이 남아있는 PO 목록 조회 (PO 기준 입고완료 여부 판단) -->
+    <select id="selectPendingPOList" parameterType="map" resultType="com.company.erp.po.dto.PurchaseOrderDTO">
+        SELECT h.PO_NUM AS poNo, h.PO_SUBJECT AS poName, h.PO_DATE AS poDate, h.RFQ_NUM AS rfqNo,
+               h.PR_NUM AS prNo, h.CTRL_USER_ID AS ctrlUserName, v.VENDOR_NM AS vendorName
+        FROM POHD h
+        LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD
+        WHERE h.PROGRESS_CD = 'S'
+          AND h.CHECK_FLAG = 'Y'
+          AND h.DEL_FLAG = 'N'
+          AND COALESCE((
+              SELECT SUM(d.GR_QT)
+              FROM GRDT d
+              INNER JOIN GRHD g ON d.GR_NUM = g.GR_NUM
+              WHERE g.PO_NUM = h.PO_NUM
+                AND d.STATUS_CD = 'N'
+                AND d.DEL_FLAG = 'N'
+                AND g.DEL_FLAG = 'N'
+          ), 0) &lt; COALESCE((
+              SELECT SUM(PO_QT)
+              FROM PODT
+              WHERE PO_NUM = h.PO_NUM AND DEL_FLAG = 'N'
+          ), 0)
+        <if test="poNo != null and poNo != ''"> AND h.PO_NUM LIKE CONCAT('%', #{poNo}, '%') </if>
+        <if test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%') </if>
+        <if test="startDate != null and startDate != ''"> AND h.PO_DATE &gt;= #{startDate} </if>
+        <if test="endDate != null and endDate != ''"> AND h.PO_DATE &lt;= #{endDate} </if>
+        ORDER BY h.PO_DATE DESC
+    </select>
 
     <!-- 발주번호로 기존 GR 정보 조회 (GR번호, 저장위치) - 중복채번 방지용 -->
     <select id="selectExistingGrByPoNo" parameterType="String" resultType="map"> SELECT h.GR_NUM AS
@@ -75,6 +87,20 @@
         d.ITEM_CD = #{itemCode} AND h.DEL_FLAG = 'N' AND d.DEL_FLAG = 'N' AND d.STATUS_CD = 'N' AND
         h.PROGRESS_CD != 'GRX' LIMIT 1 </select>
 
+    <!-- PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용) -->
+    <select id="selectWarehouseByPoAndItem" parameterType="map" resultType="String">
+        SELECT d.WH_CD
+        FROM GRHD h
+        INNER JOIN GRDT d ON h.GR_NUM = d.GR_NUM
+        WHERE h.PO_NUM = #{poNo}
+          AND d.ITEM_CD = #{itemCode}
+          AND h.PROGRESS_CD != 'GRX'
+          AND h.DEL_FLAG = 'N'
+          AND d.DEL_FLAG = 'N'
+          AND d.STATUS_CD = 'N'
+        LIMIT 1
+    </select>
+
     <!-- 입고 헤더 등록 -->
     <insert id="insertHeader"> INSERT INTO GRHD ( GR_NUM, PO_NUM, GR_DATE, GR_AMT, PROGRESS_CD,
         CTRL_USER_ID, CTRL_DEPT_CD, RMK, REG_DATE, REG_USER_ID, DEL_FLAG ) VALUES ( #{dto.grNo},
@@ -117,6 +143,26 @@
     <!-- 특정 PO의 발주수량 합계 조회 -->
     <select id="selectOrderQty" parameterType="String" resultType="java.math.BigDecimal"> SELECT
         COALESCE(SUM(PO_QT), 0) FROM PODT WHERE PO_NUM = #{poNo} AND DEL_FLAG = 'N' </select>
+
+    <!-- 특정 GR의 입고수량 합계 조회 (정상 상태만) -->
+    <select id="selectGrAccumulatedQty" parameterType="String" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(d.GR_QT), 0)
+        FROM GRDT d
+        WHERE d.GR_NUM = #{grNo}
+          AND d.STATUS_CD = 'N'
+          AND d.DEL_FLAG = 'N'
+    </select>
+
+    <!-- 특정 GR에 속한 품목들의 발주수량 합계 조회 -->
+    <select id="selectGrOrderQty" parameterType="String" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(p.PO_QT), 0)
+        FROM GRDT d
+        INNER JOIN GRHD h ON d.GR_NUM = h.GR_NUM
+        INNER JOIN PODT p ON d.ITEM_CD = p.ITEM_CD AND h.PO_NUM = p.PO_NUM
+        WHERE d.GR_NUM = #{grNo}
+          AND p.DEL_FLAG = 'N'
+          AND d.DEL_FLAG = 'N'
+    </select>
 
     <!-- 특정 GR의 모든 DT가 취소 상태인지 확인 -->
     <select id="isAllItemsCancelled" parameterType="String" resultType="boolean"> SELECT CASE WHEN
