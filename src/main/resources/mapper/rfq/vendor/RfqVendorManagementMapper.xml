@@ -188,6 +188,7 @@
                MOD_USER_ID = #{userId}
          WHERE RFQ_NUM = #{rfqNum}
            AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
     </update>
 
     <!-- RFQHD 상태 조회 -->

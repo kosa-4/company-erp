@@ -141,6 +141,7 @@ export interface RfqSelectionSearchRequest {
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
+    regDate?: string;
 }
 
 export interface RfqProgressSearchRequest {

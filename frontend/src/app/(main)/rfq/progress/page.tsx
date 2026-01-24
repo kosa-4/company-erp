@@ -101,13 +101,8 @@ export default function RfqProgressPage() {
     if (!rfqNum) return;
 
     try {
-      const response = await fetch(`/api/v1/buyer/rfqs/${rfqNum}`);
-      if (!response.ok) throw new Error('RFQ 상세 조회 실패');
-
-      const apiResponse = await response.json();
-      const detail = apiResponse?.data;
-
-      setSelectedRfqDetail(detail);
+      const response = await rfqApi.getRfqDetail(rfqNum);
+      setSelectedRfqDetail(response);
       setIsRfqDetailOpen(true);
     } catch (error) {
       toast.error('RFQ 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));

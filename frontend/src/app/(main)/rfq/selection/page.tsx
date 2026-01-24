@@ -80,13 +80,11 @@ export default function RfqSelectionPage() {
     if (!rfqNo) return;
 
     try {
-      const response = await fetch(`/api/v1/buyer/rfqs/${rfqNo}`);
-      if (!response.ok) throw new Error('RFQ 상세 조회 실패');
-
-      const apiResponse = await response.json();
-      const detail = apiResponse?.data;
-
-      setSelectedRfqDetail(detail);
+      const response = await rfqApi.getRfqDetail(rfqNo);
+      // rfqApi 래퍼가 이미 unwrap하여 data를 반환하는 구조인지 확인 필요.
+      // rfqApi.getRfqDetail은 api.get<RfqDetailResponse>(...) 이며, 
+      // client.ts의 api.get은 통상 apiResponse.data를 반환하도록 되어 있음.
+      setSelectedRfqDetail(response);
       setIsRfqDetailOpen(true);
     } catch (error) {
       toast.error('RFQ 상세 조회 중 오류가 발생했습니다: ' + getErrorMessage(error));
@@ -149,9 +147,9 @@ export default function RfqSelectionPage() {
       setData(grouped);
 
       setExpandedRows(
-          grouped
-              .filter(g => g.progressCd === 'M' || g.progressCd === 'G')
-              .map(g => g.rfqNo)
+        grouped
+          .filter(g => g.progressCd === 'M' || g.progressCd === 'G')
+          .map(g => g.rfqNo)
       );
 
       setSelectedRfqNo(null);
@@ -183,7 +181,7 @@ export default function RfqSelectionPage() {
 
   const toggleRow = (rfqNo: string) => {
     setExpandedRows(prev =>
-        prev.includes(rfqNo) ? prev.filter(id => id !== rfqNo) : [...prev, rfqNo]
+      prev.includes(rfqNo) ? prev.filter(id => id !== rfqNo) : [...prev, rfqNo]
     );
   };
 
@@ -300,81 +298,81 @@ export default function RfqSelectionPage() {
   };
 
   return (
-      <div className="space-y-6">
-        <PageHeader title="협력업체 선정" subtitle="마감된 견적에 대해 협력업체를 선정합니다." />
+    <div className="space-y-6">
+      <PageHeader title="협력업체 선정" subtitle="마감된 견적에 대해 협력업체를 선정합니다." />
 
-        <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
-          <Input
-              label="RFQ번호"
-              placeholder="RFQ번호 입력"
-              value={searchParams.rfqNo}
-              onChange={e => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
-          />
-          <Input
-              label="견적명"
-              placeholder="견적명 입력"
-              value={searchParams.rfqName}
-              onChange={e => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
-          />
-          <DatePicker
-              label="선정일"
-              value={searchParams.selectDate}
-              onChange={e => setSearchParams(prev => ({ ...prev, selectDate: e.target.value }))}
-          />
-          <DatePicker
-              label="등록일"
-              value={searchParams.regDate}
-              onChange={e => setSearchParams(prev => ({ ...prev, regDate: e.target.value }))}
-          />
-          <Select
-              label="견적유형"
-              value={searchParams.rfqType}
-              onChange={e => setSearchParams(prev => ({ ...prev, rfqType: e.target.value }))}
-              options={[
-                { value: '', label: '전체' },
-                { value: 'OC', label: '수의계약' },
-                { value: 'AC', label: '지명경쟁' },
-              ]}
-          />
-          <Select
-              label="상태"
-              value={searchParams.status}
-              onChange={e => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
-              options={[
-                { value: '', label: '전체' },
-                { value: 'M', label: '마감' },
-                { value: 'G', label: '개찰' },
-                { value: 'J', label: '선정완료' },
-              ]}
-          />
-          <Input
-              label="구매담당자"
-              placeholder="담당자명 입력"
-              value={searchParams.buyer}
-              onChange={e => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
-          />
-        </SearchPanel>
+      <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
+        <Input
+          label="RFQ번호"
+          placeholder="RFQ번호 입력"
+          value={searchParams.rfqNo}
+          onChange={e => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
+        />
+        <Input
+          label="견적명"
+          placeholder="견적명 입력"
+          value={searchParams.rfqName}
+          onChange={e => setSearchParams(prev => ({ ...prev, rfqName: e.target.value }))}
+        />
+        <DatePicker
+          label="선정일"
+          value={searchParams.selectDate}
+          onChange={e => setSearchParams(prev => ({ ...prev, selectDate: e.target.value }))}
+        />
+        <DatePicker
+          label="등록일"
+          value={searchParams.regDate}
+          onChange={e => setSearchParams(prev => ({ ...prev, regDate: e.target.value }))}
+        />
+        <Select
+          label="견적유형"
+          value={searchParams.rfqType}
+          onChange={e => setSearchParams(prev => ({ ...prev, rfqType: e.target.value }))}
+          options={[
+            { value: '', label: '전체' },
+            { value: 'OC', label: '수의계약' },
+            { value: 'AC', label: '지명경쟁' },
+          ]}
+        />
+        <Select
+          label="상태"
+          value={searchParams.status}
+          onChange={e => setSearchParams(prev => ({ ...prev, status: e.target.value }))}
+          options={[
+            { value: '', label: '전체' },
+            { value: 'M', label: '마감' },
+            { value: 'G', label: '개찰' },
+            { value: 'J', label: '선정완료' },
+          ]}
+        />
+        <Input
+          label="구매담당자"
+          placeholder="담당자명 입력"
+          value={searchParams.buyer}
+          onChange={e => setSearchParams(prev => ({ ...prev, buyer: e.target.value }))}
+        />
+      </SearchPanel>
 
-        <Card
-            title="협력업체 선정 목록"
-            padding={false}
-            actions={
-              <div className="flex gap-2">
-                <Button variant="primary" onClick={handleOpen} loading={loading}>
-                  개찰
-                </Button>
-                <Button variant="secondary" onClick={handleOpenCompare}>
-                  견적비교
-                </Button>
-                <Button variant="success" onClick={handleSelect} loading={loading}>
-                  선정
-                </Button>
-              </div>
-            }
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
+      <Card
+        title="협력업체 선정 목록"
+        padding={false}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="primary" onClick={handleOpen} loading={loading}>
+              개찰
+            </Button>
+            <Button variant="secondary" onClick={handleOpenCompare}>
+              견적비교
+            </Button>
+            <Button variant="success" onClick={handleSelect} loading={loading}>
+              선정
+            </Button>
+          </div>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
                 <th className="w-12 px-4 py-3.5">
                   <div className="w-4" />
@@ -389,309 +387,309 @@ export default function RfqSelectionPage() {
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">상태</th>
                 <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">참여업체</th>
               </tr>
-              </thead>
+            </thead>
 
-              <tbody className="divide-y divide-stone-100">
+            <tbody className="divide-y divide-stone-100">
               {loading && data.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-16 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
-                        <span className="text-stone-500">데이터를 불러오는 중...</span>
-                      </div>
-                    </td>
-                  </tr>
+                <tr>
+                  <td colSpan={10} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
+                      <span className="text-stone-500">데이터를 불러오는 중...</span>
+                    </div>
+                  </td>
+                </tr>
               ) : data.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-16 text-center text-stone-500">
-                      조회된 데이터가 없습니다.
-                    </td>
-                  </tr>
+                <tr>
+                  <td colSpan={10} className="py-16 text-center text-stone-500">
+                    조회된 데이터가 없습니다.
+                  </td>
+                </tr>
               ) : (
-                  data.map(row => {
-                    const isExpanded = expandedRows.includes(row.rfqNo);
-                    const isSelected = selectedRfqNo === row.rfqNo;
-                    const totalVendors = row.vendors.length;
+                data.map(row => {
+                  const isExpanded = expandedRows.includes(row.rfqNo);
+                  const isSelected = selectedRfqNo === row.rfqNo;
+                  const totalVendors = row.vendors.length;
 
-                    return (
-                        <React.Fragment key={row.rfqNo}>
-                          <tr
-                              className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${isSelected ? 'bg-teal-50/50' : ''}`}
-                              onClick={() => {
-                                handleSelectRfq(row.rfqNo);
-                                toggleRow(row.rfqNo);
-                              }}
+                  return (
+                    <React.Fragment key={row.rfqNo}>
+                      <tr
+                        className={`hover:bg-teal-50/30 transition-colors cursor-pointer ${isSelected ? 'bg-teal-50/50' : ''}`}
+                        onClick={() => {
+                          handleSelectRfq(row.rfqNo);
+                          toggleRow(row.rfqNo);
+                        }}
+                      >
+                        <td className="px-4 py-3 text-center">
+                          <svg
+                            className={`w-4 h-4 text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            <td className="px-4 py-3 text-center">
-                              <svg
-                                  className={`w-4 h-4 text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </td>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </td>
 
-                            <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
-                              <input
-                                  type="radio"
-                                  name="rfq-select"
-                                  className="w-4 h-4 text-teal-600"
-                                  checked={isSelected}
-                                  onChange={() => handleSelectRfq(row.rfqNo)}
-                              />
-                            </td>
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="radio"
+                            name="rfq-select"
+                            className="w-4 h-4 text-teal-600"
+                            checked={isSelected}
+                            onChange={() => handleSelectRfq(row.rfqNo)}
+                          />
+                        </td>
 
-                            <td className="px-4 py-3 text-sm font-medium text-center">
+                        <td className="px-4 py-3 text-sm font-medium text-center">
                           <span
-                              className="text-blue-600 hover:underline cursor-pointer"
-                              onClick={(e) => handleViewRfqDetail(row.rfqNo, e)}
-                              title="RFQ 상세 보기"
+                            className="text-blue-600 hover:underline cursor-pointer"
+                            onClick={(e) => handleViewRfqDetail(row.rfqNo, e)}
+                            title="RFQ 상세 보기"
                           >
                             {row.rfqNo}
                           </span>
-                            </td>
+                        </td>
 
-                            <td className="px-4 py-3 text-sm text-stone-700">{row.rfqName}</td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.rfqTypeNm}</td>
-                            <td className="px-4 py-3 text-sm text-stone-600 text-center">{row.ctrlUserNm}</td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.regDate}</td>
-                            <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.selectDate}</td>
-                            <td className="px-4 py-3 text-center">{getStatusBadge(row.progressCd, row.progressNm)}</td>
-                            <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
-                              {totalVendors}개 업체
-                            </td>
-                          </tr>
+                        <td className="px-4 py-3 text-sm text-stone-700">{row.rfqName}</td>
+                        <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.rfqTypeNm}</td>
+                        <td className="px-4 py-3 text-sm text-stone-600 text-center">{row.ctrlUserNm}</td>
+                        <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.regDate}</td>
+                        <td className="px-4 py-3 text-sm text-stone-500 text-center">{row.selectDate}</td>
+                        <td className="px-4 py-3 text-center">{getStatusBadge(row.progressCd, row.progressNm)}</td>
+                        <td className="px-4 py-3 text-center text-sm font-semibold text-stone-600">
+                          {totalVendors}개 업체
+                        </td>
+                      </tr>
 
-                          {isExpanded && (
-                              <tr className="bg-stone-50/50">
-                                <td colSpan={10} className="px-12 py-4">
-                                  <div className="border border-stone-200 rounded-lg overflow-hidden bg-white shadow-inner">
-                                    <table className="w-full">
-                                      <thead className="bg-stone-100/50">
-                                      <tr>
-                                        <th className="w-12 px-4 py-2"></th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">코드</th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">협력사명</th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">상태</th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">총 견적금액</th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">제출일</th>
-                                        <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">선정여부</th>
+                      {isExpanded && (
+                        <tr className="bg-stone-50/50">
+                          <td colSpan={10} className="px-12 py-4">
+                            <div className="border border-stone-200 rounded-lg overflow-hidden bg-white shadow-inner">
+                              <table className="w-full">
+                                <thead className="bg-stone-100/50">
+                                  <tr>
+                                    <th className="w-12 px-4 py-2"></th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">코드</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center w-1/4">협력사명</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">상태</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-right">총 견적금액</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">제출일</th>
+                                    <th className="px-4 py-2 text-xs font-semibold text-stone-500 text-center">선정여부</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody className="divide-y divide-stone-100">
+                                  {row.vendors.map(vendor => {
+                                    const isVendorSelected =
+                                      selectedVendor?.rfqNo === row.rfqNo &&
+                                      selectedVendor?.vendorCd === vendor.vendorCd;
+
+                                    return (
+                                      <tr
+                                        key={vendor.vendorCd}
+                                        className={`hover:bg-stone-50/50 cursor-pointer ${isVendorSelected ? 'bg-teal-50' : ''}`}
+                                        onClick={() =>
+                                          setSelectedVendor({
+                                            rfqNo: row.rfqNo,
+                                            vendorCd: vendor.vendorCd,
+                                            vendorNm: vendor.vendorNm,
+                                          })
+                                        }
+                                      >
+                                        <td className="px-4 py-2 text-center">
+                                          <input
+                                            type="radio"
+                                            name={`vendor-${row.rfqNo}`}
+                                            className="w-4 h-4 text-teal-600"
+                                            checked={isVendorSelected}
+                                            onChange={() =>
+                                              setSelectedVendor({
+                                                rfqNo: row.rfqNo,
+                                                vendorCd: vendor.vendorCd,
+                                                vendorNm: vendor.vendorNm,
+                                              })
+                                            }
+                                            onClick={e => e.stopPropagation()}
+                                          />
+                                        </td>
+
+                                        <td className="px-4 py-2 text-sm text-stone-500 text-center">{vendor.vendorCd}</td>
+                                        <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">{vendor.vendorNm}</td>
+                                        <td className="px-4 py-2 text-center text-xs">
+                                          <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
+                                            {vendor.vnProgressNm}
+                                          </Badge>
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-stone-700 text-right font-semibold">
+                                          {row.progressCd === 'M' ? (
+                                            <span className="text-stone-400 font-bold tracking-widest text-xs">****</span>
+                                          ) : vendor.totalAmt !== null && vendor.totalAmt !== undefined ? (
+                                            `₩${formatNumber(vendor.totalAmt)}`
+                                          ) : (
+                                            '-'
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-stone-600 text-center font-medium">
+                                          {vendor.submitDate}
+                                        </td>
+                                        <td className="px-4 py-2 text-center">
+                                          {vendor.selectYn === 'Y' ? <Badge variant="green">선정됨</Badge> : '-'}
+                                        </td>
                                       </tr>
-                                      </thead>
+                                    );
+                                  })}
 
-                                      <tbody className="divide-y divide-stone-100">
-                                      {row.vendors.map(vendor => {
-                                        const isVendorSelected =
-                                            selectedVendor?.rfqNo === row.rfqNo &&
-                                            selectedVendor?.vendorCd === vendor.vendorCd;
-
-                                        return (
-                                            <tr
-                                                key={vendor.vendorCd}
-                                                className={`hover:bg-stone-50/50 cursor-pointer ${isVendorSelected ? 'bg-teal-50' : ''}`}
-                                                onClick={() =>
-                                                    setSelectedVendor({
-                                                      rfqNo: row.rfqNo,
-                                                      vendorCd: vendor.vendorCd,
-                                                      vendorNm: vendor.vendorNm,
-                                                    })
-                                                }
-                                            >
-                                              <td className="px-4 py-2 text-center">
-                                                <input
-                                                    type="radio"
-                                                    name={`vendor-${row.rfqNo}`}
-                                                    className="w-4 h-4 text-teal-600"
-                                                    checked={isVendorSelected}
-                                                    onChange={() =>
-                                                        setSelectedVendor({
-                                                          rfqNo: row.rfqNo,
-                                                          vendorCd: vendor.vendorCd,
-                                                          vendorNm: vendor.vendorNm,
-                                                        })
-                                                    }
-                                                    onClick={e => e.stopPropagation()}
-                                                />
-                                              </td>
-
-                                              <td className="px-4 py-2 text-sm text-stone-500 text-center">{vendor.vendorCd}</td>
-                                              <td className="px-4 py-2 text-sm text-stone-500 text-center font-medium">{vendor.vendorNm}</td>
-                                              <td className="px-4 py-2 text-center text-xs">
-                                                <Badge variant={vendor.vnProgressCd === 'RFQC' ? 'blue' : 'gray'}>
-                                                  {vendor.vnProgressNm}
-                                                </Badge>
-                                              </td>
-                                              <td className="px-4 py-2 text-sm text-stone-700 text-right font-semibold">
-                                                {row.progressCd === 'M' ? (
-                                                    <span className="text-stone-400 font-bold tracking-widest text-xs">****</span>
-                                                ) : vendor.totalAmt !== null && vendor.totalAmt !== undefined ? (
-                                                    `₩${formatNumber(vendor.totalAmt)}`
-                                                ) : (
-                                                    '-'
-                                                )}
-                                              </td>
-                                              <td className="px-4 py-2 text-sm text-stone-600 text-center font-medium">
-                                                {vendor.submitDate}
-                                              </td>
-                                              <td className="px-4 py-2 text-center">
-                                                {vendor.selectYn === 'Y' ? <Badge variant="green">선정됨</Badge> : '-'}
-                                              </td>
-                                            </tr>
-                                        );
-                                      })}
-
-                                      {row.vendors.length === 0 && (
-                                          <tr>
-                                            <td colSpan={7} className="py-4 text-center text-xs text-stone-400">
-                                              데이터가 없습니다.
-                                            </td>
-                                          </tr>
-                                      )}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </td>
-                              </tr>
-                          )}
-                        </React.Fragment>
-                    );
-                  })
-              )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <RfqCompareModal
-            isOpen={isCompareModalOpen}
-            rfqNo={compareRfqNo}
-            onClose={() => {
-              setIsCompareModalOpen(false);
-              setCompareRfqNo(null);
-            }}
-        />
-
-        <Modal
-            isOpen={isReasonModalOpen}
-            onClose={() => setIsReasonModalOpen(false)}
-            title="업체 선정 사유 입력"
-            size="md"
-        >
-          <div className="space-y-4">
-            <div className="p-3 bg-blue-50 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>선정 대상:</strong> {selectedVendor?.vendorNm} ({selectedVendor?.vendorCd})
-              </p>
-            </div>
-
-            <Input
-                label="선정 사유"
-                placeholder="선정 사유를 입력하세요"
-                value={selectionReason}
-                onChange={e => setSelectionReason(e.target.value)}
-                required
-            />
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>
-                취소
-              </Button>
-              <Button variant="success" onClick={confirmSelection} disabled={!selectionReason || loading}>
-                최종 선정 확정
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        <Modal
-            isOpen={isRfqDetailOpen}
-            onClose={() => setIsRfqDetailOpen(false)}
-            title="RFQ 상세"
-            size="lg"
-            footer={
-              <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
-                닫기
-              </Button>
-            }
-        >
-          {selectedRfqDetail ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-500">RFQ번호</label>
-                    <p className="font-medium">{selectedRfqDetail?.header?.rfqNum || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500">견적명</label>
-                    <p className="font-medium">{selectedRfqDetail?.header?.rfqSubject || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500">요청일자</label>
-                    <p className="font-medium">
-                      {(selectedRfqDetail?.header?.rfqDate || '')?.split('T')[0] || '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500">담당자</label>
-                    <p className="font-medium">{selectedRfqDetail?.header?.ctrlUserNm || '-'}</p>
-                  </div>
-                </div>
-
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
-                      <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
-                      <th className="p-3 text-right font-semibold text-gray-600">수량</th>
-                      <th className="p-3 text-right font-semibold text-gray-600">단가</th>
-                      <th className="p-3 text-right font-semibold text-gray-600">금액</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {(selectedRfqDetail?.items || []).map((item: any, index: number) => (
-                        <tr key={index} className="border-t">
-                          <td className="p-3">{item.itemCd || '-'}</td>
-                          <td className="p-3">{item.itemDesc || '-'}</td>
-                          <td className="p-3 text-right">{formatNumber(Number(item.rfqQt || 0))}</td>
-                          <td className="p-3 text-right">₩{formatNumber(Number(item.estUnitPrc || 0))}</td>
-                          <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.estAmt || 0))}</td>
-                        </tr>
-                    ))}
-
-                    {(!selectedRfqDetail?.items || selectedRfqDetail.items.length === 0) && (
-                        <tr className="border-t">
-                          <td colSpan={5} className="p-4 text-center text-xs text-gray-400">
-                            품목 정보가 없습니다.
+                                  {row.vendors.length === 0 && (
+                                    <tr>
+                                      <td colSpan={7} className="py-4 text-center text-xs text-stone-400">
+                                        데이터가 없습니다.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
                           </td>
                         </tr>
-                    )}
-                    </tbody>
-                  </table>
-                </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-                <div className="flex justify-end pt-2">
-                  <div className="text-right">
-                    <span className="text-gray-500 mr-4">총 금액:</span>
-                    <span className="text-xl font-bold text-blue-600">
-                  ₩{formatNumber(
-                        Number(
-                            selectedRfqDetail?.items?.reduce(
-                                (sum: number, it: any) => sum + Number(it.estAmt || 0),
-                                0
-                            ) || 0
-                        )
-                    )}
-                </span>
-                  </div>
-                </div>
+      <RfqCompareModal
+        isOpen={isCompareModalOpen}
+        rfqNo={compareRfqNo}
+        onClose={() => {
+          setIsCompareModalOpen(false);
+          setCompareRfqNo(null);
+        }}
+      />
+
+      <Modal
+        isOpen={isReasonModalOpen}
+        onClose={() => setIsReasonModalOpen(false)}
+        title="업체 선정 사유 입력"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-blue-50 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>선정 대상:</strong> {selectedVendor?.vendorNm} ({selectedVendor?.vendorCd})
+            </p>
+          </div>
+
+          <Input
+            label="선정 사유"
+            placeholder="선정 사유를 입력하세요"
+            value={selectionReason}
+            onChange={e => setSelectionReason(e.target.value)}
+            required
+          />
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setIsReasonModalOpen(false)}>
+              취소
+            </Button>
+            <Button variant="success" onClick={confirmSelection} disabled={!selectionReason || loading}>
+              최종 선정 확정
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isRfqDetailOpen}
+        onClose={() => setIsRfqDetailOpen(false)}
+        title="RFQ 상세"
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
+            닫기
+          </Button>
+        }
+      >
+        {selectedRfqDetail ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-500">RFQ번호</label>
+                <p className="font-medium">{selectedRfqDetail?.header?.rfqNum || '-'}</p>
               </div>
-          ) : (
-              <div className="py-10 text-center text-stone-500">상세 데이터가 없습니다.</div>
-          )}
-        </Modal>
-      </div>
+              <div>
+                <label className="text-sm text-gray-500">견적명</label>
+                <p className="font-medium">{selectedRfqDetail?.header?.rfqSubject || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">요청일자</label>
+                <p className="font-medium">
+                  {(selectedRfqDetail?.header?.rfqDate || '')?.split('T')[0] || '-'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500">담당자</label>
+                <p className="font-medium">{selectedRfqDetail?.header?.ctrlUserNm || '-'}</p>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
+                    <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">수량</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">단가</th>
+                    <th className="p-3 text-right font-semibold text-gray-600">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedRfqDetail?.items || []).map((item: any, index: number) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-3">{item.itemCd || '-'}</td>
+                      <td className="p-3">{item.itemDesc || '-'}</td>
+                      <td className="p-3 text-right">{formatNumber(Number(item.rfqQt || 0))}</td>
+                      <td className="p-3 text-right">₩{formatNumber(Number(item.estUnitPrc || 0))}</td>
+                      <td className="p-3 text-right font-medium">₩{formatNumber(Number(item.estAmt || 0))}</td>
+                    </tr>
+                  ))}
+
+                  {(!selectedRfqDetail?.items || selectedRfqDetail.items.length === 0) && (
+                    <tr className="border-t">
+                      <td colSpan={5} className="p-4 text-center text-xs text-gray-400">
+                        품목 정보가 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <span className="text-gray-500 mr-4">총 금액:</span>
+                <span className="text-xl font-bold text-blue-600">
+                  ₩{formatNumber(
+                    Number(
+                      selectedRfqDetail?.items?.reduce(
+                        (sum: number, it: any) => sum + Number(it.estAmt || 0),
+                        0
+                      ) || 0
+                    )
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-stone-500">상세 데이터가 없습니다.</div>
+        )}
+      </Modal>
+    </div>
   );
 }
