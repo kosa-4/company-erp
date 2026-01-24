@@ -538,12 +538,11 @@ export default function ReceivingListPage() {
                       className="w-full px-3 py-2 border rounded-md text-right"
                       onChange={(e) => handleAdjustQuantityChange(parseInt(e.target.value) || 0)}
                     />
-                    <span className="text-sm text-gray-500">{targetItem.unit}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">입고금액</label>
-                  <div className="w-full px-3 py-2 border rounded-md bg-white text-right font-medium">
+                  <div className="w-full px-3 py-2 border rounded-md bg-gray-100 text-right font-medium text-gray-600">
                     ₩{formatNumber(adjustAmount)}
                   </div>
                 </div>
