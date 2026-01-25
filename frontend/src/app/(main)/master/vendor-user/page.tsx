@@ -276,19 +276,19 @@ export default function VendorUserPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-max text-sm">
             <thead className="bg-gray-100 text-gray-600">
               <tr>
-                <th className="p-3"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
-                <th className="p-3">상태</th>
-                <th className="p-3">협력사코드</th>
-                <th className="p-3">협력사명</th>
-                <th className="p-3">담당자ID</th>
-                <th className="p-3">담당자명</th>
-                <th className="p-3">전화번호</th>
-                <th className="p-3">이메일</th>
-                <th className="p-3">등록일</th>
-                <th className="p-3">BLOCK</th>
+                <th className="p-3 whitespace-nowrap"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
+                <th className="p-3 whitespace-nowrap">상태</th>
+                <th className="p-3 whitespace-nowrap">협력사코드</th>
+                <th className="p-3 whitespace-nowrap">협력사명</th>
+                <th className="p-3 whitespace-nowrap">담당자ID</th>
+                <th className="p-3 whitespace-nowrap">담당자명</th>
+                <th className="p-3 whitespace-nowrap">전화번호</th>
+                <th className="p-3 whitespace-nowrap">이메일</th>
+                <th className="p-3 whitespace-nowrap">등록일</th>
+                <th className="p-3 whitespace-nowrap">BLOCK</th>
               </tr>
             </thead>
             <tbody className="divide-y">

@@ -135,33 +135,34 @@ export default function RfqPendingPage() {
           </Button>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max border-collapse">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
-                <th className="w-14 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center" />
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                <th className="w-14 px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap" />
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">
                   PR번호
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left whitespace-nowrap">
                   구매요청명
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">
                   요청일자
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">
                   요청부서
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">
                   요청자
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">
                   구매유형
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-right">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-right whitespace-nowrap">
                   품목수
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-right">
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-right whitespace-nowrap">
                   총금액
                 </th>
               </tr>
@@ -311,6 +312,7 @@ export default function RfqPendingPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
 
