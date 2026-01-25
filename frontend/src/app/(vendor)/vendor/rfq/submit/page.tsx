@@ -292,11 +292,12 @@ export default function VendorRfqSubmitPage() {
           </div>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 w-10">
+                <th className="px-6 py-3 w-10 whitespace-nowrap">
                   <input
                     type="checkbox"
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -304,12 +305,12 @@ export default function VendorRfqSubmitPage() {
                     checked={rfqList.length > 0 && selectedRfqs.length === rfqList.length}
                   />
                 </th>
-                <th className="px-6 py-3 font-medium">견적번호</th>
-                <th className="px-6 py-3 font-medium">견적명</th>
-                <th className="px-6 py-3 font-medium">견적유형</th>
-                <th className="px-6 py-3 font-medium">마감일</th>
-                <th className="px-6 py-3 font-medium text-center">상태</th>
-                <th className="px-6 py-3 font-medium text-center">액션/결과</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">견적번호</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">견적명</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">견적유형</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">마감일</th>
+                <th className="px-6 py-3 font-medium text-center whitespace-nowrap">상태</th>
+                <th className="px-6 py-3 font-medium text-center whitespace-nowrap">액션/결과</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -426,6 +427,7 @@ export default function VendorRfqSubmitPage() {
                 }))}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
 

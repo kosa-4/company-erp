@@ -919,12 +919,13 @@ export default function PurchaseRequestListPage() {
             구매요청 내역이 없습니다.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-max text-sm text-left">
+                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-3.5 text-center w-12"></th>
-                  <th className="px-4 py-3.5 text-center w-12">
+                  <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap"></th>
+                  <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={selectedRows.length === data.filter(row => row.status !== 'APPROVED').length && data.filter(row => row.status !== 'APPROVED').length > 0}
@@ -938,14 +939,14 @@ export default function PurchaseRequestListPage() {
                       className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[100px]">상태</th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[150px]">PR번호</th>
-                  <th className="px-4 py-3.5 font-medium text-left w-[250px]">구매요청명</th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[100px]">구매유형</th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[100px]">요청자</th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[120px]">부서</th>
-                  <th className="px-4 py-3.5 font-medium text-center w-[110px]">요청일</th>
-                  <th className="px-4 py-3.5 font-medium text-right w-[150px]">금액</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[100px] whitespace-nowrap">상태</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[150px] whitespace-nowrap">PR번호</th>
+                  <th className="px-4 py-3.5 font-medium text-left w-[250px] whitespace-nowrap">구매요청명</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[100px] whitespace-nowrap">구매유형</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[100px] whitespace-nowrap">요청자</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[120px] whitespace-nowrap">부서</th>
+                  <th className="px-4 py-3.5 font-medium text-center w-[110px] whitespace-nowrap">요청일</th>
+                  <th className="px-4 py-3.5 font-medium text-right w-[150px] whitespace-nowrap">금액</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1062,7 +1063,8 @@ export default function PurchaseRequestListPage() {
                   </React.Fragment>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         )}
       </Card>

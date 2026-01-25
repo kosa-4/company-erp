@@ -135,7 +135,7 @@ function DataGrid<T extends object>({
   return (
     <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-max">
           <thead>
             <tr className="bg-stone-50 border-b border-stone-200">
               {expandable && <th className="w-10 px-4 py-3.5"></th>}
@@ -157,7 +157,7 @@ function DataGrid<T extends object>({
                   key={column.key.toString()}
                   className={`
                     px-4 ${compact ? 'py-2.5' : 'py-3.5'}
-                    text-xs font-medium text-stone-500 uppercase tracking-wider
+                    text-xs font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap
                     ${getAlignClass(column.align)}
                     ${column.sortable ? 'cursor-pointer hover:bg-stone-100 select-none transition-colors' : ''}
                   `}

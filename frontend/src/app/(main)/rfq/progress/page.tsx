@@ -266,12 +266,13 @@ export default function RfqProgressPage() {
           </div>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max border-collapse">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-200">
-                <th className="w-12 px-4 py-3.5"><div className="w-4" /></th>
-                <th className="w-10 px-4 py-3.5">
+                <th className="w-12 px-4 py-3.5 whitespace-nowrap"><div className="w-4" /></th>
+                <th className="w-10 px-4 py-3.5 whitespace-nowrap">
                   <input
                     type="checkbox"
                     className="w-4 h-4 text-teal-600 rounded"
@@ -279,13 +280,13 @@ export default function RfqProgressPage() {
                     onChange={(e) => setSelectedRfqNums(e.target.checked ? data.map(d => d.rfqNum) : [])}
                   />
                 </th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">RFQ번호</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left">견적명</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">견적유형</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">구매담당자</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">등록일</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">상태</th>
-                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center">제출현황</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">RFQ번호</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-left whitespace-nowrap">견적명</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">견적유형</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">구매담당자</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">등록일</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">상태</th>
+                <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase text-center whitespace-nowrap">제출현황</th>
               </tr>
             </thead>
 
@@ -405,6 +406,7 @@ export default function RfqProgressPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
 
