@@ -190,15 +190,16 @@ export default function VendorNoticePage() {
             등록된 공지사항이 없습니다.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-max text-sm text-left">
+                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-center w-32">공지번호</th>
-                  <th className="px-6 py-3 font-medium">공지명</th>
-                  <th className="px-6 py-3 font-medium text-center w-32">등록일자</th>
-                  <th className="px-6 py-3 font-medium text-center w-24">등록자</th>
-                  <th className="px-6 py-3 font-medium text-center w-48">게시기간</th>
+                  <th className="px-6 py-3 font-medium text-center w-32 whitespace-nowrap">공지번호</th>
+                  <th className="px-6 py-3 font-medium whitespace-nowrap">공지명</th>
+                  <th className="px-6 py-3 font-medium text-center w-32 whitespace-nowrap">등록일자</th>
+                  <th className="px-6 py-3 font-medium text-center w-24 whitespace-nowrap">등록자</th>
+                  <th className="px-6 py-3 font-medium text-center w-48 whitespace-nowrap">게시기간</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -228,7 +229,8 @@ export default function VendorNoticePage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         )}
       </Card>

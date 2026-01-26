@@ -210,8 +210,38 @@ public class PurchaseOrderService {
         // 헤더 등록 (regUserId, ctrlDeptCd 별도 전달)
         purchaseOrderMapper.insertHeader(dto, currentUserId, currentDeptCd);
 
+        // [Refactoring] 규격(Specification) 데이터 무결성 보장
+        // 프론트엔드 전달값 대신 DB 원본(RFQ or PR)에서 규격을 조회하여 덮어씌움
+        Map<String, String> specMap = new HashMap<>();
+        List<RfqSelectedItemDTO> sourceItems = null;
+        // 긴급(E) 또는 단가계약(C) 인 경우 PR 아이템 조회
+        // (Service 로직상 rfqNo가 없으면 prNo를 확인하거나, purchaseType으로 판단)
+        // dto.getRfqNo()가 null이고 dto.getPrNo()가 있으면 PR 참조로 간주
+        if ("E".equals(dto.getPurchaseType()) || "C".equals(dto.getPurchaseType())) {
+            // PR 번호가 있으면 사용
+            if (dto.getPrNo() != null) {
+                sourceItems = purchaseOrderMapper.selectPrItemsAsRfqItems(dto.getPrNo());
+            }
+        } else {
+            // 일반 구매(RFQ 참조)
+            if (dto.getRfqNo() != null) {
+                sourceItems = purchaseOrderMapper.selectRfqSelectedItems(dto.getRfqNo());
+            }
+        }
+
+        if (sourceItems != null) {
+            for (RfqSelectedItemDTO sourceItem : sourceItems) {
+                specMap.put(sourceItem.getItemCode(), sourceItem.getSpecification());
+            }
+        }
+
         // 품목 등록
         for (PurchaseOrderItemDTO item : dto.getItems()) {
+            // DB에서 조회한 규격이 있으면 덮어씌움
+            if (specMap.containsKey(item.getItemCode())) {
+                item.setSpecification(specMap.get(item.getItemCode()));
+            }
+
             item.setPoNo(poNo);
             purchaseOrderMapper.insertItem(item, currentUserId);
         }

@@ -6,7 +6,8 @@
 
     <!-- 선정 완료된 RFQ 목록 조회 -->
     <select id="selectRfqResultList" resultType="com.company.erp.rfq.buyer.result.dto.response.RfqSelectionResultResponse">
-        SELECT h.RFQ_NUM        AS rfqNum,
+        SELECT
+               h.RFQ_NUM        AS rfqNum,
                h.RFQ_SUBJECT    AS rfqSubject,
                h.RFQ_TYPE       AS rfqType,
                c1.CODE_NAME     AS rfqTypeNm,
@@ -16,34 +17,43 @@
                h.CTRL_USER_ID   AS ctrlUserId,
                u.USER_NM        AS ctrlUserNm,
                h.REG_DATE       AS regDate,
-               v.MOD_DATE       AS selectDate
-        FROM RFQHD h
-        INNER JOIN RFQVN v ON h.RFQ_NUM = v.RFQ_NUM 
-            AND v.SELECT_YN = 'Y' 
-            AND v.DEL_FLAG = 'N'
-        INNER JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD
-        LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c1.CODE AND c1.USE_YN = 'Y'
-        LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
-        WHERE h.DEL_FLAG = 'N'
-          AND h.PROGRESS_CD = 'J'
+               h.SELECT_DATE    AS selectDate
+          FROM RFQHD h
+    INNER JOIN RFQVN v
+            ON h.RFQ_NUM = v.RFQ_NUM 
+           AND v.SELECT_YN = 'Y' 
+           AND v.DEL_FLAG = 'N'
+    INNER JOIN VNGL vn
+            ON v.VENDOR_CD = vn.VENDOR_CD
+     LEFT JOIN CODD c1
+            ON c1.CODE_GROUP = 'REQ_TYPE'
+           AND h.RFQ_TYPE = c1.CODE
+           AND c1.USE_YN = 'Y'
+     LEFT JOIN BY_USER u
+            ON h.CTRL_USER_ID = u.USER_ID
+         WHERE h.DEL_FLAG = 'N'
+           AND h.PROGRESS_CD = 'J'
         <if test="rfqNum != null and rfqNum != ''">
-            AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNum}, '%')
+           AND h.RFQ_NUM LIKE CONCAT('%', #{rfqNum}, '%')
         </if>
         <if test="rfqSubject != null and rfqSubject != ''">
-            AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqSubject}, '%')
+           AND h.RFQ_SUBJECT LIKE CONCAT('%', #{rfqSubject}, '%')
         </if>
-        <if test="fromDate != null and fromDate != ''">
-            AND h.REG_DATE &gt;= #{fromDate}
+        <if test="regDate != null and regDate != ''">
+           AND h.REG_DATE &gt;= CONCAT(#{regDate}, ' 00:00:00')
+           AND h.REG_DATE &lt;= CONCAT(#{regDate}, ' 23:59:59')
         </if>
-        <if test="toDate != null and toDate != ''">
-            AND h.REG_DATE &lt;= #{toDate}
+        <if test="selectDate != null and selectDate != ''">
+           AND h.SELECT_DATE &gt;= CONCAT(#{selectDate}, ' 00:00:00')
+           AND h.SELECT_DATE &lt;= CONCAT(#{selectDate}, ' 23:59:59')
         </if>
-        ORDER BY v.MOD_DATE DESC, h.RFQ_NUM DESC
+         ORDER BY h.SELECT_DATE DESC, h.RFQ_NUM DESC
     </select>
 
     <!-- 특정 RFQ의 선정 결과 헤더 조회 -->
     <select id="selectRfqResultHeader" resultType="com.company.erp.rfq.buyer.result.dto.response.RfqSelectionResultResponse">
-        SELECT h.RFQ_NUM        AS rfqNum,
+        SELECT
+               h.RFQ_NUM        AS rfqNum,
                h.RFQ_SUBJECT    AS rfqSubject,
                h.RFQ_TYPE       AS rfqType,
                c1.CODE_NAME     AS rfqTypeNm,
@@ -53,22 +63,29 @@
                h.CTRL_USER_ID   AS ctrlUserId,
                u.USER_NM        AS ctrlUserNm,
                h.REG_DATE       AS regDate,
-               v.MOD_DATE       AS selectDate
-        FROM RFQHD h
-        INNER JOIN RFQVN v ON h.RFQ_NUM = v.RFQ_NUM 
-            AND v.SELECT_YN = 'Y' 
-            AND v.DEL_FLAG = 'N'
-        INNER JOIN VNGL vn ON v.VENDOR_CD = vn.VENDOR_CD
-        LEFT JOIN CODD c1 ON c1.CODE_GROUP = 'REQ_TYPE' AND h.RFQ_TYPE = c1.CODE AND c1.USE_YN = 'Y'
-        LEFT JOIN BY_USER u ON h.CTRL_USER_ID = u.USER_ID
-        WHERE h.RFQ_NUM = #{rfqNum}
-          AND h.PROGRESS_CD = 'J'
-          AND h.DEL_FLAG = 'N'
+               h.SELECT_DATE    AS selectDate
+          FROM RFQHD h
+    INNER JOIN RFQVN v
+            ON h.RFQ_NUM = v.RFQ_NUM 
+           AND v.SELECT_YN = 'Y' 
+           AND v.DEL_FLAG = 'N'
+    INNER JOIN VNGL vn
+            ON v.VENDOR_CD = vn.VENDOR_CD
+     LEFT JOIN CODD c1
+            ON c1.CODE_GROUP = 'REQ_TYPE'
+           AND h.RFQ_TYPE = c1.CODE
+           AND c1.USE_YN = 'Y'
+     LEFT JOIN BY_USER u
+            ON h.CTRL_USER_ID = u.USER_ID
+         WHERE h.RFQ_NUM = #{rfqNum}
+           AND h.PROGRESS_CD = 'J'
+           AND h.DEL_FLAG = 'N'
     </select>
 
     <!-- 선정된 업체의 견적 상세 품목 조회 (RFQDT 기준) -->
     <select id="selectRfqResultItems" resultType="com.company.erp.rfq.buyer.result.dto.response.RfqResultItem">
-        SELECT rd.ITEM_CD       AS itemCd,
+        SELECT
+               rd.ITEM_CD       AS itemCd,
                rd.ITEM_DESC     AS itemNm,
                rd.ITEM_SPEC     AS spec,
                rd.UNIT_CD       AS unit,
@@ -77,17 +94,23 @@
                rvd.QUOTE_AMT    AS amt,
                rvd.DELY_DATE    AS dlvyDate,
                rvd.RMK          AS rmk
-        FROM RFQHD rh
-        INNER JOIN RFQDT rd ON rh.RFQ_NUM = rd.RFQ_NUM AND rd.DEL_FLAG = 'N'
-        INNER JOIN RFQVN rv ON rh.RFQ_NUM = rv.RFQ_NUM AND rv.SELECT_YN = 'Y' AND rv.DEL_FLAG = 'N'
-        LEFT JOIN RFQVNDT rvd ON rd.RFQ_NUM = rvd.RFQ_NUM 
-             AND rd.LINE_NO = rvd.LINE_NO 
-             AND rvd.VENDOR_CD = rv.VENDOR_CD 
-             AND rvd.DEL_FLAG = 'N'
-        WHERE rh.RFQ_NUM = #{rfqNum}
-          AND rh.PROGRESS_CD = 'J'
-          AND rh.DEL_FLAG = 'N'
-        ORDER BY rd.LINE_NO ASC, rd.ITEM_CD ASC
+          FROM RFQHD rh
+    INNER JOIN RFQDT rd
+            ON rh.RFQ_NUM = rd.RFQ_NUM
+           AND rd.DEL_FLAG = 'N'
+    INNER JOIN RFQVN rv
+            ON rh.RFQ_NUM = rv.RFQ_NUM
+           AND rv.SELECT_YN = 'Y'
+           AND rv.DEL_FLAG = 'N'
+     LEFT JOIN RFQVNDT rvd
+            ON rd.RFQ_NUM = rvd.RFQ_NUM 
+           AND rd.LINE_NO = rvd.LINE_NO 
+           AND rvd.VENDOR_CD = rv.VENDOR_CD 
+           AND rvd.DEL_FLAG = 'N'
+         WHERE rh.RFQ_NUM = #{rfqNum}
+           AND rh.PROGRESS_CD = 'J'
+           AND rh.DEL_FLAG = 'N'
+         ORDER BY rd.LINE_NO ASC, rd.ITEM_CD ASC
     </select>
 
 </mapper>

@@ -23,7 +23,7 @@ const vendorNavigationItems: NavItem[] = [
     href: '/vendor/mypage',
     icon: '👤',
     children: [
-      { name: '프로필', href: '/vendor/mypage/profile' },
+      { name: '내 정보 수정', href: '/vendor/mypage/profile' },
       { name: '공지사항', href: '/vendor/mypage/notice' },
     ],
   },

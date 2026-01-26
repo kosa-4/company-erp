@@ -108,4 +108,24 @@ public interface GoodsReceiptMapper {
          * - 기존 GR이 있으면 해당 GR번호와 저장위치 반환
          */
         Map<String, Object> selectExistingGrByPoNo(@Param("poNo") String poNo);
+
+        /**
+         * PO 번호와 품목 코드로 기존 GR 번호 조회 (PO, Item 기준 유일한 활성 GR 찾기)
+         */
+        String selectExistingGrByPoAndItem(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
+
+        /**
+         * PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용)
+         */
+        String selectWarehouseByPoAndItem(@Param("poNo") String poNo, @Param("itemCode") String itemCode);
+
+        /**
+         * 특정 GR의 입고수량 합계 조회 (정상 상태만)
+         */
+        BigDecimal selectGrAccumulatedQty(@Param("grNo") String grNo);
+
+        /**
+         * 특정 GR에 속한 품목들의 발주수량 합계 조회
+         */
+        BigDecimal selectGrOrderQty(@Param("grNo") String grNo);
 }

@@ -36,6 +36,9 @@ public interface VendorMapper {
     // 9. 회사 코드로 마스터 테이블 회사 정보 조회
     VendorRegisterDto selectVendorVNGLByVendorCode(String vendorCode);
 
+    // 10. 요청 번호로 회사 코드 조회
+    String selectVendorCodeByAskNum(String askNum);
+
     /* 수정 */
     int updateVendorVNGL(VendorUpdateDto vendorUpdateDto);
 

@@ -2,5 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.company.erp.common.signup.mapper.SignUpMapper">
-
+    <select id="countVNCHByAskNumAndVendorCode" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            VNCH
+        WHERE
+            ASK_NUM = #{askNum}
+        AND
+            VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </select>
 </mapper>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.company.erp.common.dashboard.vendor.mapper.VendorDashboardMapper">
+
+    <select id="getDashboardStats" resultType="com.company.erp.common.dashboard.vendor.dto.response.VendorDashboardStatsResponse">
+        SELECT
+            (SELECT COUNT(*) FROM rfqvn WHERE vendor_cd = #{vendorCd} AND progress_cd IN ('RFQS', 'RFQJ')) as waitingRfqCount,
+            (SELECT COUNT(*) FROM rfqvn WHERE vendor_cd = #{vendorCd} AND progress_cd = 'RFQC') as submittedRfqCount,
+            (SELECT COUNT(*) FROM pohd WHERE vendor_cd = #{vendorCd} AND progress_cd = 'S') as receivedPoCount,
+            (SELECT COUNT(*) FROM rfqvn WHERE vendor_cd = #{vendorCd} AND select_yn = 'Y') as selectedRfqCount,
+            (SELECT COUNT(*) FROM rfqvn WHERE vendor_cd = #{vendorCd} AND progress_cd = 'RFQS') as pendingActionCount
+    </select>
+
+    <select id="getRecentActivities" resultType="com.company.erp.common.dashboard.buyer.dto.response.RecentActivityResponse">
+        SELECT * FROM (
+            SELECT 'rfq' as type, 
+                   (SELECT rfq_subject FROM rfqhd WHERE rfq_num = v.rfq_num) as title,
+                   CONCAT('상태: ', (SELECT code_name FROM codd WHERE code_group = 'PROGRESS_CD' AND code = v.progress_cd)) as description,
+                   reg_date as regDate 
+            FROM rfqvn v WHERE vendor_cd = #{vendorCd}
+            UNION ALL
+            SELECT 'order' as type, 
+                   po_subject as title, 
+                   CONCAT('발주번호: ', po_num) as description, 
+                   reg_date as regDate 
+            FROM pohd WHERE vendor_cd = #{vendorCd}
+        ) activities
+        ORDER BY regDate DESC
+        LIMIT 5
+    </select>
+
+</mapper>

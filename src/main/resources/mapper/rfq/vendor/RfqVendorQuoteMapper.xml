@@ -5,50 +5,123 @@
 
     <!-- 견적 헤더 정보 조회 -->
     <select id="selectQuoteHeader"
-        resultType="com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse"> SELECT
-        h.RFQ_NUM as rfqNum, h.RFQ_SUBJECT as rfqSubject, h.RFQ_DATE as rfqDate, h.REQ_CLOSE_DATE as
-        reqCloseDate, h.PROGRESS_CD as progressCd, v.PROGRESS_CD as vendorProgressCd FROM rfqhd h
-        INNER JOIN rfqvn v ON h.RFQ_NUM = v.RFQ_NUM WHERE h.RFQ_NUM = #{rfqNum} AND v.VENDOR_CD =
-        #{vendorCd} AND h.DEL_FLAG = 'N' AND v.DEL_FLAG = 'N' </select>
+            resultType="com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse">
+        SELECT
+               h.RFQ_NUM        AS rfqNum,
+               h.RFQ_SUBJECT    AS rfqSubject,
+               h.RFQ_DATE       AS rfqDate,
+               h.REQ_CLOSE_DATE AS reqCloseDate,
+               h.PROGRESS_CD    AS progressCd,
+               v.PROGRESS_CD    AS vendorProgressCd
+          FROM RFQHD h
+    INNER JOIN RFQVN v
+            ON h.RFQ_NUM = v.RFQ_NUM
+         WHERE h.RFQ_NUM = #{rfqNum}
+           AND v.VENDOR_CD = #{vendorCd}
+           AND h.DEL_FLAG = 'N'
+           AND v.DEL_FLAG = 'N'
+    </select>
 
     <!-- 견적 품목 목록 조회 (RFQDT + RFQVNDT 조인) -->
     <select id="selectQuoteItems"
-        resultType="com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse$QuoteItemInfo">
-        SELECT d.LINE_NO as lineNo, d.ITEM_CD as itemCd, d.ITEM_DESC as itemDesc, d.ITEM_SPEC as
-        itemSpec, d.UNIT_CD as unitCd, d.RFQ_QT as rfqQt, vd.QUOTE_UNIT_PRC as
-        quoteUnitPrc, COALESCE(vd.QUOTE_QT, d.RFQ_QT) as quoteQt, vd.QUOTE_AMT as
-        quoteAmt, vd.DELY_DATE as delyDate, vd.RMK as rmk FROM rfqdt d LEFT JOIN rfqvndt vd ON
-        d.RFQ_NUM = vd.RFQ_NUM AND d.LINE_NO = vd.LINE_NO AND vd.VENDOR_CD = #{vendorCd} AND
-        vd.DEL_FLAG = 'N' WHERE d.RFQ_NUM = #{rfqNum} AND d.DEL_FLAG = 'N' ORDER BY d.LINE_NO </select>
+            resultType="com.company.erp.rfq.vendor.quote.dto.response.VendorQuoteResponse$QuoteItemInfo">
+        SELECT
+               d.LINE_NO                       AS lineNo,
+               d.ITEM_CD                       AS itemCd,
+               d.ITEM_DESC                     AS itemDesc,
+               d.ITEM_SPEC                     AS itemSpec,
+               d.UNIT_CD                       AS unitCd,
+               d.RFQ_QT                        AS rfqQt,
+               vd.QUOTE_UNIT_PRC               AS quoteUnitPrc,
+               COALESCE(vd.QUOTE_QT, d.RFQ_QT) AS quoteQt,
+               vd.QUOTE_AMT                    AS quoteAmt,
+               d.DELY_DATE                     AS delyDate,
+               vd.RMK                          AS rmk
+          FROM RFQDT d
+     LEFT JOIN RFQVNDT vd
+            ON d.RFQ_NUM = vd.RFQ_NUM
+           AND d.LINE_NO = vd.LINE_NO
+           AND vd.VENDOR_CD = #{vendorCd}
+           AND vd.DEL_FLAG = 'N'
+         WHERE d.RFQ_NUM = #{rfqNum}
+           AND d.DEL_FLAG = 'N'
+         ORDER BY d.LINE_NO
+    </select>
 
     <!-- RFQVNDT 존재 여부 확인 -->
-    <select id="countRfqVndt" resultType="int"> SELECT COUNT(*) FROM rfqvndt WHERE RFQ_NUM =
-        #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </select>
+    <select id="countRfqVndt" resultType="int">
+        SELECT
+               COUNT(*)
+          FROM RFQVNDT
+         WHERE RFQ_NUM = #{rfqNum}
+           AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
+    </select>
 
     <!-- RFQDT에서 RFQVNDT로 초기 복사 -->
-    <insert id="insertRfqVndtFromRfqdt"> INSERT INTO rfqvndt ( RFQ_NUM, LINE_NO, VENDOR_CD,
-        REG_DATE, REG_USER_ID, DEL_FLAG, QUOTE_UNIT_PRC, QUOTE_QT, QUOTE_AMT, DELY_DATE, SELECT_YN,
-        RMK ) SELECT RFQ_NUM, LINE_NO, #{vendorCd}, NOW(), #{userId}, 'N', NULL, RFQ_QT, NULL, NULL, 'N',
-        NULL FROM rfqdt WHERE RFQ_NUM = #{rfqNum} AND DEL_FLAG = 'N' </insert>
+    <insert id="insertRfqVndtFromRfqdt">
+        INSERT INTO RFQVNDT (
+            RFQ_NUM, LINE_NO, VENDOR_CD,
+            REG_DATE, REG_USER_ID, DEL_FLAG, QUOTE_UNIT_PRC, QUOTE_QT, QUOTE_AMT, DELY_DATE, SELECT_YN,
+            RMK
+        )
+        SELECT
+               RFQ_NUM, LINE_NO, #{vendorCd}, NOW(), #{userId}, 'N', NULL, RFQ_QT, NULL, NULL, 'N',
+               NULL
+          FROM RFQDT
+         WHERE RFQ_NUM = #{rfqNum}
+           AND DEL_FLAG = 'N'
+    </insert>
 
     <!-- RFQVNDT 품목 업데이트 -->
-    <update id="updateRfqVndtItem"> UPDATE rfqvndt SET QUOTE_UNIT_PRC = #{quoteUnitPrc},
-        QUOTE_QT = #{quoteQt}, QUOTE_AMT = #{quoteAmt}, DELY_DATE = #{delyDate}, RMK
-        = #{rmk}, MOD_DATE = NOW(), MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND
-        LINE_NO = #{lineNo} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </update>
+    <update id="updateRfqVndtItem">
+        UPDATE RFQVNDT
+           SET QUOTE_UNIT_PRC = #{quoteUnitPrc},
+               QUOTE_QT       = #{quoteQt},
+               QUOTE_AMT      = #{quoteAmt},
+               DELY_DATE      = #{delyDate},
+               RMK            = #{rmk},
+               MOD_DATE       = NOW(),
+               MOD_USER_ID    = #{userId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND LINE_NO = #{lineNo}
+           AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
+    </update>
 
     <!-- RFQVN 상태 및 총액 업데이트 -->
-    <update id="updateRfqVnStatusAndAmount"> UPDATE rfqvn SET PROGRESS_CD = #{progressCd}, TOTAL_AMT
-        = #{totalAmt}, <if test="progressCd == 'RFQC'"> SUBMIT_DATE = NOW(), </if> MOD_DATE = NOW(),
-        MOD_USER_ID = #{userId} WHERE RFQ_NUM = #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG =
-        'N' </update>
+    <update id="updateRfqVnStatusAndAmount">
+        UPDATE RFQVN
+           SET PROGRESS_CD = #{progressCd},
+               TOTAL_AMT   = #{totalAmt},
+               <if test="progressCd == 'RFQC'">
+               SUBMIT_DATE = NOW(),
+               </if>
+               MOD_DATE    = NOW(),
+               MOD_USER_ID = #{userId}
+         WHERE RFQ_NUM = #{rfqNum}
+           AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
+    </update>
 
     <!-- RFQVN 상태 조회 -->
-    <select id="selectRfqVnStatus" resultType="map"> SELECT PROGRESS_CD as progressCd, SELECT_YN as
-        selectYn FROM rfqvn WHERE RFQ_NUM = #{rfqNum} AND VENDOR_CD = #{vendorCd} AND DEL_FLAG = 'N' </select>
+    <select id="selectRfqVnStatus" resultType="map">
+        SELECT
+               PROGRESS_CD AS progressCd,
+               SELECT_YN   AS selectYn
+          FROM RFQVN
+         WHERE RFQ_NUM = #{rfqNum}
+           AND VENDOR_CD = #{vendorCd}
+           AND DEL_FLAG = 'N'
+    </select>
 
     <!-- RFQHD 상태 조회 -->
-    <select id="selectRfqHdStatus" resultType="string"> SELECT PROGRESS_CD FROM rfqhd WHERE RFQ_NUM
-        = #{rfqNum} AND DEL_FLAG = 'N' </select>
+    <select id="selectRfqHdStatus" resultType="string">
+        SELECT
+               PROGRESS_CD
+          FROM RFQHD
+         WHERE RFQ_NUM = #{rfqNum}
+           AND DEL_FLAG = 'N'
+    </select>
 
 </mapper>

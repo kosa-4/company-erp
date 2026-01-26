@@ -29,5 +29,6 @@ public class RfqProgressGroupResponse {
         private String progressNm;
         private String sendDate;
         private String submitDate;
+        private String selectYn;
     }
 }

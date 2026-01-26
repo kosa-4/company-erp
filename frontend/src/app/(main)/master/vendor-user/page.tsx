@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { PageHeader } from '@/components/ui';
 
 // 백엔드 VendorUserListDto와 인터페이스 일치화
 interface VendorUser {
@@ -39,7 +40,7 @@ export default function VendorUserPage() {
   }, []);
 
   // 데이터 조회 로직
-  const fetchVendorUsers = async (params = searchParams) => {
+  const fetchVendorUsers = React.useCallback(async (params = searchParams) => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams();
@@ -62,17 +63,19 @@ export default function VendorUserPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetchVendorUsers();
+  }, [fetchVendorUsers]);
 
   const handleSearch = () => fetchVendorUsers();
 
   const handleReset = () => {
-    const resetParams = {
+    setSearchParams({
       vendorCode: '', vendorName: '', userId: '', userName: '',
       blockFlag: '', startDate: '', endDate: '', phone: '',
-    };
-    setSearchParams(resetParams);
-    fetchVendorUsers(resetParams);
+    });
   };
 
   // 상태 배지 컴포넌트
@@ -90,7 +93,7 @@ export default function VendorUserPage() {
   // 체크박스 로직
   const toggleRow = (user: VendorUser) => {
     const isSelected = selectedRows.some(row => row.userId === user.userId && row.askUserNum === user.askUserNum);
-    setSelectedRows(isSelected 
+    setSelectedRows(isSelected
       ? selectedRows.filter(row => !(row.userId === user.userId && row.askUserNum === user.askUserNum))
       : [...selectedRows, user]
     );
@@ -110,7 +113,7 @@ export default function VendorUserPage() {
     if (invalidUser) {
       const statusText = invalidUser.status === 'A' ? '이미 승인된' : '이미 반려된';
       const actionText = type === 'approve' ? '승인' : '반려';
-      
+
       // 여기서 return을 하기 때문에 아래 confirm 창은 절대 뜨지 않습니다.
       return alert(
         `[작업 불가]\n\n` +
@@ -123,7 +126,7 @@ export default function VendorUserPage() {
     // 2. 모든 데이터가 검증을 통과했을 때만 실행
     const actionLabel = type === 'approve' ? '승인' : '반려';
     if (!confirm(`선택한 ${selectedRows.length}건을 정말로 ${actionLabel}하시겠습니까?`)) return;
-    
+
 
     try {
       const response = await fetch(`/api/v1/vendor-users/${type}`, {
@@ -157,9 +160,15 @@ export default function VendorUserPage() {
 
     const user = selectedRows[0];
 
-    // 2. 상태 체크 (정상 'A' 또는 반려 'R'인 경우만 수정 가능)
-    if (user.status !== 'A' && user.status !== 'R') {
-      return alert("정상(A) 또는 반려(R) 상태인 사용자만 수정할 수 있습니다.");
+    // [수정됨] 2-1. 반려(R) 상태 체크: 수정 불가 처리
+    if (user.status === 'R') {
+      return alert("반려된 사용자는 수정이 불가능합니다.");
+    }
+
+    // [수정됨] 2-2. 상태 체크: 이제 '정상(A)' 상태만 수정 가능
+    // (기존에는 A와 R이 가능했으나, R은 위에서 막혔으므로 A만 허용)
+    if (user.status !== 'A') {
+      return alert("정상(A) 상태인 사용자만 수정할 수 있습니다.\n(신규/변경 신청 건은 승인 또는 반려 처리를 해주세요.)");
     }
 
     // 3. 데이터 복사 및 모달 오픈
@@ -195,12 +204,12 @@ export default function VendorUserPage() {
 
       // 4. 성공 처리
       alert('정보 수정 요청이 완료되었습니다.');
-      
+
       // 모달 닫고 상태 초기화
       setIsEditModalOpen(false);
       setEditUserData(null);
       setSelectedRows([]); // 체크박스 선택 해제
-      
+
       // 목록 다시 불러오기
       await fetchVendorUsers();
 
@@ -213,22 +222,30 @@ export default function VendorUserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header 영역 생략 (동일) */}
-      
+    <div>
+      <PageHeader
+        title="협력업체 사용자 관리"
+        subtitle="협력업체 사용자 계정을 조회하고 관리합니다."
+        icon={
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        }
+      />
+
       {/* Search Panel */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <Input label="담당자ID" value={searchParams.userId} onChange={v => setSearchParams(p => ({...p, userId: v}))} />
-          <Input label="담당자명" value={searchParams.userName} onChange={v => setSearchParams(p => ({...p, userName: v}))} />
-          <Input label="협력 업체 코드" value={searchParams.vendorCode} onChange={v => setSearchParams(p => ({...p, vendorCode: v}))} />
-          <Input label="협력 업체명" value={searchParams.vendorName} onChange={v => setSearchParams(p => ({...p, vendorName: v}))} />
+          <Input label="담당자ID" value={searchParams.userId} onChange={v => setSearchParams(p => ({ ...p, userId: v }))} />
+          <Input label="담당자명" value={searchParams.userName} onChange={v => setSearchParams(p => ({ ...p, userName: v }))} />
+          <Input label="협력사 코드" value={searchParams.vendorCode} onChange={v => setSearchParams(p => ({ ...p, vendorCode: v }))} />
+          <Input label="협력사명" value={searchParams.vendorName} onChange={v => setSearchParams(p => ({ ...p, vendorName: v }))} />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">BLOCK여부</label>
-            <select 
+            <select
               className="w-full px-3 py-2 border rounded-md"
               value={searchParams.blockFlag}
-              onChange={e => setSearchParams(p => ({...p, blockFlag: e.target.value}))}
+              onChange={e => setSearchParams(p => ({ ...p, blockFlag: e.target.value }))}
             >
               <option value="">전체</option>
               <option value="Y">Y</option>
@@ -247,8 +264,8 @@ export default function VendorUserPage() {
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <h2 className="font-bold text-gray-700">사용자 목록 ({vendorUsers.length}건)</h2>
           <div className="flex gap-2">
-            <button 
-              onClick={handleEditClick} 
+            <button
+              onClick={handleEditClick}
               className="px-3 py-1.5 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
               disabled={selectedRows.length !== 1} // 한 건이 아닐 때 시각적 비활성화
             >
@@ -259,19 +276,19 @@ export default function VendorUserPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-max text-sm">
             <thead className="bg-gray-100 text-gray-600">
               <tr>
-                <th className="p-3"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
-                <th className="p-3">상태</th>
-                <th className="p-3">협력사코드</th>
-                <th className="p-3">협력사명</th>
-                <th className="p-3">담당자ID</th>
-                <th className="p-3">담당자명</th>
-                <th className="p-3">전화번호</th>
-                <th className="p-3">이메일</th>
-                <th className="p-3">등록일</th>
-                <th className="p-3">BLOCK</th>
+                <th className="p-3 whitespace-nowrap"><input type="checkbox" onChange={toggleAll} checked={selectedRows.length === vendorUsers.length && vendorUsers.length > 0} /></th>
+                <th className="p-3 whitespace-nowrap">상태</th>
+                <th className="p-3 whitespace-nowrap">협력사코드</th>
+                <th className="p-3 whitespace-nowrap">협력사명</th>
+                <th className="p-3 whitespace-nowrap">담당자ID</th>
+                <th className="p-3 whitespace-nowrap">담당자명</th>
+                <th className="p-3 whitespace-nowrap">전화번호</th>
+                <th className="p-3 whitespace-nowrap">이메일</th>
+                <th className="p-3 whitespace-nowrap">등록일</th>
+                <th className="p-3 whitespace-nowrap">BLOCK</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -287,7 +304,9 @@ export default function VendorUserPage() {
                   <td className="p-3 text-center">{user.userName}</td>
                   <td className="p-3 text-center">{user.phone}</td>
                   <td className="p-3">{user.email}</td>
-                  <td className="p-3 text-center text-gray-500">{user.createdAt}</td>
+                  <td className="p-3 text-center text-gray-500">
+                    {user.createdAt ? user.createdAt.substring(0, 10) : '-'}
+                  </td>
                   <td className="p-3 text-center">
                     <span className={user.blockFlag === 'Y' ? 'text-red-600 font-bold' : 'text-gray-400'}>{user.blockFlag}</span>
                   </td>
@@ -321,37 +340,37 @@ export default function VendorUserPage() {
 
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  
-                  <Input 
-                    label="담당자ID" 
-                    value={editUserData.userId} 
-                    onChange={() => {}} 
-                    readOnly={true} 
-                    className="bg-gray-100" 
+
+                  <Input
+                    label="담당자ID"
+                    value={editUserData.userId}
+                    onChange={() => { }}
+                    readOnly={true}
+                    className="bg-gray-100"
                   />
-                  <Input 
-                    label="담당자명" 
-                    value={editUserData.userName} 
-                    onChange={v => setEditUserData(p => p ? ({...p, userName: v}) : null)} 
+                  <Input
+                    label="담당자명"
+                    value={editUserData.userName}
+                    onChange={v => setEditUserData(p => p ? ({ ...p, userName: v }) : null)}
                   />
-                  <Input 
-                    label="전화번호" 
-                    value={editUserData.phone} 
-                    onChange={v => setEditUserData(p => p ? ({...p, phone: v}) : null)} 
+                  <Input
+                    label="전화번호"
+                    value={editUserData.phone}
+                    onChange={v => setEditUserData(p => p ? ({ ...p, phone: v }) : null)}
                   />
-                  <Input 
-                    label="이메일" 
-                    value={editUserData.email} 
-                    onChange={v => setEditUserData(p => p ? ({...p, email: v}) : null)} 
+                  <Input
+                    label="이메일"
+                    value={editUserData.email}
+                    onChange={v => setEditUserData(p => p ? ({ ...p, email: v }) : null)}
                   />
-                  
+
                   {/* [핵심] blockFlag 선택 박스 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">차단여부(BLOCK)</label>
-                    <select 
+                    <select
                       className="w-full px-3 py-2 border rounded-md outline-none focus:ring-1 focus:ring-blue-500"
                       value={editUserData.blockFlag}
-                      onChange={e => setEditUserData(p => p ? ({...p, blockFlag: e.target.value as 'Y' | 'N'}) : null)}
+                      onChange={e => setEditUserData(p => p ? ({ ...p, blockFlag: e.target.value as 'Y' | 'N' }) : null)}
                     >
                       <option value="N">N (정상)</option>
                       <option value="Y">Y (차단)</option>
@@ -363,14 +382,14 @@ export default function VendorUserPage() {
 
             {/* Footer (검색 패널 버튼 스타일 참고) */}
             <div className="p-4 border-t bg-gray-50 flex gap-2 justify-end">
-              <button 
-                onClick={() => setIsEditModalOpen(false)} 
+              <button
+                onClick={() => setIsEditModalOpen(false)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
               >
                 취소
               </button>
-              <button 
-                onClick={updateVendorUser} 
+              <button
+                onClick={updateVendorUser}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 수정 저장
@@ -381,40 +400,40 @@ export default function VendorUserPage() {
       )}
 
     </div>
-    
+
   );
-  
+
 }
 
 // 재사용 가능한 입력 컴포넌트
 // 컴포넌트 하단에 있는 Input 함수를 이 코드로 덮어쓰세요
-function Input({ 
-    label, 
-    value, 
-    onChange, 
-    type = "text", 
-    readOnly = false, // 새로 추가
-    className = ""    // 새로 추가
-  }: { 
-    label: string; 
-    value: string; 
-    onChange: (v: string) => void; 
-    type?: string; 
-    readOnly?: boolean; // 타입 정의 추가
-    className?: string; // 타입 정의 추가
-  }) {
-    return (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <input 
-          type={type}
-          readOnly={readOnly} // 여기에 적용
-          className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 outline-none 
+function Input({
+  label,
+  value,
+  onChange,
+  type = "text",
+  readOnly = false, // 새로 추가
+  className = ""    // 새로 추가
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  readOnly?: boolean; // 타입 정의 추가
+  className?: string; // 타입 정의 추가
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        readOnly={readOnly} // 여기에 적용
+        className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-blue-500 outline-none 
             ${readOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'} 
             ${className}`} // 여기에 적용
-          value={value || ''} 
-          onChange={e => !readOnly && onChange(e.target.value)} 
-        />
-      </div>
-    );
-  }
+        value={value || ''}
+        onChange={e => !readOnly && onChange(e.target.value)}
+      />
+    </div>
+  );
+}

@@ -10,6 +10,7 @@ export interface GoodsReceiptDTO {
   remark?: string;
   vendorName?: string;
   ctrlUserName?: string;
+  poStatus?: string; // 발주 상태 (종결 여부 확인용)
   items?: GoodsReceiptItemDTO[];
 }
 
@@ -38,6 +39,7 @@ export interface GoodsReceiptItemDTO {
 // 입고대상(PO) 조회용 타입 (PurchaseOrderDTO 축소형)
 export interface PendingPODTO {
   rfqNo?: string;
+  prNo?: string;
   poNo?: string;
   poName?: string;
   poDate?: string;
@@ -55,6 +57,7 @@ export interface PendingPODTO {
     unitPrice?: number;
     amount?: number;
     storageLocation?: string;
+    existingGrWarehouse?: string; // 기존 GR의 저장위치 (있으면 저장위치 고정)
   }>;
 }
 

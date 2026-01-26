@@ -58,7 +58,7 @@ public class RfqProgressService {
         // 헤더 상태 변경 (T -> RFQS)
         int hdUpdated = mapper.updateRfqStatus(rfqNum, "RFQS", userId);
         if (hdUpdated != 1) {
-            throw new IllegalStateException("전송 가능한 상태(임시저장)가 아니거나 권한이 없습니다.");
+            throw new IllegalStateException("전송 가능한 상태(임시저장)가 아닙니다.");
         }
 
         // 모든 협력사 상태 변경
@@ -72,7 +72,7 @@ public class RfqProgressService {
     public void closeRfq(String rfqNum, String userId) {
         int updated = mapper.updateRfqStatus(rfqNum, "M", userId);
         if (updated != 1) {
-            throw new IllegalStateException("마감 가능한 상태(발송/진행)가 아니거나 권한이 없습니다.");
+            throw new IllegalStateException("마감 가능한 상태(발송/진행)가 아닙니다.");
         }
     }
 

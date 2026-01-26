@@ -21,6 +21,7 @@ public class GoodsReceiptDTO {
     private String vendorName; // 협력사명
     private String ctrlUserName; // 대표 담당자명 (첫 DT 기준 또는 등록자)
     private String ctrlDeptCd; // 담당자 부서 - DB: CTRL_DEPT_CD
+    private String poStatus; // 발주 상태 (종결 여부 확인용)
 
     // === 상세 ===
     private List<GoodsReceiptItemDTO> items;

@@ -292,6 +292,20 @@ public class PrService {
         }
     }
 
+    //반려 상태 확인 메서드
+    private boolean isRejectedStatus(String progressCd) {
+        if (progressCd == null || progressCd.isEmpty()) {
+            return false;
+        }
+        
+        try {
+            String codeName = prMapper.selectProgressCdName(progressCd);
+            return "반려".equals(codeName);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("진행 상태 조회에 실패하였습니다.");
+        }
+    }
+
     //구매요청 헤더 수정 (구매요청명, 구매유형만)
     @Transactional
     public void updatePr(String prNum, String prSubject, String pcType, String userId) {
@@ -308,6 +322,14 @@ public class PrService {
         String progressCd = prHd.getProgressCd();
         if (progressCd != null && isApprovedStatus(progressCd)) {
             throw new IllegalStateException("승인된 구매요청은 수정할 수 없습니다.");
+        }
+
+        // 반려 상태인 경우 임시저장으로 상태 변경
+        if (progressCd != null && isRejectedStatus(progressCd)) {
+            int statusUpdatedRows = prMapper.updatePrProgressToTemp(prNum);
+            if (statusUpdatedRows == 0) {
+                throw new IllegalStateException("구매요청 상태 변경에 실패했습니다.");
+            }
         }
 
         // 구매유형을 한글에서 코드로 변환하여 저장
@@ -333,6 +355,14 @@ public class PrService {
         String progressCd = prHd.getProgressCd();
         if (progressCd != null && isApprovedStatus(progressCd)) {
             throw new IllegalStateException("승인된 구매요청은 수정할 수 없습니다.");
+        }
+
+        // 반려 상태인 경우 임시저장으로 상태 변경
+        if (progressCd != null && isRejectedStatus(progressCd)) {
+            int statusUpdatedRows = prMapper.updatePrProgressToTemp(prNum);
+            if (statusUpdatedRows == 0) {
+                throw new IllegalStateException("구매요청 상태 변경에 실패했습니다.");
+            }
         }
 
         // 헤더 수정
@@ -370,6 +400,20 @@ public class PrService {
             // 헤더 총액 업데이트
             prMapper.updatePrHdAmount(prNum, totalAmt);
         }
+    }
+
+    // 부서 목록 조회 (숫자 제거, 중복 제거)
+    public List<String> selectDeptNameList(SessionUser user) {
+        // 구매팀 여부 확인
+        boolean isBuyerDept = false;
+        String userDeptCd = user.getDeptCd();
+        
+        // 구매사인 경우만 권한 체크
+        if ("B".equals(user.getComType()) && userDeptCd != null && !userDeptCd.isEmpty()) {
+            isBuyerDept = prMapper.isBuyerDept(userDeptCd);
+        }
+        
+        return prMapper.selectDeptNameList(userDeptCd, isBuyerDept);
     }
 
 }

@@ -3,6 +3,9 @@ package com.company.erp.master.vendor.service;
 import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.file.exception.FileException;
+import com.company.erp.common.file.model.AttFileEntity;
+import com.company.erp.common.file.service.FileService;
+import com.company.erp.common.session.SessionUser;
 import com.company.erp.master.vendor.dto.*;
 import com.company.erp.master.vendor.mapper.VendorMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +24,11 @@ public class VendorService {
     @Autowired
     VendorMapper vendorMapper;
 
-
     @Autowired
     DocNumService docNumService;
+
+    @Autowired
+    FileService fileService;
 
     /* 조회 */
     public VendorResponseDto<VendorListDto> getVendorList(VendorSearchDto vendorSearchDto) {
@@ -40,17 +45,40 @@ public class VendorService {
     }
     
     // 2. 회사 코드로 파일 번호 조회
-    public List<String> getFileNumByVendorCode(String vendorCode) {
+    public List<AttFileEntity> getFilesByVendorCode(String vendorCode, SessionUser loginUser) {
+        
+        // 1. 협력사 직원일 경우 자신의 회사만 조회 가능
+        if ("VENDOR".equals(loginUser.getRole())) {
+            if (!vendorCode.equals(loginUser.getVendorCd())) {
+                throw new IllegalStateException("해당 정보에 접근 권한이 없습니다.");
+            }
+        }
+        
+        // 2. 파일 번호 조회
         List<String> fileNumList = vendorMapper.selectFileNumByVendorCode(vendorCode);
-//        if(fileNumList.isEmpty()){
-//            throw new FileException("검색 결과가 없습니다.");
-//        }
-        return (fileNumList != null) ?  fileNumList : new ArrayList<>();
+
+        // 3. 조회한 파일 정보 리스트
+        List<AttFileEntity> files = new ArrayList<>();
+
+        // 4. 상세 정보 조회 후 저장
+        for(String fileNum : fileNumList){
+            AttFileEntity file = fileService.getFileInfo(fileNum, loginUser);
+            if (file != null) {
+                files.add(file);
+            }
+        }
+
+        return files;
     }
     
     // 3. 대기 테이블에서 최신 수정 요청 데이터 조회
-    public VendorRegisterDto getVendorByVendorCode(String vendorCode) {
+    public VendorRegisterDto getVendorVNCHByVendorCode(String vendorCode) {
         return vendorMapper.selectVendorVNCHByVendorCode(vendorCode);
+    }
+
+    // 4. 마스터 테이블에서 이전 데이터 조회
+    public VendorRegisterDto getVendorVNGLByVendorCode(String vendorCode) {
+        return vendorMapper.selectVendorVNGLByVendorCode(vendorCode);
     }
 
     /* 수정 */
@@ -156,20 +184,26 @@ public class VendorService {
     
     // 3. 구매사에서 반려
     @Transactional
-    public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, String loginId) {
-
+    public void rejectVendor(List<VendorUpdateDto> vendorUpdateDtoList, SessionUser loginUser) {
 
         // 2) 단일 dto 반환
         for(VendorUpdateDto dto : vendorUpdateDtoList) {
 
             // 3) 입력값 설정
             dto.setModifiedAt(LocalDateTime.now());
-            dto.setModifiedBy(loginId);
-            dto.setSignUserId(loginId);
+            dto.setModifiedBy(loginUser.getUserId());
+            dto.setSignUserId(loginUser.getUserId());
             dto.setStatus("R");
 
             // 3) 대기 테이블 업데이트
             vendorMapper.updateVNCHByAskNum(dto);
+
+            List<String> fileNums = dto.getFileNums();
+            if(fileNums != null && !fileNums.isEmpty()) {
+                for(String fileNum : fileNums) {
+                    fileService.delete(fileNum, loginUser);
+                }
+            }
         }
 
     }

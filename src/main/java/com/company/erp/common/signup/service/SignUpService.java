@@ -4,6 +4,7 @@ import com.company.erp.common.docNum.service.DocKey;
 import com.company.erp.common.docNum.service.DocNumService;
 import com.company.erp.common.login.service.DuplicateLoginService;
 import com.company.erp.common.signup.dto.SignUpDto;
+import com.company.erp.common.signup.dto.SignUpResponseDto;
 import com.company.erp.common.signup.mapper.SignUpMapper;
 import com.company.erp.master.vendor.dto.VendorRegisterDto;
 import com.company.erp.master.vendor.mapper.VendorMapper;
@@ -33,7 +34,7 @@ public class SignUpService {
     
     // 1. 회원 가입
     @Transactional
-    public String registerVendorWithManager(SignUpDto signUpDto) {
+    public SignUpDto registerVendorWithManager(SignUpDto signUpDto) {
 
         // 1. 중복 체크
         // 1-1. 아이디 중복 체크
@@ -82,9 +83,29 @@ public class SignUpService {
         vendorMapper.insertVendorVNCH(vendorRegisterDto); // 회사가 먼저 생성되는게 논리적으로 올바름
         vendorUserMapper.insertUserVNCH_US(vendorUserRegisterDto);
 
-        return vendorCode;
+        return signUpDto;
     }
-    
+
+    // 2. 요청 번호와 회사 번호가 일치하는지 검사
+    public void validateSignUpRequest(SignUpResponseDto responseDto){
+
+        // 1. 입력값 검증
+        if (responseDto == null
+                || responseDto.getAskNum() == null || responseDto.getAskNum().isBlank()
+                || responseDto.getVendorCode() == null || responseDto.getVendorCode().isBlank()) {
+            throw new IllegalArgumentException("요청 정보가 비어 있습니다.");
+            }
+
+        // 2. 요청 번호 및 회사 코드 저장
+        String askNum = responseDto.getAskNum();
+        String vendorCode = responseDto.getVendorCode();
+        
+        // 3. 요청 번호 / 회사 코드 일치 여부 검증
+        int count = signUpMapper.countVNCHByAskNumAndVendorCode(askNum, vendorCode);
+        if(count == 0){
+            throw new IllegalStateException("잘못된 접근입니다 (요청 정보 불일치).");
+        }
+    }
 
 
     // 협력 업체 정보 매핑

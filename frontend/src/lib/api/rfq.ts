@@ -141,6 +141,7 @@ export interface RfqSelectionSearchRequest {
     rfqType?: string;
     progressCd?: string;
     ctrlUserNm?: string;
+    regDate?: string;
 }
 
 export interface RfqProgressSearchRequest {
@@ -238,6 +239,12 @@ export const rfqApi = {
      */
     getWaitingList: (params: RfqWaitingSearchRequest) =>
         api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { ...params }),
+
+    /**
+     * PR 목록 조회 (단건 상세 조회용으로도 사용)
+     */
+    getPrList: (params: { prNo?: string }) => 
+        api.get<PrGroup[]>('/v1/rfq/buyer/waiting/list', { prNum: params.prNo }),
 
     /**
      * RFQ 상세 조회

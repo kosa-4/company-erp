@@ -182,7 +182,7 @@ export default function VendorOrderListPage() {
               } else if (!selectedOrder) {
                 toast.warning('수신확인할 발주서를 선택해주세요.');
               } else {
-                toast.warning('이미 확인된 발주서입니다.');
+                toast.warning('이미 수신확인 되었습니다.');
               }
             }}
             icon={<Check className="w-4 h-4" />}
@@ -191,17 +191,18 @@ export default function VendorOrderListPage() {
           </Button>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="w-12 px-4 py-3"></th>
-                <th className="px-6 py-3 font-medium">발주번호</th>
-                <th className="px-6 py-3 font-medium">발주명</th>
-                <th className="px-6 py-3 font-medium">발주일자</th>
-                <th className="px-6 py-3 font-medium text-right">총수량</th>
-                <th className="px-6 py-3 font-medium text-right">발주금액</th>
-                <th className="px-6 py-3 font-medium text-center">수신상태</th>
+                <th className="w-12 px-4 py-3 whitespace-nowrap"></th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">발주번호</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">발주명</th>
+                <th className="px-6 py-3 font-medium whitespace-nowrap">발주일자</th>
+                <th className="px-6 py-3 font-medium text-right whitespace-nowrap">총수량</th>
+                <th className="px-6 py-3 font-medium text-right whitespace-nowrap">발주금액</th>
+                <th className="px-6 py-3 font-medium text-center whitespace-nowrap">수신상태</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -263,6 +264,7 @@ export default function VendorOrderListPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
 

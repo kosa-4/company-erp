@@ -17,14 +17,17 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
+import { purchaseOrderApi } from '@/lib/api/purchaseOrder';
 import { goodsReceiptApi, GoodsReceiptDTO, GoodsReceiptItemDTO } from '@/lib/api/goodsReceipt';
 import { getErrorMessage } from '@/lib/api/error';
+import { PurchaseOrderDTO, PurchaseOrderItemDTO } from '@/types/purchaseOrder';
 
 interface ReceivingRecord {
   id: string; // 고유 ID (grNo + itemCode)
   grNo: string;
   poNo: string;
   status: string;
+  poStatus: string; // 발주 상태 (종결 'E' 확인용)
   receiver: string;
   vendorName: string;
   itemCode: string;
@@ -62,27 +65,28 @@ export default function ReceivingListPage() {
   const [adjustUnitPrice, setAdjustUnitPrice] = useState(0);
   const [adjustItemCode, setAdjustItemCode] = useState('');
   const [targetItem, setTargetItem] = useState<ReceivingRecord | null>(null);
+  const [poItemData, setPoItemData] = useState<{ orderQuantity: number; totalReceived: number; currentMyQuantity: number } | null>(null);
   
   // 상세 팝업용 상태
   const [isGrDetailModalOpen, setIsGrDetailModalOpen] = useState(false);
   const [isPoDetailModalOpen, setIsPoDetailModalOpen] = useState(false);
   const [selectedGrDetail, setSelectedGrDetail] = useState<GoodsReceiptDTO | null>(null);
-  const [selectedPoDetail, setSelectedPoDetail] = useState<any>(null);
+  const [selectedPoDetail, setSelectedPoDetail] = useState<PurchaseOrderDTO | null>(null);
 
   // 취소 모달 상태
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await goodsReceiptApi.getList({
-        grNo: searchParams.grNo || undefined,
-        vendorName: searchParams.vendor || undefined,
-        status: searchParams.status || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        grNo: params.grNo || undefined,
+        vendorName: params.vendor || undefined,
+        status: params.status || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -100,6 +104,7 @@ export default function ReceivingListPage() {
               grNo: gr.grNo || '',
               poNo: gr.poNo || '',
               status: gr.status || '',
+              poStatus: gr.poStatus || '',
               receiver: gr.ctrlUserName || '',
               vendorName: gr.vendorName || '',
               itemCode: item.itemCode || '',
@@ -134,27 +139,32 @@ export default function ReceivingListPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       grNo: '',
       vendor: '',
       startDate: '',
       endDate: '',
       status: '',
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
-  // 아이템 선택/해제
+  // 아이템 선택/해제 (라디오 버튼 방식 - 단일 선택)
   const toggleSelectItem = (id: string, grNo: string) => {
-    // 단일 선택만 허용 (조정을 위해)
-    // 물론 다중 선택 취소 등을 구현할 수도 있지만, 조정은 개별 품목 단위가 안전함
-    const newSelected = new Set<string>();
-    if (selectedItemIds.has(id)) {
-      // 해제
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedItemIds(newSelected);
+    // 단일 선택: 무조건 새로 선택한 것으로 교체
+    // 만약 이미 선택된 것을 다시 클릭했다면 해제할 것인가?
+    // 보통 라디오 버튼은 해제가 안 되지만, 여기서는 토글이 편할 수 있음.
+    // 하지만 "Radio form" 요청이므로 단일 선택 강제를 따르되, 같은거 클릭시 유지는 radio standard.
+    // 사용자가 체크박스 동작(토글)을 원하면 click logic에서 처리.
+    // 여기서는 "checkbox 동작과 모양을 전부 radio 형태로" 라고 했으므로
+    // 동작도 radio(하나만 선택)로 변경.
+    
+    // 이미 선택된 것이면 동작 없음 (Radio standard) 혹은 토글?
+    // "Radio form" usually implies selecting one.
+    // Let's implement strict single selection.
+    setSelectedItemIds(new Set([id]));
   };
 
   const getStatusBadge = (status: string) => {
@@ -203,9 +213,6 @@ export default function ReceivingListPage() {
 
     if (!row) return;
     
-    // 입고완료 상태에서도 조정 가능하도록 할지? 일반적으로는 가능하지만 취소는 안됨
-    // 여기서는 부분입고 상태일 때만 가능하다는 기존 로직을 따르거나, 
-    // 혹은 모든 상태에서 가능하게 할 수 있음. 일단 기존 로직 유지
     if (row.status === 'GRX') {
       toast.warning('취소된 입고 건은 조정할 수 없습니다.');
       return;
@@ -214,13 +221,31 @@ export default function ReceivingListPage() {
     try {
       // 상세 정보 조회 (Header 정보 필요)
       const detail = await goodsReceiptApi.getDetail(row.grNo);
+      const targetItemDetail = detail.items?.find((i) => i.itemCode === row.itemCode);
+      
+      const orderQty = targetItemDetail?.orderQty || 0;
+      // accumulatedQty: 현재까지의 총 누적 입고량 (현재 건 포함)
+      const totalRecv = targetItemDetail?.accumulatedQty || 0;
+      const currentMyQty = targetItemDetail?.grQuantity || 0;
+      
+      // 잔여 수량 (발주 수량 - 총 누적 입고량)
+      // 이미 총 누적량에 현재 건이 포함되어 있다고 가정하면, 순수 잔여량은 orderQty - totalRecv
+      const remaining = Math.max(0, orderQty - totalRecv);
+
       setSelectedGr(detail);
       setTargetItem(row);
+      setPoItemData({ 
+        orderQuantity: orderQty, 
+        totalReceived: totalRecv, 
+        currentMyQuantity: currentMyQty 
+      });
       
       setAdjustItemCode(row.itemCode);
-      setAdjustQuantity(row.receivedQuantity);
+      
+      // 요청 사항: "입고 조정 모달에서 표시되는 입고수량은 남은 입고수량이어야 함"
+      setAdjustQuantity(remaining);
       setAdjustUnitPrice(row.unitPrice);
-      setAdjustAmount(row.receivedAmount);
+      setAdjustAmount(remaining * row.unitPrice); // 금액도 잔량 기준으로 다시 계산 표시
       
       setIsAdjustMode(true);
       setIsDetailModalOpen(true);
@@ -244,6 +269,17 @@ export default function ReceivingListPage() {
       return;
     }
 
+    // 발주 수량 초과 검증
+    if (poItemData) {
+      // 나를 제외한 다른 입고량 합계
+      const otherReceived = poItemData.totalReceived - poItemData.currentMyQuantity;
+      // 새로운 총 입고 예상량 = 다른 입고량 + 이번 조정 수량
+      if (otherReceived + adjustQuantity > poItemData.orderQuantity) {
+        toast.warning(`총 입고수량이 발주수량(${formatNumber(poItemData.orderQuantity)})을 초과할 수 없습니다.`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       await goodsReceiptApi.updateItem(selectedGr.grNo, adjustItemCode, {
@@ -265,6 +301,13 @@ export default function ReceivingListPage() {
   // 입고 취소
   const handleCancelItem = async () => {
     if (!selectedGr || !selectedGr.grNo || !adjustItemCode) return;
+
+    // PO가 종결 상태(E)인 경우 취소 불가
+    if (selectedGr.poStatus === 'E') {
+      toast.warning('종결된 발주 건은 입고 취소할 수 없습니다.');
+      return;
+    }
+
     setCancelReason('');
     setIsCancelModalOpen(true);
   };
@@ -350,7 +393,7 @@ export default function ReceivingListPage() {
                     <span className="sr-only">선택</span>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고번호</th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">PO번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">발주번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">품목코드</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">입고상태</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">품목명</th>
@@ -400,10 +443,10 @@ export default function ReceivingListPage() {
                     >
                       <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <input
-                          type="checkbox"
+                          type="radio"
                           checked={selectedItemIds.has(item.id)}
                           onChange={() => toggleSelectItem(item.id, item.grNo)}
-                          className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                          className="w-4 h-4 text-teal-600 border-stone-300 rounded-full focus:ring-teal-500"
                         />
                       </td>
                       <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
@@ -459,7 +502,9 @@ export default function ReceivingListPage() {
             <Button variant="primary" onClick={handleSaveAdjust} disabled={loading}>
               {loading ? '저장 중...' : '수정'}
             </Button>
-            <Button variant="danger" onClick={handleCancelItem} disabled={loading}>입고 취소</Button>
+            <Button variant="danger" onClick={handleCancelItem} disabled={loading || selectedGr?.poStatus === 'E'}>
+              입고 취소
+            </Button>
             <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
           </>
         }
@@ -477,7 +522,7 @@ export default function ReceivingListPage() {
                 <p className="font-medium">{targetItem.grNo}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{targetItem.poNo}</p>
               </div>
               <div>
@@ -501,15 +546,14 @@ export default function ReceivingListPage() {
                       type="number"
                       value={adjustQuantity}
                       min={0}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border rounded-md text-right"
                       onChange={(e) => handleAdjustQuantityChange(parseInt(e.target.value) || 0)}
                     />
-                    <span className="text-sm text-gray-500">{targetItem.unit}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">입고금액</label>
-                  <div className="w-full px-3 py-2 border rounded-md bg-white text-right font-medium">
+                  <div className="w-full px-3 py-2 border rounded-md bg-gray-100 text-right font-medium text-gray-600">
                     ₩{formatNumber(adjustAmount)}
                   </div>
                 </div>
@@ -518,7 +562,10 @@ export default function ReceivingListPage() {
 
             <div className="text-sm text-gray-500">
               * 조정 시 입고 금액은 (조정 수량 × 단가)로 자동 계산됩니다.<br/>
-              * '입고 취소' 버튼을 누르면 해당 품목의 입고 내역이 취소됩니다.
+              * '입고 취소' 버튼을 누르면 해당 품목의 입고 내역이 취소됩니다.<br/>
+              {selectedGr?.poStatus === 'E' && (
+                <span className="text-red-600 font-medium">* 종결된 발주 건은 입고 취소할 수 없습니다.</span>
+              )}
             </div>
           </div>
         )}
@@ -542,7 +589,7 @@ export default function ReceivingListPage() {
                 <p className="font-medium">{selectedGrDetail.grNo}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedGrDetail.poNo}</p>
               </div>
               <div>
@@ -606,7 +653,7 @@ export default function ReceivingListPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedPoDetail.poNo}</p>
               </div>
               <div>
@@ -635,7 +682,7 @@ export default function ReceivingListPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedPoDetail.items?.map((item: any, index: number) => (
+                  {selectedPoDetail.items?.map((item, index) => (
                     <tr key={index} className="border-t">
                       <td className="p-3">{item.itemCode}</td>
                       <td className="p-3">{item.itemName}</td>

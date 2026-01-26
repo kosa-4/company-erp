@@ -26,7 +26,7 @@ import { getErrorMessage } from "@/lib/api/error";
 interface ReceivingTargetItem {
   id: string; // 고유 ID (poNo + itemCode)
   rfqNo: string;
-  prNo: string; // PR번호 추가
+  prNo: string; // 구매요청번호 추가
   poNo: string;
   poName: string;
   buyer: string;
@@ -55,6 +55,7 @@ interface ReceivingFormItem {
   receivedQuantity: number;
   receivedAmount: number;
   storageLocation: string;
+  storageLocationDisabled: boolean; // 저장위치 선택 비활성화 여부 (입고번호 기준)
 }
 
 export default function ReceivingTargetPage() {
@@ -93,15 +94,15 @@ export default function ReceivingTargetPage() {
   const [selectedRfqDetail, setSelectedRfqDetail] = useState<any>(null);
 
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await goodsReceiptApi.getPendingPOList({
-        poNo: searchParams.poNo || undefined,
-        poName: searchParams.poName || undefined,
-        vendorName: searchParams.vendor || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        poNo: params.poNo || undefined,
+        poName: params.poName || undefined,
+        vendorName: params.vendor || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -115,12 +116,6 @@ export default function ReceivingTargetPage() {
       result.forEach((po: PendingPODTO) => {
         if (!po.items || po.items.length === 0) return;
 
-        // 기존 GR 저장위치 확인 (remark에 EXISTING_WH: 형태로 저장됨)
-        let existingWh: string | undefined;
-        if (po.remark && po.remark.startsWith("EXISTING_WH:")) {
-          existingWh = po.remark.replace("EXISTING_WH:", "");
-        }
-
         po.items.forEach((item) => {
           // 잔여 수량이 0 이하면 목록에 표시하지 않음 (이미 완료된 경우)
           const remainingQty =
@@ -129,10 +124,13 @@ export default function ReceivingTargetPage() {
               : item.orderQuantity || 0;
           if (remainingQty <= 0) return;
 
+          // 기존 GR의 저장위치 확인 (별도 필드로 받음)
+          const existingGrWarehouse = item.existingGrWarehouse;
+
           flatItems.push({
             id: `${po.poNo}_${item.itemCode}`,
             rfqNo: po.rfqNo || "",
-            prNo: (po as any).prNo || "", // PR번호 추가
+            prNo: po.prNo || "",
             poNo: po.poNo || "",
             poName: po.poName || "",
             poDate: po.poDate || "",
@@ -146,8 +144,8 @@ export default function ReceivingTargetPage() {
             orderQuantity: item.orderQuantity || 0,
             remainingQuantity: remainingQty,
             amount: Number(item.amount) || 0,
-            storageLocation: existingWh || item.storageLocation || "본사 창고",
-            existingWarehouse: existingWh, // 기존 GR 저장위치 고정
+            storageLocation: existingGrWarehouse || item.storageLocation || "본사 창고",
+            existingWarehouse: existingGrWarehouse || undefined, // 기존 GR이 있으면 해당 값, 없으면 undefined
           });
         });
       });
@@ -171,14 +169,16 @@ export default function ReceivingTargetPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       poNo: "",
       poName: "",
       vendor: "",
       startDate: "",
       endDate: "",
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
   // 아이템 선택/해제
@@ -212,12 +212,12 @@ export default function ReceivingTargetPage() {
       return;
     }
 
+    // 선택된 아이템들로 초기 PO 번호 확인
     const selectedItemsList = targetItems.filter((item) =>
       selectedItemIds.has(item.id),
     );
     if (selectedItemsList.length === 0) return;
 
-    // PO 번호 검증 (모두 같아야 함)
     const firstPoNo = selectedItemsList[0].poNo;
     const isAllSamePo = selectedItemsList.every(
       (item) => item.poNo === firstPoNo,
@@ -230,27 +230,43 @@ export default function ReceivingTargetPage() {
 
     setCurrentPoNo(firstPoNo);
 
-    // 기존 GR 저장위치 확인 (첫 번째 아이템에서)
-    const existingWh = selectedItemsList[0].existingWarehouse;
-    setExistingWarehouse(existingWh || null);
-
     // 입고 폼 초기화
     setGrDate(new Date().toISOString().split("T")[0]);
     setRemark("");
     setReceivingItems(
-      selectedItemsList.map((item) => ({
-        itemCode: item.itemCode,
-        itemName: item.itemName,
-        spec: item.spec,
-        unit: item.unit,
-        unitPrice: item.unitPrice,
-        orderQuantity: item.orderQuantity,
-        remainingQuantity: item.remainingQuantity,
-        receivedQuantity: item.remainingQuantity, // 기본값: 잔여수량
-        receivedAmount: item.unitPrice * item.remainingQuantity,
-        storageLocation: existingWh || item.storageLocation, // 기존 저장위치 있으면 고정
-      })),
+      selectedItemsList
+        .filter(item => {
+             const rem = item.remainingQuantity ?? item.orderQuantity ?? 0;
+             return rem > 0;
+          })
+        .map((item) => {
+          // 확실한 숫자 타입 보장
+          const sysRemaining = item.remainingQuantity ?? item.orderQuantity ?? 0;
+          const initialReceivedQty = sysRemaining;
+
+          // 품목별로 기존 GR 저장위치 확인 (입고번호 기준)
+          const existingWh = item.existingWarehouse;
+          const storageLocation = existingWh || item.storageLocation || "본사 창고";
+
+          return {
+            itemCode: item.itemCode || "",
+            itemName: item.itemName || "",
+            spec: item.spec || "",
+            unit: item.unit || "",
+            unitPrice: Number(item.unitPrice || 0),
+            orderQuantity: item.orderQuantity || 0,
+            remainingQuantity: sysRemaining,
+            receivedQuantity: initialReceivedQty,
+            receivedAmount: Number(item.unitPrice || 0) * initialReceivedQty,
+            storageLocation: storageLocation,
+            storageLocationDisabled: !!existingWh, // 기존 GR이 있으면 비활성화
+          };
+        }),
     );
+
+    // 기존 GR 안내 메시지를 위한 상태 업데이트 (적어도 하나의 품목에 기존 GR이 있는지)
+    const hasExistingWarehouse = selectedItemsList.some(item => item.existingWarehouse);
+    setExistingWarehouse(hasExistingWarehouse ? " exist" : null);
 
     setIsReceivingModalOpen(true);
   };
@@ -307,14 +323,14 @@ export default function ReceivingTargetPage() {
       if (rfqNo) {
         // RFQ 상세 조회 - ApiResponse로 감싸져 있음
         const response = await fetch(`/api/v1/buyer/rfqs/${rfqNo}`);
-        if (!response.ok) throw new Error("RFQ 상세 조회 실패");
+        if (!response.ok) throw new Error("견적 상세 조회 실패");
         const apiResponse = await response.json();
         // ApiResponse에서 data 추출
         detail = apiResponse.data;
       } else if (prNo) {
         // PR 상세 조회 - 직접 PrDetailResponse 반환
         const response = await fetch(`/api/v1/pr/${prNo}/detail`);
-        if (!response.ok) throw new Error("PR 상세 조회 실패");
+        if (!response.ok) throw new Error("구매요청 상세 조회 실패");
         detail = await response.json();
       }
       setSelectedRfqDetail(detail);
@@ -432,8 +448,8 @@ export default function ReceivingTargetPage() {
         loading={loading}
       >
         <Input
-          label="PO번호"
-          placeholder="PO번호 입력"
+          label="발주번호"
+          placeholder="발주번호 입력"
           value={searchParams.poNo}
           onChange={(e) =>
             setSearchParams((prev) => ({ ...prev, poNo: e.target.value }))
@@ -482,10 +498,10 @@ export default function ReceivingTargetPage() {
                     <span className="sr-only">선택</span>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
-                    PO번호
+                    발주번호
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
-                    RFQ/PR번호
+                    견적/구매요청번호
                   </th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">
                     발주일자
@@ -689,12 +705,11 @@ export default function ReceivingTargetPage() {
       >
         <div className="space-y-6">
           {/* 기존 GR 안내 메시지 */}
-          {existingWarehouse && (
+          {receivingItems.some(item => item.storageLocationDisabled) && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                <strong>안내:</strong> 이 발주에 이미 입고 처리된 건이 있습니다.
-                저장위치가 <strong>'{existingWarehouse}'</strong>(으)로
-                고정됩니다.
+                <strong>안내:</strong> 일부 품목은 이미 입고 처리된 건이 있어 저장위치가 고정됩니다.
+                품목별로 입고번호에 따라 저장위치가 자동 설정됩니다.
               </p>
             </div>
           )}
@@ -789,14 +804,14 @@ export default function ReceivingTargetPage() {
                       </td>
                       <td className="p-3">
                         <select
-                          className={`px-2 py-1 border rounded text-sm ${existingWarehouse ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                          className={`px-2 py-1 border rounded text-sm ${item.storageLocationDisabled ? "bg-gray-100 cursor-not-allowed" : ""}`}
                           value={item.storageLocation}
                           onChange={(e) =>
                             handleStorageChange(index, e.target.value)
                           }
-                          disabled={!!existingWarehouse}
+                          disabled={item.storageLocationDisabled}
                           title={
-                            existingWarehouse
+                            item.storageLocationDisabled
                               ? "기존 입고 건이 있어 저장위치가 고정됩니다."
                               : ""
                           }
@@ -830,7 +845,7 @@ export default function ReceivingTargetPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">PO번호</label>
+                <label className="text-sm text-gray-500">발주번호</label>
                 <p className="font-medium">{selectedPoDetail.poNo}</p>
               </div>
               <div>
@@ -906,7 +921,7 @@ export default function ReceivingTargetPage() {
       <Modal
         isOpen={isRfqDetailOpen}
         onClose={() => setIsRfqDetailOpen(false)}
-        title={selectedRfqDetail?.header?.rfqNum ? "RFQ 상세" : "구매요청 상세"}
+        title={selectedRfqDetail?.header?.rfqNum ? "견적 상세" : "구매요청 상세"}
         size="lg"
         footer={
           <Button variant="secondary" onClick={() => setIsRfqDetailOpen(false)}>
@@ -919,7 +934,7 @@ export default function ReceivingTargetPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-500">
-                  {selectedRfqDetail.header?.rfqNum ? "RFQ번호" : "PR번호"}
+                  {selectedRfqDetail.header?.rfqNum ? "견적번호" : "구매요청번호"}
                 </label>
                 <p className="font-medium">
                   {selectedRfqDetail.header?.rfqNum || selectedRfqDetail.prNum}

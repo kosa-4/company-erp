@@ -30,10 +30,10 @@ public class RfqBuyerRequestService {
      * [신규] PR 기반 견적 초안 초기 데이터 조회
      */
     @Transactional(readOnly = true)
-    public RfqDetailResponse getRfqInitFromPr(String prNum) {
+    public RfqDetailResponse getRfqInitFromPr(String prNum, String userId) {
         RfqDetailResponse response = new RfqDetailResponse();
 
-        RfqDetailResponse.Header header = mapper.selectRfqInitHeader(prNum);
+        RfqDetailResponse.Header header = mapper.selectRfqInitHeader(prNum, userId);
         if (header == null) {
             throw new IllegalArgumentException("존재하지 않거나 승인되지 않은 구매요청입니다. 번호: " + prNum);
         }
@@ -116,8 +116,8 @@ public class RfqBuyerRequestService {
             throw new IllegalArgumentException("대상 견적이 없습니다.");
         if (!"T".equals(currentHeader.getProgressCd()))
             throw new IllegalStateException("임시저장 상태에서만 수정 가능합니다.");
-        if (!userId.equals(currentHeader.getCtrlUserId()))
-            throw new SecurityException("작성자만 수정 가능합니다.");
+//        if (!userId.equals(currentHeader.getCtrlUserId()))
+//            throw new SecurityException("작성자만 수정 가능합니다.");
 
         // 2. HD 업데이트
         int updated = mapper.updateRfqHeader(request, userId);
@@ -150,7 +150,7 @@ public class RfqBuyerRequestService {
         List<String> vendorCodes = request.getVendorCodes();
         if (vendorCodes != null && !vendorCodes.isEmpty()) {
 
-            // ✅ 중복 제거 + 공백/NULL 제거
+            // 중복 제거 + 공백/NULL 제거
             List<String> distinctVendors = vendorCodes.stream()
                     .filter(v -> v != null && !v.isBlank())
                     .distinct()
@@ -210,10 +210,10 @@ public class RfqBuyerRequestService {
 
         int hdUpdated = mapper.updateRfqStatusToSend(rfqNum, userId);
         if (hdUpdated != 1) {
-            throw new IllegalStateException("전송 권한이 없거나 전송 가능한 상태(임시저장)가 아닙니다.");
+            throw new IllegalStateException("전송 가능한 상태(임시저장)가 아닙니다.");
         }
 
-        // ✅ RFQ_NUM 전체 업데이트 (정책 A)
+        // RFQ_NUM 전체 업데이트 (정책 A)
         int vnUpdated = mapper.updateRfqVendorsStatusToSend(rfqNum, userId);
         if (vnUpdated == 0) {
             throw new IllegalStateException("전송할 협력사 정보가 없거나 전송에 실패했습니다.");

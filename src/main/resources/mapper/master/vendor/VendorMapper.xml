@@ -4,66 +4,100 @@
 <mapper namespace="com.company.erp.master.vendor.mapper.VendorMapper">
     <!--협력사 조회-->
     <select id="selectVendorList" parameterType="com.company.erp.master.vendor.dto.VendorSearchDto" resultType="com.company.erp.master.vendor.dto.VendorListDto">
-        SELECT
-            CH.ASK_NUM AS askNum,
-            COALESCE(CH.PROGRESS_CD, 'A') AS status,
-            CH.REG_DATE AS createdAt,
-            CH.REJECT_RMK AS rejectReason,
-            GL.VENDOR_CD AS vendorCode,
-            GL.VENDOR_NM AS vendorName,
-            GL.VENDOR_ENG_NM AS vendorNameEng,
-            GL.REG_TYPE AS businessType,
-            GL.CEO_USER_NM AS ceoName,
-            GL.ADDR AS address,
-            GL.INDUSTRY_TYPE AS industry,
-            GL.IRS_NO AS businessNo,
-            GL.TEL_NO AS tel,
-            GL.FAX_NO AS fax,
-            GL.EMAIL AS email,
-            GL.ZIP_CD AS zipCode,
-            GL.ADDR_DT AS addressDetail,
-            GL.FOUNDATION_DATE AS foundationDate,
-            GL.RMK AS remark
-        FROM
-            VNGL GL
-        LEFT JOIN(
+        SELECT * FROM (
+            <!--대기 테이블과 마스터 테이블 병합-->
             SELECT
-                ASK_NUM,
-                PROGRESS_CD,
-                REG_DATE,
-                VENDOR_CD,
-                REJECT_RMK,
-                ROW_NUMBER() OVER (
-                    PARTITION BY VENDOR_CD
-                    ORDER BY REG_DATE DESC, ASK_NUM DESC
-                ) rn
-            FROM
-                VNCH
-            WHERE
-                DEL_FLAG = 'N'
+                CH.ASK_NUM AS askNum,
+                COALESCE(CH.PROGRESS_CD, GL.PROGRESS_CD) AS status,
+                COALESCE(CH.REG_DATE, GL.REG_DATE) AS createdAt,
+                CH.REJECT_RMK AS rejectReason,
 
-        ) CH
-        ON
-            GL.VENDOR_CD = CH.VENDOR_CD
-        AND
-            CH.rn = 1
+                GL.VENDOR_CD AS vendorCode,
+                COALESCE(CH.VENDOR_NM, GL.VENDOR_NM) AS vendorName,
+                COALESCE(CH.VENDOR_ENG_NM, GL.VENDOR_ENG_NM) AS vendorNameEng,
+                COALESCE(CH.REG_TYPE, GL.REG_TYPE) AS businessType,
+                COALESCE(CH.CEO_USER_NM, GL.CEO_USER_NM) AS ceoName,
+                COALESCE(CH.ADDR, GL.ADDR) AS address,
+                COALESCE(CH.INDUSTRY_TYPE, GL.INDUSTRY_TYPE) AS industry,
+                COALESCE(CH.IRS_NO, GL.IRS_NO) AS businessNo,
+                COALESCE(CH.TEL_NO, GL.TEL_NO) AS tel,
+                COALESCE(CH.FAX_NO, GL.FAX_NO) AS fax,
+                COALESCE(CH.EMAIL, GL.EMAIL) AS email,
+                COALESCE(CH.ZIP_CD, GL.ZIP_CD) AS zipCode,
+                COALESCE(CH.ADDR_DT, GL.ADDR_DT) AS addressDetail,
+                COALESCE(CH.FOUNDATION_DATE, GL.FOUNDATION_DATE) AS foundationDate,
+                COALESCE(CH.RMK, GL.RMK) AS remark
+            FROM VNGL GL
+                     LEFT JOIN (
+                SELECT *
+                FROM (
+                         SELECT
+                             C.*,
+                             ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
+                         FROM VNCH C
+                         WHERE C.DEL_FLAG = 'N'
+                     ) T
+                WHERE T.rn = 1
+            ) CH
+                               ON CH.VENDOR_CD = GL.VENDOR_CD
+            WHERE GL.DEL_FLAG = 'N'
+
+            UNION ALL
+            <!--마스터 테이블에 없는 대기 테이블 건만 조회-->
+            SELECT
+                CH.ASK_NUM AS askNum,
+                CH.PROGRESS_CD AS status,
+                CH.REG_DATE AS createdAt,
+                CH.REJECT_RMK AS rejectReason,
+
+                CH.VENDOR_CD AS vendorCode,
+                CH.VENDOR_NM AS vendorName,
+                CH.VENDOR_ENG_NM AS vendorNameEng,
+                CH.REG_TYPE AS businessType,
+                CH.CEO_USER_NM AS ceoName,
+                CH.ADDR AS address,
+                CH.INDUSTRY_TYPE AS industry,
+                CH.IRS_NO AS businessNo,
+                CH.TEL_NO AS tel,
+                CH.FAX_NO AS fax,
+                CH.EMAIL AS email,
+                CH.ZIP_CD AS zipCode,
+                CH.ADDR_DT AS addressDetail,
+                CH.FOUNDATION_DATE AS foundationDate,
+                CH.RMK AS remark
+            FROM (
+                     SELECT *
+                     FROM (
+                              SELECT
+                                  C.*,
+                                  ROW_NUMBER() OVER (PARTITION BY C.VENDOR_CD ORDER BY C.REG_DATE DESC, C.ASK_NUM DESC) rn
+                              FROM VNCH C
+                              WHERE C.DEL_FLAG = 'N'
+                          ) T
+                     WHERE T.rn = 1
+                 ) CH
+                     LEFT JOIN VNGL GL
+                               ON GL.VENDOR_CD = CH.VENDOR_CD
+                                   AND GL.DEL_FLAG = 'N'
+            WHERE GL.VENDOR_CD IS NULL
+        ) VENDORS
         <where>
-            DEL_FLAG = 'N'
             <if test="vendorCode != null and vendorCode != ''">
-                AND GL.VENDOR_CD LIKE CONCAT('%', #{vendorCode}, '%')
+                AND VENDORS.vendorCode LIKE CONCAT('%', #{vendorCode}, '%')
             </if>
             <if test="vendorName != null and vendorName != ''">
-                AND GL.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%')
-            </if>
-            <if test="businessType != null and businessType != ''">
-                AND GL.REG_TYPE = #{businessType}
+                AND VENDORS.vendorName LIKE CONCAT('%', #{vendorName}, '%')
             </if>
             <if test="industry != null and industry != ''">
-                AND GL.INDUSTRY_TYPE LIKE CONCAT('%', #{industry}, '%')
+                AND VENDORS.industry LIKE CONCAT('%', #{industry}, '%')
+            </if>
+            <if test="businessType != null and businessType != ''">
+                AND VENDORS.businessType = #{businessType}
             </if>
         </where>
-        ORDER BY
-            CH.REG_DATE DESC
+
+        ORDER BY createdAt DESC
+
     </select>
 
     <!--대기 테이블 협력사 단일 조회-->
@@ -124,6 +158,18 @@
             VNGL
         WHERE
             VENDOR_CD = #{vendorCode}
+        AND
+            DEL_FLAG = 'N'
+    </select>
+
+    <!--요청 번호로 회사 코드 조회-->
+    <select id="selectVendorCodeByAskNum" parameterType="String" resultType="String">
+        SELECT
+            VENDOR_CD AS vendorCode
+        FROM
+            VNCH
+        WHERE
+            ASK_NUM = #{askNum}
         AND
             DEL_FLAG = 'N'
     </select>
@@ -279,6 +325,9 @@
             <if test="tel != null and tel != ''">
                 TEL_NO = #{tel},
             </if>
+            <if test="fax != null and fax != ''">
+                FAX_NO = #{fax},
+            </if>
             <if test="industry != null and industry != ''">
                 INDUSTRY_TYPE = #{industry},
             </if>
@@ -362,6 +411,8 @@
                 V.PROGRESS_CD AS status,
                 V.RMK AS remark,
                 V.EMAIL AS email,
+                V.FOUNDATION_DATE AS foundationDate,
+                V.FAX_NO AS fax,
                 ROW_NUMBER() OVER (
                     PARTITION BY V.VENDOR_CD
                     ORDER BY V.REG_DATE DESC, V.ASK_NUM DESC
@@ -396,6 +447,8 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
+            FAX_NO AS fax,
+            FOUNDATION_DATE AS foundationDate,
             V.PROGRESS_CD AS status,
             RMK AS remark,
             V.EMAIL AS email
@@ -439,6 +492,8 @@
             ADDR AS address,
             ADDR_DT AS addressDetail,
             TEL_NO AS tel,
+            FAX_NO AS fax,
+            FOUNDATION_DATE AS foundationDate,
             PROGRESS_CD AS status,
             RMK AS remark,
             EMAIL AS email
@@ -484,6 +539,9 @@
             <if test="tel != null and tel != ''">
                 TEL_NO = #{tel},
             </if>
+            <if test="fax != null and fax != ''">
+                FAX_NO = #{fax},
+            </if>
             <if test="email != null and email != ''">
                 EMAIL = #{email},
             </if>
@@ -492,6 +550,15 @@
             </if>
             <if test="address != null and address != ''">
                 ADDR = #{address},
+            </if>
+            <if test="addressDetail != null and addressDetail != ''">
+                ADDR_DT = #{addressDetail},
+            </if>
+            <if test="industry != null and industry != ''">
+                INDUSTRY_TYPE = #{industry},
+            </if>
+            <if test="businessType != null and businessType != ''">
+                REG_TYPE = #{businessType},
             </if>
             <if test="remark != null and remark != ''">
                 RMK = #{remark},

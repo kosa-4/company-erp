@@ -7,6 +7,9 @@ import { Category } from '../item/TreeItem';
 
 let tempId = 0;
 
+// [핵심 1] Category 타입 확장 (isModified 사용을 위해)
+type CategoryState = Category & { isModified?: boolean };
+
 interface InputCategory {
     tempKey: number;
     itemCls: string;
@@ -14,24 +17,22 @@ interface InputCategory {
     useFlag: boolean;
     itemLvl: number;
     parentItemCls: string | null;
+    isModified?: boolean;
 }
 
 export default function CategoryPage() {
-    const [cateMap, setCateMap] = useState<{ [key: string]: Category }>({});
-    const [rootList, setRootList] = useState<Category[]>([]);
-    
-    // 선택 상태 관리
-    const [selectedMainId, setSelectedMainId] = useState(""); // 1단 선택
-    const [selectedMidId, setSelectedMidId] = useState("");  // 2단 선택
-    const [selectedSubId, setSelectedSubId] = useState("");  // 3단 선택
+    // [핵심 2] rootList 상태 제거! 오직 cateMap만 믿습니다.
+    const [cateMap, setCateMap] = useState<{ [key: string]: CategoryState }>({});
 
-    
-      // 현재 선택 상태를 실시간으로 추적하는 '상자(Ref)'를 만듭니다.
+    // 선택 상태 관리
+    const [selectedMainId, setSelectedMainId] = useState("");
+    const [selectedMidId, setSelectedMidId] = useState("");
+    const [selectedSubId, setSelectedSubId] = useState("");
+
     const selectedMainIdRef = useRef(selectedMainId);
     const selectedMidIdRef = useRef(selectedMidId);
     const selectedSubIdRef = useRef(selectedSubId);
 
-    // 상태값이 바뀔 때마다 상자 안의 내용물(.current)을 최신으로 갈아끼웁니다.
     useEffect(() => {
         selectedMainIdRef.current = selectedMainId;
         selectedMidIdRef.current = selectedMidId;
@@ -46,39 +47,44 @@ export default function CategoryPage() {
             if (!response.ok) throw new Error("서버 응답 오류");
             const data = await response.json();
 
-            const tempMap: { [key: string]: Category } = {};
-            const tempRoot: Category[] = [];
+            const tempMap: { [key: string]: CategoryState } = {};
 
+            // 1단계: 맵 생성
             data.forEach((c: any) => {
-                tempMap[c.itemCls] = { ...c, children: [] };
+                tempMap[c.itemCls] = {
+                    ...c,
+                    useFlag: c.useFlag === 'Y',
+                    children: [], // 이제 children 배열은 화면 렌더링에 안 씀 (useMemo로 대체)
+                    isModified: false
+                };
             });
 
+            // 2단계: 부모-자식 연결 (트리 탐색용으로 남겨둠, 필수는 아님)
             data.forEach((c: any) => {
                 const pId = c.parentItemCls;
                 if (pId && tempMap[pId]) {
+                    if (!tempMap[pId].children) tempMap[pId].children = [];
                     tempMap[pId].children?.push(tempMap[c.itemCls]);
-                } else {
-                    tempRoot.push(tempMap[c.itemCls]);
                 }
             });
 
+            // [핵심 3] setRootList 삭제 -> cateMap만 업데이트하면 끝
             setCateMap(tempMap);
-            setRootList(tempRoot);
-            setInputDatas([]); 
+            setInputDatas([]);
 
+            // 선택 상태 복구
             const nextMainId = tempMap[selectedMainIdRef.current] ? selectedMainIdRef.current : "";
-            
-            const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some(c => c.itemCls === selectedMidIdRef.current))
+            const nextMidId = (nextMainId && tempMap[nextMainId]?.children?.some((c: any) => c.itemCls === selectedMidIdRef.current))
                 ? selectedMidIdRef.current : "";
-            
-            const nextSubId = (nextMidId && tempMap[nextMidId]?.children?.some(c => c.itemCls === selectedSubIdRef.current))
+            const nextSubId = (nextMidId && tempMap[nextMidId]?.children?.some((c: any) => c.itemCls === selectedSubIdRef.current))
                 ? selectedSubIdRef.current : "";
 
             setSelectedMainId(nextMainId);
             setSelectedMidId(nextMidId);
             setSelectedSubId(nextSubId);
-        } catch (err) {
+        } catch (err: any) {
             console.error("데이터 로딩 중 오류 발생", err);
+            alert("카테고리 목록을 불러오지 못했습니다.\n" + (err.message || "서버 오류"));
         }
     };
 
@@ -86,10 +92,39 @@ export default function CategoryPage() {
         fetchCategories();
     }, []);
 
-    // 각 단계별 자식 리스트 계산
-    const class1List = useMemo(() => selectedMainId ? cateMap[selectedMainId]?.children || [] : [], [selectedMainId, cateMap]);
-    const class2List = useMemo(() => selectedMidId ? cateMap[selectedMidId]?.children || [] : [], [selectedMidId, cateMap]);
-    const class3List = useMemo(() => selectedSubId ? cateMap[selectedSubId]?.children || [] : [], [selectedSubId, cateMap]);
+    // [핵심 4] 리스트를 cateMap에서 실시간으로 생성 (입력 시 바로 반영됨)
+
+    // 1단 (Root)
+    const rootList = useMemo(() => {
+        return Object.values(cateMap)
+            .filter(c => c.itemLvl === 0)
+            .sort((a, b) => a.itemCls.localeCompare(b.itemCls));
+    }, [cateMap]);
+
+    // 2단 (대분류)
+    const class1List = useMemo(() => {
+        if (!selectedMainId) return [];
+        return Object.values(cateMap)
+            .filter(c => c.parentItemCls === selectedMainId)
+            .sort((a, b) => a.itemCls.localeCompare(b.itemCls));
+    }, [cateMap, selectedMainId]);
+
+    // 3단 (중분류)
+    const class2List = useMemo(() => {
+        if (!selectedMidId) return [];
+        return Object.values(cateMap)
+            .filter(c => c.parentItemCls === selectedMidId)
+            .sort((a, b) => a.itemCls.localeCompare(b.itemCls));
+    }, [cateMap, selectedMidId]);
+
+    // 4단 (소분류)
+    const class3List = useMemo(() => {
+        if (!selectedSubId) return [];
+        return Object.values(cateMap)
+            .filter(c => c.parentItemCls === selectedSubId)
+            .sort((a, b) => a.itemCls.localeCompare(b.itemCls));
+    }, [cateMap, selectedSubId]);
+
 
     const handleRowClick = (e: any, level: number) => {
         const id = e.target.value;
@@ -103,16 +138,14 @@ export default function CategoryPage() {
     };
 
     const handleAddRow = (e: any, itemLvl: number, targetParentId: string) => {
-        // targetParentId가 없으면 null, 있으면 그 값 그대로 사용
         const parentId = !targetParentId || targetParentId === "" ? null : targetParentId;
-
         const newInput: InputCategory = {
             tempKey: tempId++,
             itemCls: '',
             itemClsNm: '',
             useFlag: true,
             itemLvl: itemLvl,
-            parentItemCls: parentId, // 정규화된 부모 ID 저장
+            parentItemCls: parentId,
         };
         setInputDatas(prev => [...prev, newInput]);
     };
@@ -122,54 +155,95 @@ export default function CategoryPage() {
     };
 
     const handleInputChange = (tempKey: number, field: keyof InputCategory, value: any) => {
-        setInputDatas(prev => prev.map(row => 
+        setInputDatas(prev => prev.map(row =>
             row.tempKey === tempKey ? { ...row, [field]: value } : row
         ));
     };
 
+    // [핵심 5] 수정 핸들러 (cateMap을 업데이트 -> 위 useMemo가 감지 -> 리스트 갱신 -> 화면 변경)
+    const handleEditChange = (itemCls: string, field: string, value: any) => {
+        setCateMap(prev => {
+            const target = prev[itemCls];
+            if (!target) return prev;
+
+            return {
+                ...prev,
+                [itemCls]: {
+                    ...target,
+                    [field]: value,
+                    isModified: true
+                }
+            };
+        });
+    };
+
     const saveCategory = async (targetParentId: string) => {
         const currentParent = !targetParentId || targetParentId === "" ? null : targetParentId;
-        
-        const dataToSave = inputDatas.filter(d => {
+
+        // A. 신규 데이터
+        const newItemsToSave = inputDatas.filter(d => {
             const isSameParent = d.parentItemCls === currentParent;
             const isNameFilled = d.itemClsNm && d.itemClsNm.trim() !== '';
-            const isCodeFilled = d.itemLvl !== 0 || (d.itemCls && d.itemCls.trim() !== ''); // 최상위에서 code 미입력 시
+            const isCodeFilled = d.itemLvl !== 0 || (d.itemCls && d.itemCls.trim() !== '');
             return isSameParent && isNameFilled && isCodeFilled;
         });
 
-        if (dataToSave.length === 0) {
-            alert("저장할 분류 명칭을 입력해주세요.");
+        // B. 수정 데이터
+        const modifiedItemsToSave = Object.values(cateMap).filter((c: any) => {
+            const itemParent = (!c.parentItemCls || c.parentItemCls === "") ? null : c.parentItemCls;
+            const targetParent = (!currentParent || currentParent === "") ? null : currentParent;
+            return itemParent === targetParent && c.isModified;
+        });
+
+        if (newItemsToSave.length === 0 && modifiedItemsToSave.length === 0) {
+            alert("저장하거나 수정할 데이터가 없습니다.");
             return;
         }
 
         try {
-            const payload = dataToSave.map(({ tempKey, itemCls, ...rest }) => {
-                // itemLvl이 0(최상위)이 아닐 때(자동채번 대상)는 itemCls를 제외
-                if (rest.itemLvl !== 0) {
-                    return rest; // itemCls가 없는 상태로 전송
-                }
-                return { itemCls, ...rest };
-            });
-            const response = await fetch("/api/v1/categories/new", {
-                method: 'POST',
-                headers: { 'Content-type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+            // 1) 신규 저장
+            if (newItemsToSave.length > 0) {
+                const payload = newItemsToSave.map((row) => {
+                    const { tempKey, itemCls, useFlag, ...rest } = row;
+                    const commonData = { ...rest, useFlag: useFlag === true ? 'Y' : 'N' };
+                    if (rest.itemLvl !== 0) return commonData;
+                    return { itemCls, ...commonData };
+                });
 
-            if (!response.ok) {
-                const errMsg = await response.text();
-                throw new Error(errMsg || "저장 실패");
+                const res = await fetch("/api/v1/categories/new", {
+                    method: 'POST',
+                    headers: { 'Content-type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (!res.ok) throw new Error(await res.text() || "신규 저장 실패");
+            }
+
+            // 2) 수정 저장
+            if (modifiedItemsToSave.length > 0) {
+                const updatePayload = modifiedItemsToSave.map(c => ({
+                    itemCls: c.itemCls,
+                    itemClsNm: c.itemClsNm,
+                    useFlag: c.useFlag === true ? 'Y' : 'N',
+                }));
+
+                const res = await fetch("/api/v1/categories/update", {
+                    method: 'PUT',
+                    headers: { 'Content-type': 'application/json' },
+                    body: JSON.stringify(updatePayload),
+                });
+                if (!res.ok) throw new Error(await res.text() || "수정 실패");
             }
 
             alert("저장되었습니다.");
-            await fetchCategories(); // 저장 후 목록을 다시 불러오면서 자동 생성된 코드를 확인
+            await fetchCategories();
+
         } catch (err: any) {
-            alert("저장 오류: " + err.message);
+            alert("오류 발생: " + err.message);
         }
     };
 
     const handleDeleteCategory = async (itemCls: string) => {
-        if(!confirm("삭제하시겠습니까? 하위 분류가 있는 경우 삭제되지 않을 수 있습니다.")) return;
+        if (!confirm("삭제하시겠습니까? 하위 분류가 있는 경우 삭제되지 않을 수 있습니다.")) return;
         try {
             const response = await fetch(`/api/v1/categories/${itemCls}`, { method: "DELETE" });
             if (!response.ok) throw new Error("서버에서 삭제를 거부했습니다.");
@@ -180,27 +254,36 @@ export default function CategoryPage() {
 
     return (
         <div>
-            <PageHeader title="품목 분류" subtitle="품목 카테고리를 조회하고 관리합니다." />
+            <PageHeader
+                title="품목 분류"
+                subtitle="품목 분류를 조회하고 관리합니다."
+                icon={
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                }
+            />
             <div className="p-4 bg-gray-100 min-h-screen text-sm">
                 <div className="grid grid-cols-4 gap-2 h-[650px]">
-                    
-                    {/* 1단: 품목 종류 */}
+
+                    {/* 1단 */}
                     <CategoryTable
                         title="품목 종류"
                         itemLvl={0}
-                        categories={rootList}
+                        categories={rootList} // 이제 useMemo로 실시간 반영된 리스트가 들어감
                         inputDatas={inputDatas.filter(d => d.itemLvl === 0 && d.parentItemCls === null)}
                         itemCls={selectedMainId}
                         handleChildItemType={(e: any) => handleRowClick(e, 0)}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
                         saveCategory={() => saveCategory("")}
+                        handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
-                        parentCls="" fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="MAIN" childItemType="CLASS1" maxLength={2}
+                        parentCls="" fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="MAIN" childItemType="CLASS1" maxLength={2}
                     />
 
-                    {/* 2단: 대분류 */}
+                    {/* 2단 */}
                     <CategoryTable
                         title="대분류"
                         itemLvl={1}
@@ -210,14 +293,15 @@ export default function CategoryPage() {
                         parentCls={selectedMainId}
                         handleChildItemType={(e: any) => handleRowClick(e, 1)}
                         saveCategory={() => saveCategory(selectedMainId)}
+                        handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS1" childItemType="CLASS2" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS1" childItemType="CLASS2" maxLength={2}
                     />
 
-                    {/* 3단: 중분류 */}
+                    {/* 3단 */}
                     <CategoryTable
                         title="중분류"
                         itemLvl={2}
@@ -227,28 +311,30 @@ export default function CategoryPage() {
                         parentCls={selectedMidId}
                         handleChildItemType={(e: any) => handleRowClick(e, 2)}
                         saveCategory={() => saveCategory(selectedMidId)}
+                        handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS2" childItemType="CLASS3" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS2" childItemType="CLASS3" maxLength={2}
                     />
 
-                    {/* 4단: 소분류 */}
+                    {/* 4단 */}
                     <CategoryTable
                         title="소분류"
                         itemLvl={3}
                         categories={class3List}
                         inputDatas={inputDatas.filter(d => d.itemLvl === 3 && d.parentItemCls === (selectedSubId || null))}
-                        itemCls="" // 소분류는 하위 단계가 없으므로 선택 상태를 관리할 필요 없음
+                        itemCls=""
                         parentCls={selectedSubId}
-                        handleChildItemType={() => {}} // 하위 단계가 없으므로 빈 함수
+                        handleChildItemType={() => { }}
                         saveCategory={() => saveCategory(selectedSubId)}
+                        handleEditChange={handleEditChange}
                         handleDeleteCategory={handleDeleteCategory}
                         handleAddRow={handleAddRow}
                         removeInputRow={removeInputRow}
-                        fetchCategories={fetchCategories} handleInputChange={handleInputChange} 
-                        handleSelectedCheck={() => {}} isChecked={false} itemType="CLASS3" childItemType="" maxLength={2}
+                        fetchCategories={fetchCategories} handleInputChange={handleInputChange}
+                        handleSelectedCheck={() => { }} isChecked={false} itemType="CLASS3" childItemType="" maxLength={2}
                     />
 
                 </div>

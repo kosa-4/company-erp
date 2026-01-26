@@ -19,9 +19,12 @@ import { toast } from 'sonner';
 import { formatNumber } from '@/lib/utils';
 import { purchaseOrderApi, RfqSelectedDTO, RfqSelectedItemDTO } from '@/lib/api/purchaseOrder';
 import { rfqApi } from '@/lib/api/rfq';
+import { prApi } from '@/lib/api/pr';
 import { vendorApi } from '@/lib/api/vendor';
 import { PurchaseOrderDTO, PurchaseOrderItemDTO as POItemDTO } from '@/types/purchaseOrder';
 import { getErrorMessage } from '@/lib/api/error';
+import PrDetailModal from '@/app/(main)/rfq/pending/PrDetailModal';
+import RfqRequestModal from '@/app/(main)/rfq/pending/RfqRequestModal';
 
 // RFQ 그룹 인터페이스
 interface RfqGroup {
@@ -61,6 +64,15 @@ export default function OrderPendingPage() {
   const [vendorSearch, setVendorSearch] = useState({ vendorCode: '', vendorName: '' });
   const [selectedVendor, setSelectedVendor] = useState<{vendorCode: string, vendorName: string} | null>(null);
 
+  // PR 상세 모달 상태
+  const [isPrDetailModalOpen, setIsPrDetailModalOpen] = useState(false);
+  const [currentPrNo, setCurrentPrNo] = useState<string | null>(null);
+  const [prDetailData, setPrDetailData] = useState<any>(null); // PrGroup 타입
+
+  // RFQ 상세 모달 상태
+  const [isRfqDetailModalOpen, setIsRfqDetailModalOpen] = useState(false);
+  const [currentRfqNo, setCurrentRfqNo] = useState<string | null>(null);
+
   // 발주 작성 폼 상태
   const [orderForm, setOrderForm] = useState({
     poName: '',
@@ -69,6 +81,7 @@ export default function OrderPendingPage() {
     items: [] as Array<{
       itemCode: string;
       itemName: string;
+      specification: string;
       unit: string;
       orderQuantity: number;
       unitPrice: number;
@@ -78,17 +91,63 @@ export default function OrderPendingPage() {
     }>,
   });
 
+  // PR 상세 데이터 조회
+  useEffect(() => {
+    const fetchPrDetail = async () => {
+      if (!currentPrNo || !isPrDetailModalOpen) return;
+      
+      try {
+        const detail = await prApi.getDetail(currentPrNo);
+        
+        // PrDetailResponse를 PrGroup 형태로 변환
+        const prGroupData = {
+            prNum: detail.prNum,
+            prSubject: detail.prSubject,
+            prDate: detail.regDate ? String(detail.regDate).split('T')[0] : '',
+            requester: detail.reqUserName || '',
+            reqDeptNm: detail.deptCd || '',
+            progressCd: detail.progressCd || '',
+            progressNm: detail.progressCd || '',
+            pcType: detail.pcType || '',
+            pcTypeNm: detail.pcType === 'URGENT' ? '긴급구매' : (detail.pcType === 'CONTRACT' ? '단가계약' : '일반구매'),
+            itemCount: detail.items ? detail.items.length : 0,
+            totalAmount: detail.prAmt || 0,
+            items: detail.items ? detail.items.map((item: any, idx: number) => ({
+                prNum: detail.prNum,
+                lineNo: idx + 1,
+                itemCd: item.itemCd,
+                itemDesc: item.itemDesc,
+                itemSpec: item.itemSpec,
+                unitCd: item.unitCd,
+                prQt: item.prQt,
+                unitPrc: item.unitPrc,
+                prAmt: item.prAmt,
+                delyDate: item.delyDate ? String(item.delyDate).split('T')[0] : '',
+                rmk: item.rmk
+            })) : []
+        };
+        
+        setPrDetailData(prGroupData);
+      } catch (error) {
+        console.error(error);
+        toast.error("구매요청 정보를 불러오는데 실패했습니다.");
+      }
+    };
+
+    fetchPrDetail();
+  }, [currentPrNo, isPrDetailModalOpen]);
+
   // 데이터 조회
-  const fetchData = async () => {
+  const fetchData = async (params = searchParams) => {
     setLoading(true);
     try {
       const result = await purchaseOrderApi.getRfqSelectedList({
-        rfqNo: searchParams.rfqNo || undefined,
-        rfqName: searchParams.rfqName || undefined,
-        vendorName: searchParams.vendorName || undefined,
-        purchaseType: searchParams.purchaseType || undefined,
-        startDate: searchParams.startDate || undefined,
-        endDate: searchParams.endDate || undefined,
+        rfqNo: params.rfqNo || undefined,
+        rfqName: params.rfqName || undefined,
+        vendorName: params.vendorName || undefined,
+        purchaseType: params.purchaseType || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
       });
 
       if (!result || !Array.isArray(result)) {
@@ -140,15 +199,17 @@ export default function OrderPendingPage() {
     await fetchData();
   };
 
-  const handleReset = () => {
-    setSearchParams({
+  const handleReset = async () => {
+    const emptyParams = {
       rfqNo: '',
       rfqName: '',
       vendorName: '',
       purchaseType: '',
       startDate: '',
       endDate: '',
-    });
+    };
+    setSearchParams(emptyParams);
+    await fetchData(emptyParams);
   };
 
   // RFQ 행 펼치기/접기
@@ -201,7 +262,7 @@ export default function OrderPendingPage() {
     }
   }, [isVendorSearchOpen, selectedRfqNo]);
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!selectedRfqNo) {
       toast.warning('발주할 견적을 선택해주세요.');
       return;
@@ -209,6 +270,37 @@ export default function OrderPendingPage() {
 
     const selectedGroup = rfqGroups.find(g => g.rfqNo === selectedRfqNo);
     if (!selectedGroup) return;
+
+    // 상세 정보에서 납기일 조회
+    const itemDateMap = new Map<string, string>();
+    try {
+      if (['E', 'C'].includes(selectedGroup.purchaseType) && selectedGroup.prNo) {
+        // PR 상세 (긴급/단가계약)
+        const res = await fetch(`/api/v1/pr/${selectedGroup.prNo}/detail`);
+        if (res.ok) {
+          const data = await res.json();
+          (data.items || []).forEach((i: any) => {
+            const date = i.dlvyHopeDate || i.dlvyHopeDt || i.reqDlvyDate || '';
+            const code = i.itemCd || i.itemCode;
+            if (date && code) itemDateMap.set(code, date);
+          });
+        }
+      } else {
+        // RFQ 상세 (일반)
+        const res = await fetch(`/api/v1/buyer/rfqs/${selectedGroup.rfqNo}`);
+        if (res.ok) {
+          const json = await res.json();
+          (json.data?.items || []).forEach((i: any) => {
+            // RFQ 상세의 날짜 필드
+            const date = i.deliveryDate || i.dlvyHopeDate || i.dlvyHopeDt || '';
+            const code = i.itemCd || i.itemCode;
+            if (date && code) itemDateMap.set(code, date);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('납기일 조회 실패:', error);
+    }
     
     // 폼 초기화
     setOrderForm({
@@ -218,11 +310,12 @@ export default function OrderPendingPage() {
       items: selectedGroup.items.map(item => ({
         itemCode: item.itemCode || '',
         itemName: item.itemName || '',
+        specification: item.specification || '',
         unit: item.unit || 'EA',
         orderQuantity: Number(item.quantity) || 0,
         unitPrice: Number(item.unitPrice) || 0,
         amount: Number(item.amount) || 0,
-        deliveryDate: item.deliveryDate || '',
+        deliveryDate: itemDateMap.get(item.itemCode || '') || item.deliveryDate || '',
         storageLocation: item.storageLocation || '본사 창고',
       })),
     });
@@ -292,6 +385,7 @@ export default function OrderPendingPage() {
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
           itemName: item.itemName,
+          specification: item.specification,
           unit: item.unit,
           orderQuantity: item.orderQuantity,
           unitPrice: item.unitPrice,
@@ -380,6 +474,7 @@ export default function OrderPendingPage() {
         items: orderForm.items.map(item => ({
           itemCode: item.itemCode,
           itemName: item.itemName,
+          specification: item.specification,
           unit: item.unit,
           orderQuantity: item.orderQuantity,
           unitPrice: item.unitPrice,
@@ -433,8 +528,8 @@ export default function OrderPendingPage() {
 
       <SearchPanel onSearch={handleSearch} onReset={handleReset} loading={loading}>
         <Input
-          label="RFQ번호"
-          placeholder="RFQ번호 입력"
+          label="견적번호"
+          placeholder="견적번호 입력"
           value={searchParams.rfqNo}
           onChange={(e) => setSearchParams(prev => ({ ...prev, rfqNo: e.target.value }))}
         />
@@ -484,7 +579,7 @@ export default function OrderPendingPage() {
                   <th className="w-12 px-4 py-3.5 whitespace-nowrap">
                     {/* 선택 체크박스 헤더 */}
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">RFQ번호</th>
+                  <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">견적번호/구매요청번호</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-left whitespace-nowrap">견적명</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">구매유형</th>
                   <th className="px-4 py-3.5 text-xs font-medium text-stone-500 uppercase tracking-wider text-center whitespace-nowrap">담당자</th>
@@ -542,14 +637,28 @@ export default function OrderPendingPage() {
                         {/* 선택 체크박스 */}
                         <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
-                            type="checkbox"
+                            type="radio"
                             checked={selectedRfqNo === group.rfqNo}
                             onChange={() => handleSelectRfq(group.rfqNo)}
-                            className="w-4 h-4 text-teal-600 border-stone-300 rounded focus:ring-teal-500"
+                            className="w-4 h-4 text-teal-600 border-stone-300 rounded-full focus:ring-teal-500"
                           />
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>
-                          <span className="text-blue-600 font-medium">{group.rfqNo}</span>
+                        <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap">
+                          <span 
+                            className="text-blue-600 font-medium cursor-pointer hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (group.rfqNo.startsWith("PR")) {
+                                setCurrentPrNo(group.rfqNo);
+                                setIsPrDetailModalOpen(true);
+                              } else {
+                                setCurrentRfqNo(group.rfqNo);
+                                setIsRfqDetailModalOpen(true);
+                              }
+                            }}
+                          >
+                            {group.rfqNo}
+                          </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm text-left whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.rfqName}</td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.rfqNo)}>{group.purchaseTypeDisplay}</td>
@@ -584,7 +693,6 @@ export default function OrderPendingPage() {
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">단가</th>
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-right">금액</th>
                                     <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-center">납기희망일</th>
-                                    <th className="px-3 py-2 text-xs font-semibold text-stone-600 text-left">저장위치</th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-stone-100">
@@ -598,7 +706,6 @@ export default function OrderPendingPage() {
                                       <td className="px-3 py-2 text-xs text-right">₩{formatNumber(Number(item.unitPrice))}</td>
                                       <td className="px-3 py-2 text-xs text-right font-medium">₩{formatNumber(Number(item.amount))}</td>
                                       <td className="px-3 py-2 text-xs text-center">{item.deliveryDate || '-'}</td>
-                                      <td className="px-3 py-2 text-xs text-left">{item.storageLocation || '-'}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -707,6 +814,7 @@ export default function OrderPendingPage() {
                   <tr>
                     <th className="p-3 text-left font-semibold text-gray-600">품목코드</th>
                     <th className="p-3 text-left font-semibold text-gray-600">품목명</th>
+                    <th className="p-3 text-center font-semibold text-gray-600">규격</th>
                     <th className="p-3 text-right font-semibold text-gray-600">단가</th>
                     <th className="p-3 text-right font-semibold text-gray-600">발주수량</th>
                     <th className="p-3 text-right font-semibold text-gray-600">금액</th>
@@ -719,16 +827,30 @@ export default function OrderPendingPage() {
                     <tr key={item.itemCode} className="border-t">
                       <td className="p-3">{item.itemCode}</td>
                       <td className="p-3">{item.itemName}</td>
+                      <td className="p-3 text-center">{item.specification || '-'}</td>
                       <td className="p-3 text-right">₩{formatNumber(item.unitPrice)}</td>
                       <td className="p-3 text-right">
                         <span className="font-medium text-gray-900">
                           {formatNumber(item.orderQuantity)}
                         </span>
-                        <span className="ml-1 text-xs text-gray-900">{item.unit}</span>
                       </td>
                       <td className="p-3 text-right font-medium">₩{formatNumber(item.amount)}</td>
                       <td className="p-3 text-center">{item.deliveryDate}</td>
-                      <td className="p-3">{item.storageLocation}</td>
+                      <td className="p-3">
+                        <Select
+                          value={item.storageLocation}
+                          onChange={(e) => {
+                            const newItems = [...orderForm.items];
+                            newItems[index].storageLocation = e.target.value;
+                            setOrderForm(prev => ({ ...prev, items: newItems }));
+                          }}
+                          options={[
+                            { value: '본사 창고', label: '본사 창고' },
+                            { value: '지사 창고', label: '지사 창고' },
+                          ]}
+                          className="text-sm"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -820,6 +942,20 @@ export default function OrderPendingPage() {
           </div>
         </div>
       </Modal>
+
+      {/* PR 상세 모달 */}
+      <PrDetailModal
+        isOpen={isPrDetailModalOpen}
+        onClose={() => setIsPrDetailModalOpen(false)}
+        data={prDetailData}
+      />
+
+      {/* RFQ 상세 모달 */}
+      <RfqRequestModal
+        isOpen={isRfqDetailModalOpen}
+        onClose={() => setIsRfqDetailModalOpen(false)}
+        rfqNum={currentRfqNo}
+      />
     </div>
   );
 }

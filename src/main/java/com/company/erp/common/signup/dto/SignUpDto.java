@@ -44,10 +44,10 @@ public class SignUpDto {
     private String addressDetail;
 
     @NotBlank(message = "필수 입력 사항입니다")
-    @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "전화번호 형식이 올바르지 않습니다.")
+    @Pattern(regexp = "^(0\\d{1,2}-\\d{3,4}-\\d{4}|\\d{4}-\\d{4})$", message = "유효한 전화번호 형식이 아닙니다. (예: 02-1234-5678 또는 1588-1234)")
     private String phone;
 
-    @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "팩스번호 형식이 올바르지 않습니다.")
+    @Pattern(regexp = "^0\\d{1,2}-\\d{3,4}-\\d{4}$", message = "팩스 번호 형식이 올바르지 않습니다.")
     private String fax;
 
 //    @NotBlank(message = "이메일은 필수 입력 사항입니다.")
