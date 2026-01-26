@@ -5,7 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture, Environment, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
-const TOTAL_SLIDES = 28;
+const TOTAL_SLIDES = 22;
 const SLIDE_URLS = Array.from({ length: TOTAL_SLIDES }, (_, i) => `/ppt/${i + 1}.png`);
 
 const SLIDE_WIDTH = 12.3;
