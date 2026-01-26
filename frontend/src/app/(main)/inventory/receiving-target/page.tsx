@@ -400,7 +400,15 @@ export default function ReceivingTargetPage() {
       setSelectedItemIds(new Set());
       setCurrentPoNo(null);
 
-      toast.success("성공적으로 입고 처리되었습니다.", {
+      // 신규 입고문서 생성 개수 계산 (기존 GR에 누적되는 품목 제외)
+      const newGrCount = receivingItems.filter(item => !item.storageLocationDisabled).length;
+      const message = newGrCount > 1 
+        ? `성공적으로 입고 처리되었습니다. (입고문서 ${newGrCount}개 생성)`
+        : newGrCount === 1
+        ? "성공적으로 입고 처리되었습니다. (입고문서 1개 생성)"
+        : "성공적으로 입고 처리되었습니다.";
+      
+      toast.success(message, {
         action: {
           label: "입고현황 이동",
           onClick: () => router.push("/inventory/receiving-list"),
