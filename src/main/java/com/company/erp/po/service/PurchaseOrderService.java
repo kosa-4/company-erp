@@ -277,10 +277,12 @@ public class PurchaseOrderService {
         if (existing == null) {
             throw new NoSuchElementException("발주를 찾을 수 없습니다 : " + poNo);
         }
-        // 수정 가능: T(임시저장)만
-        if (!PoStatusCode.SAVED.getCode().equals(existing.getStatus())) {
+        // 수정 가능: T(임시저장) 또는 R(반려) 상태
+        String currentStatus = existing.getStatus();
+        if (!PoStatusCode.SAVED.getCode().equals(currentStatus)
+                && !PoStatusCode.REJECTED.getCode().equals(currentStatus)) {
             throw new IllegalStateException(
-                    "임시저장 상태에서만 수정할 수 있습니다. 현재 상태: " + existing.getStatus());
+                    "임시저장 또는 반려 상태에서만 수정할 수 있습니다. 현재 상태: " + currentStatus);
         }
         dto.setPoNo(poNo);
 
@@ -291,8 +293,17 @@ public class PurchaseOrderService {
         dto.setTotalAmount(totalAmount);
         // 현재 사용자 ID 가져오기
         String currentUserId = getCurrentUserId();
+        
+        // 반려 상태에서 수정 시 임시저장(T)으로 상태 변경
+        if (PoStatusCode.REJECTED.getCode().equals(currentStatus)) {
+            // 상태 전이 검증
+            validateStatusTransition(currentStatus, PoStatusCode.SAVED.getCode());
+            purchaseOrderMapper.updateStatus(poNo, PoStatusCode.SAVED.getCode(), currentUserId);
+        }
+        
         // 헤더 수정
         purchaseOrderMapper.updateHeader(dto, currentUserId);
+        
         // 기존 품목 삭제 후 재등록
         purchaseOrderMapper.deleteItems(poNo);
         for (PurchaseOrderItemDTO item : dto.getItems()) {
@@ -343,7 +354,7 @@ public class PurchaseOrderService {
         return updateStatus(poNo, PoStatusCode.APPROVED.getCode(), currentUserId);
     }
 
-    // 반려 (확정 → 임시저장으로 복귀)
+    // 반려 (확정 → 반려 상태로 변경)
     @Transactional
     public Boolean reject(String poNo, String rejectReason) {
         // 반려 사유 필수 검증
@@ -360,10 +371,12 @@ public class PurchaseOrderService {
                     "확정 상태에서만 반려할 수 있습니다. 현재 상태: " + existing.getStatus());
         }
         String currentUserId = getCurrentUserId();
-        // 반려 시 임시저장(T) 상태로 복귀
+        // 상태 전이 검증
+        validateStatusTransition(existing.getStatus(), PoStatusCode.REJECTED.getCode());
+        // 반려 시 반려(R) 상태로 변경
         purchaseOrderMapper.updateStatusWithReason(
                 poNo,
-                PoStatusCode.SAVED.getCode(),
+                PoStatusCode.REJECTED.getCode(),
                 rejectReason,
                 currentUserId);
         return true;

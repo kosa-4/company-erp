@@ -232,8 +232,8 @@ export default function OrderProgressPage() {
     const selectedGroup = poGroups.find(g => g.poNo === selectedPoNo);
     if (!selectedGroup) return;
 
-    if (selectedGroup.status !== 'T') {
-      toast.warning('저장 상태의 항목만 수정할 수 있습니다.');
+    if (selectedGroup.status !== 'T' && selectedGroup.status !== 'R') {
+      toast.warning('저장 또는 반려 상태의 항목만 수정할 수 있습니다.');
       return;
     }
 
@@ -628,7 +628,7 @@ export default function OrderProgressPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm text-center whitespace-nowrap" onClick={() => toggleExpand(group.poNo)}>
-                          {['T', 'D', 'A'].includes(group.status) ? (
+                          {['T', 'D', 'A', 'R'].includes(group.status) ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                               -
                             </span>

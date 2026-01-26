@@ -8,7 +8,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public enum PoStatusCode {
     SAVED("T", Set.of("D")), // 임시저장 → 확정
-    CONFIRMED("D", Set.of("A", "T")), // 확정 → 승인 또는 반려 (T로 복귀)
+    CONFIRMED("D", Set.of("A", "R")), // 확정 → 승인 또는 반려
+    REJECTED("R", Set.of("T")), // 반려 → 수정 시 임시저장으로 복귀
     APPROVED("A", Set.of("S")), // 승인 → 발주전송
     SENT("S", Set.of("C")), // 발주전송 → 완료 (입고완료 시 자동)
     COMPLETED("C", Set.of("E")), // 완료 → 종결
