@@ -29,7 +29,7 @@
         <if test="vendorName != null and vendorName != ''"> AND v.VENDOR_NM LIKE CONCAT('%', #{vendorName}, '%') </if>
         <if test="startDate != null and startDate != ''"> AND h.PO_DATE &gt;= #{startDate} </if>
         <if test="endDate != null and endDate != ''"> AND h.PO_DATE &lt;= #{endDate} </if>
-        ORDER BY h.PO_DATE DESC
+        ORDER BY h.REG_DATE DESC
     </select>
 
     <!-- 발주번호로 기존 GR 정보 조회 (GR번호, 저장위치) - 중복채번 방지용 -->
