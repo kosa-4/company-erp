@@ -191,7 +191,7 @@ public class GoodsReceiptService {
             }
         }
 
-        String lastProcessedGrNo = null;
+        List<String> processedGrNos = new java.util.ArrayList<>();
 
         // 3. 기존 입고 건 업데이트 처리
         for (GoodsReceiptItemDTO item : updateItems) {
@@ -221,32 +221,29 @@ public class GoodsReceiptService {
 
                 goodsReceiptMapper.updateItem(item, currentUserId);
                 recalculateHeaderAmount(item.getGrNo(), currentUserId);
-                lastProcessedGrNo = item.getGrNo();
+                processedGrNos.add(item.getGrNo());
             }
         }
 
-        // 4. 신규 입고 건 생성 처리 (신규 품목끼리는 하나의 문서로 묶음)
+        // 4. 신규 입고 건 생성 처리 (품목별로 개별 입고문서 생성)
         if (!newItems.isEmpty()) {
-            String newGrNo = docNumService.generateDocNumStr(DocKey.GR);
-
-            // 신규 총액 계산
-            BigDecimal newTotalAmount = newItems.stream()
-                    .map(GoodsReceiptItemDTO::getGrAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // 헤더 생성
-            GoodsReceiptDTO newHeader = new GoodsReceiptDTO();
-            newHeader.setGrNo(newGrNo);
-            newHeader.setPoNo(dto.getPoNo());
-            newHeader.setGrDate(dto.getGrDate() != null ? dto.getGrDate() : LocalDate.now());
-            newHeader.setStatus(GoodsReceiptStatus.PARTIAL);
-            newHeader.setTotalAmount(newTotalAmount);
-            newHeader.setRemark(dto.getRemark());
-
-            goodsReceiptMapper.insertHeader(newHeader, currentUserId, currentDeptCd);
-
-            // 아이템 Insert
+            // 각 품목별로 개별 입고문서 생성
             for (GoodsReceiptItemDTO item : newItems) {
+                // 품목별로 새로운 입고번호 생성
+                String newGrNo = docNumService.generateDocNumStr(DocKey.GR);
+
+                // 헤더 생성 (품목별 개별 문서)
+                GoodsReceiptDTO newHeader = new GoodsReceiptDTO();
+                newHeader.setGrNo(newGrNo);
+                newHeader.setPoNo(dto.getPoNo());
+                newHeader.setGrDate(dto.getGrDate() != null ? dto.getGrDate() : LocalDate.now());
+                newHeader.setStatus(GoodsReceiptStatus.PARTIAL);
+                newHeader.setTotalAmount(item.getGrAmount()); // 품목별 금액
+                newHeader.setRemark(dto.getRemark());
+
+                goodsReceiptMapper.insertHeader(newHeader, currentUserId, currentDeptCd);
+
+                // 아이템 Insert
                 item.setGrNo(newGrNo);
                 item.setVendorCode(vendorCode);
                 item.setCtrlUserId(currentUserId);
@@ -261,13 +258,23 @@ public class GoodsReceiptService {
                     item.setGrDate(LocalDateTime.now());
 
                 goodsReceiptMapper.insertItem(item);
+                
+                // 처리된 GR 번호 목록에 추가
+                processedGrNos.add(newGrNo);
             }
-            lastProcessedGrNo = newGrNo;
         }
 
-        // 5. 전체 상태 업데이트
-        updateHeaderStatusByPO(dto.getPoNo(), lastProcessedGrNo, currentUserId);
+        // 5. 각 GR별 상태 업데이트 및 PO 전체 상태 업데이트
+        for (String grNo : processedGrNos) {
+            updateGrHeaderStatus(grNo, currentUserId);
+        }
+        // PO 전체 상태 업데이트 (한 번만 호출)
+        if (!processedGrNos.isEmpty()) {
+            updateHeaderStatusByPO(dto.getPoNo(), processedGrNos.get(processedGrNos.size() - 1), currentUserId);
+        }
 
+        // 마지막 처리된 GR 반환
+        String lastProcessedGrNo = processedGrNos.isEmpty() ? null : processedGrNos.get(processedGrNos.size() - 1);
         return lastProcessedGrNo != null ? getDetail(lastProcessedGrNo) : null;
     }
 

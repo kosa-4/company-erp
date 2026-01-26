@@ -400,7 +400,12 @@ export default function ReceivingTargetPage() {
       setSelectedItemIds(new Set());
       setCurrentPoNo(null);
 
-      toast.success("성공적으로 입고 처리되었습니다.", {
+      const itemCount = receivingItems.length;
+      const message = itemCount > 1 
+        ? `성공적으로 입고 처리되었습니다. (입고문서 ${itemCount}개 생성)`
+        : "성공적으로 입고 처리되었습니다.";
+      
+      toast.success(message, {
         action: {
           label: "입고현황 이동",
           onClick: () => router.push("/inventory/receiving-list"),
