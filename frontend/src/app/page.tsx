@@ -11,7 +11,7 @@ import { AuthModal } from '@/components/landing';
 import { AnimatePresence } from 'framer-motion';
 
 // Slide Config
-const TOTAL_SLIDES = 22;
+const TOTAL_SLIDES = 26;
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);

@@ -62,7 +62,7 @@
         deliveryDate, d.TERM_PAY AS paymentTerms, d.WH_CD AS storageLocation, d.RMK AS remark,
         h.VENDOR_CD AS vendorCode, v.VENDOR_NM AS vendorName FROM PODT d INNER JOIN POHD h ON
         d.PO_NUM = h.PO_NUM LEFT JOIN VNGL v ON h.VENDOR_CD = v.VENDOR_CD WHERE d.PO_NUM = #{poNo}
-        AND d.DEL_FLAG = 'N' </select>
+        AND d.DEL_FLAG = 'N' ORDER BY d.REG_DATE DESC </select>
 
     <!-- 헤더 등록 -->
     <insert id="insertHeader"> INSERT INTO POHD ( PO_NUM, PO_SUBJECT, PO_DATE, PO_AMT, PROGRESS_CD,
