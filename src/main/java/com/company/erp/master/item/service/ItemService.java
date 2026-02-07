@@ -24,7 +24,7 @@ public class ItemService {
     public ItemResponseDto<ItemDetailDto> getItemList(ItemSearchDto searchDto, String loginId) {
 
         // 1. 날짜 형식 변환
-        if(searchDto.getDate() != null){
+        if (searchDto.getDate() != null) {
             LocalDateTime start = searchDto.getDate().atStartOfDay();
             LocalDateTime end = searchDto.getDate().atTime(23, 59, 59);
             searchDto.setStartDate(start);
@@ -33,15 +33,14 @@ public class ItemService {
         // 2. 총 품목 수 계산
         int totalCount = itemMapper.countItemList(searchDto);
         // 3. 총 페이지 계산
-        int totalPage = (int)Math.ceil((double) totalCount / searchDto.getPageSize());
+        int totalPage = (int) Math.ceil((double) totalCount / searchDto.getPageSize());
         // 4. Dto 반환
         return new ItemResponseDto<ItemDetailDto>(
                 itemMapper.selectItemList(searchDto),
                 searchDto.getPage(),
                 searchDto.getPageSize(),
                 totalPage,
-                totalCount
-        );
+                totalCount);
     }
 
     /* 상세 품목 조회 */
@@ -54,7 +53,7 @@ public class ItemService {
     public void registerItem(ItemDetailDto itemDetailDto, SessionUser loginUser) {
         // 1. 중복 체크
         boolean existsItem = itemMapper.existsByNameAndSpec(itemDetailDto);
-        if(existsItem){
+        if (existsItem) {
             throw new IllegalStateException("동일한 이름과 규격의 품목이 존재합니다.");
         }
 
@@ -78,19 +77,22 @@ public class ItemService {
     public void updateItem(ItemDetailDto itemDetailDto, SessionUser loginUser) {
         // 품목 존재 여부 확인
         ItemDetailDto item = itemMapper.selectItemByCode(itemDetailDto.getItemCode());
-        if(item == null){
+        if (item == null) {
             throw new IllegalStateException("존재하지 않는 품목입니다.");
         }
-        
+
         // 상태 확인
-        String status =  item.getStatus();
-        if("A".equals(status)){
+        String status = item.getStatus();
+        if ("A".equals(status)) {
             throw new IllegalStateException("승인 완료된 품목으로 수정이 불가합니다.");
         }
         itemDetailDto.setModifiedAt(LocalDateTime.now());
         itemDetailDto.setModifiedBy(loginUser.getUserId());
-        
+
         // 업데이트
-        itemMapper.updateItem(itemDetailDto);
+        int updatedRows = itemMapper.updateItem(itemDetailDto);
+        if (updatedRows == 0) {
+            throw new RuntimeException("다른 사용자에 의해 이미 수정된 데이터입니다. 다시 조회 후 시도해주세요.");
+        }
     }
 }

@@ -107,7 +107,8 @@
             GL.USE_FLAG AS useYn,
             GL.RMK AS remark,
             GL.REG_DATE AS createdAt,
-            GL.REG_USER_ID AS createdBy
+            GL.REG_USER_ID AS createdBy,
+            GL.VERSION AS version
         FROM
             MTGL GL
         LEFT JOIN <!--카테고리가 삭제되더라도 표시되기 위해서-->
@@ -225,11 +226,14 @@
                 RMK = #{remark},
             </if>
             <if test="useYn != null">
-                USE_FLAG = #{useYn}
+                USE_FLAG = #{useYn},
             </if>
+            VERSION = VERSION + 1
         </set>
         WHERE
             ITEM_CD = #{itemCode}
+        AND
+            VERSION = #{version}
 
     </update>
 </mapper>
