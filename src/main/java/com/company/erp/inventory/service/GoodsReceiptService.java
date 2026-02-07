@@ -162,8 +162,8 @@ public class GoodsReceiptService {
         String currentUserId = getCurrentUserId();
         String currentDeptCd = getCurrentUserDeptCd();
 
-        // 1. PO 정보 및 협력사 코드 조회
-        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(dto.getPoNo());
+        // 1. PO 정보 및 협력사 코드 조회 (비관적 락 적용)
+        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeaderForUpdate(dto.getPoNo());
         if (poHeader == null) {
             throw new NoSuchElementException("발주 정보를 찾을 수 없습니다: " + dto.getPoNo());
         }
@@ -210,16 +210,13 @@ public class GoodsReceiptService {
                     .orElse(null);
 
             if (existing != null) {
-                // 기존 수량/금액 + 입력된 수량/금액 (누적)
-                BigDecimal newQty = existing.getGrQuantity().add(item.getGrQuantity());
-                BigDecimal newAmt = existing.getGrAmount().add(item.getGrAmount());
-                item.setGrQuantity(newQty);
-                item.setGrAmount(newAmt);
                 // 기존 창고 유지 (입력값 없으면)
                 if (item.getWarehouseCode() == null)
                     item.setWarehouseCode(existing.getWarehouseCode());
 
-                goodsReceiptMapper.updateItem(item, currentUserId);
+                // updateItemIncrement 쿼리가 GR_QT = GR_QT + #{item.grQuantity} 방식으로 동작
+                // 증분 값(item.grQuantity, item.grAmount)을 그대로 전달
+                goodsReceiptMapper.updateItemIncrement(item, currentUserId);
                 recalculateHeaderAmount(item.getGrNo(), currentUserId);
                 processedGrNos.add(item.getGrNo());
             }

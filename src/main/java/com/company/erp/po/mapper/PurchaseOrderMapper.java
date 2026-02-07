@@ -20,6 +20,8 @@ public interface PurchaseOrderMapper {
         List<PurchaseOrderDTO> selectVendorOrderList(Map<String, Object> params);
 
         PurchaseOrderDTO selectHeader(String poNo);
+        
+        PurchaseOrderDTO selectHeaderForUpdate(String poNo); // 비관적 락을 위한 조회
 
         List<PurchaseOrderItemDTO> selectItems(String poNo);
 

@@ -81,11 +81,19 @@
         v.VENDOR_CD WHERE d.GR_NUM = #{grNo} AND d.DEL_FLAG = 'N' </select>
 
     <!-- ========== 입고처리 ========== -->
-    <!-- PO 번호와 품목 코드로 기존 GR 번호 조회 (PO, Item 기준 유일한 활성 GR 찾기) -->
-    <select id="selectExistingGrByPoAndItem" parameterType="map" resultType="String"> SELECT
-        h.GR_NUM FROM GRHD h INNER JOIN GRDT d ON h.GR_NUM = d.GR_NUM WHERE h.PO_NUM = #{poNo} AND
-        d.ITEM_CD = #{itemCode} AND h.DEL_FLAG = 'N' AND d.DEL_FLAG = 'N' AND d.STATUS_CD = 'N' AND
-        h.PROGRESS_CD != 'GRX' LIMIT 1 </select>
+    <select id="selectExistingGrByPoAndItem" parameterType="map" resultType="String" flushCache="true"> 
+        SELECT h.GR_NUM 
+        FROM GRHD h 
+        INNER JOIN GRDT d ON h.GR_NUM = d.GR_NUM 
+        WHERE h.PO_NUM = #{poNo} 
+          AND d.ITEM_CD = #{itemCode} 
+          AND h.DEL_FLAG = 'N' 
+          AND d.DEL_FLAG = 'N' 
+          AND d.STATUS_CD = 'N' 
+          AND h.PROGRESS_CD != 'GRX' 
+        LIMIT 1 
+        FOR UPDATE
+    </select>
 
     <!-- PO 번호와 품목 코드로 기존 GR의 저장위치 조회 (품목별 입고번호 기준 저장위치 확인용) -->
     <select id="selectWarehouseByPoAndItem" parameterType="map" resultType="String">
@@ -116,10 +124,29 @@
         #{item.grDate}, #{item.remark}, #{item.statusCode}, NOW(), #{item.ctrlUserId}, 'N' ) </insert>
 
     <!-- ========== 입고조정 ========== -->
-    <!-- 상세 품목 수정 (입고수량, 저장위치만) -->
-    <update id="updateItem"> UPDATE GRDT SET GR_QT = #{item.grQuantity}, GR_AMT = #{item.grAmount},
-        WH_CD = #{item.warehouseCode}, MOD_DATE = NOW(), MOD_USER_ID = #{modUserId} WHERE GR_NUM =
-        #{item.grNo} AND ITEM_CD = #{item.itemCode} </update>
+    <!-- 상세 품목 수정 (입고수량, 저장위치만) - 절대값 설정 -->
+    <update id="updateItem"> 
+        UPDATE GRDT 
+        SET GR_QT = #{item.grQuantity}, 
+            GR_AMT = #{item.grAmount},
+            WH_CD = #{item.warehouseCode}, 
+            MOD_DATE = NOW(), 
+            MOD_USER_ID = #{modUserId} 
+        WHERE GR_NUM = #{item.grNo} 
+          AND ITEM_CD = #{item.itemCode} 
+    </update>
+
+    <!-- 상세 품목 수량 증분 (추가 입고용) - 원자적 증가 -->
+    <update id="updateItemIncrement"> 
+        UPDATE GRDT 
+        SET GR_QT = GR_QT + #{item.grQuantity}, 
+            GR_AMT = GR_AMT + #{item.grAmount},
+            WH_CD = #{item.warehouseCode}, 
+            MOD_DATE = NOW(), 
+            MOD_USER_ID = #{modUserId} 
+        WHERE GR_NUM = #{item.grNo} 
+          AND ITEM_CD = #{item.itemCode} 
+    </update>
 
     <!-- 상세 품목 취소 처리 -->
     <update id="cancelItem"> UPDATE GRDT SET STATUS_CD = 'C', CANCLE_RMK = #{cancelRemark}, MOD_DATE
