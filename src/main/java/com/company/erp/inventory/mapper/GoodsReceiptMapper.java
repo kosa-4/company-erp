@@ -50,9 +50,15 @@ public interface GoodsReceiptMapper {
 
         // ========== 입고조정 ==========
         /**
-         * 상세 품목 수정 (입고수량, 저장위치만)
+         * 상세 품목 수정 (입고수량, 저장위치만) - 절대값 설정
          */
         int updateItem(@Param("item") GoodsReceiptItemDTO item,
+                        @Param("modUserId") String modUserId);
+
+        /**
+         * 상세 품목 수량 증분 (추가 입고용) - 원자적 증가
+         */
+        int updateItemIncrement(@Param("item") GoodsReceiptItemDTO item,
                         @Param("modUserId") String modUserId);
 
         /**
@@ -68,6 +74,20 @@ public interface GoodsReceiptMapper {
          */
         int updateHeaderStatus(@Param("grNo") String grNo,
                         @Param("status") String status,
+                        @Param("modUserId") String modUserId);
+
+        /**
+         * 헤더 총액 업데이트 (계산된 값 설정)
+         */
+        int updateHeaderAmount(@Param("grNo") String grNo,
+                        @Param("totalAmount") BigDecimal totalAmount,
+                        @Param("modUserId") String modUserId);
+
+        /**
+         * 헤더 총액 증분 업데이트 (원자적 증가)
+         */
+        int updateHeaderAmountIncrement(@Param("grNo") String grNo,
+                        @Param("amount") BigDecimal amount,
                         @Param("modUserId") String modUserId);
 
         /**
