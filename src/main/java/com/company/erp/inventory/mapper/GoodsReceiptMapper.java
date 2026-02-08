@@ -77,6 +77,20 @@ public interface GoodsReceiptMapper {
                         @Param("modUserId") String modUserId);
 
         /**
+         * 헤더 총액 업데이트 (계산된 값 설정)
+         */
+        int updateHeaderAmount(@Param("grNo") String grNo,
+                        @Param("totalAmount") BigDecimal totalAmount,
+                        @Param("modUserId") String modUserId);
+
+        /**
+         * 헤더 총액 증분 업데이트 (원자적 증가)
+         */
+        int updateHeaderAmountIncrement(@Param("grNo") String grNo,
+                        @Param("amount") BigDecimal amount,
+                        @Param("modUserId") String modUserId);
+
+        /**
          * 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트
          */
         int updateAllHeadersStatusByPO(@Param("poNo") String poNo,

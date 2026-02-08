@@ -117,6 +117,7 @@ class ItemConcurrencyTest {
         });
 
         latch.await();
+        executorService.shutdown();
 
         mainTest.log(Status.INFO, "최종 결과 - 성공: " + successCount.get() + ", 실패: " + failCount.get());
 

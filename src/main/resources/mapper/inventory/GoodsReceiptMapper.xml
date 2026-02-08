@@ -153,8 +153,28 @@
         = NOW(), MOD_USER_ID = #{modUserId} WHERE GR_NUM = #{grNo} AND ITEM_CD = #{itemCode} </update>
 
     <!-- 헤더 상태 업데이트 -->
-    <update id="updateHeaderStatus"> UPDATE GRHD SET PROGRESS_CD = #{status}, MOD_DATE = NOW(),
-        MOD_USER_ID = #{modUserId} WHERE GR_NUM = #{grNo} </update>
+    <update id="updateHeaderStatus"> 
+        UPDATE GRHD SET PROGRESS_CD = #{status}, MOD_DATE = NOW(),
+        MOD_USER_ID = #{modUserId} WHERE GR_NUM = #{grNo} 
+    </update>
+
+    <!-- 헤더 총액 업데이트 (계산된 값 설정) -->
+    <update id="updateHeaderAmount">
+        UPDATE GRHD
+        SET GR_AMT = #{totalAmount},
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        WHERE GR_NUM = #{grNo}
+    </update>
+
+    <!-- 헤더 총액 증분 업데이트 (원자적 증가) -->
+    <update id="updateHeaderAmountIncrement">
+        UPDATE GRHD
+        SET GR_AMT = GR_AMT + #{amount},
+            MOD_DATE = NOW(),
+            MOD_USER_ID = #{modUserId}
+        WHERE GR_NUM = #{grNo}
+    </update>
 
     <!-- 특정 PO에 연결된 모든 입고 헤더 상태 일괄 업데이트 (취소 제외) -->
     <update id="updateAllHeadersStatusByPO"> UPDATE GRHD SET PROGRESS_CD = #{status}, MOD_DATE =

@@ -217,7 +217,10 @@ public class GoodsReceiptService {
                 // updateItemIncrement 쿼리가 GR_QT = GR_QT + #{item.grQuantity} 방식으로 동작
                 // 증분 값(item.grQuantity, item.grAmount)을 그대로 전달
                 goodsReceiptMapper.updateItemIncrement(item, currentUserId);
-                recalculateHeaderAmount(item.getGrNo(), currentUserId);
+                
+                // 헤더 총액도 원자적 증분 업데이트 (동시성 성능 최적화)
+                goodsReceiptMapper.updateHeaderAmountIncrement(item.getGrNo(), item.getGrAmount(), currentUserId);
+                
                 processedGrNos.add(item.getGrNo());
             }
         }
@@ -354,12 +357,8 @@ public class GoodsReceiptService {
                 .map(GoodsReceiptItemDTO::getGrAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        GoodsReceiptDTO header = goodsReceiptMapper.selectHeader(grNo);
-        if (header != null) {
-            header.setTotalAmount(totalAmount);
-            // 총액 업데이트는 별도 Mapper 메서드가 필요할 수 있음
-            // 현재는 헤더 조회 시 자동 계산되므로 생략 가능
-        }
+        // DB에 계산된 총액 반영
+        goodsReceiptMapper.updateHeaderAmount(grNo, totalAmount, userId);
     }
 
     // PO의 입고 상태에 따라 헤더 상태 업데이트

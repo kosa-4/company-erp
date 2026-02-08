@@ -120,6 +120,7 @@ class GoodsReceiptConcurrencyTest {
         }
 
         latch.await();
+        executorService.shutdown();
 
         // Then
         mainTest.log(Status.INFO, "최종 결과 - 성공: " + successCount.get() + ", 실패: " + failCount.get());
