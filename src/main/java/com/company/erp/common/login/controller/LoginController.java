@@ -34,11 +34,12 @@ public class LoginController {
         // 서비스에서 인증 + 유저 정보 조회 (comType/vendorCd 포함) + SessionUser 생성까지 끝냄
         SessionUser sessionUser = loginService.login(req, ipAddress);
 
-        // [보안 강화] 세션 고정 공격(Session Fixation) 방지
-        request.changeSessionId();
-
-        // 세션 생성
+        // 세션 생성 (없으면 생성)
         HttpSession session = request.getSession(true);
+
+        // [보안 강화] 세션 고정 공격(Session Fixation) 방지
+        // 세션이 존재하는 상태에서 ID를 변경하여 IllegalStateException을 방지하고 보안을 강화합니다.
+        request.changeSessionId();
 
         // 중복 로그인 처리 + registry 등록 + 세션 저장
         duplicateLoginService.handleLoginSuccess(sessionUser, session);
