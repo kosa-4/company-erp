@@ -34,6 +34,9 @@ public class LoginController {
         // 서비스에서 인증 + 유저 정보 조회 (comType/vendorCd 포함) + SessionUser 생성까지 끝냄
         SessionUser sessionUser = loginService.login(req, ipAddress);
 
+        // [보안 강화] 세션 고정 공격(Session Fixation) 방지
+        request.changeSessionId();
+
         // 세션 생성
         HttpSession session = request.getSession(true);
 
