@@ -162,8 +162,8 @@ public class GoodsReceiptService {
         String currentUserId = getCurrentUserId();
         String currentDeptCd = getCurrentUserDeptCd();
 
-        // 1. PO 정보 및 협력사 코드 조회
-        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeader(dto.getPoNo());
+        // 1. PO 정보 및 협력사 코드 조회 (비관적 락 적용)
+        PurchaseOrderDTO poHeader = purchaseOrderMapper.selectHeaderForUpdate(dto.getPoNo());
         if (poHeader == null) {
             throw new NoSuchElementException("발주 정보를 찾을 수 없습니다: " + dto.getPoNo());
         }
@@ -210,17 +210,17 @@ public class GoodsReceiptService {
                     .orElse(null);
 
             if (existing != null) {
-                // 기존 수량/금액 + 입력된 수량/금액 (누적)
-                BigDecimal newQty = existing.getGrQuantity().add(item.getGrQuantity());
-                BigDecimal newAmt = existing.getGrAmount().add(item.getGrAmount());
-                item.setGrQuantity(newQty);
-                item.setGrAmount(newAmt);
                 // 기존 창고 유지 (입력값 없으면)
                 if (item.getWarehouseCode() == null)
                     item.setWarehouseCode(existing.getWarehouseCode());
 
-                goodsReceiptMapper.updateItem(item, currentUserId);
-                recalculateHeaderAmount(item.getGrNo(), currentUserId);
+                // updateItemIncrement 쿼리가 GR_QT = GR_QT + #{item.grQuantity} 방식으로 동작
+                // 증분 값(item.grQuantity, item.grAmount)을 그대로 전달
+                goodsReceiptMapper.updateItemIncrement(item, currentUserId);
+                
+                // 헤더 총액도 원자적 증분 업데이트 (동시성 성능 최적화)
+                goodsReceiptMapper.updateHeaderAmountIncrement(item.getGrNo(), item.getGrAmount(), currentUserId);
+                
                 processedGrNos.add(item.getGrNo());
             }
         }
@@ -357,12 +357,8 @@ public class GoodsReceiptService {
                 .map(GoodsReceiptItemDTO::getGrAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        GoodsReceiptDTO header = goodsReceiptMapper.selectHeader(grNo);
-        if (header != null) {
-            header.setTotalAmount(totalAmount);
-            // 총액 업데이트는 별도 Mapper 메서드가 필요할 수 있음
-            // 현재는 헤더 조회 시 자동 계산되므로 생략 가능
-        }
+        // DB에 계산된 총액 반영
+        goodsReceiptMapper.updateHeaderAmount(grNo, totalAmount, userId);
     }
 
     // PO의 입고 상태에 따라 헤더 상태 업데이트
